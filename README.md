@@ -1,37 +1,40 @@
 # IINA Streams
 
-A local-first, lightweight streaming plugin project for IINA on macOS.
+Lightweight Twitch/YouTube playback integration for the native IINA macOS player.
 
-**STATUS: SPECIFICATION ONLY; NO FUNCTIONAL PLUGIN RELEASED FROM THIS REPO.**
+**STATUS (2026-11-07): M2 development candidate implemented; runtime release gates NOT met due unresolved IINA startup crashes. No stable plugin promoted.** The original Streamlink Bridge remains unchanged.
 
-Primary acceptance source: https://www.twitch.tv/hutchmf
+Primary acceptance stream: https://www.twitch.tv/hutchmf
 
-Read [docs/SPEC.md](docs/SPEC.md) and [docs/ROADMAP.md](docs/ROADMAP.md) before writing code. The current installed Streamlink Bridge is a separate broken prototype and is not modified by this repository. No new plugin is currently linked to IINA.
+## Project layout
 
-## First release target
+- `plugin-dev/` — development IINA plugin, separate identity `local.iina.streams.dev`.
+- `plugin-dev/global.js` — one Open Stream action; short Streamlink extraction; isolated IINA player creation.
+- `plugin-dev/main.js` — per-player quality and lazy sidebar controller.
+- `plugin-dev/ui/` — local CSS/HTML/JS sidebar; no framework, no chat connection.
+- `plugin-dev/src/` — provider routing and Streamlink JSON format selection.
+- `tests/` — pure helpers and mocked plugin-runtime interaction tests.
+- `scripts/verify.sh` — offline checks.
+- `scripts/preflight.sh --live` — channel availability, no playback.
+- `scripts/link-dev.sh` / `scripts/unlink-dev.sh` — safe dev lifecycle, no app restart.
+- `scripts/package-candidate.sh` — candidate archive and checksum, no install.
+- `scripts/resource-snapshot.sh` — read-only resource snapshot.
+- `docs/INVESTIGATION-2026-11-07.md` — crash signatures, Bridge forensic analysis, architectural rationale.
+- `docs/RELEASE.md` — manual testing, gates and rollback.
+- `docs/PERFORMANCE.md` — what was measured, and what was not.
+- `docs/reviews/M0-M2-2026-11-07.md` — milestone decision record.
+- `HANDOFF-GPT6-PRO.md` — full next-session execution and audit brief.
+- `evidence/bridge-0.1.0-original/` — unchanged failed plugin.
+- `releases/` — candidate archives, ignored by Git.
 
-v0.1: select Open Stream in IINA, paste hutchmf, watch live Twitch video, close cleanly. No terminal; proven end-to-end. Later releases can add sidebar, quality, chat and YouTube Live.
+## Reproducible checks
 
-## Local development
+```sh
+cd ~/development/iina-streams
+./scripts/verify.sh
+./scripts/preflight.sh --live
+```
 
-Code will live beneath this directory, with a separate development plugin ID. IINA supports local dev linking via its bundled iina-plugin link command; it has NOT been run yet.
+For development install after resolving the IINA startup-crash issue: `./scripts/link-dev.sh`; manually enable the development plugin and relaunch IINA. To roll back development linkage: `./scripts/unlink-dev.sh`. These operations do not touch stable IINA, existing Bridge or Safari. See [docs/RELEASE.md](docs/RELEASE.md) before GUI testing.
 
-Run safe read-only preflight (does not launch playback):
-    ./scripts/preflight.sh
-
-Optional network-only Streamlink channel resolution (does not launch player):
-    ./scripts/preflight.sh --live
-
-Manual packaging and stable deployment are gated on tested acceptance evidence and explicit promotion. Never overwrite an installed plugin directly.
-
-## Files
-
-- docs/SPEC.md — scope, architecture, UX, requirements, evidence, risks, releases.
-- docs/ROADMAP.md — milestone-by-milestone completion and feedback gates.
-- docs/BUG-001.md — deployed prototype failure investigation.
-- docs/DECISIONS.md — dated decisions, questions and revisions.
-- scripts/preflight.sh — read-only environment and optional live-availability test.
-- evidence/ — test evidence without secrets.
-- releases/ — local immutable package artifacts (not tracked by git).
-
-No external GitHub repository or auto-updater has been enabled.
+The critical missing evidence is **real extended UI playback and repeated quality switching with no IINA crash**. Static unit tests, a short real IINA file-loaded test, and an mpv headless decoder check do not establish M1/M2 acceptance.

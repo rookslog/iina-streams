@@ -9,3 +9,9 @@
 2026-11-07 D-007 OPEN: whether user wants a private GitHub remote / CI automation after local tests and first working release.
 
 Update this append-only log when actual decisions are made, with evidence and rollback references; don't silently rewrite historical conclusions.
+
+2026-11-07 D-008 CHOSEN (candidate): prefer Streamlink one-shot --stream-url direct HLS extraction + IINA-managed player over persistent Streamlink-to-iina-cli or localhost HTTP, subject to long-run/reconnect tests. Evidence: real extraction + headless decoder + IINA file-loaded event; ongoing behavior unverified.
+2026-11-07 D-009 CHOSEN: separate dev plugin ID local.iina.streams.dev and prospective stable ID local.iina.streams; do not overwrite original Bridge or installed IINA.
+2026-11-07 D-010 CHOSEN: lazy sidebar and dynamic live Streamlink quality list, no chat processes/timers in M2. Per-window quality switch via core.open requires GUI lifecycle tests.
+2026-11-07 D-011 CRITICAL: user reported unexpected IINA closures. Predecessor test had 14-second core.stop and was corrected. Five real IINA app startup SIGTRAP reports, two predating development link; investigate before repeating launches. Dev plugin disabled; stable promotion deferred.
+2026-11-07 D-012 OPEN: consider isolated IINA 1.5.1 compatibility testing after approval; do not change existing IINA 1.4.4 automatically.

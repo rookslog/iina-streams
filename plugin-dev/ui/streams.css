@@ -1,0 +1,23 @@
+:root { color-scheme: light dark; font: -apple-system-body; }
+* { box-sizing: border-box; }
+body { margin: 0; background: transparent; color: CanvasText; font: 13px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+.panel { padding: 17px 14px; max-width: 100%; }
+header { border-bottom: 1px solid color-mix(in srgb, CanvasText 16%, transparent); padding-bottom: 17px; margin-bottom: 19px; }
+.eyebrow { font-size: 10px; font-weight: 650; letter-spacing: .095em; opacity: .62; }
+h1 { font-size: 18px; font-weight: 620; margin: 7px 0 8px; overflow-wrap: anywhere; }
+h2 { font-size: 13px; font-weight: 590; margin: 0; }
+#status { min-height: 18px; opacity: .75; font-size: 12px; }
+.titleRow, .footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+select { appearance: auto; width: 100%; padding: 7px 9px; margin-top: 10px; color: inherit; background: Canvas; border-radius: 7px; border: 1px solid color-mix(in srgb, CanvasText 25%, transparent); }
+button { font: inherit; border-radius: 6px; padding: 5px 10px; border: 1px solid color-mix(in srgb, CanvasText 22%, transparent); background: color-mix(in srgb, CanvasText 6%, transparent); color: inherit; cursor: pointer; }
+button:hover { background: color-mix(in srgb, CanvasText 11%, transparent); }
+button:focus-visible, select:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; }
+button:disabled, select:disabled { cursor: default; opacity: .5; }
+#refresh { font-size: 17px; line-height: 1; padding: 4px 9px; }
+.hint { font-size: 11px; line-height: 1.5; opacity: .65; margin: 8px 0 0; }
+.error { color: #c23d35; font-size: 12px; line-height: 1.45; margin-top: 14px; }
+.footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, CanvasText 16%, transparent); flex-wrap: wrap; }
+.subtle { font-size: 11px; opacity: .53; }
+.assistive { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-color-scheme: dark) { .error { color: #ff928e; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

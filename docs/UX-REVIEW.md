@@ -9,3 +9,6 @@ The current UX uses one global **Open Stream…** command (native IINA input pro
 **User feedback at 13:05 Nov 7:** IINA unexpectedly closes while trying to test. Do not treat this as resolved. Debug auto-stop removed; real crash reports show PlayerCore.startMPV SIGTRAP before/after dev plugin. Priority: restore a reliable first stream experience before visual polish.
 
 **M3 proposal:** Twitch read-only chat opt-in, entirely disconnected when hidden/off, credential request only after user chooses to connect, bounded DOM/message queue, Keychain; no send/chat permissions, no full Twitch website. Test CPU, memory and actual off state before UX acceptance.
+
+## November 7: TNF-principles-informed design review
+The user considers the current M2 sidebar visually unfinished, with unnecessary text, and points to Tap and Filter's native-but-distinctive glass design guidance. Read `docs/design/TNF-INHERITANCE-QUIET-STREAMS.md` for the full first-source audit and proposed compact direction. The research is design-only: no rendered replacement, no modified live UI, no user acceptance. Current feature behavior remains available on the working development checkout.

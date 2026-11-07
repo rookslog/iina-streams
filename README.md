@@ -55,3 +55,5 @@ The full-screen **native title bar** may remain visible while IINA 1.5's sidebar
 **The current development branch changes Twitch quality without recreating IINA's window.** The official Online Media plugin uses the same mpv-level loadfile mechanism. Confirmed in a real IINA 1.5.1 run: hutchmf 160p30 switched to 360p30; resolution changed, playback resumed, sidebar remained connected, and no window-close event was observed. See `docs/BUG-004-quality-window-recreation.md`.
 
 For interactive use, start a fresh Twitch stream with the currently linked development plugin, show the Streams panel, and change quality there. Do not use the old rc1/rc2 release archives: they predate the fix. The native titlebar overlap in fullscreen and the aesthetics of the first M2 panel remain user-reported defects for the Pro continuation. No accepted stable plugin was promoted.
+
+Design exploration: [TNF principles → Quiet Streams](docs/design/TNF-INHERITANCE-QUIET-STREAMS.md). This is a reviewable proposal on `design/tnf-quiet-streams`; no code or deployed UI was changed in the design pass.

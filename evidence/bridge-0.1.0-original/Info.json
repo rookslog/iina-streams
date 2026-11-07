@@ -1,0 +1,10 @@
+{
+  "name": "Streamlink Bridge",
+  "identifier": "local.iina.streamlink-bridge",
+  "version": "0.1.0",
+  "description": "Launch Twitch streams in IINA using the local Streamlink installation.",
+  "author": { "name": "Local integration" },
+  "entry": "main.js",
+  "globalEntry": "global.js",
+  "permissions": ["file-system", "show-alert"]
+}

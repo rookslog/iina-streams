@@ -1,0 +1,29 @@
+{
+  "phase": "sidebar-ready",
+  "time": "2026-11-07T20:00:08.127Z",
+  "loaded": true,
+  "status": "Playing",
+  "sidebarReady": true,
+  "sidebarLoaded": true,
+  "controlsDesired": true,
+  "windowLoaded": true,
+  "formats": [
+    "auto720"
+  ],
+  "chosenQuality": "160p30",
+  "pendingQuality": null,
+  "qaWindowOpenCount": 1,
+  "qaWindowCloseCount": 0,
+  "formatQueryBusy": false,
+  "reconnectBusy": false,
+  "error": "",
+  "videoWidth": 284,
+  "videoHeight": 160,
+  "videoFrames": 0,
+  "droppedFrames": 0,
+  "playbackSeconds": 0.266,
+  "audioChannels": 2,
+  "mediaTitle": "hutchmf — Twitch",
+  "forcedTitle": "hutchmf — Twitch",
+  "sidebarSelection": null
+}

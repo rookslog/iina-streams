@@ -17,3 +17,12 @@ Update this append-only log when actual decisions are made, with evidence and ro
 2026-11-07 D-012 OPEN: consider isolated IINA 1.5.1 compatibility testing after approval; do not change existing IINA 1.4.4 automatically.
 
 2026-11-07 D-013 M2 UX BLOCKER: user shared screenshot of top on-screen controller not hiding and obstructing Streams sidebar. Read-only IINA pref places floating control bar near top (vertical 0.0003568). Do not silently move global controls. Investigate native OSC layout/auto-hide and sidebar readiness; see BUG-002.
+
+
+2026-11-07 D-014 CONFIRMED: IINA 1.5.1 network window title reads mpv media-title; use file-local-options/force-media-title from on_load, not native window patches. hutchmf title seen in actual AX player window.
+2026-11-07 D-015 CONFIRMED: JavascriptAPISidebarView.loadFile clears message listeners; register sidebar.onMessage handlers afterward. JavascriptMessageHub requires JSON-serializable data; send explicit objects for ready/refresh/hide.
+2026-11-07 D-016 IMPLEMENTED: reveal Twitch Streams controls on first playback; honor hide through quality reconnect and reinitialize after IINA recreates window. Pending user visual acceptance; no global titlebar/OSC setting modifications.
+
+
+2026-11-07 D-017 CONFIRMED: the official installed Online Media plugin changes quality with mpv.command("loadfile"), whereas PlayerCore.open in IINA v1.5.1 deliberately closes the network window. The Streams quality controller now uses mpv.loadfile replace with pre-extracted new Twitch URL; preserve title and sidebar. Real 160p30→360p30 QA: 1 window load, 0 window-close events, new video resolution, playback advanced.
+2026-11-07 D-018 M2 VISUAL REVIEW OPEN: user screenshot shows fullscreen native titlebar overlapping Streams panel; UI looks unpolished to user. Pro should improve layout, responsiveness, native UI integration and accessibility with evidence rather than ad-hoc global settings.

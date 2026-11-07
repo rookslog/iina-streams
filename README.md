@@ -41,3 +41,17 @@ The critical missing evidence is **real extended UI playback and repeated qualit
 
 ## Latest November 7 runtime update
 The new `fix/closed-loop-m2-validation` branch corrected IINA's real `network-request` and `allowedDomains` permission errors and demonstrated 360p30 Twitch playback initialization and a same-resolution quality reconnect inside IINA. **The user reported that the stream began working.** The user's latest screenshot also shows native top-bar interference with the sidebar; tracked in `docs/BUG-002-OSC-SIDEBAR.md`. Full M2 acceptance still requires the sidebar bridge, visual controls, normal 10 start/stop cycles, isolation, and performance validation. The prior rc1 archive is missing essential permissions and must not be deployed.
+
+
+## November 7 usability fix — native title and working sidebar
+Current development source on `fix/title-and-streams-sidebar` opens Twitch with **hutchmf — Twitch** as the native IINA media title. IINA Streams controls appear automatically on the first file load in a new Twitch player; use **Hide controls** to dismiss them and **Plugin > IINA Streams (Development) > Show Streams Controls** to reopen. The panel can be on either side depending on IINA's Layout settings.
+
+Verified on IINA **1.5.1 build 183** with real hutchmf playback: sidebar's webview now sends its ready signal, available qualities populate, quality reconnection reattaches the sidebar, and the title remains friendly. macOS Accessibility saw an actual player window named `hutchmf — Twitch`. See [BUG-003](docs/BUG-003-title-and-sidebar.md) and its sanitized QA evidence. A rendered screenshot / human interaction test is still outstanding because window capture was denied.
+
+The full-screen **native title bar** may remain visible while IINA 1.5's sidebars are displayed. That behavior belongs to IINA's layout; hiding the controls sidebar is a reversible way to compare. No global macOS/IINA UI preferences were modified.
+
+
+## Same-window quality switching update (November 7)
+**The current development branch changes Twitch quality without recreating IINA's window.** The official Online Media plugin uses the same mpv-level loadfile mechanism. Confirmed in a real IINA 1.5.1 run: hutchmf 160p30 switched to 360p30; resolution changed, playback resumed, sidebar remained connected, and no window-close event was observed. See `docs/BUG-004-quality-window-recreation.md`.
+
+For interactive use, start a fresh Twitch stream with the currently linked development plugin, show the Streams panel, and change quality there. Do not use the old rc1/rc2 release archives: they predate the fix. The native titlebar overlap in fullscreen and the aesthetics of the first M2 panel remain user-reported defects for the Pro continuation. No accepted stable plugin was promoted.

@@ -29,7 +29,7 @@ function openStream(input, qaMode) {
   log.log("Extracting Twitch stream for " + chosen.channel + ".");
   return utils.exec(STREAMLINK, [
     "--no-config", "--loglevel", "error", "--stream-url",
-    chosen.url, providers.selectedQuality(qa ? "test-360" : "auto720")
+    chosen.url, qa ? "160p30" : providers.selectedQuality("auto720")
   ]).then(function (res) {
     extracting = false;
     if (qa) iina.file.write("@data/qa-global.json", JSON.stringify({phase:"extract-returned",status:res.status}));

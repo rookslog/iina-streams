@@ -30,3 +30,9 @@ Earlier in the session a specifically labeled QA test player intentionally calle
 ## Gate status
 
 M2 visual/interaction acceptance remains **open**. Correct native control behavior and an operating/sidebar bridge must both pass. No stable promotion. Do not treat a correctly functioning stream URL or mock tests as evidence that this visual defect is resolved.
+
+
+## Corrective diagnosis — November 7 (supersedes earlier hypotheses)
+The screenshot's dark bar with red/yellow/green controls and the signed Twitch URL is specifically IINA's **native title bar**, not its floating OSC. Previous OSC-position evidence does not establish the cause of that particular bar remaining visible. IINA 1.5 changes titlebar/sidebars and intentionally keeps window buttons visible in some sidebar layouts. macOS menu-bar auto-hide does **not** control IINA's native title bar. The user tested fullscreen and menu-bar settings without resolving the symptom. Do not keep prescribing those as proven remedies.
+
+BUG-003 now fixes the leaked signed URL in the title and the plugin sidebar's broken messaging. The actual native fullscreen auto-hide behavior remains a separate IINA issue: check after hiding the sidebar, and avoid changing global settings without authorization.

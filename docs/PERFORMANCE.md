@@ -24,3 +24,7 @@ Prior session noted total combined resident memory approx. 129–193 MiB for IIN
 
 ## Recommended future measurement
 Use matched channel/quality/codec where possible; record exact session URL type (not tokens), decoder, player versions, timestamp, load, 2-minute warmup plus 5-minute samples repeated three times. Measure system memory pressure and **swap-ins/outs per interval**, not accumulated swap used; collect IINA, WebKit helpers, Streamlink, Safari and codec/performance. Turn chat on/off in one test only after M3. Never restart Safari or close unrelated windows to make a comparison look favorable.
+
+
+## New quality-switch probe — 2026-11-07
+The `mpv loadfile replace` mechanism was run on a 160p30 to 360p30 Twitch quality switch in a *single real IINA 1.5.1 player window*. Evidence: first load 284×160, second 640×360, 0 window-close events and advancing playback; live Streamlink extraction processes completed without orphans. This establishes functionality, **not** energy, matched Safari consumption, or performance of fullscreen high-quality changes. IINA process RSS observed during the test is confounded by WebKit and system load and is not used as a benchmark.

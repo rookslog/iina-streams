@@ -29,8 +29,8 @@
     error.hidden = !err;
   }
   quality.addEventListener("change", function () { iina.postMessage("change-quality", quality.value); });
-  refresh.addEventListener("click", function () { iina.postMessage("refresh-qualities"); });
-  el("hide").addEventListener("click", function () { iina.postMessage("hide"); });
+  refresh.addEventListener("click", function () { iina.postMessage("refresh-qualities", {}); });
+  el("hide").addEventListener("click", function () { iina.postMessage("hide", {}); });
   iina.onMessage("state", render);
-  iina.postMessage("ready");
+  iina.postMessage("ready", { ready: true });
 }());

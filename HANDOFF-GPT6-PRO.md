@@ -71,3 +71,7 @@ Keep append-only `docs/DECISIONS.md` and changelog, per-milestone reviews with G
 At each gate offer **Accept / Revise / Roll back / Defer** with the evidence needed. Never approve on the user's behalf. If you cannot reach M5 due to macOS crashes or auth gates, complete all independent work, identify precisely what is blocked, and preserve the best viable candidate.
 
 **Begin immediately by auditing the repo, the actual crash reports, and M1/M2 evidence. Then implement and test rather than stopping at this brief.**
+
+## Last-minute packaging and rollback results (read before promotion)
+On 2026-11-07 the initial `iina-plugin pack` attempt failed: `Cannot read plugin package content.` The candidate builder now creates a ZIP-format `.iinaplgz` fallback using IINA's published ZIP equivalence, validates ZIP CRC and required manifest/files, and logs the packaging method. **Do not assume IINA GUI will install this fallback until you test it.** Inspect/repair any underlying CLI incompatibility before M5.
+The development-link rollback was actually tested: unlink removed the precise symlink and disabled dev preference; relink restored the correct symlink; no app restart performed. Stable rollback is documented only, not exercised. Refer to `docs/RELEASE.md`.

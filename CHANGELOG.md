@@ -20,3 +20,5 @@
 
 ## Baseline 5751d8f
 - Inherited specification, roadmap, and preserved original Bridge 0.1.0 code.
+
+- Candidate packaging: IINA 1.4.4 pack command failed; ZIP-compatible fallback passed integrity only. Development unlink/relink was tested; plugin remained disabled.

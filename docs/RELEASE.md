@@ -29,3 +29,7 @@ This repo uses a separate dev plugin identity `local.iina.streams.dev` and candi
 - Side bar show/hide, keyboard, VoiceOver, light/dark and no chat connections.
 - Offline channel and invalid quality (no app crash), no timer or auto stop.
 - Repeat after manual restart, check clean rollback.
+
+## Packaging and rollback evidence from 2026-11-07
+The first `iina-plugin pack` attempt on Apollo 1.4.4 failed with `Cannot read plugin package content.` The script now logs that outcome and uses `zip -X -r` as a fallback, matching IINA's documented ZIP-format `.iinaplgz` packaging. The candidate ZIP passed archive integrity and required-file/manifest validation. **Installer compatibility is not established**; do not distribute as tested.
+The actual `./scripts/unlink-dev.sh` test removed the correct dev symlink, then `./scripts/link-dev.sh` restored that exact link. The dev preference remained disabled. This tests **dev-link rollback**, not stable package restore or IINA runtime unload. No IINA process was deliberately restarted.

@@ -38,3 +38,6 @@ cd ~/development/iina-streams
 For development install after resolving the IINA startup-crash issue: `./scripts/link-dev.sh`; manually enable the development plugin and relaunch IINA. To roll back development linkage: `./scripts/unlink-dev.sh`. These operations do not touch stable IINA, existing Bridge or Safari. See [docs/RELEASE.md](docs/RELEASE.md) before GUI testing.
 
 The critical missing evidence is **real extended UI playback and repeated quality switching with no IINA crash**. Static unit tests, a short real IINA file-loaded test, and an mpv headless decoder check do not establish M1/M2 acceptance.
+
+## Latest November 7 runtime update
+The new `fix/closed-loop-m2-validation` branch corrected IINA's real `network-request` and `allowedDomains` permission errors and demonstrated 360p30 Twitch playback initialization and a same-resolution quality reconnect inside IINA. **The user reported that the stream began working.** The user's latest screenshot also shows native top-bar interference with the sidebar; tracked in `docs/BUG-002-OSC-SIDEBAR.md`. Full M2 acceptance still requires the sidebar bridge, visual controls, normal 10 start/stop cycles, isolation, and performance validation. The prior rc1 archive is missing essential permissions and must not be deployed.

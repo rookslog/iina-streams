@@ -43,3 +43,8 @@ Official IINA website now advertises IINA 1.5.1 (November 2026); **do not upgrad
 
 ## Safety record
 No Safari processes were killed or restarted. No system symlinks or Homebrew defaults changed. No persistent services installed. Only dedicated project repo and development link/preferences changed. The dev test trigger was removed; no app restart is needed to preserve the user’s existing windows.
+
+## Additional real IINA evidence, approximately 13:56–14:00 EST
+The runtime exposed two actual missing manifest capabilities: `network-request` for `utils.exec` and `allowedDomains` for direct Twitch HLS URL player creation. The original manifest static tests omitted these; corrected in dev. `hutchmf` then opened in real IINA: 640×360 video, two audio channels, playback time advanced from 0 to >2 seconds, live qualities populated (160p30,360p30,480p30,720p60,1080p60), and a 360p30 quality reconnect through `core.open` resumed playback; QA-labeled test-only `core.stop` triggered `end-file` and no Streamlink orphan. This tests a reconnect to the same 360p resolution, **not an actual resolution increase**. User reported that live playback worked.
+The sidebar's state still showed `sidebarLoaded=true`, `sidebarReady=false` during QA; the browser-to-plugin bridge and visual controls remain unverified. User also reported top native control bar obstructing sidebar; see BUG-002.
+A later IINA termination at 14:00:39 had `NSApplication terminate` in unified logs and **no new crash .ips**; no evidence identifies who initiated the quit. This is not another confirmed crash, and does not prove startup reliability.

@@ -15,3 +15,5 @@ Update this append-only log when actual decisions are made, with evidence and ro
 2026-11-07 D-010 CHOSEN: lazy sidebar and dynamic live Streamlink quality list, no chat processes/timers in M2. Per-window quality switch via core.open requires GUI lifecycle tests.
 2026-11-07 D-011 CRITICAL: user reported unexpected IINA closures. Predecessor test had 14-second core.stop and was corrected. Five real IINA app startup SIGTRAP reports, two predating development link; investigate before repeating launches. Dev plugin disabled; stable promotion deferred.
 2026-11-07 D-012 OPEN: consider isolated IINA 1.5.1 compatibility testing after approval; do not change existing IINA 1.4.4 automatically.
+
+2026-11-07 D-013 M2 UX BLOCKER: user shared screenshot of top on-screen controller not hiding and obstructing Streams sidebar. Read-only IINA pref places floating control bar near top (vertical 0.0003568). Do not silently move global controls. Investigate native OSC layout/auto-hide and sidebar readiness; see BUG-002.

@@ -8,7 +8,9 @@ test -x "$PACK"
 VERSION=$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$ROOT/plugin-dev/Info.json")
 case "$VERSION" in *[!0-9A-Za-z._-]*|'') echo 'Bad version' >&2; exit 2;; esac
 mkdir -p "$ROOT/releases"
-DEST="$ROOT/releases/iina-streams-$VERSION-rc1.iinaplgz"
+REV=${1:-rc2}
+case "$REV" in *[!0-9A-Za-z._-]*|'') echo 'Bad revision' >&2; exit 2;; esac
+DEST="$ROOT/releases/iina-streams-$VERSION-$REV.iinaplgz"
 test ! -e "$DEST" || { echo "Candidate already exists: $DEST" >&2; exit 3; }
 STAGING=$(mktemp -d "$ROOT/releases/.build.XXXXXXXX")
 trap 'rm -rf "$STAGING"' EXIT HUP INT TERM

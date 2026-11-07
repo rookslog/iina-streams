@@ -7,5 +7,6 @@
   "entry": "main.js",
   "globalEntry": "global.js",
   "sidebarTab": {"name": "Streams"},
-  "permissions": ["file-system", "show-alert"]
+  "permissions": ["file-system", "show-alert", "network-request"],
+  "allowedDomains": ["*.ttvnw.net", "twitch.tv", "*.twitch.tv", "youtube.com", "*.youtube.com", "youtu.be"]
 }

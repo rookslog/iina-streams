@@ -17,6 +17,8 @@ x=json.loads((root/'Info.json').read_text())
 assert x['identifier']=='local.iina.streams.dev'
 assert (root/x['entry']).is_file() and (root/x['globalEntry']).is_file()
 assert (root/'ui/streams.html').is_file()
-assert x['permissions']==['file-system','show-alert']
+assert x['permissions']==['file-system','show-alert','network-request']
+assert '*.ttvnw.net' in x['allowedDomains']
+assert '*' not in x['allowedDomains']
 PY
 echo 'All static and mocked-runtime checks passed.'

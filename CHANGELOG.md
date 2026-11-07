@@ -22,3 +22,10 @@
 - Inherited specification, roadmap, and preserved original Bridge 0.1.0 code.
 
 - Candidate packaging: IINA 1.4.4 pack command failed; ZIP-compatible fallback passed integrity only. Development unlink/relink was tested; plugin remained disabled.
+
+## 0.2.0-rc2 (2026-11-07) — development, tested partial runtime
+- Fixed real IINA API permission failures: added `network-request` and scoped Twitch CDN `allowedDomains`. These were missed by earlier mocks.
+- Added opt-in, single-use automated IINA integration QA mode using `qa-request.json`, with recorded nonsecret player state and time-bounded stop affecting QA-labeled player only.
+- Reproduced hutchmf 360p30 IINA playback initialization, format discovery and same-resolution quality reconnect, tested in real IINA.
+- Recorded user feedback and BUG-002 regarding top on-screen controller obscuring Streams sidebar; avoid system-wide layout changes without approval.
+- Kept old rc1 candidate as forensic record; rc2 must not be promoted until real sidebar and release gates pass.

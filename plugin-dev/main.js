@@ -4,8 +4,9 @@ const providers = require("./src/providers.js");
 const formats = require("./src/formats.js");
 const STREAMLINK = "/opt/homebrew/bin/streamlink";
 const label = app.getLabel() || "";
-const isTwitch = label.startsWith("streams:twitch:");
-const channel = isTwitch ? label.slice("streams:twitch:".length) : "";
+const qa = label === "streams:qa:hutchmf";
+const isTwitch = qa || label.startsWith("streams:twitch:");
+const channel = qa ? "hutchmf" : isTwitch ? label.slice("streams:twitch:".length) : "";
 const owned = isTwitch && /^[A-Za-z0-9_]{3,25}$/.test(channel);
 let sidebarLoaded = false, sidebarReady = false, windowLoaded = false;
 let loadingFormats = false, changingQuality = false;
@@ -24,9 +25,23 @@ function ensureSidebar() {
   if (!windowLoaded) return;
   if (!sidebarLoaded) {
     sidebarLoaded = true;
-    sidebar.loadFile("ui/streams.html");
+    try {
+      sidebar.loadFile("ui/streams.html");
+      if (qa) qaSave("sidebar-load-called");
+    } catch (_) {
+      sidebarLoaded = false;
+      lastError = "Sidebar could not be loaded.";
+      if (qa) qaSave("sidebar-load-failed");
+      return;
+    }
   }
-  sidebar.show();
+  try {
+    sidebar.show();
+    if (qa) qaSave("sidebar-show-called");
+  } catch (_) {
+    lastError = "Sidebar could not be shown.";
+    if (qa) qaSave("sidebar-show-failed");
+  }
 }
 function queryFormats() {
   if (!owned || loadingFormats || changingQuality) return Promise.resolve(false);
@@ -88,17 +103,85 @@ if (owned) {
   menu.addItem(menu.item("Show Streams Controls", ensureSidebar));
   sidebar.onMessage("ready", function () {
     sidebarReady = true; sendState();
+    if (qa) qaSave("sidebar-ready");
     if (available.length === 1) queryFormats();
   });
   sidebar.onMessage("refresh-qualities", queryFormats);
   sidebar.onMessage("change-quality", changeQuality);
   sidebar.onMessage("hide", function () { sidebar.hide(); });
-  event.on("iina.window-loaded", function () { windowLoaded = true; });
+  event.on("iina.window-loaded", function () {
+    windowLoaded = true;
+    if (qa) {
+      qaSave("window-loaded");
+      ensureSidebar();
+    }
+  });
   event.on("iina.file-started", function () { state = "Connecting"; sendState(); });
-  event.on("iina.file-loaded", function () { hasMedia = true; state = "Playing"; lastError = ""; sendState(); });
-  event.on("mpv.end-file", function () { hasMedia = false; state = "Stopped"; sendState(); });
+  event.on("iina.file-loaded", function () {
+    hasMedia = true; state = "Playing"; lastError = ""; sendState();
+    if (qa) qaSave("file-loaded");
+  });
+  event.on("mpv.end-file", function () {
+    hasMedia = false; state = "Stopped"; sendState();
+    if (qa) qaSave("end-file");
+  });
   event.on("iina.window-will-close", function () {
     sidebarReady = false; sidebarLoaded = false; windowLoaded = false;
   });
   log.log("Streams Twitch controls available for " + channel);
+}
+
+function qaSave(phase) {
+  if (!qa) return;
+  const safeNumber = function (name) {
+    try {
+      const n = iina.mpv.getNumber(name);
+      return Number.isFinite(n) ? n : null;
+    } catch (_) { return null; }
+  };
+  const sample = {
+    phase: phase,
+    time: new Date().toISOString(),
+    loaded: hasMedia,
+    status: state,
+    sidebarReady: sidebarReady,
+    sidebarLoaded: sidebarLoaded,
+    formats: available,
+    chosenQuality: selected,
+    formatQueryBusy: loadingFormats,
+    reconnectBusy: changingQuality,
+    error: lastError,
+    videoWidth: safeNumber("video-params/w"),
+    videoHeight: safeNumber("video-params/h"),
+    videoFrames: safeNumber("vo-frame-count"),
+    droppedFrames: safeNumber("vo-drop-frame-count"),
+    playbackSeconds: safeNumber("playback-time"),
+    audioChannels: safeNumber("audio-params/channel-count")
+  };
+  try { iina.file.write("@data/qa-" + phase + ".json", JSON.stringify(sample, null, 2)); }
+  catch (_) { log.error("QA snapshot write failed"); }
+}
+
+if (qa) {
+  qaSave("entry");
+  setTimeout(function () {
+    qaSave("sample-5s");
+    if (!loadingFormats && available.length === 1) queryFormats();
+  }, 5000);
+  setTimeout(function () {
+    qaSave("before-quality");
+    if (available.indexOf("360p30") !== -1) {
+      changeQuality("360p30").then(function (ok) {
+        qaSave(ok ? "quality-command-succeeded" : "quality-command-failed");
+      });
+    } else qaSave("quality-not-available");
+  }, 12000);
+  setTimeout(function () { qaSave("sample-20s"); }, 20000);
+  setTimeout(function () {
+    qaSave("before-test-stop");
+    try {
+      core.stop();
+      qaSave("test-stop-invoked");
+    } catch (_) { qaSave("test-stop-failed"); }
+  }, 24000);
 }

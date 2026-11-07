@@ -5,7 +5,8 @@ const { menu, utils, global: app, console: log } = iina;
 let extracting = false;
 // Streamlink extracts and exits; IINA owns native playback and cleanup.
 // Never write signed HLS URLs, credentials, or extraction stdout to logs.
-function openStream(input) {
+function openStream(input, qaMode) {
+  const qa = qaMode === true;
   const chosen = providers.parseInput(input);
   if (chosen.kind === "unsupported" || chosen.kind === "twitch-vod") {
     utils.ask("IINA Streams supports Twitch channels and YouTube URLs. Twitch VODs are not supported in this build.");
@@ -28,24 +29,32 @@ function openStream(input) {
   log.log("Extracting Twitch stream for " + chosen.channel + ".");
   return utils.exec(STREAMLINK, [
     "--no-config", "--loglevel", "error", "--stream-url",
-    chosen.url, providers.selectedQuality("auto720")
+    chosen.url, providers.selectedQuality(qa ? "test-360" : "auto720")
   ]).then(function (res) {
     extracting = false;
+    if (qa) iina.file.write("@data/qa-global.json", JSON.stringify({phase:"extract-returned",status:res.status}));
     const extracted = (res.stdout || "").trim();
     if (res.status !== 0 || !providers.validExtractedUrl(extracted)) {
-      utils.ask("The Twitch channel could not be opened. It may be offline, unavailable, or temporarily rate limited.");
+      if (qa) iina.file.write("@data/qa-global.json", JSON.stringify({phase:"extract-failed",status:res.status}));
+      else utils.ask("The Twitch channel could not be opened. It may be offline, unavailable, or temporarily rate limited.");
       return false;
     }
     // Unrelated plugins are disabled only for this newly created Twitch player.
     const playerID = app.createPlayerInstance({
-      url: extracted, enablePlugins: false, label: "streams:twitch:" + chosen.channel
+      url: extracted, enablePlugins: false, label: qa ? "streams:qa:" + chosen.channel : "streams:twitch:" + chosen.channel
     });
     log.log("Twitch player created (ID " + playerID + ").");
+    if (qa) iina.file.write("@data/qa-global.json", JSON.stringify({phase:"player-created",playerID:playerID,channel:chosen.channel}));
     return true;
-  }).catch(function () {
+  }).catch(function (error) {
     extracting = false;
     log.error("Twitch extraction failed (details redacted).");
-    utils.ask("Could not open Twitch. Check that Streamlink is installed and the channel is live.");
+    if (qa) {
+      const text = String(error || "unknown").replace(/https?:\/\/[^\s]+/g, "[redacted-url]").slice(0, 180);
+      const hostMatch = String(error || "").match(/https?:\/\/([^\/\s?]+)/i);
+      iina.file.write("@data/qa-global.json", JSON.stringify({phase:"exception",message:text,hostname:hostMatch ? hostMatch[1] : null}));
+    }
+    else utils.ask("Could not open Twitch. Check that Streamlink is installed and the channel is live.");
     return false;
   });
 }
@@ -54,3 +63,17 @@ menu.addItem(menu.item("Open Stream…", function () {
   if (typeof entered === "string" && entered.trim()) openStream(entered);
 }));
 log.log("IINA Streams development launcher loaded.");
+// Single-use opt-in QA request for automated integration validation. This code
+// runs only when a specific file exists in the development plugin data folder.
+try {
+  const qaFile = "@data/qa-request.json";
+  if (iina.file.exists(qaFile)) {
+    const request = JSON.parse(iina.file.read(qaFile));
+    iina.file.delete(qaFile);
+    if (request.approved === "hutchmf-360p-bounded" &&
+        request.url === "https://www.twitch.tv/hutchmf") {
+      iina.file.write("@data/qa-global.json", JSON.stringify({phase:"request-accepted"}));
+      openStream(request.url, true);
+    }
+  }
+} catch (_) { log.error("Development QA request error (details redacted)"); }

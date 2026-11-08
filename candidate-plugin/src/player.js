@@ -54,7 +54,7 @@ function start(host,config,services){
   });
   sidebar.onMessage('authorize-open',()=>{if(auth.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);});
   sidebar.onMessage('forget-auth',()=>{chatOff();app.postMessage('auth-forget',{});});
-  sidebar.onMessage('live-state',data=>{if(chat.mode!=='live'||closed)return;chat.state=String(data&&data.state||'connecting');chat.error=String(data&&data.message||'').slice(0,160);send();});
+  sidebar.onMessage('live-state',data=>{if(chat.mode!=='live'||closed)return;chat.state=String(data&&data.state||'connecting');chat.error=String(data&&data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
   sidebar.onMessage('live-messages',data=>{if(chat.mode!=='live'||closed||!Array.isArray(data))return;messages=data.slice(-150).map(safeMessage);chat.count=messages.length;send();});
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
  }
@@ -192,16 +192,23 @@ function start(host,config,services){
   finally{finish();}
  });
  on('iina.window-loaded',()=>{windowLoaded=true;if(controlsDesired)showSidebar();trace('window-loaded');});
- on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired)showSidebar();tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
+ // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
+ on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
  on('mpv.end-file',()=>{player.ended();trace('end-file');});
  on('mpv.seek',()=>tick(true));on('mpv.pause.changed',()=>{tick(true);send();});
  on('iina.window-fs.changed',()=>{send();trace('fullscreen',{fullscreen:core.window.fullscreen});});
  on('iina.window-will-close',()=>{if(closed)return;cancelAuthBinding();chatOff();if(services.cancelHelpers)services.cancelHelpers();if(replayPath&&services.deleteDataPath)services.deleteDataPath(replayPath);replay=null;replayPath='';app.postMessage('player-closed',{});closed=true;generation++;player.close();timers.clearAll();restoreTimer=null;restoration=null;for(const [name,id] of listeners)try{event.off(name,id);}catch(_){};trace('window-closed');});
+ function authReceiver(accept,handler){return wire=>{
+  if(closed||!sourceActive||typeof wire!=='string'||wire.length>8192)return;
+  let data;try{data=JSON.parse(wire);}catch(_){return;}
+  if(!data||typeof data!=='object'||Array.isArray(data)||!accept(data))return;
+  handler(data);
+ };}
  const authCallbacks={
-  'auth-state':data=>{trace('auth-state-received',{authPhase:data&&data.phase,chatMode:chat.mode});if(chat.mode!=='live'||closed||!sourceActive)return;auth=data;chat.state=data.phase;chat.error=data.message||'';send();},
-  'auth-ready':data=>{if(chat.mode!=='live'||closed||!sourceActive||!sidebarReady)return;postSidebar('live-config',{token:data.token,login:data.login,channel:source.id});if(view.presentation==='overlay')ensureOverlay();},
-  'auth-stop':()=>{if(closed||!sourceActive)return;trace('auth-stop-received',{chatMode:chat.mode});if(sidebarReady)postSidebar('live-stop',{});if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}},
-  'auth-forgotten':result=>{if(closed||!sourceActive)return;auth={phase:'off',message:''};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();}
+  'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=data;chat.state=data.phase;chat.error=data.message||'';send();}),
+  'auth-ready':authReceiver(data=>typeof data.token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(data.token)&&typeof data.login==='string'&&/^[a-z0-9_]{3,25}$/.test(data.login),data=>{if(chat.mode!=='live'||!sidebarReady)return;postSidebar('live-config',{token:data.token,login:data.login,channel:source.id});if(view.presentation==='overlay')ensureOverlay();}),
+  'auth-stop':authReceiver(()=>true,()=>{trace('auth-stop-received',{chatMode:chat.mode});if(sidebarReady)postSidebar('live-stop',{});if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}}),
+  'auth-forgotten':authReceiver(data=>typeof data.removed==='boolean'&&typeof data.revoked==='boolean'&&data.stale!==true,result=>{auth={phase:'off',message:''};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();})
  };
  // IINA creates the child while the parent's createPlayerInstance call is on
  // stack. Bind from a later child turn and retain callbacks in the controller.

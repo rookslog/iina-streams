@@ -12,7 +12,7 @@ const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringi
 
 function harness(overrides = {}) {
   const config = {identifier: 'local.iina.streams.candidate.unified', variant: 'unified', ...overrides};
-  const handlers = new Map(), items = [], opens = [], messages = [], httpCalls = [], timers = [];
+  const handlers = new Map(), items = [], opens = [], messages = [], wires = [], httpCalls = [], timers = [];
   const files = new Map(), fileReads = [], fileWrites = [], keychainReads = [], keychainWrites = [], prompts = [], alerts = [];
   let input = null, nextID = 0, auth, authOptions, nativeResult, response = {statusCode: 200, data: {ok: true}}, transportError = false;
   class CapturedAuth extends TwitchAuth {
@@ -36,7 +36,7 @@ function harness(overrides = {}) {
         return nativeResult === undefined ? ++nextID : nativeResult;
       },
       onMessage(name, callback) { handlers.set(name, callback); },
-      postMessage(target, name, data) { messages.push({target, name, data: plain(data)}); }
+      postMessage(target, name, data) { wires.push({target, name, data: plain(data)}); messages.push({target, name, data: typeof data === 'string' ? JSON.parse(data) : plain(data)}); }
     },
     menu: {item: (title, callback) => ({title, callback}), addItem(item) { items.push(item); }},
     utils,
@@ -61,13 +61,14 @@ function harness(overrides = {}) {
   });
   vm.runInContext(script, context, {filename: scriptPath, timeout: 1000});
   return {
-    config, handlers, items, opens, messages, httpCalls, timers, files, fileReads, fileWrites,
+    config, handlers, items, opens, messages, wires, httpCalls, timers, files, fileReads, fileWrites,
     keychainReads, keychainWrites, prompts, alerts, auth, authOptions,
     open(value) { input = value; items[0].callback(); return opens.at(-1); },
     setResponse(value) { response = value; },
     failTransport() { transportError = true; },
     setNativeResult(value) { nativeResult = value; },
-    label(id = 1) { return id + '-' + config.identifier; }
+    label(id = 1) { return id + '-' + config.identifier; },
+    flushMessages() { for (const timer of timers.slice()) if (timer.delay === 0 && !timer.cancelled) timer.fn(); }
   };
 }
 
@@ -115,14 +116,19 @@ test('cancelled or invalid source prompts never create a managed player', () => 
 test('native internal string labels route authorization only to numeric opted-in children', async () => {
   const r = harness(); r.open('firstchannel'); r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(2));
+  assert.equal(r.messages.length, 0, 'native delivery must not occur while the child call is on the stack');
+  r.flushMessages();
   assert.ok(r.messages.length > 0);
   assert.ok(r.messages.every(event => typeof event.target === 'number' && event.target === 2));
   assert.ok(r.messages.some(event => event.name === 'auth-state' && event.data.phase === 'needs-client'));
   r.authOptions.onReady({token: 'offline-test-token', login: 'reader', clientID: 'a'.repeat(30)});
+  r.flushMessages();
   assert.deepEqual(r.messages.at(-1), {target: 2, name: 'auth-ready', data: {token: 'offline-test-token', login: 'reader', clientID: 'a'.repeat(30)}});
   r.messages.length = 0;
   await r.handlers.get('auth-connect')({}, r.label(1));
+  r.flushMessages();
   assert.deepEqual(r.messages.map(event => [event.target, event.name]), [[1, 'auth-state'], [1, 'auth-ready']]);
+  assert.ok(r.wires.every(event => typeof event.data === 'string' && event.data.length <= 8192));
   assert.equal(r.httpCalls.length, 0);
 });
 
@@ -135,6 +141,7 @@ test('unrelated, malformed, numeric and uncreated labels are rejected before tou
   }
   for (const events of [r.messages, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites, r.timers]) assert.equal(events.length, 0);
   await r.handlers.get('auth-connect')({}, r.label());
+  r.flushMessages();
   assert.ok(r.messages.some(event => event.target === 1 && event.name === 'auth-state'));
 });
 
@@ -142,16 +149,17 @@ test('disconnect and close affect the addressed player without stopping another 
   const r = harness(); r.open('firstchannel'); r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(1));
   await r.handlers.get('auth-connect')({}, r.label(2));
+  r.flushMessages();
   r.handlers.get('auth-disconnect')({}, '1-unrelated');
-  r.messages.length = 0; r.authOptions.onState({phase: 'ready'});
+  r.messages.length = 0; r.authOptions.onState({phase: 'ready'}); r.flushMessages();
   assert.deepEqual(r.messages.map(event => event.target).sort(), [1, 2]);
   r.handlers.get('player-closed')({}, r.label(1));
-  r.messages.length = 0; r.authOptions.onState({phase: 'ready'});
+  r.messages.length = 0; r.authOptions.onState({phase: 'ready'}); r.flushMessages();
   assert.deepEqual(r.messages.map(event => event.target), [2]);
   r.messages.length = 0; await r.handlers.get('auth-connect')({}, r.label(1));
   assert.equal(r.messages.length, 0, 'closed player is no longer a managed authentication target');
   r.handlers.get('auth-disconnect')({}, r.label(2));
-  r.messages.length = 0; r.authOptions.onReady({token: 'offline-test-token', login: 'reader'});
+  r.messages.length = 0; r.authOptions.onReady({token: 'offline-test-token', login: 'reader'}); r.flushMessages();
   assert.equal(r.messages.length, 0);
 });
 
@@ -178,10 +186,11 @@ test('real authorization orchestration requests only chat:read in a POST form af
   await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
   assert.equal(r.httpCalls.length, 1);
   assert.deepEqual(r.httpCalls[0], {method: 'POST', url: 'https://id.twitch.tv/oauth2/device', options: {headers: {}, data: {client_id: 'a'.repeat(30), scopes: 'chat:read'}}});
-  assert.equal(r.keychainReads.length, 1); assert.equal(r.timers.length, 1);
+  assert.equal(r.keychainReads.length, 1); assert.equal(r.timers.filter(timer => timer.delay > 0).length, 1);
   assert.equal(r.auth.snapshot().phase, 'waiting');
   assert.equal(JSON.stringify(r.messages).includes('offline-device-code'), false);
-  r.handlers.get('auth-disconnect')({}, r.label()); assert.equal(r.timers[0].cancelled, true);
+  r.handlers.get('auth-disconnect')({}, r.label()); assert.equal(r.timers.find(timer => timer.delay > 0).cancelled, true);
+  r.flushMessages(); assert.ok(r.messages.every(event => event.name === 'auth-stop'), 'only a stop may reach an opted-out managed child');
 });
 
 test('a failed native player creation never authorizes a fabricated numeric target', async () => {
@@ -196,4 +205,74 @@ test('an unrelated sender cannot forget the candidate shared authorization', asy
   assert.equal(r.keychainWrites.length, 0); assert.equal(r.httpCalls.length, 0);
   await r.handlers.get('auth-forget')({}, r.label());
   assert.equal(r.keychainWrites.length, 1); assert.equal(r.keychainWrites[0].value, '');
+});
+
+test('deferred credentials are discarded if the child opts out or closes before delivery', async () => {
+  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  await r.handlers.get('auth-connect')({}, r.label(1));
+  await r.handlers.get('auth-connect')({}, r.label(2));
+  r.flushMessages(); r.messages.length = 0;
+  r.authOptions.onReady({token: 'offline-current-token', login: 'reader'});
+  assert.equal(r.messages.length, 0);
+  r.handlers.get('auth-disconnect')({}, r.label(1));
+  r.handlers.get('player-closed')({}, r.label(2));
+  r.flushMessages();
+  assert.deepEqual(r.messages, []);
+  assert.ok(r.timers.filter(timer => timer.delay === 0).every(timer => timer.cancelled));
+});
+
+test('a queued old token is never delivered after the broker replaces credentials', async () => {
+  const r = harness(); r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
+  r.authOptions.onReady({token: 'offline-obsolete-token', login: 'reader'});
+  r.authOptions.onReady({token: 'offline-current-token', login: 'reader'});
+  assert.equal(r.messages.length, 0); r.flushMessages();
+  assert.deepEqual(r.messages, [{target: 1, name: 'auth-ready', data: {token: 'offline-current-token', login: 'reader'}}]);
+});
+
+test('stop and forgotten reach managed children after Forget clears the opted-in audience', async () => {
+  const r = harness(); r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
+  await r.handlers.get('auth-forget')({}, r.label());
+  assert.equal(r.messages.length, 0); r.flushMessages();
+  assert.deepEqual(r.messages.map(event => event.name), ['auth-stop', 'auth-forgotten']);
+  assert.deepEqual(r.messages.at(-1).data, {removed: true, revoked: true, stale: false});
+  r.messages.length = 0;
+  await r.handlers.get('auth-forget')({}, r.label());
+  r.handlers.get('player-closed')({}, r.label()); r.flushMessages();
+  assert.deepEqual(r.messages, []);
+});
+
+test('oversized or unserializable auth payloads never enter native delivery', async () => {
+  const r = harness(); r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
+  const cycle = {phase: 'error'}; cycle.self = cycle;
+  assert.doesNotThrow(() => r.authOptions.onState(cycle));
+  r.authOptions.onState({phase: 'error', message: 'x'.repeat(8193)});
+  r.flushMessages(); assert.deepEqual(r.messages, []);
+});
+
+test('a queued Forget result and stop cannot interrupt a newer authorization generation', async () => {
+  const r = harness(); r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
+  await r.handlers.get('auth-forget')({}, r.label());
+  await r.handlers.get('auth-connect')({}, r.label());
+  r.flushMessages();
+  assert.equal(r.messages.some(event => event.name === 'auth-forgotten'), false);
+  assert.equal(r.messages.filter(event => event.name === 'auth-stop').length, 1, 'only the new connect generation can stop its own previous session');
+  assert.deepEqual(r.messages.filter(event => event.name === 'auth-state').map(event => event.data.phase), ['off', 'needs-client']);
+});
+
+test('A reconnecting after shared Forget still stops B without stopping A newer session', async () => {
+  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  await r.handlers.get('auth-connect')({}, r.label(1));
+  await r.handlers.get('auth-connect')({}, r.label(2));
+  r.flushMessages(); r.messages.length = 0;
+  await r.handlers.get('auth-forget')({}, r.label(1));
+  await r.handlers.get('auth-connect')({}, r.label(1));
+  r.flushMessages();
+  assert.deepEqual(r.messages.filter(event => event.target === 2).map(event => event.name), ['auth-stop'], 'B must still stop its old live session after audience clearing');
+  assert.equal(r.messages.some(event => event.target === 1 && event.name === 'auth-forgotten'), false);
+  assert.equal(r.messages.filter(event => event.target === 1 && event.name === 'auth-stop').length, 1);
+  assert.equal(r.messages.filter(event => event.target === 1 && event.name === 'auth-state').at(-1).data.phase, 'needs-client');
 });

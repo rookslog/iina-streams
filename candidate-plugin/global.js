@@ -5,12 +5,27 @@ const {TwitchAuth}=require('./src/auth.js');
 const {create:createTimers}=require('./src/timers.js');
 const {global:app,menu,utils,file,http}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
-const audience=new Set(),managed=new Set();let credentials=null;
+const audience=new Set(),managed=new Set(),sessions=new Map();let credentials=null;
 const qaEvents=[];
 function qaTrace(phase,data){if(!config.qa)return;qaEvents.push(Object.assign({phase,time:new Date().toISOString()},data||{}));if(qaEvents.length>60)qaEvents.shift();file.write('@data/qa-global.json',JSON.stringify(qaEvents));}
 function targetID(label){if(typeof label!=='string')return null;const match=/^([1-9][0-9]*)-/.exec(label);if(!match)return null;const id=Number(match[1]);return managed.has(id)&&label===id+'-'+config.identifier?id:null;}
-function createPlayer(options){const id=app.createPlayerInstance(options);if(typeof id==='number')managed.add(id);qaTrace('created',{id,type:typeof id});return id;}
-function sendAll(name,data){if(name==='auth-state')qaTrace('auth-state',{state:data.phase,targets:Array.from(audience)});for(const id of audience)app.postMessage(id,name,data);}
+function createPlayer(options){const id=app.createPlayerInstance(options);if(typeof id==='number'){managed.add(id);sessions.set(id,0);}qaTrace('created',{id,type:typeof id});return id;}
+function nextSession(id){sessions.set(id,(sessions.get(id)||0)+1);}
+function postChild(id,name,data){
+ if(!managed.has(id))return;
+ let wire;try{wire=JSON.stringify(data);}catch(_){return;}
+ if(typeof wire!=='string'||wire.length>8192)return;
+ const token=name==='auth-ready'&&data.token,session=sessions.get(id);
+ // Match the successful native probe: use a primitive payload after the
+ // originating child call has returned. Never enqueue native objects.
+ timers.setTimeout(()=>{
+  if(!managed.has(id)||session!==sessions.get(id))return;
+  if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
+  if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
+  app.postMessage(id,name,wire);
+ },0);
+}
+function sendAll(name,data){if(name==='auth-state')qaTrace('auth-state',{state:data.phase,targets:Array.from(audience)});for(const id of audience)postChild(id,name,data);}
 async function request(path,method,form,headers){
  try{
   const options={headers:headers||{}};
@@ -30,17 +45,17 @@ function openStream(input){
 menu.addItem(menu.item('Open Stream — '+(config.variant==='focus'?'Focus':'Unified')+'…',()=>openStream()));
 app.onMessage('open',()=>openStream());
 app.onMessage('auth-connect',async(data,label)=>{
- const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});if(id===null)return;audience.add(id);
- if(credentials){app.postMessage(id,'auth-state',auth.snapshot());app.postMessage(id,'auth-ready',credentials);return;}
- if(['waiting','authorizing'].includes(auth.snapshot().phase)){app.postMessage(id,'auth-state',auth.snapshot());return;}
+ const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});if(id===null)return;nextSession(id);audience.add(id);
+ if(credentials){postChild(id,'auth-state',auth.snapshot());postChild(id,'auth-ready',credentials);return;}
+ if(['waiting','authorizing'].includes(auth.snapshot().phase)){postChild(id,'auth-state',auth.snapshot());return;}
  let clientID=String(data&&data.clientID||'');
  try{if(!clientID&&file.exists('@data/twitch-client.json'))clientID=JSON.parse(file.read('@data/twitch-client.json')).clientID||'';}catch(_){}
  if(/^[A-Za-z0-9]{10,64}$/.test(clientID))file.write('@data/twitch-client.json',JSON.stringify({clientID}));
  await auth.connect(clientID);
 });
-app.onMessage('auth-disconnect',(_,label)=>{const id=targetID(label);if(id===null)return;audience.delete(id);if(!audience.size)auth.stop();});
-app.onMessage('player-closed',(_,label)=>{const id=targetID(label);if(id===null)return;audience.delete(id);managed.delete(id);if(!audience.size)auth.stop();});
-app.onMessage('auth-forget',async(_,label)=>{const id=targetID(label);if(id===null)return;const pending=auth.forget();audience.clear();const result=await pending;if(result&&!result.stale&&managed.has(id))app.postMessage(id,'auth-forgotten',result);});
+app.onMessage('auth-disconnect',(_,label)=>{const id=targetID(label);if(id===null)return;nextSession(id);audience.delete(id);if(!audience.size)auth.stop();});
+app.onMessage('player-closed',(_,label)=>{const id=targetID(label);if(id===null)return;audience.delete(id);managed.delete(id);sessions.delete(id);if(!audience.size)auth.stop();});
+app.onMessage('auth-forget',async(_,label)=>{const id=targetID(label);if(id===null)return;nextSession(id);const pending=auth.forget();audience.clear();const result=await pending;if(result&&!result.stale&&managed.has(id))postChild(id,'auth-forgotten',result);});
 if(config.qa){
  app.onMessage('qa-ping',(_,label)=>{const id=targetID(label);qaTrace('ping',{id,sender:label});setTimeout(()=>{if(id!==null)app.postMessage(id,'qa-pong','number-string-deferred');},0);});
  app.onMessage('qa-open',data=>openStream(data&&data.url));

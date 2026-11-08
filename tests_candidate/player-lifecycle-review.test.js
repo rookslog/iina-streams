@@ -16,7 +16,7 @@ function fixture({retainFiredTimers = false} = {}) {
   const hooks = new Map(), calls = [], helperCalls = [], deletes = [];
   const source = Sources.parse('https://www.twitch.tv/videos/123456');
   const native = {path: source.url, position: 83.25, paused: true, speed: 1.5,
-    frame: {x: 11, y: 22, width: 1000, height: 620}, fullscreen: false};
+    frame: {x: 11, y: 22, width: 1000, height: 620}, fullscreen: false, visibleSidebar: null};
   const formats = [{id: '720p60', label: '720p60'}, {id: '360p30', label: '360p'}];
   const result = quality => ({ok: true, quality: quality === 'auto720' ? '720p60' : quality,
     title: 'Synthetic recording', live: false, duration: 100, formats,
@@ -57,7 +57,7 @@ function fixture({retainFiredTimers = false} = {}) {
       command(name, args) { calls.push(['command', name, plain(args)]); if (name === 'loadfile') native.path = args[0]; }
     },
     core: {window},
-    sidebar: {loadFile() {}, onMessage(name, fn) { messages.set(name, fn); }, postMessage() {}, show() { calls.push(['sidebar', 'show']); }, hide() {}},
+    sidebar: {loadFile() {}, onMessage(name, fn) { messages.set(name, fn); }, postMessage() {}, show() { native.visibleSidebar = 'streams'; calls.push(['sidebar', 'show']); }, hide() { native.visibleSidebar = null; }},
     overlay: {loadFile() {}, onMessage() {}, postMessage() {}, show() {}, hide() {}, setClickable() {}, setOpacity() {}},
     event: {
       on(name, fn) { if (!events.has(name)) events.set(name, new Map()); const id = ++listenerID; events.get(name).set(id, fn); return id; },
@@ -126,6 +126,29 @@ test('quality remains busy and uncommitted until the native restoration callback
   assert.ok(r.calls.some(call => call[0] === 'window' && call[1] === 'frame'));
   r.emit('iina.window-will-close');
 });
+
+for (const nativeChoice of [null, 'video-settings']) {
+  test('quality replacement preserves native sidebar choice ' + String(nativeChoice), async () => {
+    const r = fixture(); await r.initial();
+    assert.equal(r.native.visibleSidebar, 'streams', 'initial source still opens its controls');
+    // Simulate IINA's own collapse/tab control, which sends no Streams Hide message.
+    r.native.visibleSidebar = nativeChoice;
+    await r.controller.changeQuality('360p30'); await r.load();
+    r.emit('iina.file-loaded', r.native.path); r.emit('iina.window-size-adjusted'); r.advance(600);
+    assert.equal(r.controller.snapshot().quality, '360p30');
+    assert.equal(r.native.visibleSidebar, nativeChoice, 'a reload must not reopen or replace the user-selected native sidebar');
+    assert.equal(r.calls.filter(call => call[0] === 'sidebar' && call[1] === 'show').length, 0);
+
+    r.controller.showSidebar();
+    assert.equal(r.native.visibleSidebar, 'streams', 'explicit Show must still reopen controls after a native collapse');
+    r.calls.length = 0;
+    await r.controller.changeQuality('720p60'); await r.load();
+    r.emit('iina.file-loaded', r.native.path); r.emit('iina.window-size-adjusted'); r.advance(600);
+    assert.equal(r.native.visibleSidebar, 'streams');
+    assert.equal(r.calls.filter(call => call[0] === 'sidebar' && call[1] === 'show').length, 0, 'visible controls need no redundant native show');
+    r.emit('iina.window-will-close');
+  });
+}
 
 test('two native size events keep restoration pending until the last event has been quiet', async () => {
   const r = fixture(); await r.initial();

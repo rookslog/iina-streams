@@ -12,7 +12,7 @@ function setup(){
  global.clearTimeout=id=>{cleared.push(id);scheduled.delete(id);};
  const source=Sources.parse(path);
  const host={global:{getLabel:()=>Sources.label(source,'focus'),onMessage:(name,fn)=>callbacks[name]=fn,
-   postMessage:(name,data)=>{posts.push([name,data]);if(name==='auth-connect'){callbacks['auth-state']({phase:'off'});callbacks['auth-state']({phase:'needs-client',message:'Synthetic client required'});}}},
+   postMessage:(name,data)=>{posts.push([name,data]);if(name==='auth-connect')global.setTimeout(()=>{callbacks['auth-state'](JSON.stringify({phase:'off'}));callbacks['auth-state'](JSON.stringify({phase:'needs-client',message:'Synthetic client required'}));},0);}},
   mpv:{addHook:(name,p,fn)=>events[name]=fn,getString:()=>path,getNumber:()=>0,getFlag:()=>false},
   core:{window:{loaded:true}},sidebar:{loadFile(){},onMessage:(name,fn)=>sidebar[name]=fn,postMessage:(...args)=>posts.push(['sidebar',...args]),show(){},hide(){}},
   overlay:{loadFile(){},onMessage(){},postMessage(){},show(){},hide(){},setClickable(){},setOpacity(){}},
@@ -37,9 +37,10 @@ test('child auth listeners bind once on a deferred turn with explicit retained r
  }finally{f.restore();}
 });
 
-test('after binding, immediate object auth replies update the child controller',()=>{
+test('after binding, a deferred JSON primitive reply updates the child controller',()=>{
  const f=setup();try{
   f.flush();f.sidebar.connect({clientID:''});
+  assert.equal(f.controller.snapshot().chat.state,'authorizing');f.flush();
   assert.equal(f.controller.snapshot().auth.phase,'needs-client');
   assert.equal(f.controller.snapshot().chat.state,'needs-client');
   assert.equal(f.controller.snapshot().chat.error,'Synthetic client required');
@@ -47,13 +48,14 @@ test('after binding, immediate object auth replies update the child controller',
  }finally{f.restore();}
 });
 
-test('explicit Connect before setup waits for listeners and receives the immediate reply',()=>{
+test('explicit Connect before setup waits for listeners and receives a later primitive reply',()=>{
  const f=setup();try{
   f.sidebar.connect({clientID:''});
   assert.equal(f.posts.filter(([name])=>name==='auth-connect').length,0);
   assert.equal(f.controller.snapshot().chat.mode,'live');
   f.flush();
   assert.equal(f.posts.filter(([name])=>name==='auth-connect').length,1);
+  assert.equal(f.controller.snapshot().chat.state,'authorizing');f.flush();
   assert.equal(f.controller.snapshot().auth.phase,'needs-client');
  }finally{f.restore();}
 });
@@ -89,11 +91,62 @@ test('source deactivation cancels setup and cannot deliver queued authentication
 test('retained callbacks cannot revive a closed child or post late credentials',()=>{
  const f=setup();try{
   f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.events['iina.window-will-close']();const count=f.posts.length;
-  f.callbacks['auth-state']({phase:'ready'});
-  f.callbacks['auth-ready']({token:'synthetic-only',login:'synthetic'});
-  f.callbacks['auth-stop']({});
-  f.callbacks['auth-forgotten']({removed:true,revoked:true});
+  f.callbacks['auth-state'](JSON.stringify({phase:'ready'}));
+  f.callbacks['auth-ready'](JSON.stringify({token:'synthetic-only-token',login:'synthetic'}));
+  f.callbacks['auth-stop']('{}');
+  f.callbacks['auth-forgotten'](JSON.stringify({removed:true,revoked:true}));
   assert.equal(f.posts.length,count);
   assert.equal(f.controller.snapshot().chat.mode,'off');
+ }finally{f.restore();}
+});
+
+test('malformed, non-object, oversized and wrong-shaped auth wire is ignored without echoing it',()=>{
+ const f=setup();try{
+  f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
+  const before=f.controller.snapshot(),count=f.posts.length;
+  for(const wire of [undefined,null,{phase:'ready'},'broken','null','[]','42','"text"','{}','{"phase":12}',JSON.stringify({phase:'error',message:'x'.repeat(8192)})]){
+   assert.doesNotThrow(()=>f.callbacks['auth-state'](wire));
+  }
+  for(const wire of ['null','[]','{}','{"token":17,"login":"reader"}',JSON.stringify({token:'x'.repeat(8193),login:'reader'})])assert.doesNotThrow(()=>f.callbacks['auth-ready'](wire));
+  for(const wire of ['null','[]','{}','{"removed":"yes","revoked":true}'])assert.doesNotThrow(()=>f.callbacks['auth-forgotten'](wire));
+  assert.equal(f.posts.length,count);assert.deepEqual(f.controller.snapshot(),before);
+ }finally{f.restore();}
+});
+
+test('valid credential strings reach only a live ready sidebar, and Off fences late delivery',()=>{
+ const f=setup();try{
+  f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
+  const wire=JSON.stringify({token:'synthetic-only-token',login:'synthetic'});
+  f.callbacks['auth-ready'](wire);
+  const delivered=f.posts.filter(([kind,name])=>kind==='sidebar'&&name==='live-config');
+  assert.equal(delivered.length,1);
+  assert.ok(JSON.stringify(delivered[0]).includes('synthetic-only-token'));
+  f.controller.chatOff();const count=f.posts.length;
+  f.callbacks['auth-ready'](wire);f.callbacks['auth-state'](JSON.stringify({phase:'ready'}));
+  assert.equal(f.posts.length,count);assert.equal(f.controller.snapshot().chat.mode,'off');
+ }finally{f.restore();}
+});
+
+test('session-only storage warning survives live progress, yields to transport errors, and clears at Off',()=>{
+ const f=setup();try{
+  f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
+  const warning='Connected for this session; Keychain storage failed.';
+  f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:warning}));
+  for(const phase of ['connecting','authenticating','joining','connected']){
+   f.sidebar['live-state']({state:phase,message:''});
+   assert.equal(f.controller.snapshot().chat.error,warning,'ordinary '+phase+' progress must retain the storage limitation');
+  }
+  const sent=f.posts.filter(([kind,name])=>kind==='sidebar'&&name==='state').at(-1);
+  assert.equal(JSON.parse(decodeURIComponent(sent[2].encoded)).chat.error,warning);
+  f.sidebar['live-state']({state:'error',message:'Authorization was rejected. Reconnect to chat.'});
+  assert.equal(f.controller.snapshot().chat.error,'Authorization was rejected. Reconnect to chat.');
+  f.sidebar['live-state']({state:'connected',message:''});
+  assert.equal(f.controller.snapshot().chat.error,warning,'recovery must restore the still-relevant storage warning');
+  f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:''}));
+  f.sidebar['live-state']({state:'connected',message:''});
+  assert.equal(f.controller.snapshot().chat.error,'','a later successful storage state must clear the old warning');
+  f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:warning}));
+  f.controller.chatOff();f.sidebar['live-state']({state:'connected',message:''});
+  assert.equal(f.controller.snapshot().chat.mode,'off');assert.equal(f.controller.snapshot().chat.error,'');
  }finally{f.restore();}
 });

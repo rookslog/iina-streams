@@ -85,3 +85,51 @@ node --test tests_candidate/player-auth-binding.test.js tests_candidate/player-c
 The source review supports the lifecycle approach. The successful native evidence at this cutoff is still the **QA pong probe**. Native immediate object authorization-state delivery, stability after the final timer integration, and any real OAuth/IRC grant remain pending. No live authorization, credential exchange, or authenticated chat receipt is inferred from this change.
 
 Relevant primary sources: [IINA Global API implementation](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPIGlobal.swift), [message hub and managed references](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptMessageHub.swift), [native timer implementation](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPolyfill.swift), and [Apple managed-reference ownership requirements](https://developer.apple.com/documentation/javascriptcore/jsvirtualmachine/addmanagedreference(_:withowner:)).
+
+### Subsequent authorization transport correction
+
+Root's next native test showed that deferred, retained child binding **alone did not fix immediate object authorization replies**: the broker emitted `needs-client`, while the child stayed Off. The preceding binding-only description is therefore historical, not a successful native authorization gate.
+
+The production broker now follows the successful narrow probe: it serializes each authorization payload to a JSON primitive string of at most 8,192 characters and dispatches it on a 0 ms timer through the owned timer wrapper. Every delivery checks that the numeric child remains managed and that its own session revision is unchanged. Connect, Off, and Forget advance that target's revision; close removes it. State and credential messages additionally require that child to remain opted in, and credential delivery requires the queued token to equal the current broker token. Stop and Forget receipts remain deliverable after deliberate audience clearing.
+
+A shared-authentication regression was reproduced during review: a single broker-generation guard could discard the stop required by child B when child A forgot authorization and immediately reconnected. The final per-child revision guard preserves B's stop and rejects A's obsolete stop/Forget receipt. This case was RED with the broker guard and GREEN with per-child revisions. Closed targets and opted-out credential recipients are also covered.
+
+Child callbacks retain the deferred binding and explicit function table. They accept only bounded JSON strings that decode to the expected object shapes, reject malformed/oversized input without echoing it into logs, and preserve the closed/source-inactive/Off guards. The global broker never places a credential in the diagnostic trace. No additional polling, token files, network requests, or authorization grants were introduced by this correction.
+
+The initial transport regression run had **9 failures** before production changes. The corrected transport passed **114 tests** under `node --test tests_candidate/*.test.js`. After the two subsequent ordering regressions were added and the per-child guard finalized, the final directly executed focused command passed **36/36**:
+
+```text
+node --test tests_candidate/global.test.js tests_candidate/player-auth-binding.test.js tests_candidate/player-chat-race.test.js tests_candidate/timers.test.js
+```
+
+Final transport handoff digests: `candidate-plugin/global.js` = `7ffb99c5e0698be64c1e2b0f1a61b567ddfcfede281031180d6909cda84544e4`; `candidate-plugin/src/player.js` = `aee5f6bf2748a94463cd5204f00aaf4c92c69d3ffd442c24ab160d4c8bddadfa`. The native production transport retest remains pending at this handoff. The successful QA primitive probe does not establish a real OAuth grant or authenticated chat receipt.
+
+## Final package/security review and native gate update
+
+The later native evidence advances the authorization transport gate. This reviewer independently read the current `evidence/native/focus-final-native-auth.json`, SHA-256 `b2e1e8f048892899941d3bf66bfc35fbeb69a924abf6f77d991d68c9f23ca532`. All **five checks pass**: native state delivery, actionable invalid-client error, unaffected video, an editable Client ID after failure, and cleared chat after Off. The initial controller authorization phase is `needs-client`; the rejected-client phase is `error`. This establishes the production transport and those setup/error states through Focus QA. It does not establish a real OAuth grant or authenticated IRC receipt, and final archive installation remains a separate native gate.
+
+The dummy Keychain probe did **not** establish persistence. `evidence/native/keychain-native-probe.json`, SHA-256 `7c941932d3f9b0ab0a37e69d74b14ebec306a9bfaa189832ff3893107760a6f1`, records `wrote:false`, `matched:false`, `cleared:false`, and cleanup exit code `44` (no item reported). No real grant was used. The code has no plaintext credential fallback: a failed Keychain write leaves authorization in memory for that session and supplies an explicit storage-failure message. Root's subsequent player change preserves that message when a live-status update has no error of its own.
+
+### Normal package contents and boundaries
+
+Fresh temporary normal builds were inspected directly. Each contains **25 root-relative entries**, its separate candidate identifier, its distinct **Streams Unified / Streams Focus** sidebar name, and `qa:false`. The four embedded helpers are exactly `media`, `replay`, `acquire`, and `runner`, with source bytes and SHA-256 digests matching the checked source files. There is no QA harness, native evidence, test directory, bytecode cache, or source symlink in these packages. Dormant `config.qa` branches remain in shared source; normal configuration disables their autostart, traces, input hooks, and 400 ms harness polling. Global loading is inert, and unrelated players return before candidate hooks or timers are installed. The one deferred callback-binding timer is limited to a deliberately managed player; live authorization, socket creation, and replay acquisition remain explicit actions.
+
+The authorization code does not copy access or refresh tokens into player snapshots, QA auth traces, settings files, or package manifests. The public Client ID may be saved separately. Validated access credentials pass only to the opted-in child's live client; the deferred broker checks managed identity, per-child revision, current audience, and current token. The sidebar and overlay render title/chat strings through text nodes. Their network policies allow the fixed Twitch WebSocket endpoint and no overlay networking respectively. Helper process arguments contain canonical public source URLs, not OAuth credentials; extractor stderr is not exposed verbatim, and media transport URLs are excluded from the player snapshot. The broader IINA filesystem/program permission is explicitly disclosed in the install guide.
+
+A read-only scan of **56 native JSON evidence files** found no nonempty unredacted values under the inspected credential-field names and no URL values bearing the inspected signed/token query parameters. Only paths/counts and safe boolean observations were returned by that scan; values were not printed. This is a targeted evidence check, not a claim that arbitrary future logs will be secret-free.
+
+### Builder output safety correction
+
+The final review reproduced one concrete issue in a temporary directory: a symlink at an archive filename caused the old builder to overwrite its foreign target. The same direct-write issue applied to the manifest, and a conflict in a later candidate was checked after the first candidate could already be replaced. No remote or source file was used as the reproduction target.
+
+Root authorized a narrow builder correction. All selected candidate folders, archive files, and the manifest are now preflighted before replacement. Existing output files must be regular, owned by the invoking account, bounded, and recognized by archive identity/configuration or the build-manifest schema. Linked/nonregular files, foreign identities, and malformed manifests are refused. Archives and manifests are written to private temporary files, validated, and published with atomic replacement only after the previous output identity is rechecked. A failed archive writer preserves the previous archive bytes; publication never opens a foreign link target for writing. The manifest is published after both packages. This is per-file atomic publication, not a transaction spanning every build output after arbitrary I/O failures; a failed build must not be treated as a release.
+
+Five safety assertions were observed failing before the fix. The final command passes **20/20 tests**, including normal and QA rebuilds, deterministic archives, directory/foreign-file/FIFO/link refusals, prior-output preservation, all-candidate preflight, and the guarded installer tests:
+
+```text
+python3 -B -m unittest tests_candidate.test_build tests_candidate.test_install
+```
+
+The new archive writer was also compared directly with the exact previous writer on identical current source: both Unified and Focus archives were byte-for-byte equal. The builder change therefore preserves the archive format and deterministic bytes. Builder SHA-256: `f93e3219ec054b767d1e1e65781e5b38bc2d4dde62d7bdd9b537042b54a0646b`; focused build test SHA-256: `6803d449e0030df3bad96517421fd6c0f59faedd1d9c370b4a4379c4716f767e`.
+
+The guarded development-link manager remains unchanged and excludes stable, original development, preview, and QA identities. It never extracts archives, enables plugins, changes preferences, or launches/quits IINA. `docs/INSTALL-AND-ROLLBACK.md` correctly distinguishes that utility from native `.iinaplgz` installation: opening an archive invokes permission review and automatic candidate enable; candidate-only native Uninstall removes the installed folder while leaving data/preferences/Keychain state. No remaining concrete package/security blocker was found in this review after the builder fix. Root still owns the final archive hash, actual native installation and rollback observations, and final preservation ledger.

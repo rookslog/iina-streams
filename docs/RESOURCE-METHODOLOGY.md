@@ -1,6 +1,6 @@
 # Resource measurement methodology
 
-This is a collection and interpretation protocol, not a performance result. Record actual conditions and durations alongside each observation; a short native characterization does not establish a general performance advantage.
+This document contains the collection/interpretation protocol and a limited native sampler validation. The completed six-run QA observations are in RESOURCE-RESULTS.md; controlled workload interpretation remains separate from sampler validation. Record actual conditions and durations alongside each observation; a short native characterization does not establish a general performance advantage.
 
 ## Conditions and workload
 
@@ -36,3 +36,46 @@ Report failed or missing measurements, exact durations, and confounders. Short C
 ## Media address scope
 
 The resolver in `candidate-plugin/helpers/media.py` accepts the configured Twitch CDN suffixes and one observed CloudFront distribution, `d2vi6trrdongqn.cloudfront.net`; it does not allow arbitrary CloudFront tenants. Another legitimate Twitch VOD distribution may therefore return `UNSAFE_MEDIA_URL` until independently verified. Keep this compatibility limit in the report rather than widening the allowlist for benchmarking. YouTube transport is restricted to HTTPS on `googlevideo.com` and its subdomains. Store canonical source IDs and sanitized format facts in evidence, never expiring transport URLs.
+
+## Native sampler validation — 2026-11-08
+
+The independent auditor ran the existing sampler read-only on Apollo with IINA PID 75148, label `sampler-validation-75148`, requested duration 8 seconds, and interval 2 seconds. The command succeeded with exit code 0 and no query errors. It ran from `19:12:24.857Z` to `19:12:32.921Z`, reported 8.063 seconds elapsed, collected four samples, and stopped for the requested duration. The observed elapsed time exceeded the requested window by 63 ms; retain the measured duration rather than silently rounding it to the requested window. No application, player, window, preference, or remote file was changed by this validation.
+
+Sampler SHA-256: `9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862`.
+
+Observed environment: IINA 1.5.1 build 183; macOS 27.2 build 26B123; hardware model `Mac16,13`; 17,179,869,184 bytes installed memory; 10 logical and 10 physical CPUs as reported by sysctl. The sampler recorded repository HEAD `ab4a00f0a1324769283275c39f3b7df3376c7a84`; that value is repository metadata, not proof of the exact loaded plugin bytes. The IINA PID retained its start identity `2026-11-08T19:04:20Z` throughout.
+
+| Sample UTC | Elapsed s | IINA ps CPU % | IINA RSS KiB | WindowServer ps CPU % | WindowServer RSS KiB | System memory-free % |
+| --- | --- | --- | --- | --- | --- | --- |
+| 19:12:24.926 | 0.068 | 1.0 | 226496 | 3.3 | 53920 | 40 |
+| 19:12:27.000 | 2.143 | 10.2 | 227984 | 4.1 | 54512 | 38 |
+| 19:12:29.073 | 4.215 | 6.4 | 263456 | 7.0 | 51376 | 36 |
+| 19:12:31.141 | 6.284 | 15.9 | 265312 | 6.9 | 50064 | 34 |
+
+Per-sample collection took 0.039–0.098 seconds. System swap allocation was 6,936,592,384 bytes used in all four samples, with no used-allocation delta. The VM counter deltas between the first and last collected samples were Swapins +28, Swapouts +0, Pageins +12,971, and Pageouts +9. These are shared-system observations; they are not assigned to the candidate. A constant swap-used figure does not mean that no swap-in occurred.
+
+The sampler found no process descendants under this IINA PID and reported 14 WebKit processes as unattributed; their PPID was 1. They were therefore excluded from `scopedTotal`, which in this run equals the IINA main-process values above. Five WebKit processes began one second after IINA (PIDs 75150, 75151, 75153, 75154, and 75156); correlated start times are a useful investigation lead, not conclusive ownership evidence. Use independently observed ownership before supplying `--helper-pid`, and preserve that operator attribution in the report.
+
+This run validates the native command/parser path, process identity checks, timing, and system queries. No workload metadata was supplied, the current player/source/pause/chat state was not independently established by the auditor, and there was no controlled warm-up or matched Safari condition. A concrete overlap was subsequently verified: `evidence/native/focus-final-fullscreen-quality-360.json` records a native fullscreen quality-change test with before/action/after times `19:12:26.752Z`, `19:12:27.155Z`, and `19:12:31.991Z`, inside this sampler interval. That artifact's SHA-256 is `6ebbe6fdbafc19ff0b26efeb2b21c4317b354448d18908b17341cba594521309`.
+
+The figures must not be used as an A/B comparison, steady-state playback cost, evidence of a memory leak or its absence, or a measurement of the native-timer fix's memory effect. The confirmed quality-change overlap and unrelated system activity can affect CPU/RSS/pressure. Network remains unmeasured. The six completed controlled QA captures are analyzed separately in RESOURCE-RESULTS.md.
+
+### WebKit attribution investigation
+
+Unprivileged targeted `launchctl procinfo` queries returned exit status 1 with a root-privilege requirement. No escalation was attempted. At `19:18:27.380318Z`, a read-only PID/parent/start/name inventory observed fresh IINA PID 99898 (start `19:18:22Z`) and WebKit PIDs 99910, 99911, 99956, 99957, and 99960 (starts `19:18:22–23Z`), all with PPID 1. The earlier 75150/75151/75153/75154/75156 cohort was no longer in the inventory. The main task had independently restarted IINA for its next test; the auditor did not do so.
+
+This is lifecycle correlation, not a verified responsible-owner field, and does not distinguish candidate WebKit from other enabled IINA plugins. Keep these helpers unattributed in the primary reported totals. A root-only CPU/RSS table can be useful with that scope stated; it cannot support a claim about total application-plus-WebKit efficiency. No process memory profiling, debugger attachment, UI action, or full argv/environment dump was used to investigate ownership.
+
+`qa/analyze-resources.py --directory /absolute/evidence/resources` can summarize the six saved Unified/Focus Off/sidebar/overlay reports without querying or changing a running application. It reports per-run min/median/max, original SHA-256 hashes, condition-record checksum agreement, native before/after workload fields, query errors, and matching-metadata differences. Its output intentionally makes no total-efficiency claim or automatic ownership inference. Recorded QA polling and any other enabled plugins remain part of the measured host configuration.
+
+## Completed controlled captures
+
+All six Unified/Focus Off/sidebar/overlay reports are now independently read and analyzed in [RESOURCE-RESULTS.md](RESOURCE-RESULTS.md). The machine-readable [resource-summary.json](../evidence/resources/resource-summary.json) preserves per-run values, hashes, condition checks, native before/after fields, and matching-metadata comparisons. Sixty samples were collected in total, with ten samples after a 20-second warm-up for each approximately 20-second run. All six report hashes match the conditions records, and all selected paired workload fields agree.
+
+The reported scope is IINA main process only. Fifteen WebKit processes in the Unified session and sixteen to seventeen in the Focus session remain unattributed. The QA wrapper polls every 400 ms, modes ran in sequential order, shared WindowServer/system paging varied, and the main task reports minor UI/sidebar-continuity source changes between the sessions. These limitations preclude a total-efficiency winner or an isolated final-build A/B conclusion. Final post-QA-cleanup preservation remains a separate pending check.
+
+### Safari comparison outcome
+
+An optional same-source Safari comparison was attempted by the main task, but the saved `evidence/resources/safari-comparison-window.json` records disabled JavaScript inspection and an inability to verify decoded quality/codec/timing. It therefore records no validly matched benchmark and supports no relative efficiency claim. No inspection preference was enabled. The owned comparison window was closed after identification, and a pre-existing window's accidental resize was approximately restored; exact prior geometry was not captured. The preservation incident and recovery uncertainty are detailed in `PRESERVATION-AUDIT.md` and must accompany this comparison limitation.
+
+The updated Safari record has SHA-256 `b3e16655cdea1adc433f318f9e1ee5c72b3e261fc9b3d8517065e94fb463f00d` and records cleanup at `2026-11-08T19:34:13.115469+00:00`. The auditor read the saved record only and did not operate Safari.

@@ -1,0 +1,12 @@
+{
+  "name": "Streams Unified Candidate",
+  "identifier": "local.iina.streams.candidate.unified",
+  "version": "0.5.0",
+  "description": "Twitch and YouTube playback with optional read-only chat and synchronized replay.",
+  "author": {"name": "IINA Streams"},
+  "entry": "main.js",
+  "globalEntry": "global.js",
+  "sidebarTab": {"name": "Streams"},
+  "permissions": ["file-system", "show-alert", "network-request", "video-overlay"],
+  "allowedDomains": ["twitch.tv", "*.twitch.tv", "*.ttvnw.net", "*.twitchcdn.net", "d2vi6trrdongqn.cloudfront.net", "youtube.com", "*.youtube.com", "youtu.be", "*.googlevideo.com", "id.twitch.tv", "irc-ws.chat.twitch.tv"]
+}

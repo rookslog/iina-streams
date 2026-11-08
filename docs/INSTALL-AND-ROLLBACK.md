@@ -160,3 +160,7 @@ Record the final archive hash, installed folder and its identifier, app version,
 ## Completed final acceptance
 
 `package-acceptance-r2.json` ties final code commit `127f6b98587bbdb8a6f2c532ad2a97665b4a7611` to both archive hashes, exact installed contents, `qa:false`, absent QA harness, enabled states and native normal-use records. Focus completed six ordinary-menu child cycles and Unified five, each with eleven native checks; both final Fetch Replay actions acquired 693 messages. Off and exact owned-window closure were observed before handoff. The QA link and its temporary enable preference were retired. Stable `local.iina.streams` was neither installed nor enabled.
+
+## Reproducible source export
+
+The delivered builder fixes filesystem-dependent embedded-helper ordering while preserving the already-tested R2 archive bytes. An expanded existing regression exercises opposite helper enumeration orders. Twenty focused build/install tests pass after this correction, and fresh standalone builds on Linux and Apollo reproduce the exact final archive hashes. Runtime code remains at `127f6b98587bbdb8a6f2c532ad2a97665b4a7611`; the delivery manifest identifies the later build-tool/documentation checkpoint.

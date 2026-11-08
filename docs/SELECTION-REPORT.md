@@ -147,3 +147,7 @@ Use Chat Appearance to choose Sidebar or Over Video. Move Overlay enters an expl
 `INSTALL-AND-ROLLBACK.md` supplies exact native archive installation, optional guarded development-link commands, switching, and uninstall instructions. Native installation enables only the selected candidate identity. Remove a release candidate through its exact Plugins settings row; development links use the guarded manager. Candidate source and evidence remain recoverable independently of the installed copy.
 
 `CONTINUATION.md` is the current handoff. The inherited `HANDOFF-GPT6-PRO.md` is preserved as historical context and is not the current state description.
+
+## Standalone build verification
+
+The first fresh-source export exposed a reproducibility defect in the builder: filesystem enumeration changed the order of the embedded helper object, although every parsed helper value was identical. The existing reproducibility test was strengthened to simulate both forward and reverse enumeration; it failed before the correction and passed afterward. The builder now preserves the published helper order and sorts any future helper names. This is a packaging-tool correction; the candidate runtime files and installed archives are unchanged. Twenty focused build/install tests pass after the correction, and fresh builds on Linux and Apollo reproduce both final R2 archive SHA-256 values exactly. The handoff checkpoint includes this correction separately from runtime commit `127f6b98587bbdb8a6f2c532ad2a97665b4a7611`. See `evidence/tests/build-reproducibility-closeout.json`.

@@ -63,8 +63,11 @@ def main():
         raise SystemExit('Refusing to overwrite an existing delivery directory')
     if git('status', '--porcelain'):
         raise SystemExit('Commit the reviewed checkpoint before exporting')
-    if git('diff', RELEASE, '--', 'candidate-plugin', 'scripts/build-candidates.py', 'scripts/manage-candidates.py', 'tests_candidate'):
-        raise SystemExit('Release product/tests differ from the recorded production commit')
+    if git('diff', RELEASE, '--', 'candidate-plugin', 'scripts/manage-candidates.py'):
+        raise SystemExit('Release product differs from the recorded production commit')
+    changed_tests = set(git('diff', '--name-only', RELEASE, '--', 'tests_candidate').splitlines())
+    if changed_tests - {'tests_candidate/test_build.py'}:
+        raise SystemExit('Unexpected runtime test changes after the recorded production commit')
     head = git('rev-parse', 'HEAD')
     manifest = json.loads(checked_read(ROOT / 'dist/candidates/build-manifest.json'))
     assert manifest['sourceCommit'] == RELEASE
@@ -73,6 +76,9 @@ def main():
     identity = {'productionCodeCommit': RELEASE, 'handoffCommit': head,
                 'branch': git('branch', '--show-current'), 'stableDeployment': False,
                 'normalCandidateVersion': '0.5.0',
+                'buildScriptSHA256': sha(checked_read(ROOT / 'scripts/build-candidates.py')),
+                'buildRegressionSHA256': sha(checked_read(ROOT / 'tests_candidate/test_build.py')),
+                'packagingOnlyChange': 'Stable embedded-helper ordering reproduces the exact published R2 bytes; candidate-plugin is unchanged from the production commit.',
                 'scope': 'Conditional candidate evaluation; see explicit gates in docs/SELECTION-REPORT.md.'}
     source = {}
     for name in git('ls-files').splitlines():

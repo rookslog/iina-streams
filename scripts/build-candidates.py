@@ -17,6 +17,8 @@ SOURCE = ROOT / 'candidate-plugin'
 IDS = {'unified': 'local.iina.streams.candidate.unified', 'focus': 'local.iina.streams.candidate.focus', 'qa': 'local.iina.streams.qa'}
 HASH = re.compile(r'[0-9a-f]{64}')
 VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?')
+# Preserve the published 0.5.0 archive bytes across filesystem enumeration orders.
+HELPER_ORDER = {'runner': 0, 'media': 1, 'acquire': 2, 'replay': 3}
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -138,7 +140,9 @@ def build(output, qa=None):
         commit = 'working-copy'
     source_files = sorted(p for p in SOURCE.rglob('*') if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc')
     manifest = {'sourceCommit': commit, 'files': {str(p.relative_to(SOURCE)): digest(p.read_bytes()) for p in source_files}, 'packages': []}
-    embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in SOURCE.joinpath('helpers').glob('*.py')}
+    helper_paths = sorted(SOURCE.joinpath('helpers').glob('*.py'),
+                          key=lambda p: (HELPER_ORDER.get(p.stem, len(HELPER_ORDER)), p.name))
+    embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in helper_paths}
     if not {'media', 'replay'}.issubset(embedded):
         raise ValueError('Required helper source is absent')
     variants = ['qa'] if qa else ['unified', 'focus']

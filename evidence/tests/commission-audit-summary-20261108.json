@@ -905,12 +905,56 @@
   },
   "auditDocuments": {
     "docs/COMMISSION-AUDIT.md": {
-      "sha256": "758d0be58c4366e50e1762a19310bf870a90f5b02efec6852e27117f400e458a",
-      "bytes": 106348
+      "sha256": "4dc1abd3743431e9bf241dbccde44de03f620a5a0f5896769c6224431de32ca4",
+      "bytes": 107896
     },
     "docs/EVIDENCE-APPENDIX.md": {
-      "sha256": "486ea1dfe3da9c61660468baa39312f4a698768ef6a52eb696d2e485268b7a81",
-      "bytes": 36169
+      "sha256": "0a9b3a1fec7050669e831ac66c58cd6b1e23138e7a765ac98db4ab6da732370d",
+      "bytes": 37614
     }
+  },
+  "buildReproducibility": {
+    "recordedUTC": "2026-11-08T21:15:46.078956+00:00",
+    "scope": "Post-export build-tool and regression correction; no installed candidate or native runtime changes",
+    "finding": "Fresh standalone Linux build differed only in generated src/embedded-helpers.js JSON key order; parsed helper data was identical",
+    "publishedHelperOrder": [
+      "runner",
+      "media",
+      "acquire",
+      "replay"
+    ],
+    "observedGlobOrder": [
+      "runner",
+      "replay",
+      "media",
+      "acquire"
+    ],
+    "regression": "BuildTests.test_isolated_ids_reproducibility_and_no_autostart exercises forward/reverse Path.glob enumeration",
+    "failureBeforeFix": 1,
+    "fix": "Known helper rank in published order, followed by filename ordering for future helpers",
+    "reportedFocusedVerification": {
+      "passed": 20,
+      "failed": 0,
+      "durationSeconds": 1.101,
+      "scope": "Focused build/install tests"
+    },
+    "freshStandaloneArchiveHashesMatchPublishedR2": true,
+    "archiveHashes": {
+      "unified": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+      "focus": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24"
+    },
+    "runtimeSourceCommitUnchanged": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+    "releaseSuiteCountsUnchanged": {
+      "javascript": 143,
+      "python": 103
+    },
+    "installedBytesUnchanged": true,
+    "nativeClaimsUnchanged": true,
+    "evidence": [
+      "evidence/tests/build-reproducibility-closeout.json",
+      "evidence/tests/python-build-reproducibility.txt"
+    ],
+    "verificationAttribution": "Build operator report; not an independent rerun by this auditor",
+    "buildToolTestDocumentationCommit": "Separate handoff manifest"
   }
 }

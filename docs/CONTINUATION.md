@@ -158,3 +158,7 @@ The packaging manifest records the final documentation/evidence commit, source s
 | Recommendation / open gates | `SELECTION-REPORT.md` owns the final recommendation; real Twitch grant/receipt, Keychain persistence, authentic Twitch history, sustained stability/accessibility, and stable promotion remain separately gated. |
 
 Keep completed evidence, explicitly failed checks, untested external gates, and source-derived expectations distinguishable. Stable remains untouched unless the user separately chooses and authorizes promotion.
+
+## Post-export build reproducibility correction
+
+The first standalone extraction changed only the embedded helper object's key order when rebuilt; parsed helper values were identical. The builder now explicitly preserves the published runner/media/acquire/replay order and sorts future helper names. Its existing reproducibility test injects forward/reverse filesystem enumeration, failed before the correction, then passed within the 20-test build/install suite locally and on Apollo. Fresh builds now reproduce both final R2 hashes exactly. `candidate-plugin` and the installed archives remain unchanged from runtime commit127f6b9. The final delivery manifest records the later build-tool/documentation checkpoint. Evidence is in `evidence/tests/build-reproducibility-closeout.json` and `python-build-reproducibility.txt`. The earlier1ae6288 export is retained as a local delivery checkpoint, not the final delivery.

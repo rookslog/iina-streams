@@ -99,3 +99,5 @@ The resolver accepts the observed Twitch CloudFront distribution `d2vi6trrdongqn
 - `docs/`: selection, audits, evidence, installation, continuation, resource results, and the implementation plan.
 
 The delivery set comprises the two `.iinaplgz` archives, a clean source ZIP, a review/evidence ZIP, the Markdown selection report, the Markdown evidence appendix, and checksums. The source snapshot excludes Git history, raw downloads, private diagnostic payloads, runtime credentials, and machine-specific compiled QA binaries. The delivery manifest records exact filenames, checksums, and the final documentation commit separately from the fixed production-code commit.
+
+The final source export also includes a packaging-only reproducibility correction: embedded-helper ordering is stable across filesystems, and fresh builds reproduce both installed R2 archives byte for byte. Runtime code stays at the production commit above; the delivery manifest identifies the later handoff/build-tool checkpoint. The existing reproducibility regression was strengthened and the 20 focused build/install tests passed.

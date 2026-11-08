@@ -15,8 +15,19 @@ SPEC.loader.exec_module(BUILD)
 class BuildTests(unittest.TestCase):
     def test_isolated_ids_reproducibility_and_no_autostart(self):
         with tempfile.TemporaryDirectory() as temp:
-            first = BUILD.build(temp)
-            second = BUILD.build(temp)
+            original_glob = Path.glob
+            def helper_enumeration(reverse):
+                def enumerate_paths(path, pattern):
+                    rows = list(original_glob(path, pattern))
+                    if path == BUILD.SOURCE / 'helpers' and pattern == '*.py':
+                        rows.sort(key=lambda p: p.name, reverse=reverse)
+                    return iter(rows)
+                return enumerate_paths
+            # Different filesystems/source extractions can enumerate helpers differently.
+            with mock.patch.object(Path, 'glob', helper_enumeration(False)):
+                first = BUILD.build(temp)
+            with mock.patch.object(Path, 'glob', helper_enumeration(True)):
+                second = BUILD.build(temp)
             self.assertEqual(first['packages'], second['packages'])
             self.assertEqual(len(first['packages']), 2)
             for item in first['packages']:

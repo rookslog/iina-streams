@@ -10,7 +10,7 @@ const root=path.join(__dirname,'../candidate-plugin/ui');
 
 function setup(){
  const callbacks={},posts=[],frames=new Map(),allFrames=new Map(),scrollEvents=[];
- const windowEvents={},documentEvents={},elements={};let nextFrame=0,top=0;
+ const windowEvents={},documentEvents={},elements={};let nextFrame=0,top=0,now=1000,viewportHeight=200;
  function element(id=''){
   return{id,hidden:false,disabled:false,value:'',children:[],dataset:{},events:{},attributes:{},_text:'',
    classList:{toggle(){}},style:{setProperty(){}},scrollTop:0,clientHeight:200,scrollHeight:0,
@@ -25,7 +25,7 @@ function setup(){
   getElementById:id=>elements[id],createElement:()=>element(),addEventListener:(name,fn)=>documentEvents[name]=fn};
  const visible=()=>!elements.messages.hidden&&!elements['chat-panel'].hidden;
  Object.defineProperties(elements.messages,{
-  clientHeight:{get:()=>visible()?200:0},
+  clientHeight:{get:()=>visible()?viewportHeight:0},
   scrollHeight:{get:()=>visible()?elements.messages.children.length*40:0},
   scrollTop:{get:()=>top,set:value=>{top=Math.max(0,Math.min(Number(value)||0,Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight)));scrollEvents.push(()=>elements.messages.events.scroll?.({target:elements.messages}));}}
  });
@@ -34,7 +34,7 @@ function setup(){
  const window={addEventListener:(name,fn)=>windowEvents[name]=fn,requestAnimationFrame,cancelAnimationFrame};
  const iina={onMessage:(name,fn)=>callbacks[name]=fn,postMessage:(name,data)=>posts.push({name,data})};
  vm.runInNewContext(fs.readFileSync(path.join(root,'sidebar.js'),'utf8'),
-  {document,window,iina,requestAnimationFrame,cancelAnimationFrame},{filename:'candidate-sidebar.js'});
+  {document,window,iina,requestAnimationFrame,cancelAnimationFrame,Date:{now:()=>now}},{filename:'candidate-sidebar.js'});
  return{elements,frames,allFrames,posts,windowEvents,documentEvents,
   state(value){callbacks.state({encoded:encodeURIComponent(JSON.stringify(value))});},
   inspect(){callbacks['qa-action']({encoded:encodeURIComponent(JSON.stringify({name:'inspect'}))});return posts.at(-1).data;},
@@ -42,9 +42,13 @@ function setup(){
   flushScroll(){for(const fn of scrollEvents.splice(0))fn();},
   flushFrames(){for(const [id,fn] of [...frames]){frames.delete(id);fn();}},
   userScrollTo(value,kind='wheel'){
-   elements.messages.events[kind]?.(kind==='keydown'?{key:'PageUp',target:elements.messages}:{deltaY:-100,target:elements.messages});
+   elements.messages.events[kind]?.(kind==='keydown'?{key:value<top?'PageUp':'PageDown',target:elements.messages}:{deltaY:value<top?-100:100,target:elements.messages});
    top=value;elements.messages.events.scroll?.({target:elements.messages});
   },
+  nativeScrollTo(value){top=value;elements.messages.events.scroll?.({target:elements.messages});},
+  input(name,event={}){elements.messages.events[name]?.({target:elements.messages,...event});},
+  advance(ms){now+=ms;},
+  resize(height){viewportHeight=height;top=Math.min(top,Math.max(0,elements.messages.scrollHeight-height));windowEvents.resize?.({});},
   click:id=>elements[id].click(),
   maxTop:()=>Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight)
  };
@@ -112,4 +116,57 @@ test('bounded QA rendered-message inspection remains available',()=>{
  const result=f.inspect();
  assert.equal(result.messageCount,40);assert.equal(result.renderedMessages.length,12);
  assert.ok(result.renderedMessages.at(-1).endsWith('Syntheticmessage 39'));
+});
+
+test('a late native layout or focus scroll without user input cannot disable default following',()=>{
+ const f=setup();f.state(state({variant:'unified'}));f.flushFrames();f.flushScroll();
+ f.advance(2000);f.nativeScrollTo(0);
+ assert.equal(f.inspect().following,true,'scroll geometry alone is not a user opt-out');
+ assert.equal(f.elements.follow.hidden,true);assert.equal(f.elements.messages.scrollTop,f.maxTop());
+ f.flushFrames();f.flushScroll();assert.equal(f.frames.size,0);
+});
+
+test('an expired input gesture does not authorize a later automatic scroll to change intent',()=>{
+ const f=setup();f.state(state({variant:'unified'}));f.flushFrames();f.flushScroll();
+ f.input('wheel',{deltaY:100});f.advance(2000);f.nativeScrollTo(0);
+ f.flushFrames();f.flushScroll();
+ assert.equal(f.inspect().following,true);assert.equal(f.elements.messages.scrollTop,f.maxTop());
+});
+
+test('manual history survives later automatic scrolling, while deliberate downward scrolling resumes follow',()=>{
+ const f=setup();f.state(state({variant:'unified'}));f.flushFrames();f.flushScroll();
+ f.userScrollTo(400);assert.equal(f.inspect().following,false);
+ f.advance(2000);f.nativeScrollTo(f.maxTop());f.flushFrames();f.flushScroll();
+ assert.equal(f.inspect().following,false);assert.equal(f.elements.messages.scrollTop,400);
+ f.userScrollTo(f.maxTop());assert.equal(f.inspect().following,true);assert.equal(f.elements.follow.hidden,true);
+});
+
+test('held pointer scrolling stays manual and release or blur ends its authority',()=>{
+ const f=setup();f.state(state({variant:'unified'}));f.flushFrames();f.flushScroll();
+ f.input('pointerdown');f.advance(2000);f.nativeScrollTo(400);
+ assert.equal(f.inspect().following,false);assert.equal(f.elements.messages.scrollTop,400);
+ f.windowEvents.pointerup?.({});f.advance(2000);f.nativeScrollTo(f.maxTop());f.flushFrames();f.flushScroll();
+ assert.equal(f.inspect().following,false);assert.equal(f.elements.messages.scrollTop,400);
+ f.click('follow');f.flushFrames();f.flushScroll();
+ f.input('pointerdown');f.windowEvents.blur?.({});f.nativeScrollTo(0);f.flushFrames();f.flushScroll();
+ assert.equal(f.inspect().following,true);assert.equal(f.elements.messages.scrollTop,f.maxTop());
+});
+
+test('resize and replacement batches do not reinterpret a recent manual scroll as resumed following',()=>{
+ const f=setup();f.state(state({variant:'unified'}));f.flushFrames();f.flushScroll();
+ f.userScrollTo(400);f.resize(1400);f.flushFrames();f.flushScroll();
+ assert.equal(f.inspect().following,false);assert.equal(f.elements.follow.hidden,false);
+ f.resize(200);f.flushFrames();f.flushScroll();assert.equal(f.elements.messages.scrollTop,400);
+ f.userScrollTo(300);
+ const next=state({variant:'unified'});next.messages=next.messages.slice(0,10);
+ f.state(next);f.flushFrames();f.flushScroll();
+ assert.equal(f.elements.messages.scrollTop,f.maxTop());
+ assert.equal(f.inspect().following,false,'a batch clamping the position to the bottom preserves explicit history intent');
+});
+
+test('an unarmed scroll is repaired even before a throttled animation callback runs',()=>{
+ const f=setup();f.state(state({variant:'unified'}));
+ f.nativeScrollTo(0);
+ assert.equal(f.inspect().following,true);assert.equal(f.elements.messages.scrollTop,f.maxTop());
+ assert.equal(f.frames.size,1);f.flushFrames();f.flushScroll();assert.equal(f.frames.size,0);
 });

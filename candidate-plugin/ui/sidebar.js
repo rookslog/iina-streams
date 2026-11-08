@@ -4,18 +4,21 @@
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
  const messages=$('messages');
  let live=null,liveHistory=[];
- let scrollFrame=null,programmaticScroll=false,historyTop=0,pageClosed=false;
+ let scrollFrame=null,positionedTop=null,historyTop=0,pageClosed=false,scrollIntentUntil=0,pointerHeld=false;
  const messagesVisible=()=>!messages.hidden&&!$('chat-panel').hidden&&messages.clientHeight>0;
- function cancelScrollCorrection(){if(scrollFrame!==null){cancelAnimationFrame(scrollFrame);scrollFrame=null;}programmaticScroll=false;}
+ function cancelScrollCorrection(){if(scrollFrame!==null){cancelAnimationFrame(scrollFrame);scrollFrame=null;}positionedTop=null;}
+ function clearScrollIntent(){pointerHeld=false;scrollIntentUntil=0;}
+ function scrollIntent(){if(pageClosed||!messagesVisible())return;cancelScrollCorrection();scrollIntentUntil=Date.now()+750;}
+ function holdPointer(){if(pageClosed||!messagesVisible())return;pointerHeld=true;scrollIntent();}
+ function releasePointer(){if(!pointerHeld)return;pointerHeld=false;scrollIntentUntil=Date.now()+750;}
+ function applyScrollPosition(){if(messagesVisible()){messages.scrollTop=following?messages.scrollHeight:historyTop;positionedTop=messages.scrollTop;}}
  function positionMessages(){
   if(pageClosed)return;
-  programmaticScroll=true;
-  if(messagesVisible())messages.scrollTop=following?messages.scrollHeight:historyTop;
+  applyScrollPosition();
   $('follow').hidden=following;
   if(scrollFrame===null)scrollFrame=requestAnimationFrame(()=>{
    scrollFrame=null;if(pageClosed)return;
-   if(messagesVisible())messages.scrollTop=following?messages.scrollHeight:historyTop;
-   programmaticScroll=false;
+   applyScrollPosition();
   });
  }
  const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
@@ -41,7 +44,7 @@
   $('overlay-note').hidden=!on||s.view.presentation!=='overlay';messages.hidden=s.view.presentation==='overlay';
   const visibleMessages=s.view.presentation==='sidebar'?(s.messages||[]):[];
   const sig=visibleMessages.map(m=>m.id+':'+m.time+':'+m.text).join('|');
-  if(sig!==signature){signature=sig;if(!following&&messagesVisible())historyTop=messages.scrollTop;programmaticScroll=true;messages.replaceChildren();for(const m of visibleMessages){const row=document.createElement('div');row.className='message'+(m.kind==='notice'?' notice':'');if(replay){const time=document.createElement('button');time.className='time';time.textContent=clock(m.time);time.setAttribute('aria-label','Seek to chat message at '+clock(m.time));time.addEventListener('click',()=>post('seek-chat',m.time));row.appendChild(time);}const author=document.createElement('span');author.className='author';author.textContent=m.author;const text=document.createElement('span');text.textContent=m.text;row.append(author,text);messages.appendChild(row);}}
+  if(sig!==signature){signature=sig;if(!following&&messagesVisible())historyTop=messages.scrollTop;messages.replaceChildren();for(const m of visibleMessages){const row=document.createElement('div');row.className='message'+(m.kind==='notice'?' notice':'');if(replay){const time=document.createElement('button');time.className='time';time.textContent=clock(m.time);time.setAttribute('aria-label','Seek to chat message at '+clock(m.time));time.addEventListener('click',()=>post('seek-chat',m.time));row.appendChild(time);}const author=document.createElement('span');author.className='author';author.textContent=m.author;const text=document.createElement('span');text.textContent=m.text;row.append(author,text);messages.appendChild(row);}}
   positionMessages();
  }
  for(const [id,event] of [['open','open'],['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],['off','chat-off'],['fetch','fetch-replay'],['resume','replay-resume'],['first','first-message'],['authorize-open','authorize-open'],['forget','forget-auth']])$(id).addEventListener('click',()=>post(event));
@@ -51,15 +54,26 @@
  for(const [id,key] of [['presentation','presentation'],['font-size','fontSize'],['opacity','opacity'],['lines','lines'],['density','density']])$(id).addEventListener('change',()=>post('view',{[key]:$(id).value}));
  $('placement').addEventListener('change',()=>{const p={tr:[1,0],tl:[0,0],br:[1,1],bl:[0,1]}[$('placement').value];if(p)post('view',{x:p[0],y:p[1],editing:false});});$('position').addEventListener('click',()=>post('view',{presentation:'overlay',editing:!state.view.editing}));$('reset').addEventListener('click',()=>post('view',{reset:true,editing:false}));
  for(const name of ['playback','chat'])$(name+'-tab').addEventListener('click',()=>tab(name));$('tabs').addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();tab(e.key==='Home'?'playback':e.key==='End'?'chat':activeTab==='chat'?'playback':'chat');$(activeTab+'-tab').focus();}});
- messages.addEventListener('scroll',()=>{if(pageClosed||programmaticScroll||!messagesVisible())return;following=messages.scrollHeight-messages.clientHeight-messages.scrollTop<35;if(!following)historyTop=messages.scrollTop;$('follow').hidden=following;});
- for(const name of ['wheel','pointerdown','touchstart'])messages.addEventListener(name,cancelScrollCorrection,{passive:true});
- messages.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key))cancelScrollCorrection();});
- $('follow').addEventListener('click',()=>{following=true;positionMessages();});
+ messages.addEventListener('scroll',()=>{
+  if(pageClosed||!messagesVisible())return;
+  const top=messages.scrollTop,max=Math.max(0,messages.scrollHeight-messages.clientHeight);
+  if(positionedTop!==null&&Math.abs(top-positionedTop)<1)return;
+  positionedTop=null;
+  if(pointerHeld||Date.now()<scrollIntentUntil){following=max-top<35;if(!following)historyTop=top;$('follow').hidden=following;}
+  else if(Math.abs(top-(following?max:Math.min(historyTop,max)))>=1)positionMessages();
+ });
+ messages.addEventListener('wheel',event=>{if(event.deltaY)scrollIntent();},{passive:true});
+ for(const name of ['pointerdown','touchstart'])messages.addEventListener(name,holdPointer,{passive:true});
+ for(const name of ['pointerup','touchend'])window.addEventListener(name,releasePointer,{passive:true});
+ for(const name of ['pointercancel','touchcancel','blur'])window.addEventListener(name,clearScrollIntent);
+ messages.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key))scrollIntent();});
+ window.addEventListener('resize',()=>{clearScrollIntent();positionMessages();});
+ $('follow').addEventListener('click',()=>{clearScrollIntent();following=true;positionMessages();});
  on('state',render);
  on('live-config',data=>{liveHistory=[];const client=getLive();if(client)client.start(data);else post('live-state',{state:'error',message:'Live chat client is unavailable.'});});
  on('live-stop',()=>{if(live)live.stop();liveHistory=[];});
  on('qa-action',action=>{if(!state||!state.qa)return;try{if(action.name==='click')$(action.data.id).click();else if(action.name==='change'){const e=$(action.data.id);e.value=String(action.data.value);e.dispatchEvent(new Event('change',{bubbles:true}));}else if(action.name==='tab')tab(action.data);post('qa-result',{action:action.name,id:action.data&&action.data.id||'',title:$('title').textContent,quality:$('quality').value,messageCount:messages.children.length,following,scrollTop:messages.scrollTop,scrollHeight:messages.scrollHeight,clientHeight:messages.clientHeight,renderedMessages:action.name==='inspect'?Array.from(messages.children).slice(-12).map(e=>e.textContent.slice(0,2120)):[],tab:activeTab,bodyWidth:document.body.clientWidth,scrollWidth:document.body.scrollWidth,focused:document.activeElement&&document.activeElement.id,documentHidden:document.hidden,authPanelVisible:!$('auth-panel').hidden,authCodeVisible:!$('auth-code-panel').hidden,qualityDisabled:$('quality').disabled});}catch(_){post('qa-result',{action:action.name,error:'UI action failed'});}});
- window.addEventListener('pagehide',()=>{pageClosed=true;cancelScrollCorrection();if(live)live.stop();});
+ window.addEventListener('pagehide',()=>{pageClosed=true;clearScrollIntent();cancelScrollCorrection();if(live)live.stop();});
  document.addEventListener('visibilitychange',()=>post('surface-visibility',{visible:!document.hidden}));
  post('ready',{ready:true});
 })();

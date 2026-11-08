@@ -1,0 +1,1420 @@
+{
+  "completedUTC": "2026-11-08T19:40:47.825767+00:00",
+  "variant": "focus",
+  "pid": 40519,
+  "conditions": [
+    {
+      "mode": "off",
+      "before": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "off",
+            "state": "off",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "sidebar",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [],
+          "position": 140.3,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 140.3,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "after": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "off",
+            "state": "off",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "sidebar",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [],
+          "position": 160.8,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 160.8,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "sample": "focus-off.json",
+      "sha256": "ad4d3b36a144f2ca496c351dff87b6b8af02e7143702be472b0d3edec4ef53cc",
+      "warmupSeconds": 20.0
+    },
+    {
+      "mode": "sidebar",
+      "before": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "sidebar",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZW95YmZtLTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 120.154,
+              "author": "@javiert_01",
+              "text": "This brings joy to me",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJdU40N2ptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 122.673,
+              "author": "@supercrafter100",
+              "text": "we can hear you but your mic is just very quiet",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPelJ1TG5tLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 124.074,
+              "author": "@snowpoch42",
+              "text": "I can hear you, music too loud in comparison ",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 140.3,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 140.3,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "after": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "sidebar",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZW95YmZtLTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 120.154,
+              "author": "@javiert_01",
+              "text": "This brings joy to me",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJdU40N2ptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 122.673,
+              "author": "@supercrafter100",
+              "text": "we can hear you but your mic is just very quiet",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPelJ1TG5tLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 124.074,
+              "author": "@snowpoch42",
+              "text": "I can hear you, music too loud in comparison ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNV1B0Y0htLTQ0REZXZ0sxZ0FkZ0N3STFB",
+              "time": 140.812,
+              "author": "@OhHeyItsAnthony",
+              "text": "Welcome to Passengers!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLTEQ4c0htLTQ0REZZVGNsQWtkUzlVR3hR",
+              "time": 141.819,
+              "author": "@Jonesiblitz",
+              "text": "voice up slightly, music lower slightly more",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUFrOGZtLTQ0REZXX053Z1FkRVljSWl3",
+              "time": 152.881,
+              "author": "@dinglestein",
+              "text": "sup gamers",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 160.8,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 160.8,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "sample": "focus-sidebar.json",
+      "sha256": "af886793c5f133a069312f770b27ad2730f59f7a7ad2b5a2c7e67b966221eca9",
+      "warmupSeconds": 20.0
+    },
+    {
+      "mode": "overlay",
+      "before": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZW95YmZtLTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 120.154,
+              "author": "@javiert_01",
+              "text": "This brings joy to me",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJdU40N2ptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 122.673,
+              "author": "@supercrafter100",
+              "text": "we can hear you but your mic is just very quiet",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPelJ1TG5tLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 124.074,
+              "author": "@snowpoch42",
+              "text": "I can hear you, music too loud in comparison ",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 140.3,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 140.3,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "after": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZW95YmZtLTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 120.154,
+              "author": "@javiert_01",
+              "text": "This brings joy to me",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJdU40N2ptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 122.673,
+              "author": "@supercrafter100",
+              "text": "we can hear you but your mic is just very quiet",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPelJ1TG5tLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 124.074,
+              "author": "@snowpoch42",
+              "text": "I can hear you, music too loud in comparison ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNV1B0Y0htLTQ0REZXZ0sxZ0FkZ0N3STFB",
+              "time": 140.812,
+              "author": "@OhHeyItsAnthony",
+              "text": "Welcome to Passengers!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLTEQ4c0htLTQ0REZZVGNsQWtkUzlVR3hR",
+              "time": 141.819,
+              "author": "@Jonesiblitz",
+              "text": "voice up slightly, music lower slightly more",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUFrOGZtLTQ0REZXX053Z1FkRVljSWl3",
+              "time": 152.881,
+              "author": "@dinglestein",
+              "text": "sup gamers",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 160.8,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 160.8,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "videoFps": 30,
+          "droppedFrames": 0,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "seeking": false,
+          "pausedForCache": false,
+          "cacheBuffering": 100,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      },
+      "sample": "focus-overlay.json",
+      "sha256": "a47130f5117fcd6730afbbaef0125897d5f29f42bf8c764ff1baa9dd38e585fe",
+      "warmupSeconds": 20.0
+    }
+  ],
+  "afterOff": {
+    "controller": {
+      "phase": "playing",
+      "quality": "136",
+      "formats": [
+        {
+          "id": "auto720",
+          "label": "Auto \u00b7 720p preferred"
+        },
+        {
+          "id": "270",
+          "label": "1080p \u00b7 H.264"
+        },
+        {
+          "id": "137",
+          "label": "1080p \u00b7 H.264"
+        },
+        {
+          "id": "399",
+          "label": "1080p \u00b7 AV1"
+        },
+        {
+          "id": "232",
+          "label": "720p \u00b7 H.264"
+        },
+        {
+          "id": "136",
+          "label": "720p \u00b7 H.264"
+        },
+        {
+          "id": "398",
+          "label": "720p \u00b7 AV1"
+        },
+        {
+          "id": "397",
+          "label": "480p \u00b7 AV1"
+        },
+        {
+          "id": "230",
+          "label": "360p \u00b7 H.264"
+        },
+        {
+          "id": "134",
+          "label": "360p \u00b7 H.264"
+        },
+        {
+          "id": "605",
+          "label": "360p \u00b7 VP9"
+        },
+        {
+          "id": "243",
+          "label": "360p \u00b7 VP9"
+        },
+        {
+          "id": "396",
+          "label": "360p \u00b7 AV1"
+        },
+        {
+          "id": "395",
+          "label": "240p \u00b7 AV1"
+        },
+        {
+          "id": "269",
+          "label": "144p \u00b7 H.264"
+        },
+        {
+          "id": "160",
+          "label": "144p \u00b7 H.264"
+        },
+        {
+          "id": "394",
+          "label": "144p \u00b7 AV1"
+        }
+      ],
+      "busy": false,
+      "error": "",
+      "title": "All Aboard (ish)",
+      "live": false,
+      "duration": 5915,
+      "variant": "focus",
+      "source": {
+        "kind": "youtube",
+        "provider": "YouTube",
+        "id": "92h_kU8O58M"
+      },
+      "chat": {
+        "mode": "off",
+        "state": "off",
+        "error": "",
+        "count": 693,
+        "sourceName": "Imported chat",
+        "offset": 0,
+        "available": true
+      },
+      "auth": {
+        "phase": "off",
+        "message": ""
+      },
+      "view": {
+        "presentation": "overlay",
+        "fontSize": 14,
+        "opacity": 0.64,
+        "lines": 6,
+        "x": 1,
+        "y": 0,
+        "density": "comfortable",
+        "editing": false
+      },
+      "messages": [],
+      "position": 161.2,
+      "paused": true,
+      "qa": true
+    },
+    "native": {
+      "position": 161.2,
+      "duration": 5914.733333333334,
+      "paused": true,
+      "speed": 1,
+      "width": 1280,
+      "height": 720,
+      "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+      "videoFps": 30,
+      "droppedFrames": 0,
+      "audioCodec": "aac",
+      "audioRate": 44100,
+      "playlistCount": 1,
+      "idle": false,
+      "seeking": false,
+      "pausedForCache": false,
+      "cacheBuffering": 100,
+      "fullscreen": false,
+      "frame": {
+        "y": 140,
+        "x": 140,
+        "width": 1280,
+        "height": 800
+      },
+      "hwdec": "videotoolbox-copy",
+      "activeHelpers": []
+    }
+  },
+  "checks": {
+    "allThreeSamples": true,
+    "offClearedMessagesAndHelpers": true
+  }
+}

@@ -1,6 +1,6 @@
 # Install and roll back the isolated candidates
 
-The final `.iinaplgz` archives use IINA's native installer. The separate guarded utility manages **development links** only. Both paths use the two unique candidate identities below; neither procedure replaces the stable, original development, or preview plugin. Native installation and its permission prompts must be observed against the final archive hashes before an archive is described as installation-verified.
+Both final `.iinaplgz` archives are installed and enabled on Apollo through IINA’s native installer; all 25 files in each installed folder match the corresponding final archive. The exact final hashes are in `dist/candidates/build-manifest.json`. The separate guarded utility manages **development links** only. Both paths use the two unique candidate identities below; neither procedure replaces the stable, original development, or preview plugin. The installation record distinguishes observed folder/identity/enable results from permission-dialog actions: Focus’s final Install click was observed; Unified’s final confirmation action was not observed, although its installed bytes, enable state and ordinary playback were verified.
 
 ## Exact identities and paths
 
@@ -23,7 +23,7 @@ Build the current source using the candidate builder:
 /usr/bin/python3 /Users/rookslog/development/iina-streams-candidates/scripts/build-candidates.py
 ```
 
-Use `scripts/build-candidates.py` for this portfolio. The inherited `scripts/package-candidate.sh` targets a different plugin and is not part of this procedure.
+Use `scripts/build-candidates.py` for this portfolio. The inherited `scripts/package-candidate.sh` has been retired with a fail-closed message to prevent accidentally packaging the old stable identity.
 
 The build produces `iina-streams-unified-0.5.0.iinaplgz`, `iina-streams-focus-0.5.0.iinaplgz`, and `build-manifest.json` in `dist/candidates`. Record and compare the package SHA-256 values with that manifest:
 
@@ -72,7 +72,9 @@ Choosing **Install** completes native installation and **automatically enables t
 
 ### Native archive rollback
 
-Turn chat Off and close only the candidate's managed windows. In **Settings… → Plugins**, locate the exact candidate row, turn off its enabled switch, open its **ellipsis menu → Uninstall**, and confirm **OK** only when the dialog names that candidate. In the legacy pane, select that candidate and click **Uninstall**, then confirm **OK**. IINA also disables the candidate as part of uninstall and deletes its installed plugin folder. [New uninstall action](https://github.com/iina/iina/blob/v1.5.1/iina/SettingsPagePlugin.swift), [legacy uninstall action](https://github.com/iina/iina/blob/v1.5.1/iina/PrefPluginViewController.swift), [confirmation buttons](https://github.com/iina/iina/blob/v1.5.1/iina/Dialog.swift).
+Turn chat Off and close only the candidate's managed windows. In **Settings… → Plugins**, locate the exact candidate row, turn off its enabled switch, use an ordinary pointer click on its **ellipsis menu → Uninstall**, and confirm **OK** only when the dialog names that candidate. In the legacy pane, select that candidate and click **Uninstall**, then confirm **OK**. IINA also disables the candidate as part of uninstall and deletes its installed plugin folder. [New uninstall action](https://github.com/iina/iina/blob/v1.5.1/iina/SettingsPagePlugin.swift), [legacy uninstall action](https://github.com/iina/iina/blob/v1.5.1/iina/PrefPluginViewController.swift), [confirmation buttons](https://github.com/iina/iina/blob/v1.5.1/iina/Dialog.swift).
+
+Both preceding candidate archives were actually removed through this native flow, with candidate-specific confirmation, row absence and installed-folder absence recorded in `unified-native-uninstall.json` and `focus-native-uninstall.json`. The final R2 archives were subsequently installed and retained for selection; they were not uninstalled again. Direct Accessibility AXPress on this settings ellipsis had triggered a separate host trap, so the verified procedure uses an ordinary pointer click.
 
 Verify that the candidate row and recorded installed folder are gone and that the original plugin rows and their enable states remain intact. Native uninstall does not erase candidate data directories, per-plugin preferences, Keychain grants, the source checkout, or release archives. If a real grant was deliberately created and must be revoked/cleared, use the candidate's **Forget** action before uninstalling; no real OAuth grant was used in the development tests recorded here. Do not use broad filesystem deletion or preference resets as rollback. Restore a development link only if that is the chosen final state.
 
@@ -117,7 +119,7 @@ In the existing IINA test environment, open **IINA → Settings… / Preferences
 
 If IINA has not discovered a newly created link, reload or relaunch the selected app manually at a convenient point after preserving any open work. The installer never performs this step.
 
-The native menu is named **Plugin** (singular) on the tested IINA build. The candidate global menu commands are **Open Stream — Unified…** and **Open Stream — Focus…**. Use the command belonging to the candidate under review and enter a supported Twitch or YouTube source. A managed player exposes **Show Streams Unified** or **Show Streams Focus**, **Import Chat Archive…**, **Turn Chat Off**, **Chat in Sidebar**, and **Chat over Video**. Chat starts Off. Network chat authorization and **Fetch Replay** remain explicit actions; installing or enabling a candidate does not authorize chat.
+The native menu is named **Plugin** (singular) on the tested IINA build. The candidate global menu commands are **Open Stream — Unified…** and **Open Stream — Focus…**. From IINA’s initial window, use the command belonging to the candidate under review and enter a supported Twitch or YouTube source. IINA builds the Plugin menu from the active player’s loaded plugins; a managed candidate player exposes its own candidate. To compare the other one, return to the initial window or close only the owned candidate player and choose the other command there. A managed player exposes **Show Streams Unified** or **Show Streams Focus**, **Import Chat Archive…**, **Turn Chat Off**, **Chat in Sidebar**, and **Chat over Video**. Chat starts Off. Network chat authorization and **Fetch Replay** remain explicit actions; installing or enabling a candidate does not authorize chat.
 
 ## Roll back development links
 
@@ -151,6 +153,10 @@ A successful build, CRC check, unit test, or development-link run does **not** e
 1. Record the exact archive hash and inspect its `Info.json`, generated configuration, and embedded helpers. The selectable archives must have their separate candidate IDs, `qa:false`, no QA harness, and the current media, replay, acquisition, and cancellation helpers.
 2. Avoid duplicate IDs by rolling back that candidate's development link and unloading its row before the native archive flow above. Confirm the permission sheet, installed folder, displayed name, identifier, version, distinct sidebar label, and automatic enable behavior for the selected archive.
 3. Exercise its normal menu and managed player, including the explicit replay workflow and cancellation behavior, then record the native result against the same archive hash.
-4. Remove only that archive-installed candidate when the test ends, confirm the original plugin identities remain intact, and restore a development link only if that is the intended final state.
+4. If testing rollback, remove only that archive-installed candidate and confirm the original plugin identities remain intact. Retain the final normal candidate installations for the user’s selection, as done here. Restore a development link only if that is the intended final state.
 
 Record the final archive hash, installed folder and its identifier, app version, permission/enable observations, normal menu and managed-player result, rollback result, and unchanged original-plugin state. The final execution journal and commission audit must distinguish each observed gate from source inspection. This guide's native instructions were checked against IINA v1.5.1 source and the installed CLI's help; preparing this guide did not itself install, uninstall, launch, quit, or change preferences.
+
+## Completed final acceptance
+
+`package-acceptance-r2.json` ties final code commit `127f6b98587bbdb8a6f2c532ad2a97665b4a7611` to both archive hashes, exact installed contents, `qa:false`, absent QA harness, enabled states and native normal-use records. Focus completed six ordinary-menu child cycles and Unified five, each with eleven native checks; both final Fetch Replay actions acquired 693 messages. Off and exact owned-window closure were observed before handoff. The QA link and its temporary enable preference were retired. Stable `local.iina.streams` was neither installed nor enabled.

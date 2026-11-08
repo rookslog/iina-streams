@@ -1,0 +1,820 @@
+{
+  "elements": [
+    {
+      "depth": 0,
+      "description": "",
+      "position": [
+        140,
+        100
+      ],
+      "role": "AXWindow",
+      "size": [
+        1280,
+        720
+      ],
+      "title": "All Aboard (ish) \u2014 YouTube",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Volume Lower",
+      "position": [
+        565,
+        744.5
+      ],
+      "role": "AXImage",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "numericValue": 0,
+      "position": [
+        593,
+        750.5
+      ],
+      "role": "AXSlider",
+      "size": [
+        72,
+        14
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Puzzle piece extension, filled",
+      "position": [
+        901,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "minimize video",
+      "position": [
+        925,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Bulleted list in a rectangle",
+      "position": [
+        949,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Gear shape",
+      "position": [
+        973,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        719,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        767,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        815,
+        744.5
+      ],
+      "role": "AXButton",
+      "size": [
+        26,
+        26
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        559,
+        782.5
+      ],
+      "role": "AXStaticText",
+      "size": [
+        48,
+        16
+      ],
+      "title": "",
+      "value": "03:11"
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        948,
+        782.5
+      ],
+      "role": "AXStaticText",
+      "size": [
+        53,
+        16
+      ],
+      "title": "",
+      "value": "-1:35:24"
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "numericValue": 3.2309148904994305,
+      "position": [
+        607,
+        782.5
+      ],
+      "role": "AXSlider",
+      "size": [
+        341,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        447,
+        111
+      ],
+      "role": "AXImage",
+      "size": [
+        18,
+        18
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        465,
+        111
+      ],
+      "role": "AXStaticText",
+      "size": [
+        176.5,
+        18
+      ],
+      "title": "",
+      "value": "All Aboard (ish) \u2014 YouTube"
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        235,
+        107
+      ],
+      "role": "AXGroup",
+      "size": [
+        152,
+        38
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Back",
+      "position": [
+        393,
+        107
+      ],
+      "role": "AXButton",
+      "size": [
+        38,
+        38
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXGroup",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        158,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        204,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        181,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "numericValue": 0,
+      "position": [
+        594,
+        751.5
+      ],
+      "role": "AXValueIndicator",
+      "size": [
+        16,
+        12
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "numericValue": 3.2309148904994305,
+      "position": [
+        618.8558740320781,
+        783.5
+      ],
+      "role": "AXValueIndicator",
+      "size": [
+        3,
+        14
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "Streams Unified",
+      "position": [
+        236,
+        109
+      ],
+      "role": "AXButton",
+      "size": [
+        112,
+        36
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "go down",
+      "position": [
+        348,
+        109
+      ],
+      "role": "AXButton",
+      "size": [
+        40,
+        36
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXGroup",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "position": [
+        205,
+        119
+      ],
+      "role": "AXGroup",
+      "size": [
+        14,
+        14
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 3,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXScrollArea",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 4,
+      "description": "Streams",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXWebArea",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "",
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        42
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "Playback settings",
+      "position": [
+        156,
+        228
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        45
+      ],
+      "title": "Playback settings",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "Chat",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        536
+      ],
+      "title": "Chat",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "numericValue": 1,
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXHeading",
+      "size": [
+        202,
+        21
+      ],
+      "title": "All Aboard (ish)",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        195
+      ],
+      "role": "AXGroup",
+      "size": [
+        202,
+        18
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Open another stream",
+      "position": [
+        363,
+        177
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Open another stream",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Hide Streams",
+      "position": [
+        396,
+        177
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Hide Streams",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        234
+      ],
+      "role": "AXStaticText",
+      "size": [
+        40,
+        16
+      ],
+      "title": "",
+      "value": "Quality"
+    },
+    {
+      "depth": 6,
+      "description": "Playback quality",
+      "position": [
+        205,
+        231
+      ],
+      "role": "AXPopUpButton",
+      "size": [
+        181,
+        22
+      ],
+      "title": "Playback quality",
+      "value": "720p \u00b7 H.264"
+    },
+    {
+      "depth": 6,
+      "description": "Refresh available qualities",
+      "position": [
+        396,
+        228
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Refresh available qualities",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "numericValue": 2,
+      "position": [
+        156,
+        293
+      ],
+      "role": "AXHeading",
+      "size": [
+        31,
+        17
+      ],
+      "title": "Chat",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Chat appearance",
+      "position": [
+        394,
+        287
+      ],
+      "role": "AXButton",
+      "size": [
+        31,
+        29
+      ],
+      "title": "Chat appearance",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        324
+      ],
+      "role": "AXButton",
+      "size": [
+        105,
+        29
+      ],
+      "title": "Import archive\u2026",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        266,
+        324
+      ],
+      "role": "AXButton",
+      "size": [
+        85,
+        29
+      ],
+      "title": "Fetch replay",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        361
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        18
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Read-only chat messages",
+      "position": [
+        156,
+        388
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        420
+      ],
+      "title": "Read-only chat messages",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXStaticText",
+      "size": [
+        116,
+        20
+      ],
+      "title": "",
+      "value": "All Aboard (ish)"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        197
+      ],
+      "role": "AXStaticText",
+      "size": [
+        85,
+        14
+      ],
+      "title": "",
+      "value": "YouTube \u00b7 Video"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        235
+      ],
+      "role": "AXStaticText",
+      "size": [
+        40,
+        15
+      ],
+      "title": "",
+      "value": "Quality"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        293
+      ],
+      "role": "AXStaticText",
+      "size": [
+        31,
+        16
+      ],
+      "title": "",
+      "value": "Chat"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        363
+      ],
+      "role": "AXStaticText",
+      "size": [
+        236,
+        14
+      ],
+      "title": "",
+      "value": "Import a chat archive to follow the recording."
+    }
+  ],
+  "pid": 55428,
+  "readErrors": {
+    "AXChildren:-25212": 16,
+    "AXDescription:-25205": 17,
+    "AXDescription:-25212": 1,
+    "AXSheets:-25205": 26,
+    "AXSheets:-25212": 27,
+    "AXTitle:-25205": 14,
+    "AXTitle:-25212": 4,
+    "AXValue:-25205": 38,
+    "AXValue:-25212": 2
+  },
+  "timeUTC": "2026-11-08T20:40:40Z",
+  "windowMatches": 1,
+  "withinDeadline": true
+}

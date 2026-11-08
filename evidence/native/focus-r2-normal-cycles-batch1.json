@@ -1,0 +1,2686 @@
+{
+  "actionTimeline" : [
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:41.802Z",
+      "cycle" : 0,
+      "phase" : "before",
+      "uptime" : 924569.22691325005
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:41.810Z",
+      "cycle" : 0,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924569.23519566667
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:42.058Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 0,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924569.48308300006
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:42.062Z",
+      "AXResult" : 0,
+      "cycle" : 0,
+      "phase" : "after",
+      "uptime" : 924569.48688412504
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:42.064Z",
+      "cycle" : 0,
+      "phase" : "before",
+      "uptime" : 924569.48878833337
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:42.066Z",
+      "AXResult" : 0,
+      "cycle" : 0,
+      "phase" : "after",
+      "uptime" : 924569.49132529169
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.079Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 0,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924569.50374187506
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.081Z",
+      "AXResult" : 0,
+      "cycle" : 0,
+      "phase" : "after",
+      "uptime" : 924569.50575641671
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.338Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 0,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924569.76343887509
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.344Z",
+      "AXResult" : 0,
+      "cycle" : 0,
+      "phase" : "after",
+      "uptime" : 924569.76947000006
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:42.542Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924569.96756629169
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:42.544Z",
+      "cycle" : 1,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924569.96924887504
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:42.781Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924570.20646608341
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:42.784Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924570.20960254176
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:42.786Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924570.21085312509
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:42.787Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924570.21242700005
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.800Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 1,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924570.2252576251
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:42.802Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924570.22724450007
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:43.094Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 1,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924570.51891375007
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:43.106Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924570.53079641669
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:43.298Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 1,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924570.72350954171
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:43.300Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924570.72508279176
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:43.587Z",
+      "AXAction" : "AXPress",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXMenuItem",
+      "title" : "Open Stream — Focus…",
+      "uptime" : 924571.01170329168
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:43.588Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924571.01265466667
+    },
+    {
+      "action" : "release-selected-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:43.716Z",
+      "cycle" : 1,
+      "menu" : "Plugin",
+      "phase" : "observed-source-prompt",
+      "uptime" : 924571.14152200008
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:43.717Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+      "uptime" : 924571.14245016675
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:43.718Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924571.14355625003
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:43.757Z",
+      "AXAction" : "AXPress",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "OK",
+      "uptime" : 924571.18197795842
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:43.762Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924571.18710945838
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:46.995Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924574.42022545834
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:46.996Z",
+      "cycle" : 1,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924574.42146991671
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:34:47.228Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "Me at the zoo — YouTube",
+      "uptime" : 924574.65300912503
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:34:47.231Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924574.65644729172
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:34:47.233Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924574.65827600006
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:34:47.235Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924574.66054491675
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:34:47.249Z",
+      "AXAction" : "AXPress",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "",
+      "uptime" : 924574.67457370844
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:34:47.278Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924574.70311262505
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:48.207Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924575.6316725834
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:48.208Z",
+      "cycle" : 1,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924575.63322391675
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:48.454Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 1,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924575.87929704168
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:48.458Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924575.88339208334
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:48.460Z",
+      "cycle" : 1,
+      "phase" : "before",
+      "uptime" : 924575.88562408334
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:48.463Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924575.88785108342
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:48.478Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 1,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924575.90270916675
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:48.480Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924575.9051250834
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:48.716Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 1,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924576.14100295841
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:48.722Z",
+      "AXResult" : 0,
+      "cycle" : 1,
+      "phase" : "after",
+      "uptime" : 924576.14699566667
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:48.921Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924576.34563350002
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:48.922Z",
+      "cycle" : 2,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924576.34721650009
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:49.171Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924576.5965222501
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:49.175Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924576.59998350008
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:49.177Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924576.60226404178
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:49.179Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924576.60458666668
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:49.194Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 2,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924576.61941691674
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:49.197Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924576.621969625
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:49.492Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 2,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924576.91756158334
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:49.500Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924576.92540325003
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:49.818Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 2,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924577.24329720833
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:49.820Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924577.24504608335
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:50.106Z",
+      "AXAction" : "AXPress",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXMenuItem",
+      "title" : "Open Stream — Focus…",
+      "uptime" : 924577.53143995837
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:50.108Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924577.53288950003
+    },
+    {
+      "action" : "release-selected-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:50.619Z",
+      "cycle" : 2,
+      "menu" : "Plugin",
+      "phase" : "observed-source-prompt",
+      "uptime" : 924578.04422383336
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:50.621Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+      "uptime" : 924578.04562566674
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:50.622Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924578.04703487502
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:50.670Z",
+      "AXAction" : "AXPress",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "OK",
+      "uptime" : 924578.09525875002
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:50.679Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924578.10374587507
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:53.838Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924581.26336887502
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:53.842Z",
+      "cycle" : 2,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924581.26672075002
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:34:54.061Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "Me at the zoo — YouTube",
+      "uptime" : 924581.48578045843
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:34:54.065Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924581.48981858336
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:34:54.067Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924581.49198895844
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:34:54.073Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924581.49821587501
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:34:54.099Z",
+      "AXAction" : "AXPress",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "",
+      "uptime" : 924581.5239871667
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:34:54.125Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924581.55036358337
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:55.109Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924582.53454387502
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:55.111Z",
+      "cycle" : 2,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924582.53623808338
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:55.324Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 2,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924582.74937112501
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:55.328Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924582.75298587501
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:55.330Z",
+      "cycle" : 2,
+      "phase" : "before",
+      "uptime" : 924582.75549129175
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:55.334Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924582.75892495841
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:55.348Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 2,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924582.77273154177
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:55.351Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924582.77600633341
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:55.624Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 2,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924583.04955416673
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:55.633Z",
+      "AXResult" : 0,
+      "cycle" : 2,
+      "phase" : "after",
+      "uptime" : 924583.05771158345
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:55.845Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924583.27020833339
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:34:55.847Z",
+      "cycle" : 3,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924583.27220695838
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:56.090Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924583.51507895836
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:34:56.096Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924583.52132425003
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:56.100Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924583.52551941667
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:34:56.104Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924583.52926854172
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:56.119Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 3,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924583.54360608337
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:56.122Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924583.5468200834
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:56.440Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 3,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924583.86549075006
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:34:56.451Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924583.87637279171
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:56.717Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 3,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924584.14235833334
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:56.719Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924584.14367433335
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:56.962Z",
+      "AXAction" : "AXPress",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXMenuItem",
+      "title" : "Open Stream — Focus…",
+      "uptime" : 924584.38738070836
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:34:56.964Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924584.38904245838
+    },
+    {
+      "action" : "release-selected-Plugin-menu",
+      "atUTC" : "2026-11-08T20:34:57.573Z",
+      "cycle" : 3,
+      "menu" : "Plugin",
+      "phase" : "observed-source-prompt",
+      "uptime" : 924584.99852758343
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:57.575Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+      "uptime" : 924585.0000219167
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:34:57.577Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924585.00179554173
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:57.626Z",
+      "AXAction" : "AXPress",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "OK",
+      "uptime" : 924585.05151737505
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:34:57.629Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924585.05371908343
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:00.676Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924588.10154187505
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:00.679Z",
+      "cycle" : 3,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924588.10416729178
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:00.930Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "Me at the zoo — YouTube",
+      "uptime" : 924588.35490829172
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:00.932Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924588.35730808345
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:00.934Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924588.35954820842
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:00.937Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924588.36208008335
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:00.948Z",
+      "AXAction" : "AXPress",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "",
+      "uptime" : 924588.37325758336
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:00.966Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924588.39129695843
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:01.912Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924589.33691470837
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:01.914Z",
+      "cycle" : 3,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924589.33874833339
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:02.164Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 3,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924589.58923008339
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:02.169Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924589.59375479177
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:02.172Z",
+      "cycle" : 3,
+      "phase" : "before",
+      "uptime" : 924589.59706675005
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:02.175Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924589.59963700001
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:02.195Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 3,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924589.62021400011
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:02.199Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924589.62414050009
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:02.514Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 3,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924589.93886208336
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:02.524Z",
+      "AXResult" : 0,
+      "cycle" : 3,
+      "phase" : "after",
+      "uptime" : 924589.94954779174
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:02.734Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924590.15953304176
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:02.736Z",
+      "cycle" : 4,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924590.16141291673
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:02.980Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924590.40539004176
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:02.985Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924590.41013258335
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:02.988Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924590.41332937509
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:02.993Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924590.41780004173
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:03.013Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 4,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924590.43785620842
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:03.017Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924590.44230612507
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:03.315Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 4,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924590.74036870839
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:03.327Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924590.75223920844
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:03.645Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 4,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924591.0695726251
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:03.647Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924591.07185570837
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:35:03.911Z",
+      "AXAction" : "AXPress",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXMenuItem",
+      "title" : "Open Stream — Focus…",
+      "uptime" : 924591.33611737506
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:35:03.913Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924591.3375576667
+    },
+    {
+      "action" : "release-selected-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:04.415Z",
+      "cycle" : 4,
+      "menu" : "Plugin",
+      "phase" : "observed-source-prompt",
+      "uptime" : 924591.84023320838
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:35:04.417Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+      "uptime" : 924591.84220654168
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:35:04.419Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924591.84431279171
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:35:04.468Z",
+      "AXAction" : "AXPress",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "OK",
+      "uptime" : 924591.89263812511
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:35:04.479Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924591.90370687505
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:07.462Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924594.88660695835
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:07.464Z",
+      "cycle" : 4,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924594.88873141678
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:07.708Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "Me at the zoo — YouTube",
+      "uptime" : 924595.13281283341
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:07.714Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924595.13869016676
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:07.717Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924595.14192879177
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:07.722Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924595.14712266671
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:07.750Z",
+      "AXAction" : "AXPress",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "",
+      "uptime" : 924595.17491912504
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:07.777Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924595.20222329174
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:08.753Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924596.17766904167
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:08.756Z",
+      "cycle" : 4,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924596.18092187506
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:08.998Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 4,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924596.42279533343
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:09.005Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924596.42978000001
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:09.008Z",
+      "cycle" : 4,
+      "phase" : "before",
+      "uptime" : 924596.43276933336
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:09.011Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924596.43618708337
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.027Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 4,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924596.45199408336
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.031Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924596.45604716672
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.348Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 4,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924596.7734164584
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.360Z",
+      "AXResult" : 0,
+      "cycle" : 4,
+      "phase" : "after",
+      "uptime" : 924596.78525195841
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:09.576Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924597.0013254584
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:09.579Z",
+      "cycle" : 5,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924597.00377704168
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:09.819Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924597.24434345844
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:09.827Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924597.25246308337
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:09.832Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924597.25715083338
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:09.838Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924597.26314187504
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.859Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 5,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924597.28396491671
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:09.864Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924597.28913737508
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:10.180Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 5,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924597.6047949167
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:10.189Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924597.61422775011
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:10.517Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 5,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924597.94157962501
+    },
+    {
+      "action" : "open-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:10.519Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924597.94408083335
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:35:10.805Z",
+      "AXAction" : "AXPress",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXMenuItem",
+      "title" : "Open Stream — Focus…",
+      "uptime" : 924598.22960241674
+    },
+    {
+      "action" : "open-focus-source-prompt",
+      "atUTC" : "2026-11-08T20:35:10.807Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924598.23213341669
+    },
+    {
+      "action" : "release-selected-Plugin-menu",
+      "atUTC" : "2026-11-08T20:35:11.304Z",
+      "cycle" : 5,
+      "menu" : "Plugin",
+      "phase" : "observed-source-prompt",
+      "uptime" : 924598.72926245839
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:35:11.306Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+      "uptime" : 924598.73137395841
+    },
+    {
+      "action" : "set-public-source",
+      "atUTC" : "2026-11-08T20:35:11.309Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924598.73370720842
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:35:11.368Z",
+      "AXAction" : "AXPress",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "OK",
+      "uptime" : 924598.79320083337
+    },
+    {
+      "action" : "confirm-public-source",
+      "atUTC" : "2026-11-08T20:35:11.379Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924598.80367912503
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:15.103Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924602.52837500011
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:15.106Z",
+      "cycle" : 5,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924602.53065179172
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:15.362Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "Me at the zoo — YouTube",
+      "uptime" : 924602.78696933342
+    },
+    {
+      "action" : "raise-new-child",
+      "atUTC" : "2026-11-08T20:35:15.367Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924602.79221679177
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:15.371Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924602.79617712507
+    },
+    {
+      "action" : "make-main-new-child",
+      "atUTC" : "2026-11-08T20:35:15.377Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924602.80178508337
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:15.397Z",
+      "AXAction" : "AXPress",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXButton",
+      "title" : "",
+      "uptime" : 924602.82223075011
+    },
+    {
+      "action" : "close-retained-new-child",
+      "atUTC" : "2026-11-08T20:35:15.429Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924602.85362750001
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:16.406Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924603.83076487505
+    },
+    {
+      "action" : "activate-IINA",
+      "atUTC" : "2026-11-08T20:35:16.409Z",
+      "cycle" : 5,
+      "phase" : "after",
+      "returned" : true,
+      "uptime" : 924603.83374354173
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:16.615Z",
+      "AXAction" : "AXRaise",
+      "cycle" : 5,
+      "phase" : "before",
+      "role" : "AXWindow",
+      "title" : "All Aboard (ish) — YouTube",
+      "uptime" : 924604.039853625
+    },
+    {
+      "action" : "raise-anchor",
+      "atUTC" : "2026-11-08T20:35:16.624Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924604.04923141678
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:16.630Z",
+      "cycle" : 5,
+      "phase" : "before",
+      "uptime" : 924604.05502066668
+    },
+    {
+      "action" : "make-main-anchor",
+      "atUTC" : "2026-11-08T20:35:16.636Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924604.06134216674
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:16.649Z",
+      "AXAction" : "AXPress",
+      "AXCancelSupported" : true,
+      "cycle" : 5,
+      "phase" : "before",
+      "retainedMenuRole" : "AXMenu",
+      "uptime" : 924604.07432958344
+    },
+    {
+      "action" : "open-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:16.654Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924604.07856612501
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:16.891Z",
+      "AXAction" : "AXCancel",
+      "cycle" : 5,
+      "phase" : "before",
+      "reason" : "normal-menu-observation-complete",
+      "timeoutSeconds" : 1,
+      "uptime" : 924604.31557158334
+    },
+    {
+      "action" : "cancel-retained-Playback-menu",
+      "atUTC" : "2026-11-08T20:35:16.904Z",
+      "AXResult" : 0,
+      "cycle" : 5,
+      "phase" : "after",
+      "uptime" : 924604.32925412501
+    }
+  ],
+  "allPassed" : true,
+  "anchorTitle" : "All Aboard (ish) — YouTube",
+  "childTitle" : "Me at the zoo — YouTube",
+  "complete" : true,
+  "completedCycles" : 5,
+  "endedUTC" : "2026-11-08T20:35:17.181Z",
+  "expectedOpenMenuTitle" : "Open Stream — Focus…",
+  "initialAnchor" : {
+    "frame" : [
+      535,
+      391,
+      640,
+      360
+    ],
+    "frameUnchanged" : true,
+    "notMinimized" : true,
+    "observedUTC" : "2026-11-08T20:34:42.073Z",
+    "playbackMenu" : {
+      "enabled" : true,
+      "itemTitle" : "Resume",
+      "observedUTC" : "2026-11-08T20:34:42.470Z",
+      "pausedByMenu" : true
+    },
+    "sameAppProcess" : true,
+    "sameAXIdentity" : true,
+    "title" : "All Aboard (ish) — YouTube",
+    "titleUnchanged" : true
+  },
+  "initialWindows" : [
+    {
+      "frame" : [
+        535,
+        391,
+        640,
+        360
+      ],
+      "title" : "All Aboard (ish) — YouTube"
+    },
+    {
+      "frame" : [
+        576,
+        508,
+        560,
+        440
+      ],
+      "title" : ""
+    }
+  ],
+  "lastSuccessfulAXWindowsRead" : {
+    "afterUTC" : "2026-11-08T20:35:17.161Z",
+    "attempt" : 1,
+    "AXResult" : 0,
+    "beforeUTC" : "2026-11-08T20:35:17.160Z",
+    "timeoutSeconds" : 0.25,
+    "validArray" : true,
+    "windowCount" : 2
+  },
+  "limits" : [
+    "Resume menu is native paused-state evidence only; exact 120-second position is not inspected.",
+    "A resolved child title does not prove decoded video\/audio or network quality.",
+    "This is a bounded ordinary-YouTube child lifecycle test, not mixed Twitch or long-session proof.",
+    "On failure cleanup only requests AXCancel on the exact menu this harness opened; no window close, playback toggle, or app termination is performed.",
+    "AXCancel success records an accepted cancellation request, not proof that AppKit menu tracking or all AppleEvent responsiveness recovered."
+  ],
+  "mode" : "run",
+  "ok" : true,
+  "ownedMenuCancellation" : {
+    "attempted" : true,
+    "AXResult" : 0,
+    "menu" : "Playback",
+    "reason" : "normal-menu-observation-complete",
+    "requestAccepted" : true,
+    "trackingExitIndependentlyVerified" : false
+  },
+  "phase" : "bounded-normal-cycles-passed",
+  "pid" : 55428,
+  "plannedCycles" : 5,
+  "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+  "reads" : 17742,
+  "records" : [
+    {
+      "anchorAfter" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:48.472Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:34:48.848Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBefore" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:42.794Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:34:43.229Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBeforeClose" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:46.913Z",
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "checks" : {
+        "anchorFrameUnchanged" : true,
+        "anchorSameAXIdentity" : true,
+        "anchorStillNativelyPaused" : true,
+        "anchorTitleUnchanged" : true,
+        "childClosed" : true,
+        "childExpectedTitle" : true,
+        "childNewRetainedIdentity" : true,
+        "closeButtonBelongedToChild" : true,
+        "preexistingWindowsRetained" : true,
+        "sameAppProcess" : true,
+        "windowSetRestored" : true
+      },
+      "closeTarget" : {
+        "buttonAXWindowEqualsRetainedChild" : true,
+        "directAXCloseButtonAttribute" : true,
+        "notAnchor" : true,
+        "notAnyPreexistingWindow" : true,
+        "title" : "Me at the zoo — YouTube"
+      },
+      "complete" : true,
+      "cycle" : 1,
+      "endedUTC" : "2026-11-08T20:34:48.854Z",
+      "openedChild" : {
+        "frame" : [
+          712,
+          464,
+          348,
+          214
+        ],
+        "newRetainedAXIdentity" : true,
+        "observedUTC" : "2026-11-08T20:34:46.909Z",
+        "title" : "Me at the zoo — YouTube"
+      },
+      "pluginMenuObservation" : {
+        "expectedTitle" : "Open Stream — Focus…",
+        "matchingCommandCount" : 1,
+        "menuItems" : [
+          {
+            "enabled" : true,
+            "title" : "Manage Plugins…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Hide Plugins Panel"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Open Stream — Focus…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Show Streams Focus"
+          },
+          {
+            "enabled" : true,
+            "title" : "Import Chat Archive…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Turn Chat Off"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat in Sidebar"
+          },
+          {
+            "enabled" : true,
+            "title" : "More…"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Developer Tool"
+          },
+          {
+            "enabled" : true,
+            "title" : "Reload All Plugins"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat over Video"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate (Global)"
+          }
+        ],
+        "observedUTC" : "2026-11-08T20:34:43.574Z"
+      },
+      "startedUTC" : "2026-11-08T20:34:42.473Z"
+    },
+    {
+      "anchorAfter" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:55.342Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:34:55.759Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBefore" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:49.189Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:34:49.747Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBeforeClose" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:53.734Z",
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "checks" : {
+        "anchorFrameUnchanged" : true,
+        "anchorSameAXIdentity" : true,
+        "anchorStillNativelyPaused" : true,
+        "anchorTitleUnchanged" : true,
+        "childClosed" : true,
+        "childExpectedTitle" : true,
+        "childNewRetainedIdentity" : true,
+        "closeButtonBelongedToChild" : true,
+        "preexistingWindowsRetained" : true,
+        "sameAppProcess" : true,
+        "windowSetRestored" : true
+      },
+      "closeTarget" : {
+        "buttonAXWindowEqualsRetainedChild" : true,
+        "directAXCloseButtonAttribute" : true,
+        "notAnchor" : true,
+        "notAnyPreexistingWindow" : true,
+        "title" : "Me at the zoo — YouTube"
+      },
+      "complete" : true,
+      "cycle" : 2,
+      "endedUTC" : "2026-11-08T20:34:55.770Z",
+      "openedChild" : {
+        "frame" : [
+          712,
+          464,
+          348,
+          214
+        ],
+        "newRetainedAXIdentity" : true,
+        "observedUTC" : "2026-11-08T20:34:53.729Z",
+        "title" : "Me at the zoo — YouTube"
+      },
+      "pluginMenuObservation" : {
+        "expectedTitle" : "Open Stream — Focus…",
+        "matchingCommandCount" : 1,
+        "menuItems" : [
+          {
+            "enabled" : true,
+            "title" : "Manage Plugins…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Hide Plugins Panel"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Open Stream — Focus…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Show Streams Focus"
+          },
+          {
+            "enabled" : true,
+            "title" : "Import Chat Archive…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Turn Chat Off"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat in Sidebar"
+          },
+          {
+            "enabled" : true,
+            "title" : "More…"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Developer Tool"
+          },
+          {
+            "enabled" : true,
+            "title" : "Reload All Plugins"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat over Video"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate (Global)"
+          }
+        ],
+        "observedUTC" : "2026-11-08T20:34:50.094Z"
+      },
+      "startedUTC" : "2026-11-08T20:34:48.859Z"
+    },
+    {
+      "anchorAfter" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:02.189Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:35:02.655Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBefore" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:34:56.111Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:34:56.654Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBeforeClose" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:00.579Z",
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "checks" : {
+        "anchorFrameUnchanged" : true,
+        "anchorSameAXIdentity" : true,
+        "anchorStillNativelyPaused" : true,
+        "anchorTitleUnchanged" : true,
+        "childClosed" : true,
+        "childExpectedTitle" : true,
+        "childNewRetainedIdentity" : true,
+        "closeButtonBelongedToChild" : true,
+        "preexistingWindowsRetained" : true,
+        "sameAppProcess" : true,
+        "windowSetRestored" : true
+      },
+      "closeTarget" : {
+        "buttonAXWindowEqualsRetainedChild" : true,
+        "directAXCloseButtonAttribute" : true,
+        "notAnchor" : true,
+        "notAnyPreexistingWindow" : true,
+        "title" : "Me at the zoo — YouTube"
+      },
+      "complete" : true,
+      "cycle" : 3,
+      "endedUTC" : "2026-11-08T20:35:02.663Z",
+      "openedChild" : {
+        "frame" : [
+          712,
+          464,
+          348,
+          214
+        ],
+        "newRetainedAXIdentity" : true,
+        "observedUTC" : "2026-11-08T20:35:00.573Z",
+        "title" : "Me at the zoo — YouTube"
+      },
+      "pluginMenuObservation" : {
+        "expectedTitle" : "Open Stream — Focus…",
+        "matchingCommandCount" : 1,
+        "menuItems" : [
+          {
+            "enabled" : true,
+            "title" : "Manage Plugins…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Hide Plugins Panel"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Open Stream — Focus…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Show Streams Focus"
+          },
+          {
+            "enabled" : true,
+            "title" : "Import Chat Archive…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Turn Chat Off"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat in Sidebar"
+          },
+          {
+            "enabled" : true,
+            "title" : "More…"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Developer Tool"
+          },
+          {
+            "enabled" : true,
+            "title" : "Reload All Plugins"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat over Video"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate (Global)"
+          }
+        ],
+        "observedUTC" : "2026-11-08T20:34:56.948Z"
+      },
+      "startedUTC" : "2026-11-08T20:34:55.778Z"
+    },
+    {
+      "anchorAfter" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:09.022Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:35:09.490Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBefore" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:03.006Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:35:03.568Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBeforeClose" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:07.361Z",
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "checks" : {
+        "anchorFrameUnchanged" : true,
+        "anchorSameAXIdentity" : true,
+        "anchorStillNativelyPaused" : true,
+        "anchorTitleUnchanged" : true,
+        "childClosed" : true,
+        "childExpectedTitle" : true,
+        "childNewRetainedIdentity" : true,
+        "closeButtonBelongedToChild" : true,
+        "preexistingWindowsRetained" : true,
+        "sameAppProcess" : true,
+        "windowSetRestored" : true
+      },
+      "closeTarget" : {
+        "buttonAXWindowEqualsRetainedChild" : true,
+        "directAXCloseButtonAttribute" : true,
+        "notAnchor" : true,
+        "notAnyPreexistingWindow" : true,
+        "title" : "Me at the zoo — YouTube"
+      },
+      "complete" : true,
+      "cycle" : 4,
+      "endedUTC" : "2026-11-08T20:35:09.503Z",
+      "openedChild" : {
+        "frame" : [
+          712,
+          464,
+          348,
+          214
+        ],
+        "newRetainedAXIdentity" : true,
+        "observedUTC" : "2026-11-08T20:35:07.351Z",
+        "title" : "Me at the zoo — YouTube"
+      },
+      "pluginMenuObservation" : {
+        "expectedTitle" : "Open Stream — Focus…",
+        "matchingCommandCount" : 1,
+        "menuItems" : [
+          {
+            "enabled" : true,
+            "title" : "Manage Plugins…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Hide Plugins Panel"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Open Stream — Focus…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Show Streams Focus"
+          },
+          {
+            "enabled" : true,
+            "title" : "Import Chat Archive…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Turn Chat Off"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat in Sidebar"
+          },
+          {
+            "enabled" : true,
+            "title" : "More…"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Developer Tool"
+          },
+          {
+            "enabled" : true,
+            "title" : "Reload All Plugins"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat over Video"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate (Global)"
+          }
+        ],
+        "observedUTC" : "2026-11-08T20:35:03.901Z"
+      },
+      "startedUTC" : "2026-11-08T20:35:02.671Z"
+    },
+    {
+      "anchorAfter" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:16.644Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:35:17.152Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBefore" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:09.852Z",
+        "playbackMenu" : {
+          "enabled" : true,
+          "itemTitle" : "Resume",
+          "observedUTC" : "2026-11-08T20:35:10.436Z",
+          "pausedByMenu" : true
+        },
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "anchorBeforeClose" : {
+        "frame" : [
+          535,
+          391,
+          640,
+          360
+        ],
+        "frameUnchanged" : true,
+        "notMinimized" : true,
+        "observedUTC" : "2026-11-08T20:35:15.009Z",
+        "sameAppProcess" : true,
+        "sameAXIdentity" : true,
+        "title" : "All Aboard (ish) — YouTube",
+        "titleUnchanged" : true
+      },
+      "checks" : {
+        "anchorFrameUnchanged" : true,
+        "anchorSameAXIdentity" : true,
+        "anchorStillNativelyPaused" : true,
+        "anchorTitleUnchanged" : true,
+        "childClosed" : true,
+        "childExpectedTitle" : true,
+        "childNewRetainedIdentity" : true,
+        "closeButtonBelongedToChild" : true,
+        "preexistingWindowsRetained" : true,
+        "sameAppProcess" : true,
+        "windowSetRestored" : true
+      },
+      "closeTarget" : {
+        "buttonAXWindowEqualsRetainedChild" : true,
+        "directAXCloseButtonAttribute" : true,
+        "notAnchor" : true,
+        "notAnyPreexistingWindow" : true,
+        "title" : "Me at the zoo — YouTube"
+      },
+      "complete" : true,
+      "cycle" : 5,
+      "endedUTC" : "2026-11-08T20:35:17.167Z",
+      "openedChild" : {
+        "frame" : [
+          712,
+          464,
+          348,
+          214
+        ],
+        "newRetainedAXIdentity" : true,
+        "observedUTC" : "2026-11-08T20:35:15.002Z",
+        "title" : "Me at the zoo — YouTube"
+      },
+      "pluginMenuObservation" : {
+        "expectedTitle" : "Open Stream — Focus…",
+        "matchingCommandCount" : 1,
+        "menuItems" : [
+          {
+            "enabled" : true,
+            "title" : "Manage Plugins…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Hide Plugins Panel"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Open Stream — Focus…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Show Streams Focus"
+          },
+          {
+            "enabled" : true,
+            "title" : "Import Chat Archive…"
+          },
+          {
+            "enabled" : true,
+            "title" : "Turn Chat Off"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat in Sidebar"
+          },
+          {
+            "enabled" : true,
+            "title" : "More…"
+          },
+          {
+            "enabled" : false,
+            "title" : ""
+          },
+          {
+            "enabled" : true,
+            "title" : "Developer Tool"
+          },
+          {
+            "enabled" : true,
+            "title" : "Reload All Plugins"
+          },
+          {
+            "enabled" : true,
+            "title" : "Chat over Video"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate"
+          },
+          {
+            "enabled" : true,
+            "title" : "Streams Focus Candidate (Global)"
+          }
+        ],
+        "observedUTC" : "2026-11-08T20:35:10.790Z"
+      },
+      "startedUTC" : "2026-11-08T20:35:09.515Z"
+    }
+  ],
+  "retainedAnchor" : {
+    "frame" : [
+      535,
+      391,
+      640,
+      360
+    ],
+    "identityMethod" : "retained AXUIElement; CFEqual against each current AXWindows list",
+    "title" : "All Aboard (ish) — YouTube"
+  },
+  "schemaVersion" : 1,
+  "scope" : "Normal candidate menu, guarded public prompt, retained AX window identity and AXCloseButton. No QA bridge or mpv data.",
+  "startedUTC" : "2026-11-08T20:34:41.710Z",
+  "updatedUTC" : "2026-11-08T20:35:17.181Z",
+  "variant" : "focus",
+  "windowQueryDiagnostics" : [
+    {
+      "attempts" : [
+        {
+          "afterUTC" : "2026-11-08T20:34:47.610Z",
+          "attempt" : 1,
+          "AXResult" : -25204,
+          "beforeUTC" : "2026-11-08T20:34:47.286Z",
+          "timeoutSeconds" : 0.25,
+          "validArray" : false
+        },
+        {
+          "afterUTC" : "2026-11-08T20:34:47.804Z",
+          "attempt" : 2,
+          "AXResult" : 0,
+          "beforeUTC" : "2026-11-08T20:34:47.611Z",
+          "timeoutSeconds" : 2,
+          "validArray" : true,
+          "windowCount" : 2
+        }
+      ],
+      "cycle" : 1,
+      "recovered" : true
+    },
+    {
+      "attempts" : [
+        {
+          "afterUTC" : "2026-11-08T20:34:54.457Z",
+          "attempt" : 1,
+          "AXResult" : -25204,
+          "beforeUTC" : "2026-11-08T20:34:54.132Z",
+          "timeoutSeconds" : 0.25,
+          "validArray" : false
+        },
+        {
+          "afterUTC" : "2026-11-08T20:34:54.656Z",
+          "attempt" : 2,
+          "AXResult" : 0,
+          "beforeUTC" : "2026-11-08T20:34:54.457Z",
+          "timeoutSeconds" : 2,
+          "validArray" : true,
+          "windowCount" : 2
+        }
+      ],
+      "cycle" : 2,
+      "recovered" : true
+    },
+    {
+      "attempts" : [
+        {
+          "afterUTC" : "2026-11-08T20:35:01.282Z",
+          "attempt" : 1,
+          "AXResult" : -25204,
+          "beforeUTC" : "2026-11-08T20:35:00.972Z",
+          "timeoutSeconds" : 0.25,
+          "validArray" : false
+        },
+        {
+          "afterUTC" : "2026-11-08T20:35:01.490Z",
+          "attempt" : 2,
+          "AXResult" : 0,
+          "beforeUTC" : "2026-11-08T20:35:01.283Z",
+          "timeoutSeconds" : 2,
+          "validArray" : true,
+          "windowCount" : 2
+        }
+      ],
+      "cycle" : 3,
+      "recovered" : true
+    },
+    {
+      "attempts" : [
+        {
+          "afterUTC" : "2026-11-08T20:35:08.110Z",
+          "attempt" : 1,
+          "AXResult" : -25204,
+          "beforeUTC" : "2026-11-08T20:35:07.786Z",
+          "timeoutSeconds" : 0.25,
+          "validArray" : false
+        },
+        {
+          "afterUTC" : "2026-11-08T20:35:08.305Z",
+          "attempt" : 2,
+          "AXResult" : 0,
+          "beforeUTC" : "2026-11-08T20:35:08.111Z",
+          "timeoutSeconds" : 2,
+          "validArray" : true,
+          "windowCount" : 2
+        }
+      ],
+      "cycle" : 4,
+      "recovered" : true
+    },
+    {
+      "attempts" : [
+        {
+          "afterUTC" : "2026-11-08T20:35:15.759Z",
+          "attempt" : 1,
+          "AXResult" : -25204,
+          "beforeUTC" : "2026-11-08T20:35:15.434Z",
+          "timeoutSeconds" : 0.25,
+          "validArray" : false
+        },
+        {
+          "afterUTC" : "2026-11-08T20:35:15.957Z",
+          "attempt" : 2,
+          "AXResult" : 0,
+          "beforeUTC" : "2026-11-08T20:35:15.759Z",
+          "timeoutSeconds" : 2,
+          "validArray" : true,
+          "windowCount" : 2
+        }
+      ],
+      "cycle" : 5,
+      "recovered" : true
+    }
+  ]
+}

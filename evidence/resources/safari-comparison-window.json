@@ -1,0 +1,22 @@
+{
+  "timeUTC": "2026-11-08T19:31:49.633846+00:00",
+  "appPID": 57089,
+  "preexistingWindowIDs": [
+    55998
+  ],
+  "ownedWindowID": 56467,
+  "source": "https://www.youtube.com/watch?v=92h_kU8O58M",
+  "requestedBounds": [
+    140,
+    140,
+    1420,
+    940
+  ],
+  "javascriptProbeExitCode": 1,
+  "javascriptProbe": "29:447: execution error: Safari got an error: You must enable 'Allow JavaScript from Apple Events' in the Developer section of Safari Settings to use 'do JavaScript'. (8)",
+  "preservationIncident": "The first front-window query raced new-document activation and resized existing55998. Its3tabs were not navigated/closed. Restored bounds to0,34,1688,1107 from the new document original frame; exact original frame was not captured, so this restoration is inferred pending baseline check.",
+  "comparison": "Not validly matched: native Safari JavaScript inspection is disabled; decoded video quality/codec/timing could not be verified from the observed player. No comparison benchmark or efficiency claim.",
+  "closedOwnedWindow": true,
+  "cleanupUTC": "2026-11-08T19:34:13.115469+00:00",
+  "cleanupObservation": "55998, 3, 0, 34, 1688, 1107"
+}

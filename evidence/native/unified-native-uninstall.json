@@ -1,0 +1,121 @@
+{
+  "actions": {
+    "OK": 0,
+    "Uninstall": 0
+  },
+  "actionTimeline": [
+    {
+      "action": "More-pointer",
+      "at": "2026-11-08T20:29:22.509Z",
+      "phase": "before",
+      "uptime": 924249.9361112084
+    },
+    {
+      "action": "More-pointer",
+      "at": "2026-11-08T20:29:22.701Z",
+      "code": 0,
+      "phase": "after",
+      "uptime": 924250.127864
+    },
+    {
+      "action": "Uninstall",
+      "at": "2026-11-08T20:29:23.040Z",
+      "phase": "before",
+      "uptime": 924250.4664924167
+    },
+    {
+      "action": "Uninstall",
+      "at": "2026-11-08T20:29:23.040Z",
+      "code": 0,
+      "phase": "after",
+      "uptime": 924250.4669864584
+    },
+    {
+      "action": "OK",
+      "at": "2026-11-08T20:29:23.411Z",
+      "phase": "before",
+      "uptime": 924250.8376299584
+    },
+    {
+      "action": "OK",
+      "at": "2026-11-08T20:29:23.696Z",
+      "code": 0,
+      "phase": "after",
+      "uptime": 924251.12270575
+    }
+  ],
+  "candidate": "Streams Unified Candidate",
+  "candidateMatches": 1,
+  "candidateRowAbsent": true,
+  "confirmationTitle": "Are you sure to uninstall Streams Unified Candidate?",
+  "frontmostVerified": true,
+  "mode": "uninstall",
+  "moreClick": {
+    "method": "cliclick",
+    "x": 793,
+    "y": 809
+  },
+  "moreFrame": {
+    "height": 18,
+    "width": 18,
+    "x": 783.5,
+    "y": 800
+  },
+  "ok": true,
+  "phase": "candidate-row-removed",
+  "pid": 55428,
+  "reads": 2112,
+  "row": [
+    {
+      "description": "",
+      "role": "AXCell",
+      "text": "",
+      "title": ""
+    },
+    {
+      "description": "",
+      "role": "AXButton",
+      "text": "",
+      "title": ""
+    },
+    {
+      "description": "",
+      "role": "AXStaticText",
+      "text": "Streams Unified Candidate",
+      "title": ""
+    },
+    {
+      "description": "",
+      "role": "AXStaticText",
+      "text": "0.5.0",
+      "title": ""
+    },
+    {
+      "description": "More",
+      "role": "AXButton",
+      "text": "",
+      "title": ""
+    },
+    {
+      "description": "",
+      "role": "AXStaticText",
+      "text": "Twitch and YouTube playback with optional read-only chat and synchronized replay.",
+      "title": ""
+    },
+    {
+      "description": "info",
+      "role": "AXButton",
+      "text": "",
+      "title": ""
+    }
+  ],
+  "rowFrame": {
+    "height": 60,
+    "width": 357,
+    "x": 517,
+    "y": 789
+  },
+  "settingsWindowCount": 1,
+  "windowTitle": "Plugins",
+  "installedFolderAbsent": true
+}

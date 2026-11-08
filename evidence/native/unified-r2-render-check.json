@@ -1,0 +1,62 @@
+{
+  "timeUTC": "2026-11-08T20:54:14.053820Z",
+  "pid": 55428,
+  "package": "unified-r2",
+  "method": "normal installed archive; native Accessibility tree and window screenshot; no QA harness",
+  "snapshot": "unified-r2-captured-ui.json",
+  "screenshot": "unified-r2-sidebar.png",
+  "visibleMessageViewport": {
+    "depth": 6,
+    "description": "Read-only chat messages",
+    "position": [
+      156,
+      396
+    ],
+    "role": "AXGroup",
+    "size": [
+      268,
+      412
+    ],
+    "title": "Read-only chat messages",
+    "value": ""
+  },
+  "lastMessageRow": {
+    "depth": 8,
+    "description": "",
+    "position": [
+      156,
+      739
+    ],
+    "role": "AXStaticText",
+    "size": [
+      243,
+      59
+    ],
+    "title": "",
+    "value": "@snowpoch42The audience absolutely desires more of you on the internet. Please and thank you"
+  },
+  "messageRows": 12,
+  "checks": [
+    {
+      "name": "native Unified identity",
+      "passed": true
+    },
+    {
+      "name": "genuine replay reports 693 messages",
+      "passed": true
+    },
+    {
+      "name": "Latest control absent while following",
+      "passed": true
+    },
+    {
+      "name": "native message row count bounded",
+      "passed": true
+    },
+    {
+      "name": "last synchronized row fully inside message viewport",
+      "passed": true
+    }
+  ],
+  "allPassed": true
+}

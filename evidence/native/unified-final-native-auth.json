@@ -1,0 +1,416 @@
+{
+  "provenance": "Native setup and rejection path; no registered client, OAuth grant, or authenticated chat session.",
+  "initial": {
+    "id": "f09f8dd481974d179e0642935feb9038",
+    "time": "2026-11-08T19:25:57.036Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "720p60",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+        "live": true,
+        "duration": 0,
+        "variant": "unified",
+        "source": {
+          "kind": "twitch-live",
+          "provider": "Twitch",
+          "id": "hutchmf"
+        },
+        "chat": {
+          "mode": "live",
+          "state": "needs-client",
+          "error": "Enter a registered Twitch Public Client ID to connect.",
+          "count": 0,
+          "sourceName": "hutchmf",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "needs-client",
+          "message": "Enter a registered Twitch Public Client ID to connect.",
+          "userCode": "",
+          "verificationURI": ""
+        },
+        "view": {
+          "presentation": "sidebar",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 2.383,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 2.383,
+        "duration": 11.994000000000597,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoFps": 59.940059661865234,
+        "droppedFrames": 0,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "seeking": false,
+        "pausedForCache": false,
+        "cacheBuffering": 100,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "checks": {
+    "nativeStateDelivery": true,
+    "invalidClientActionableError": true,
+    "videoUnaffected": true,
+    "clientIDEditableAfterError": true,
+    "offCleared": true
+  },
+  "invalidClient": {
+    "id": "d4ea3cbdfd934b0aabc29196804147cb",
+    "time": "2026-11-08T19:25:58.649Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "720p60",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+        "live": true,
+        "duration": 0,
+        "variant": "unified",
+        "source": {
+          "kind": "twitch-live",
+          "provider": "Twitch",
+          "id": "hutchmf"
+        },
+        "chat": {
+          "mode": "live",
+          "state": "disconnected",
+          "error": "Twitch authorization is unavailable. Check the Public Client ID and try again.",
+          "count": 0,
+          "sourceName": "hutchmf",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "error",
+          "message": "Twitch authorization is unavailable. Check the Public Client ID and try again.",
+          "userCode": "",
+          "verificationURI": ""
+        },
+        "view": {
+          "presentation": "sidebar",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 2.383,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 2.383,
+        "duration": 13.999333333333198,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoFps": 59.940059661865234,
+        "droppedFrames": 0,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "seeking": false,
+        "pausedForCache": false,
+        "cacheBuffering": 100,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "formInspection": {
+    "phase": "ui-result",
+    "time": "2026-11-08T19:25:59.055Z",
+    "variant": "unified",
+    "sourceId": "hutchmf",
+    "id": "",
+    "quality": "720p60",
+    "authCodeVisible": false,
+    "focused": "quality",
+    "authPanelVisible": true,
+    "documentHidden": true,
+    "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+    "action": "inspect",
+    "tab": "chat",
+    "qualityDisabled": false,
+    "bodyWidth": 300,
+    "messageCount": 0,
+    "scrollWidth": 300
+  },
+  "off": {
+    "id": "d64e445f120d406a82f437b6e429d5ab",
+    "time": "2026-11-08T19:26:00.263Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "720p60",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+        "live": true,
+        "duration": 0,
+        "variant": "unified",
+        "source": {
+          "kind": "twitch-live",
+          "provider": "Twitch",
+          "id": "hutchmf"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 0,
+          "sourceName": "hutchmf",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "error",
+          "message": "Twitch authorization is unavailable. Check the Public Client ID and try again.",
+          "userCode": "",
+          "verificationURI": ""
+        },
+        "view": {
+          "presentation": "sidebar",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 2.383,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 2.383,
+        "duration": 15.983333333333576,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoFps": 59.940059661865234,
+        "droppedFrames": 0,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "seeking": false,
+        "pausedForCache": false,
+        "cacheBuffering": 100,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "callbacks": [
+    {
+      "phase": "auth-state-received",
+      "time": "2026-11-08T19:25:56.246Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "authPhase": "off",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-stop-received",
+      "time": "2026-11-08T19:25:56.248Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-state-received",
+      "time": "2026-11-08T19:25:56.249Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "authPhase": "needs-client",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-state-received",
+      "time": "2026-11-08T19:25:57.861Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "authPhase": "off",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-stop-received",
+      "time": "2026-11-08T19:25:57.862Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-state-received",
+      "time": "2026-11-08T19:25:57.863Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "authPhase": "authorizing",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-state-received",
+      "time": "2026-11-08T19:25:58.082Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "authPhase": "error",
+      "chatMode": "live"
+    },
+    {
+      "phase": "auth-stop-received",
+      "time": "2026-11-08T19:25:58.083Z",
+      "variant": "unified",
+      "sourceId": "hutchmf",
+      "chatMode": "live"
+    }
+  ]
+}

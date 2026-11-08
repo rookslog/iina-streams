@@ -2937,7 +2937,7 @@
     },
     {
       "label": "rate-0.5-playing",
-      "clock": 301.3,
+      "clock": 301.3333333333333,
       "expectedIds": [
         "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
         "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
@@ -3140,12 +3140,12 @@
               "kind": "message"
             }
           ],
-          "position": 301.3,
+          "position": 301.3333333333333,
           "paused": false,
           "qa": true
         },
         "native": {
-          "position": 301.3,
+          "position": 301.3333333333333,
           "duration": 5914.733333333334,
           "paused": false,
           "speed": 0.5,
@@ -3169,7 +3169,7 @@
     },
     {
       "label": "rate-0.5-paused",
-      "clock": 301.5,
+      "clock": 301.5333333333333,
       "expectedIds": [
         "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
         "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
@@ -3372,12 +3372,12 @@
               "kind": "message"
             }
           ],
-          "position": 301.5,
+          "position": 301.5333333333333,
           "paused": true,
           "qa": true
         },
         "native": {
-          "position": 301.5,
+          "position": 301.5333333333333,
           "duration": 5914.733333333334,
           "paused": true,
           "speed": 0.5,
@@ -3401,7 +3401,7 @@
     },
     {
       "label": "rate-2-before",
-      "clock": 301.5,
+      "clock": 301.5333333333333,
       "expectedIds": [
         "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
         "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
@@ -3604,12 +3604,12 @@
               "kind": "message"
             }
           ],
-          "position": 301.5,
+          "position": 301.5333333333333,
           "paused": true,
           "qa": true
         },
         "native": {
-          "position": 301.5,
+          "position": 301.5333333333333,
           "duration": 5914.733333333334,
           "paused": true,
           "speed": 2,
@@ -3857,7 +3857,7 @@
     },
     {
       "label": "rate-2-paused",
-      "clock": 306.23333333333335,
+      "clock": 306.26666666666665,
       "expectedIds": [
         "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
         "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
@@ -4060,12 +4060,12 @@
               "kind": "message"
             }
           ],
-          "position": 306.23333333333335,
+          "position": 306.26666666666665,
           "paused": true,
           "qa": true
         },
         "native": {
-          "position": 306.23333333333335,
+          "position": 306.26666666666665,
           "duration": 5914.733333333334,
           "paused": true,
           "speed": 2,
@@ -4089,7 +4089,7 @@
     },
     {
       "label": "offset-plus-30",
-      "clock": 336.23333333333335,
+      "clock": 336.26666666666665,
       "expectedIds": [
         "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
         "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
@@ -4310,12 +4310,12 @@
               "kind": "message"
             }
           ],
-          "position": 306.23333333333335,
+          "position": 306.26666666666665,
           "paused": true,
           "qa": true
         },
         "native": {
-          "position": 306.23333333333335,
+          "position": 306.26666666666665,
           "duration": 5914.733333333334,
           "paused": true,
           "speed": 2,
@@ -4327,10 +4327,10 @@
           "idle": false,
           "fullscreen": false,
           "frame": {
-            "y": 356,
-            "x": 535,
-            "width": 640,
-            "height": 360
+            "y": 140,
+            "x": 343,
+            "width": 1024,
+            "height": 576
           },
           "hwdec": "videotoolbox-copy",
           "activeHelpers": []
@@ -4775,10 +4775,10 @@
           "idle": false,
           "fullscreen": false,
           "frame": {
-            "y": 356,
-            "x": 535,
-            "width": 640,
-            "height": 360
+            "y": 140,
+            "x": 343,
+            "width": 1024,
+            "height": 576
           },
           "hwdec": "videotoolbox-copy",
           "activeHelpers": []

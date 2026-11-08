@@ -1,0 +1,13 @@
+{
+  "pid": 5853,
+  "source": "92h_kU8O58M",
+  "variant": "unified",
+  "method": "normal menu and exact native close button",
+  "beforeCloseUTC": "2026-11-08T20:12:22.310214+00:00",
+  "afterCloseUTC": "2026-11-08T20:12:22.937060+00:00",
+  "closeExit": 0,
+  "beforeOpenUTC": "2026-11-08T20:12:22.937146+00:00",
+  "afterOpenUTC": "2026-11-08T20:12:24.063351+00:00",
+  "openExit": 0,
+  "result": "Unified normal source prompt confirmed"
+}

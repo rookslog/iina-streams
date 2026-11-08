@@ -1,0 +1,23 @@
+{
+  "variant": "unified",
+  "normalInstalledArchive": true,
+  "source": "https://www.youtube.com/watch?v=92h_kU8O58M",
+  "action": "Explicit Fetch replay",
+  "target": {
+    "depth": 6,
+    "description": "",
+    "position": [
+      266,
+      324
+    ],
+    "role": "AXButton",
+    "size": [
+      85,
+      29
+    ],
+    "title": "Fetch replay",
+    "value": ""
+  },
+  "beforeUTC": "2026-11-08T20:08:01.369111+00:00",
+  "afterUTC": "2026-11-08T20:08:01.481255+00:00"
+}

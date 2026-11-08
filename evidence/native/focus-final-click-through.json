@@ -1,0 +1,673 @@
+{
+  "checks": {
+    "baselineNativeInputObserved": true,
+    "insideOverlayNativeInputObserved": true,
+    "normalModeNotEditing": true,
+    "sameFrame": true
+  },
+  "baseline": [
+    {
+      "phase": "native-input",
+      "time": "2026-11-08T19:14:25.844Z",
+      "kind": "onMouseDown",
+      "x": 700,
+      "y": 300,
+      "clickCount": 1
+    },
+    {
+      "phase": "native-input",
+      "time": "2026-11-08T19:14:25.891Z",
+      "kind": "onMouseUp",
+      "x": 700,
+      "y": 300,
+      "clickCount": 0
+    }
+  ],
+  "insideOverlay": [
+    {
+      "phase": "native-input",
+      "time": "2026-11-08T19:14:26.720Z",
+      "kind": "onMouseDown",
+      "x": 1094,
+      "y": 644,
+      "clickCount": 1
+    },
+    {
+      "phase": "native-input",
+      "time": "2026-11-08T19:14:26.760Z",
+      "kind": "onMouseUp",
+      "x": 1094,
+      "y": 644,
+      "clickCount": 0
+    }
+  ],
+  "before": {
+    "id": "91d436da28774e59912b1746a2a5bc9a",
+    "time": "2026-11-08T19:14:25.623Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "136",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "270",
+            "label": "1080p \u00b7 H.264"
+          },
+          {
+            "id": "137",
+            "label": "1080p \u00b7 H.264"
+          },
+          {
+            "id": "399",
+            "label": "1080p \u00b7 AV1"
+          },
+          {
+            "id": "232",
+            "label": "720p \u00b7 H.264"
+          },
+          {
+            "id": "136",
+            "label": "720p \u00b7 H.264"
+          },
+          {
+            "id": "398",
+            "label": "720p \u00b7 AV1"
+          },
+          {
+            "id": "397",
+            "label": "480p \u00b7 AV1"
+          },
+          {
+            "id": "230",
+            "label": "360p \u00b7 H.264"
+          },
+          {
+            "id": "134",
+            "label": "360p \u00b7 H.264"
+          },
+          {
+            "id": "605",
+            "label": "360p \u00b7 VP9"
+          },
+          {
+            "id": "243",
+            "label": "360p \u00b7 VP9"
+          },
+          {
+            "id": "396",
+            "label": "360p \u00b7 AV1"
+          },
+          {
+            "id": "395",
+            "label": "240p \u00b7 AV1"
+          },
+          {
+            "id": "269",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "160",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "394",
+            "label": "144p \u00b7 AV1"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "All Aboard (ish)",
+        "live": false,
+        "duration": 5915,
+        "variant": "focus",
+        "source": {
+          "kind": "youtube",
+          "provider": "YouTube",
+          "id": "92h_kU8O58M"
+        },
+        "chat": {
+          "mode": "replay",
+          "state": "ready",
+          "error": "",
+          "count": 693,
+          "sourceName": "Imported chat",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [
+          {
+            "id": "ChwKGkNNZlFtYXZxLTQ0REZhY0gxZ0FkSVVzMDhB",
+            "time": 1167.963,
+            "author": "@pingudaniel",
+            "text": "Hello!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLU2JtYXpxLTQ0REZRY0wxZ0FkX0RzYTF3",
+            "time": 1170.056,
+            "author": "@CoreDump07",
+            "text": "oh no the missed sales",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNQNjFuS3pxLTQ0REZiRUgxZ0FkeGFjYzl3",
+            "time": 1170.095,
+            "author": "@alejandroioio6784",
+            "text": "i Just buy it on Amazon",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKRGxvcTNxLTQ0REZhZ0sxZ0FkSVVVQjln",
+            "time": 1172.268,
+            "author": "@LewwyyS",
+            "text": "I mean... that might be why haha ",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKYW5rcTdxLTQ0REZZN01sQWtkN0pVZXNn",
+            "time": 1174.093,
+            "author": "@sb_karma5121",
+            "text": "No it doesnt, I just tried too, Also is this book aimed toward people who are learning or who already know a decent chunk of programming does anyone know?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLYU40TERxLTQ0REZmWXQxZ0FkaXh3azJR",
+            "time": 1179.552,
+            "author": "@Umbra451",
+            "text": "live bug-squashing",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNOS05xckhxLTQ0REZiRUgxZ0FkeGFjYzl3",
+            "time": 1180.781,
+            "author": "@ITTom",
+            "text": "lol",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNQ2o3TG5xLTQ0REZhSUkxZ0FkT3hnWE5R",
+            "time": 1198.641,
+            "author": "@ITTom",
+            "text": "debuging life",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKZTg5TG5xLTQ0REZSc0wxZ0FkNGg0TERn",
+            "time": 1198.784,
+            "author": "@waielal",
+            "text": "the audio didn't cut since you restarted",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLMmh6Y0hxLTQ0REZaYTdyZ1VkVzBvTW93",
+            "time": 1214.912,
+            "author": "@MarkMusante",
+            "text": "the floating head dan is disappointed that the order button doesn't work",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPWEU3c0xxLTQ0REZlMFkxZ0FkYlZnM21n",
+            "time": 1217.578,
+            "author": "@rodakdev",
+            "text": "oh no",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKVEZuTVRxLTQ0REZaVUcxZ0FkMXpNdmt3",
+            "time": 1220.391,
+            "author": "@ChristianSchmid",
+            "text": "I wanted to support you by direct ordering through your page, but this is too expensive in Europe. what's the best ordering method for support you when I live in Germany?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPWGR3Y1hxLTQ0REZkZUtyZ1VkRTRJZ3hn",
+            "time": 1223.095,
+            "author": "@ThePixelExpedition",
+            "text": "Is it okay to buy on Amazon? I'm in Canada!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNOUzA5TTdxLTQ0REZXSVJyUVlkNC13NElB",
+            "time": 1242.886,
+            "author": "@p16r",
+            "text": "Omg it's Dan!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKVzhzdEhxLTQ0REZabzQxZ0FkNTJFWmNR",
+            "time": 1248.069,
+            "author": "@LewwyyS",
+            "text": "Yes, that may be true but - it's The Coding Train - we must all answer the whistle (we see stream, we click)",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNYTd5dFBxLTQ0REZhSUkxZ0FkT3hnWE5R",
+            "time": 1252.606,
+            "author": "@CoreDump07",
+            "text": "be sure to click like and subscribe :grinning_face_with_big_eyes:",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNeWM2ZGpxLTQ0REZRY0wxZ0FkX0RzYTF3",
+            "time": 1263.605,
+            "author": "@paulovgha",
+            "text": "I'm where for the Who... Also the what and where, probably the when, but why?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNObVQydG5xLTQ0REZTTXQxZ0FkSmswVzFn",
+            "time": 1265.453,
+            "author": "@MarkMusante",
+            "text": "i had already bought it!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKSF82ZHJxLTQ0REZlUEtGZ2tkLWQ4aVhn",
+            "time": 1267.838,
+            "author": "@summaryp",
+            "text": "no one told me this as you read an email telling you this haha",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNJXzI5dHpxLTQ0REZRSTUxZ0FkVXpRZ25B",
+            "time": 1272.236,
+            "author": "@rxz7834",
+            "text": "i mean youtube dock link for amazon doesn't work",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPN0Z5Tl9xLTQ0REZhRUgxZ0FkZEpjY0VR",
+            "time": 1277.743,
+            "author": "@shubeditz9800",
+            "text": "i miss the old u",
+            "color": "",
+            "kind": "message"
+          }
+        ],
+        "position": 1286.8,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 1286.8,
+        "duration": 5914.733333333334,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "audioCodec": "aac",
+        "audioRate": 44100,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 140,
+          "x": 140,
+          "width": 1280,
+          "height": 800
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "after": {
+    "id": "a5ae6ce2f36949878c8bb921eea65f19",
+    "time": "2026-11-08T19:14:27.640Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "136",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "270",
+            "label": "1080p \u00b7 H.264"
+          },
+          {
+            "id": "137",
+            "label": "1080p \u00b7 H.264"
+          },
+          {
+            "id": "399",
+            "label": "1080p \u00b7 AV1"
+          },
+          {
+            "id": "232",
+            "label": "720p \u00b7 H.264"
+          },
+          {
+            "id": "136",
+            "label": "720p \u00b7 H.264"
+          },
+          {
+            "id": "398",
+            "label": "720p \u00b7 AV1"
+          },
+          {
+            "id": "397",
+            "label": "480p \u00b7 AV1"
+          },
+          {
+            "id": "230",
+            "label": "360p \u00b7 H.264"
+          },
+          {
+            "id": "134",
+            "label": "360p \u00b7 H.264"
+          },
+          {
+            "id": "605",
+            "label": "360p \u00b7 VP9"
+          },
+          {
+            "id": "243",
+            "label": "360p \u00b7 VP9"
+          },
+          {
+            "id": "396",
+            "label": "360p \u00b7 AV1"
+          },
+          {
+            "id": "395",
+            "label": "240p \u00b7 AV1"
+          },
+          {
+            "id": "269",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "160",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "394",
+            "label": "144p \u00b7 AV1"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "All Aboard (ish)",
+        "live": false,
+        "duration": 5915,
+        "variant": "focus",
+        "source": {
+          "kind": "youtube",
+          "provider": "YouTube",
+          "id": "92h_kU8O58M"
+        },
+        "chat": {
+          "mode": "replay",
+          "state": "ready",
+          "error": "",
+          "count": 693,
+          "sourceName": "Imported chat",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [
+          {
+            "id": "ChwKGkNNZlFtYXZxLTQ0REZhY0gxZ0FkSVVzMDhB",
+            "time": 1167.963,
+            "author": "@pingudaniel",
+            "text": "Hello!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLU2JtYXpxLTQ0REZRY0wxZ0FkX0RzYTF3",
+            "time": 1170.056,
+            "author": "@CoreDump07",
+            "text": "oh no the missed sales",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNQNjFuS3pxLTQ0REZiRUgxZ0FkeGFjYzl3",
+            "time": 1170.095,
+            "author": "@alejandroioio6784",
+            "text": "i Just buy it on Amazon",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKRGxvcTNxLTQ0REZhZ0sxZ0FkSVVVQjln",
+            "time": 1172.268,
+            "author": "@LewwyyS",
+            "text": "I mean... that might be why haha ",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKYW5rcTdxLTQ0REZZN01sQWtkN0pVZXNn",
+            "time": 1174.093,
+            "author": "@sb_karma5121",
+            "text": "No it doesnt, I just tried too, Also is this book aimed toward people who are learning or who already know a decent chunk of programming does anyone know?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLYU40TERxLTQ0REZmWXQxZ0FkaXh3azJR",
+            "time": 1179.552,
+            "author": "@Umbra451",
+            "text": "live bug-squashing",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNOS05xckhxLTQ0REZiRUgxZ0FkeGFjYzl3",
+            "time": 1180.781,
+            "author": "@ITTom",
+            "text": "lol",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNQ2o3TG5xLTQ0REZhSUkxZ0FkT3hnWE5R",
+            "time": 1198.641,
+            "author": "@ITTom",
+            "text": "debuging life",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKZTg5TG5xLTQ0REZSc0wxZ0FkNGg0TERn",
+            "time": 1198.784,
+            "author": "@waielal",
+            "text": "the audio didn't cut since you restarted",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNLMmh6Y0hxLTQ0REZaYTdyZ1VkVzBvTW93",
+            "time": 1214.912,
+            "author": "@MarkMusante",
+            "text": "the floating head dan is disappointed that the order button doesn't work",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPWEU3c0xxLTQ0REZlMFkxZ0FkYlZnM21n",
+            "time": 1217.578,
+            "author": "@rodakdev",
+            "text": "oh no",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKVEZuTVRxLTQ0REZaVUcxZ0FkMXpNdmt3",
+            "time": 1220.391,
+            "author": "@ChristianSchmid",
+            "text": "I wanted to support you by direct ordering through your page, but this is too expensive in Europe. what's the best ordering method for support you when I live in Germany?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPWGR3Y1hxLTQ0REZkZUtyZ1VkRTRJZ3hn",
+            "time": 1223.095,
+            "author": "@ThePixelExpedition",
+            "text": "Is it okay to buy on Amazon? I'm in Canada!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNOUzA5TTdxLTQ0REZXSVJyUVlkNC13NElB",
+            "time": 1242.886,
+            "author": "@p16r",
+            "text": "Omg it's Dan!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKVzhzdEhxLTQ0REZabzQxZ0FkNTJFWmNR",
+            "time": 1248.069,
+            "author": "@LewwyyS",
+            "text": "Yes, that may be true but - it's The Coding Train - we must all answer the whistle (we see stream, we click)",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNYTd5dFBxLTQ0REZhSUkxZ0FkT3hnWE5R",
+            "time": 1252.606,
+            "author": "@CoreDump07",
+            "text": "be sure to click like and subscribe :grinning_face_with_big_eyes:",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNNeWM2ZGpxLTQ0REZRY0wxZ0FkX0RzYTF3",
+            "time": 1263.605,
+            "author": "@paulovgha",
+            "text": "I'm where for the Who... Also the what and where, probably the when, but why?",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNObVQydG5xLTQ0REZTTXQxZ0FkSmswVzFn",
+            "time": 1265.453,
+            "author": "@MarkMusante",
+            "text": "i had already bought it!",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNKSF82ZHJxLTQ0REZlUEtGZ2tkLWQ4aVhn",
+            "time": 1267.838,
+            "author": "@summaryp",
+            "text": "no one told me this as you read an email telling you this haha",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNJXzI5dHpxLTQ0REZRSTUxZ0FkVXpRZ25B",
+            "time": 1272.236,
+            "author": "@rxz7834",
+            "text": "i mean youtube dock link for amazon doesn't work",
+            "color": "",
+            "kind": "message"
+          },
+          {
+            "id": "ChwKGkNPN0Z5Tl9xLTQ0REZhRUgxZ0FkZEpjY0VR",
+            "time": 1277.743,
+            "author": "@shubeditz9800",
+            "text": "i miss the old u",
+            "color": "",
+            "kind": "message"
+          }
+        ],
+        "position": 1286.8,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 1286.8,
+        "duration": 5914.733333333334,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "audioCodec": "aac",
+        "audioRate": 44100,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 140,
+          "x": 140,
+          "width": 1280,
+          "height": 800
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "coordinates": {
+    "outside": [
+      840,
+      667
+    ],
+    "inside": [
+      1234,
+      323
+    ]
+  },
+  "provenance": "Physical mouse clicks in the native player after activation/focus click; QA observers return false. Native y is measured upward from player bottom."
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "afterUTC": "2026-11-08T20:33:02Z",
+    "AXResult": 0,
+    "beforeUTC": "2026-11-08T20:33:02Z",
+    "button": "Chat",
+    "normalNativeWebButton": true,
+    "pid": 55428,
+    "window": "All Aboard"
+  },
+  {
+    "afterUTC": "2026-11-08T20:33:02Z",
+    "AXResult": 0,
+    "beforeUTC": "2026-11-08T20:33:02Z",
+    "button": "Fetch replay",
+    "normalNativeWebButton": true,
+    "pid": 55428,
+    "window": "All Aboard"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "beforeUTC": "2026-11-08T20:37:17.197279+00:00",
+  "afterUTC": "2026-11-08T20:37:18.469479+00:00",
+  "pid": 55428,
+  "variant": "focus",
+  "exit": 0,
+  "result": "Native Turn Chat Off and exact owned Focus window close completed.",
+  "error": "",
+  "closureConfirmedByThatAction": false,
+  "followup": "Later exact-frame Swift closure independently checks absence; earlier AppleScript action returnedsuccess but the Focus window remained visible."
+}

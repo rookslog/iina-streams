@@ -1,0 +1,17 @@
+{
+  "afterUTC": "2026-11-08T20:40:16Z",
+  "allOtherNativeWindowIdentitiesPreserved": true,
+  "AXResult": 0,
+  "beforeUTC": "2026-11-08T20:40:16Z",
+  "closeButtonAXWindowEqualsTarget": true,
+  "frame": [
+    140,
+    100,
+    1280,
+    720
+  ],
+  "ok": true,
+  "pid": 55428,
+  "targetAbsent": true,
+  "title": "All Aboard (ish) \u2014 YouTube"
+}

@@ -1,0 +1,967 @@
+{
+  "schemaVersion": 2,
+  "startedUTC": "2026-11-08T20:56:37.391658+00:00",
+  "method": "Read-only final preservation queries; no UI actions, process changes, preference changes, remote writes, or credential inspection.",
+  "repositories": [
+    {
+      "path": "/Users/rookslog/development/iina-streams",
+      "branch": {
+        "exitCode": 0,
+        "output": "design/tnf-quiet-streams"
+      },
+      "head": {
+        "exitCode": 0,
+        "output": "8140312e6df4ff48143712c6ce8b911160a17454"
+      },
+      "status": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "worktrees": {
+        "exitCode": 0,
+        "output": "worktree /Users/rookslog/Development/iina-streams\nHEAD 8140312e6df4ff48143712c6ce8b911160a17454\nbranch refs/heads/design/tnf-quiet-streams\n\nworktree /Users/rookslog/development/iina-streams-candidates\nHEAD 127f6b98587bbdb8a6f2c532ad2a97665b4a7611\nbranch refs/heads/feature/candidate-portfolio-20261108\n\nworktree /Users/rookslog/development/iina-streams-design\nHEAD a7b61e1e7e33c4e9a196f59d91bd5202532c7ac1\nbranch refs/heads/design/in-app-panel-comparison"
+      }
+    },
+    {
+      "path": "/Users/rookslog/development/iina-streams-design",
+      "branch": {
+        "exitCode": 0,
+        "output": "design/in-app-panel-comparison"
+      },
+      "head": {
+        "exitCode": 0,
+        "output": "a7b61e1e7e33c4e9a196f59d91bd5202532c7ac1"
+      },
+      "status": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "worktrees": {
+        "exitCode": 0,
+        "output": "worktree /Users/rookslog/Development/iina-streams\nHEAD 8140312e6df4ff48143712c6ce8b911160a17454\nbranch refs/heads/design/tnf-quiet-streams\n\nworktree /Users/rookslog/development/iina-streams-candidates\nHEAD 127f6b98587bbdb8a6f2c532ad2a97665b4a7611\nbranch refs/heads/feature/candidate-portfolio-20261108\n\nworktree /Users/rookslog/development/iina-streams-design\nHEAD a7b61e1e7e33c4e9a196f59d91bd5202532c7ac1\nbranch refs/heads/design/in-app-panel-comparison"
+      }
+    },
+    {
+      "path": "/Users/rookslog/development/iina-streams-candidates",
+      "branch": {
+        "exitCode": 0,
+        "output": "feature/candidate-portfolio-20261108"
+      },
+      "head": {
+        "exitCode": 0,
+        "output": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611"
+      },
+      "status": {
+        "exitCode": 0,
+        "output": " M docs/COMMISSION-AUDIT.md\n M evidence/native/focus-real-youtube-replay.json\n M evidence/tests/focus-final-qa-build.json\n M evidence/tests/node-final-core.txt\n M evidence/tests/python-final-core.txt\n?? evidence/native/first-native.png\n?? evidence/native/focus-comparison-real-replay.png\n?? evidence/native/focus-final-click-through.json\n?? evidence/native/focus-final-comparison-overlay.png\n?? evidence/native/focus-final-fullscreen-quality-360.json\n?? evidence/native/focus-final-hidden-before.json\n?? evidence/native/focus-final-hidden-quality-360.json\n?? evidence/native/focus-final-native-auth.json\n?? evidence/native/focus-final-open-twitch-vod.json\n?? evidence/native/focus-final-open-youtube-archive.json\n?? evidence/native/focus-final-render-check.json\n?? evidence/native/focus-final-render-overlay.jpg\n?? evidence/native/focus-final-render-overlay.png\n?? evidence/native/focus-final-render-sidebar.jpg\n?? evidence/native/focus-final-render-sidebar.png\n?? evidence/native/focus-fullscreen-overlay.png\n?? evidence/native/focus-hidden-quality-settled.png\n?? evidence/native/focus-hidden-quality.png\n?? evidence/native/focus-native-collapse-action.json\n?? evidence/native/focus-native-collapse-before-quality.png\n?? evidence/native/focus-native-collapsed-quality-final.json\n?? evidence/native/focus-native-collapsed-quality-final.png\n?? evidence/native/focus-native-uninstall.json\n?? evidence/native/focus-normal-click-probe.png\n?? evidence/native/focus-r2-after-fetch-native-ui.json\n?? evidence/native/focus-r2-confirmed-close.json\n?? evidence/native/focus-r2-initial-native-ui.json\n?? evidence/native/focus-r2-inspector.png\n?? evidence/native/focus-r2-normal-close.json\n?? evidence/native/focus-r2-normal-cycle-smoke.json\n?? evidence/native/focus-r2-normal-cycles-batch1.json\n?? evidence/native/focus-r2-normal-fetch-actions.json\n?? evidence/native/focus-r2-overlay.png\n?? evidence/native/focus-r2-render-capture.json\n?? evidence/native/focus-replay-sidebar.png\n?? evidence/native/focus-small-window-clamp.png\n?? evidence/native/iina-normal-unresponsive-sample-private.txt\n?? evidence/native/keychain-native-probe.json\n?? evidence/native/native-modal-inspection.json\n?? evidence/native/normal-cycles-inspect.json\n?? evidence/native/normal-focus-cycles-batch1.json\n?? evidence/native/normal-menu-physical-recovery.json\n?? evidence/native/normal-menu-recovery.json\n?? evidence/native/normal-test-termination.json\n?? evidence/native/normal-unified-cycles-smoke.json\n?? evidence/native/overlay-fullscreen-check.png\n?? evidence/native/overlay-opacity-probe.png\n?? evidence/native/overlay-playing-check.png\n?? evidence/native/overlay-top-left-check.png\n?? evidence/native/owned-normal-test-restart.json\n?? evidence/native/package-acceptance-r2.json\n?? evidence/native/package-acceptance.json\n?? evidence/native/qa-final-traces/qa-events-2922164492.json\n?? evidence/native/qa-final-traces/qa-events-92h_kU8O58M.json\n?? evidence/native/qa-final-traces/qa-events-hutchmf.json\n?? evidence/native/qa-final-traces/qa-events-jNQXAC9IVRw.json\n?? evidence/native/qa-final-traces/qa-events-umLWFz4izTM.json\n?? evidence/native/qa-final-traces/qa-events.json\n?? evidence/native/qa-final-traces/qa-global.json\n?? evidence/native/qa-final-traces/qa-request.json\n?? evidence/native/qa-final-traces/qa-response.json\n?? evidence/native/qa-retirement.json\n?? evidence/native/r2-duplicate-title-inspection.json\n?? evidence/native/safari-active-comparison.png\n?? evidence/native/safari-comparison.png\n?? evidence/native/unified-comparison-settled.json\n?? evidence/native/unified-final-comparison-sidebar.json\n?? evidence/native/unified-final-comparison-sidebar.png\n?? evidence/native/unified-final-fullscreen-quality-720.json\n?? evidence/native/unified-final-initial.json\n?? evidence/native/unified-final-native-auth.json\n?? evidence/native/unified-final-open-twitch-live.json\n?? evidence/native/unified-final-open-twitch-vod.json\n?? evidence/native/unified-final-quality-360.json\n?? evidence/native/unified-install-dialog.png\n?? evidence/native/unified-native-uninstall.json\n?? evidence/native/unified-normal-after-modal.json\n?? evidence/native/unified-normal-current-ui.json\n?? evidence/native/unified-normal-fetch-action.json\n?? evidence/native/unified-normal-fetch-ax-action.json\n?? evidence/native/unified-normal-fresh-after-fetch.json\n?? evidence/native/unified-normal-fresh-after-fetch.png\n?? evidence/native/unified-normal-fresh-fetch-action.json\n?? evidence/native/unified-normal-fresh-fetch-early-attempt.txt\n?? evidence/native/unified-normal-fresh-settled.json\n?? evidence/native/unified-normal-installed-initial.png\n?? evidence/native/unified-normal-reopen.json\n?? evidence/native/unified-normal-replay-at120.json\n?? evidence/native/unified-normal-replay.png\n?? evidence/native/unified-normal-ui-after-fetch.json\n?? evidence/native/unified-normal-ui.json\n?? evidence/native/unified-overlay-editing.png\n?? evidence/native/unified-r2-after-fetch-native-ui.json\n?? evidence/native/unified-r2-after-off-native-ui.json\n?? evidence/native/unified-r2-captured-ui.json\n?? evidence/native/unified-r2-confirmed-close.json\n?? evidence/native/unified-r2-final-render-ui.json\n?? evidence/native/unified-r2-initial-native-ui.json\n?? evidence/native/unified-r2-normal-cycles-batch1.json\n?? evidence/native/unified-r2-normal-fetch-action.json\n?? evidence/native/unified-r2-normal-off-action.json\n?? evidence/native/unified-r2-off-check-initial-assertion.json\n?? evidence/native/unified-r2-off-check.json\n?? evidence/native/unified-r2-render-capture.json\n?? evidence/native/unified-r2-render-check.json\n?? evidence/native/unified-r2-sidebar.png\n?? evidence/native/unified-real-youtube-replay.json\n?? evidence/native/unified-replay-overlay.png\n?? evidence/native/unified-replay-sidebar.png\n?? evidence/resources/focus-conditions.json\n?? evidence/resources/focus-off-metadata.json\n?? evidence/resources/focus-off.json\n?? evidence/resources/focus-overlay-metadata.json\n?? evidence/resources/focus-overlay.json\n?? evidence/resources/focus-sidebar-metadata.json\n?? evidence/resources/focus-sidebar.json\n?? evidence/resources/safari-comparison-window.json\n?? evidence/resources/sampler-native-smoke.json\n?? evidence/resources/unified-conditions.json\n?? evidence/resources/unified-off-metadata.json\n?? evidence/resources/unified-off.json\n?? evidence/resources/unified-overlay-metadata.json\n?? evidence/resources/unified-overlay.json\n?? evidence/resources/unified-sidebar-metadata.json\n?? evidence/resources/unified-sidebar.json\n?? evidence/tests/final-package-build-r2.json\n?? evidence/tests/final-package-build.json\n?? evidence/tests/focus-release-qa-build.json\n?? evidence/tests/unified-final-qa-build.json\n?? qa/bin/native-ui-inspect\n?? qa/bin/native-uninstall\n?? qa/bin/native-web-button\n?? qa/native-capture.swift\n?? qa/native-close-owned.swift\n?? qa/native-normal-cycles.py\n?? qa/native-normal-cycles.swift\n?? qa/native-ui-inspect.swift\n?? qa/native-uninstall.swift\n?? qa/native-web-button.swift\n",
+        "capturedUTC": "2026-11-08T20:59:14.348129+00:00",
+        "trackedChanges": 5,
+        "untrackedEntries": 139
+      },
+      "worktrees": {
+        "exitCode": 0,
+        "output": "worktree /Users/rookslog/Development/iina-streams\nHEAD 8140312e6df4ff48143712c6ce8b911160a17454\nbranch refs/heads/design/tnf-quiet-streams\n\nworktree /Users/rookslog/development/iina-streams-candidates\nHEAD 127f6b98587bbdb8a6f2c532ad2a97665b4a7611\nbranch refs/heads/feature/candidate-portfolio-20261108\n\nworktree /Users/rookslog/development/iina-streams-design\nHEAD a7b61e1e7e33c4e9a196f59d91bd5202532c7ac1\nbranch refs/heads/design/in-app-panel-comparison"
+      }
+    }
+  ],
+  "plugins": [
+    {
+      "entry": "io.iina.opensub.iinaplugin",
+      "kind": "directory",
+      "identifier": "io.iina.opensub",
+      "version": "0.9.4",
+      "manifestSHA256": "b937b6a64df4c04b969726ecb5ffddc17a9d6ae4c2e34d86a2b967044ee0f0cb",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      }
+    },
+    {
+      "entry": "io.iina.user-script.iinaplugin",
+      "kind": "directory",
+      "identifier": "io.iina.user-script",
+      "version": "0.9.1",
+      "manifestSHA256": "9113a1ce56532bf9aaccad10d22a1e522ca9d23d5aff2c6268749b3f4c3b7e76",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      }
+    },
+    {
+      "entry": "io.iina.ytdl.iinaplugin",
+      "kind": "directory",
+      "identifier": "io.iina.ytdl",
+      "version": "0.9.8",
+      "manifestSHA256": "3acc9e087d3a9c12da0551780841bb692f1d270bfabb6f588c16af21d033fa12",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      }
+    },
+    {
+      "entry": "local.iina.streamlink-bridge.iinaplugin",
+      "kind": "directory",
+      "identifier": "local.iina.streamlink-bridge",
+      "version": "0.1.0",
+      "manifestSHA256": "37f0428e38c1751a714bdfa6e42bfde6dc1270842a2062d440f82c2acdf902f3",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "0"
+      }
+    },
+    {
+      "entry": "local.iina.streams.candidate.focus.iinaplugin",
+      "kind": "directory",
+      "identifier": "local.iina.streams.candidate.focus",
+      "version": "0.5.0",
+      "manifestSHA256": "3d080e824eb3286ec4da99e2a01ec2e8da506f16dfff0dacd1bbc0b33914b56a",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      },
+      "fileCount": 25,
+      "qaHarnessPresent": false,
+      "qaFalse": true,
+      "builtFileCount": 25,
+      "exactBuiltTreeMatch": true,
+      "mismatchedBuiltPaths": [],
+      "installedTreeSHA256": "ce4836976de21e57d7f106db75fbf35ea2a892050601b5376ca1969e54f5e29f",
+      "symlinksWithinInstallation": []
+    },
+    {
+      "entry": "local.iina.streams.candidate.unified.iinaplugin",
+      "kind": "directory",
+      "identifier": "local.iina.streams.candidate.unified",
+      "version": "0.5.0",
+      "manifestSHA256": "4be9fa5639684631d0cc8923cda00360e4d93a8321292908f88f77e2c859cd78",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      },
+      "fileCount": 25,
+      "qaHarnessPresent": false,
+      "qaFalse": true,
+      "builtFileCount": 25,
+      "exactBuiltTreeMatch": true,
+      "mismatchedBuiltPaths": [],
+      "installedTreeSHA256": "8519c077c425d60d221d4f7f6830fcfd8589c3a3d73c636325b3087760a8866e",
+      "symlinksWithinInstallation": []
+    },
+    {
+      "entry": "plugin-dev.iinaplugin-dev",
+      "kind": "symlink",
+      "target": "/Users/rookslog/development/iina-streams/plugin-dev",
+      "identifier": "local.iina.streams.dev",
+      "version": "0.2.0",
+      "manifestSHA256": "274458547206e328d7fd83f18b88654d18ac586fa565bf245909b1dc933aded9",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      }
+    },
+    {
+      "entry": "preview-plugin.iinaplugin-dev",
+      "kind": "symlink",
+      "target": "/Users/rookslog/development/iina-streams-design/preview-plugin",
+      "identifier": "local.iina.streams.design-preview",
+      "version": "0.0.1",
+      "manifestSHA256": "67147ade0603cc5de43eecacfd61c0baadc684052cd4555e936caa6ee228cc8e",
+      "enabledPreference": {
+        "exitCode": 0,
+        "output": "1"
+      }
+    }
+  ],
+  "qa": {
+    "linkPresent": false,
+    "enabledPreference": {
+      "exitCode": 1,
+      "output": ""
+    },
+    "retainedDataDirectoryPresent": true,
+    "clientConfigurationFilePresent": false
+  },
+  "stable": {
+    "manifestPresent": false,
+    "canonicalFolderPresent": false,
+    "enabledPreference": {
+      "exitCode": 1,
+      "output": ""
+    }
+  },
+  "app": {
+    "path": "/Applications/IINA.app",
+    "CFBundleIdentifier": "com.colliderli.iina",
+    "CFBundleShortVersionString": "1.5.1",
+    "CFBundleVersion": "183",
+    "comparisonScope": "Reported bundle identity/version/build, not a full baseline bundle hash or code-signature audit."
+  },
+  "candidateBuild": {
+    "path": "/Users/rookslog/development/iina-streams-candidates/dist/candidates/build-manifest.json",
+    "sha256": "77df7786602b882c5f5a8c7646d4dcd8c01309723a5a063c763a34c1939da5be",
+    "sourceCommit": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+    "packages": [
+      {
+        "name": "iina-streams-unified-0.5.0.iinaplgz",
+        "identifier": "local.iina.streams.candidate.unified",
+        "expectedSHA256": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+        "actualSHA256": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+        "archiveBytes": 79458,
+        "archiveMemberCount": 25,
+        "memberNames": [
+          "Info.json",
+          "config.js",
+          "global.js",
+          "helpers/acquire.py",
+          "helpers/media.py",
+          "helpers/replay.py",
+          "helpers/runner.py",
+          "main.js",
+          "src/auth.js",
+          "src/bridge.js",
+          "src/embedded-helpers.js",
+          "src/io.js",
+          "src/playback.js",
+          "src/player.js",
+          "src/replay.js",
+          "src/source.js",
+          "src/timers.js",
+          "ui/live-history.js",
+          "ui/live.js",
+          "ui/overlay.css",
+          "ui/overlay.html",
+          "ui/overlay.js",
+          "ui/sidebar.css",
+          "ui/sidebar.html",
+          "ui/sidebar.js"
+        ],
+        "exactInstalledArchiveMatch": true,
+        "mismatchedArchivePaths": []
+      },
+      {
+        "name": "iina-streams-focus-0.5.0.iinaplgz",
+        "identifier": "local.iina.streams.candidate.focus",
+        "expectedSHA256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24",
+        "actualSHA256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24",
+        "archiveBytes": 79455,
+        "archiveMemberCount": 25,
+        "memberNames": [
+          "Info.json",
+          "config.js",
+          "global.js",
+          "helpers/acquire.py",
+          "helpers/media.py",
+          "helpers/replay.py",
+          "helpers/runner.py",
+          "main.js",
+          "src/auth.js",
+          "src/bridge.js",
+          "src/embedded-helpers.js",
+          "src/io.js",
+          "src/playback.js",
+          "src/player.js",
+          "src/replay.js",
+          "src/source.js",
+          "src/timers.js",
+          "ui/live-history.js",
+          "ui/live.js",
+          "ui/overlay.css",
+          "ui/overlay.html",
+          "ui/overlay.js",
+          "ui/sidebar.css",
+          "ui/sidebar.html",
+          "ui/sidebar.js"
+        ],
+        "exactInstalledArchiveMatch": true,
+        "mismatchedArchivePaths": []
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "path": "evidence/native/qa-retirement.json",
+      "sha256": "c8f6f1bcfcbb4ec2df8a7b4615d19bbb5680c070223f9784a618e926192f5ebc",
+      "data": {
+        "timeUTC": "2026-11-08T20:03:59.072084+00:00",
+        "IINARunningAtCleanup": false,
+        "lastIINATermination": "new crash report at 2026-11-08T19:56:25Z under investigation",
+        "exactQALinkRemoved": true,
+        "qaEnabledPreferenceRestoredAbsent": true,
+        "knownFakePublicClientIDRemoved": true,
+        "qaPrivateDataRetainedForEvidence": true,
+        "candidateInstallationsRetained": [
+          "local.iina.streams.candidate.focus.iinaplugin",
+          "local.iina.streams.candidate.unified.iinaplugin"
+        ],
+        "stablePluginFolderPresent": false
+      }
+    },
+    {
+      "path": "evidence/native/package-acceptance-r2.json",
+      "sha256": "c2161f99a467c9d7e55a98a849f34f13688420f098b7795f920e5bde28272fa7",
+      "data": {
+        "timeUTC": "2026-11-08T20:31:31.549126+00:00",
+        "releaseCodeCommit": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+        "records": [
+          {
+            "variant": "unified",
+            "identifier": "local.iina.streams.candidate.unified",
+            "archiveSHA256": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+            "installedPath": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.candidate.unified.iinaplugin",
+            "fileCount": 25,
+            "allInstalledFilesMatchArchive": true,
+            "enabledValue": "1",
+            "qaFalse": true,
+            "noQAHarness": true,
+            "permissionPromptConfirmationObserved": false,
+            "permissionObservation": "Archive-open completed native installation and enabled candidate. Permission sheet was present but confirmation action was not observed after an AppleScript condition error.",
+            "nativeUninstallRecord": "unified-native-uninstall.json",
+            "normalMenuPlaybackPending": true
+          },
+          {
+            "variant": "focus",
+            "identifier": "local.iina.streams.candidate.focus",
+            "archiveSHA256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24",
+            "installedPath": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.candidate.focus.iinaplugin",
+            "fileCount": 25,
+            "allInstalledFilesMatchArchive": true,
+            "enabledValue": "1",
+            "qaFalse": true,
+            "noQAHarness": true,
+            "permissionPromptConfirmationObserved": true,
+            "permissionObservation": "Observed native Warning permissions sheet; clicked Install. Text: WarningThis plugin requires the following permissions. Please review them before proceeding.",
+            "nativeUninstallRecord": "focus-native-uninstall.json",
+            "normalMenuPlaybackPending": true
+          }
+        ],
+        "qaRetired": true,
+        "nativeRollbackPassedForBothPreviousArchives": true,
+        "normalMenuPlaybackPending": true
+      }
+    },
+    {
+      "path": "evidence/native/focus-r2-confirmed-close.json",
+      "sha256": "458b592a2f93018f8e4749177580888a85df934599bcc1dfd9de4af4dfe20b8a",
+      "data": {
+        "afterUTC": "2026-11-08T20:40:16Z",
+        "allOtherNativeWindowIdentitiesPreserved": true,
+        "AXResult": 0,
+        "beforeUTC": "2026-11-08T20:40:16Z",
+        "closeButtonAXWindowEqualsTarget": true,
+        "frame": [
+          140,
+          100,
+          1280,
+          720
+        ],
+        "ok": true,
+        "pid": 55428,
+        "targetAbsent": true,
+        "title": "All Aboard (ish) — YouTube"
+      }
+    },
+    {
+      "path": "evidence/native/focus-r2-normal-close.json",
+      "sha256": "829e29c2a9ca0f911d6b4930d77f98948762edbdc53fcddfe717b8407ccd407d",
+      "data": {
+        "beforeUTC": "2026-11-08T20:37:17.197279+00:00",
+        "afterUTC": "2026-11-08T20:37:18.469479+00:00",
+        "pid": 55428,
+        "variant": "focus",
+        "exit": 0,
+        "result": "Native Turn Chat Off and exact owned Focus window close completed.",
+        "error": "",
+        "closureConfirmedByThatAction": false,
+        "followup": "Later exact-frame Swift closure independently checks absence; earlier AppleScript action returnedsuccess but the Focus window remained visible."
+      }
+    },
+    {
+      "path": "evidence/native/unified-r2-off-check.json",
+      "sha256": "6e84c488018d1b6adaa2c12f2bcdc2c4b38f294c8c87806cc91f8f0c0179cecf",
+      "data": {
+        "timeUTC": "2026-11-08T20:54:43.399061Z",
+        "pid": 55428,
+        "snapshot": "unified-r2-after-off-native-ui.json",
+        "checks": [
+          {
+            "name": "native Off action completed",
+            "passed": true
+          },
+          {
+            "name": "Resume replay available after Off",
+            "passed": true
+          },
+          {
+            "name": "no rendered chat messages",
+            "passed": true
+          },
+          {
+            "name": "active replay controls hidden",
+            "passed": true
+          },
+          {
+            "name": "playback quality unchanged",
+            "passed": true
+          }
+        ],
+        "allPassed": true,
+        "note": "An initial QA assertion expected a literal Off status text. This UI instead indicates Off by the positive Resume replay control, an empty message region, and hidden active-replay controls. The first evidence aggregation read the wrong result-key name; it is corrected here to the observed AXResult=0. Native action was not repeated."
+      }
+    },
+    {
+      "path": "evidence/native/unified-r2-confirmed-close.json",
+      "sha256": "488630f420f02a7962113595bdeed57f0d29657de71c87581ebeee5ddf52a88a",
+      "data": {
+        "afterUTC": "2026-11-08T20:54:44Z",
+        "allOtherNativeWindowIdentitiesPreserved": true,
+        "AXResult": 0,
+        "beforeUTC": "2026-11-08T20:54:44Z",
+        "closeButtonAXWindowEqualsTarget": true,
+        "frame": [
+          140,
+          100,
+          1280,
+          720
+        ],
+        "ok": true,
+        "pid": 55428,
+        "targetAbsent": true,
+        "title": "All Aboard (ish) — YouTube"
+      }
+    },
+    {
+      "path": "evidence/native/focus-native-uninstall.json",
+      "sha256": "5f2bbaf832ee0ffd730f6e6b0c5afcdeb925a20d07fda4bf6755b15c7bf3608e",
+      "data": {
+        "actions": {
+          "OK": 0,
+          "Uninstall": 0
+        },
+        "actionTimeline": [
+          {
+            "action": "More-pointer",
+            "at": "2026-11-08T20:29:34.856Z",
+            "phase": "before",
+            "uptime": 924262.2826404584
+          },
+          {
+            "action": "More-pointer",
+            "at": "2026-11-08T20:29:35.017Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924262.4441314584
+          },
+          {
+            "action": "Uninstall",
+            "at": "2026-11-08T20:29:35.063Z",
+            "phase": "before",
+            "uptime": 924262.4897563751
+          },
+          {
+            "action": "Uninstall",
+            "at": "2026-11-08T20:29:35.064Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924262.4902795417
+          },
+          {
+            "action": "OK",
+            "at": "2026-11-08T20:29:35.402Z",
+            "phase": "before",
+            "uptime": 924262.8290750834
+          },
+          {
+            "action": "OK",
+            "at": "2026-11-08T20:29:35.694Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924263.1207450418
+          }
+        ],
+        "candidate": "Streams Focus Candidate",
+        "candidateMatches": 1,
+        "candidateRowAbsent": true,
+        "confirmationTitle": "Are you sure to uninstall Streams Focus Candidate?",
+        "frontmostVerified": true,
+        "mode": "uninstall",
+        "moreClick": {
+          "method": "cliclick",
+          "x": 785,
+          "y": 749
+        },
+        "moreFrame": {
+          "height": 18,
+          "width": 18,
+          "x": 775.5,
+          "y": 740
+        },
+        "ok": true,
+        "phase": "candidate-row-removed",
+        "pid": 55428,
+        "reads": 2009,
+        "row": [
+          {
+            "description": "",
+            "role": "AXCell",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "Streams Focus Candidate",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "0.5.0",
+            "title": ""
+          },
+          {
+            "description": "More",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "Twitch and YouTube playback with optional read-only chat and synchronized replay.",
+            "title": ""
+          },
+          {
+            "description": "info",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          }
+        ],
+        "rowFrame": {
+          "height": 60,
+          "width": 357,
+          "x": 517,
+          "y": 729
+        },
+        "settingsWindowCount": 1,
+        "windowTitle": "Plugins",
+        "installedFolderAbsent": true
+      }
+    },
+    {
+      "path": "evidence/native/unified-native-uninstall.json",
+      "sha256": "a80f58253716bcc4e3d72f161c5a482498c2bb86f3f51dee6fce60ad6b6020fb",
+      "data": {
+        "actions": {
+          "OK": 0,
+          "Uninstall": 0
+        },
+        "actionTimeline": [
+          {
+            "action": "More-pointer",
+            "at": "2026-11-08T20:29:22.509Z",
+            "phase": "before",
+            "uptime": 924249.9361112084
+          },
+          {
+            "action": "More-pointer",
+            "at": "2026-11-08T20:29:22.701Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924250.127864
+          },
+          {
+            "action": "Uninstall",
+            "at": "2026-11-08T20:29:23.040Z",
+            "phase": "before",
+            "uptime": 924250.4664924167
+          },
+          {
+            "action": "Uninstall",
+            "at": "2026-11-08T20:29:23.040Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924250.4669864584
+          },
+          {
+            "action": "OK",
+            "at": "2026-11-08T20:29:23.411Z",
+            "phase": "before",
+            "uptime": 924250.8376299584
+          },
+          {
+            "action": "OK",
+            "at": "2026-11-08T20:29:23.696Z",
+            "code": 0,
+            "phase": "after",
+            "uptime": 924251.12270575
+          }
+        ],
+        "candidate": "Streams Unified Candidate",
+        "candidateMatches": 1,
+        "candidateRowAbsent": true,
+        "confirmationTitle": "Are you sure to uninstall Streams Unified Candidate?",
+        "frontmostVerified": true,
+        "mode": "uninstall",
+        "moreClick": {
+          "method": "cliclick",
+          "x": 793,
+          "y": 809
+        },
+        "moreFrame": {
+          "height": 18,
+          "width": 18,
+          "x": 783.5,
+          "y": 800
+        },
+        "ok": true,
+        "phase": "candidate-row-removed",
+        "pid": 55428,
+        "reads": 2112,
+        "row": [
+          {
+            "description": "",
+            "role": "AXCell",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "Streams Unified Candidate",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "0.5.0",
+            "title": ""
+          },
+          {
+            "description": "More",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          },
+          {
+            "description": "",
+            "role": "AXStaticText",
+            "text": "Twitch and YouTube playback with optional read-only chat and synchronized replay.",
+            "title": ""
+          },
+          {
+            "description": "info",
+            "role": "AXButton",
+            "text": "",
+            "title": ""
+          }
+        ],
+        "rowFrame": {
+          "height": 60,
+          "width": 357,
+          "x": 517,
+          "y": 789
+        },
+        "settingsWindowCount": 1,
+        "windowTitle": "Plugins",
+        "installedFolderAbsent": true
+      }
+    },
+    {
+      "path": "evidence/native/owned-normal-test-restart.json",
+      "sha256": "46943ca85b1978e31ad2f5bb7022402b9833332315292dcdfa1297632e1d09cf",
+      "data": {
+        "timeUTC": "2026-11-08T20:28:59.438797+00:00",
+        "ownedTestPID": 5853,
+        "identityBefore": "/Applications/IINA.app/Contents/MacOS/IINA",
+        "reason": "Normal quit timed out after an accessibility-opened native menu remained in tracking; thread sample retained; boundedAXCancel and actualEscape recovery did not complete quit. All media in this root-launchedprocess belonged to these tests.",
+        "signal": "SIGTERM",
+        "processAbsent": true,
+        "latestCrashReport": "IINA-2026-11-08-145625.ips"
+      }
+    }
+  ],
+  "safariSavedEvidence": {
+    "path": "evidence/resources/safari-comparison-window.json",
+    "sha256": "b3e16655cdea1adc433f318f9e1ee5c72b3e261fc9b3d8517065e94fb463f00d",
+    "data": {
+      "cleanupUTC": "2026-11-08T19:34:13.115469+00:00",
+      "cleanupObservation": "55998, 3, 0, 34, 1688, 1107",
+      "closedOwnedWindow": true,
+      "ownedWindowID": 56467,
+      "preexistingWindowIDs": [
+        55998
+      ],
+      "preservationIncident": "The first front-window query raced new-document activation and resized existing55998. Its3tabs were not navigated/closed. Restored bounds to0,34,1688,1107 from the new document original frame; exact original frame was not captured, so this restoration is inferred pending baseline check."
+    }
+  },
+  "processes": {
+    "queryPID": 10162,
+    "psExitCode": 0,
+    "iina": {
+      "exitCode": 0,
+      "output": "55428     1 Sun Nov  8 15:28:59 2026     /Applications/IINA.app/Contents/MacOS/IINA"
+    },
+    "iinaDescendants": [],
+    "extractorOrNamedCandidateProcesses": [],
+    "otherInterpreterProcesses": [
+      {
+        "pid": 34794,
+        "ppid": 1,
+        "executable": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python"
+      }
+    ],
+    "limits": "Executable name and process ancestry only; unrelated command lines are not read. The currently executing preservation query is excluded from lingering-process rows. PID34794 predates this 2026-11-08 task and its cwd is outside the IINA worktrees. Its ownership/function is not otherwise attributed and it was left untouched. PPID1 WebKit workers are not attributed by ancestry.",
+    "preexistingInterpreter": {
+      "pid": 34794,
+      "identityExitCode": 0,
+      "identity": "34794     1 Sat Nov  7 07:58:44 2026     /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "cwdExitCode": 0,
+      "cwdClassification": [
+        "outside-IINA-worktrees"
+      ],
+      "candidateOwnedPathObserved": false
+    },
+    "noNamedCandidateOrExtractorProcessesObserved": true,
+    "noIINADescendantsObserved": true,
+    "inactiveQueries": "The preservation query processes completed in the tool results; no persistent monitoring or sampler was started."
+  },
+  "crashes": {
+    "cutoffUTC": "2026-11-08T19:56:25+00:00",
+    "directoriesChecked": [
+      {
+        "path": "/Users/rookslog/Library/Logs/DiagnosticReports",
+        "exists": true
+      },
+      {
+        "path": "/Library/Logs/DiagnosticReports",
+        "exists": true
+      }
+    ],
+    "countAfterCutoff": 0,
+    "limits": "Existing IINA .ips reports in the two checked top-level DiagnosticReports directories only; no absence-of-all-failures or long-session-stability claim.",
+    "reportCount": 12,
+    "currentDayReportCount": 4,
+    "latestReport": {
+      "filename": "IINA-2026-11-08-145625.ips",
+      "reportUTC": "2026-11-08T19:56:25+00:00",
+      "sha256": "675c05a910b034ff31d56dae8a511920b8fa92214180f228a8d3465b1dce132f"
+    }
+  },
+  "endedUTC": "2026-11-08T20:56:37.673010+00:00",
+  "completedUTC": "2026-11-08T20:59:14.348129+00:00",
+  "nativeWindows": {
+    "exitCode": 0,
+    "timeUTC": "2026-11-08T20:58:15Z",
+    "pid": 55428,
+    "windowCount": 1,
+    "windowTitlesEmpty": [
+      true
+    ],
+    "windows": [
+      {
+        "role": "AXWindow",
+        "position": [
+          576,
+          508
+        ],
+        "size": [
+          560,
+          440
+        ]
+      }
+    ],
+    "controlRoles": [
+      "AXButton",
+      "AXColumn",
+      "AXGroup",
+      "AXImage",
+      "AXScrollArea",
+      "AXStaticText",
+      "AXTable",
+      "AXWindow"
+    ],
+    "recognizedControls": [
+      "IINA",
+      "Open URL…",
+      "Open…"
+    ],
+    "titleIsOwnedPlayback": [
+      false
+    ],
+    "withinDeadline": true,
+    "readErrors": {
+      "AXChildren:-25212": 6,
+      "AXDescription:-25205": 12,
+      "AXSheets:-25205": 13,
+      "AXTitle:-25205": 7,
+      "AXTitle:-25212": 3,
+      "AXValue:-25205": 22
+    },
+    "initialWindowPresent": true,
+    "initialWindowBasis": "One untitled 560x440 AXWindow with IINA, Open…, and Open URL… controls; no known owned-playback title. The initial strict literal-IINA-title predicate was false because the observed window title is empty.",
+    "menusReopened": false,
+    "menuReadinessScope": "Both ordinary candidate menu routes were exercised in the preceding saved normal lifecycle runs. This final audit does not open or activate menus.",
+    "priorReadQueryNote": "The previous read-only query reached Safari metadata but its local parser failed because AppleScript resolved tab to a literal class word. This retry uses an explicit separator; neither attempt mutated UI."
+  },
+  "safariCurrentMetadata": {
+    "expectedPID": 57089,
+    "processIdentityMatches": true,
+    "queryExitCode": 0,
+    "windows": [
+      {
+        "id": 56800,
+        "tabCount": 1,
+        "boundsLTRB": [
+          139,
+          139,
+          1419,
+          939
+        ]
+      }
+    ],
+    "startedUTC": "2026-11-08T20:57:38.627467+00:00",
+    "endedUTC": "2026-11-08T20:57:38.818380+00:00"
+  },
+  "normalLifecycleEvidence": [
+    {
+      "path": "evidence/native/focus-r2-normal-cycle-smoke.json",
+      "sha256": "d1343df2a1e697a59a359b8ebe3b24c8328ab435032aeeccf42f80d88202d523",
+      "startedUTC": "2026-11-08T20:34:13.570Z",
+      "endedUTC": "2026-11-08T20:34:21.205Z",
+      "pid": 55428,
+      "mode": "run",
+      "variant": "focus",
+      "plannedCycles": 1,
+      "completedCycles": 1,
+      "complete": true,
+      "allPassed": true,
+      "ok": true,
+      "phase": "bounded-normal-cycles-passed"
+    },
+    {
+      "path": "evidence/native/focus-r2-normal-cycles-batch1.json",
+      "sha256": "5397ac307bff47f1d3d36510e89cf0d52d03a21bccd47e615943ed25f9402e23",
+      "startedUTC": "2026-11-08T20:34:41.710Z",
+      "endedUTC": "2026-11-08T20:35:17.181Z",
+      "pid": 55428,
+      "mode": "run",
+      "variant": "focus",
+      "plannedCycles": 5,
+      "completedCycles": 5,
+      "complete": true,
+      "allPassed": true,
+      "ok": true,
+      "phase": "bounded-normal-cycles-passed"
+    },
+    {
+      "path": "evidence/native/unified-r2-normal-cycles-batch1.json",
+      "sha256": "9f79273555932f3387349c7a2ebcfe9b8db541f84de9d321350588ff55793256",
+      "startedUTC": "2026-11-08T20:41:45.132Z",
+      "endedUTC": "2026-11-08T20:42:20.282Z",
+      "pid": 55428,
+      "mode": "run",
+      "variant": "unified",
+      "plannedCycles": 5,
+      "completedCycles": 5,
+      "complete": true,
+      "allPassed": true,
+      "ok": true,
+      "phase": "bounded-normal-cycles-passed"
+    }
+  ],
+  "safariPreservationComparison": {
+    "earlierCleanupUTC": "2026-11-08T19:34:13.115469+00:00",
+    "earlierCleanupObservation": {
+      "id": 55998,
+      "tabCount": 3,
+      "boundsLTRB": [
+        0,
+        34,
+        1688,
+        1107
+      ]
+    },
+    "ownedComparisonWindowID": 56467,
+    "ownedComparisonClosedInSavedRecord": true,
+    "currentObservedUTC": "2026-11-08T20:57:38.818380+00:00",
+    "currentWindows": [
+      {
+        "id": 56800,
+        "tabCount": 1,
+        "boundsLTRB": [
+          139,
+          139,
+          1419,
+          939
+        ]
+      }
+    ],
+    "earlierWindow55998Present": false,
+    "outcome": "Current metadata does not match the earlier cleanup observation. The original three-tab state is evidenced only at the earlier cutoff, not at this final audit.",
+    "attribution": "Unknown. The main task reports no further Safari actions after the saved comparison cleanup. Neither the observations nor that report establish the cause; do not infer user, external, or task responsibility.",
+    "exactOriginalBoundsKnown": false,
+    "correctiveActionTaken": false,
+    "titlesOrURLsInspected": false
+  },
+  "baselineComparison": {
+    "originalRepositoriesClean": true,
+    "originalHeadsMatch": true,
+    "originalManifestAndEnablementChecks": [
+      {
+        "identifier": "local.iina.streams.dev",
+        "manifestMatches": true,
+        "enabledMatches": true
+      },
+      {
+        "identifier": "local.iina.streams.design-preview",
+        "manifestMatches": true,
+        "enabledMatches": true
+      },
+      {
+        "identifier": "local.iina.streamlink-bridge",
+        "manifestMatches": true,
+        "enabledMatches": true
+      },
+      {
+        "identifier": "io.iina.ytdl",
+        "manifestMatches": true,
+        "enabledMatches": true
+      },
+      {
+        "identifier": "io.iina.user-script",
+        "manifestMatches": true,
+        "enabledMatches": true
+      },
+      {
+        "identifier": "io.iina.opensub",
+        "manifestMatches": true,
+        "enabledMatches": true
+      }
+    ],
+    "appReportedIdentityVersionBuildMatch": true,
+    "globalPreferencesCompared": false,
+    "entireAppBundleCompared": false,
+    "credentialStoresInspected": false
+  },
+  "disposition": {
+    "state": "Final native-work preservation snapshot; reporting/commit work may continue.",
+    "originalStateOutcome": "No drift in the checked original branches/HEADs/clean states, symlink targets, six manifest hashes/enablement keys, or reported IINA identity/version/build.",
+    "expectedAdditions": "Two enabled ordinary R2 candidate installations, each matching every packaged file; separate candidate worktree and recorded evidence; inactive QA data retained.",
+    "unexpectedObservation": "Safari window-ID/tab-count/bounds metadata differs from the earlier cleanup record; current original-tab preservation is not established and attribution is unknown.",
+    "stableDeployment": false,
+    "functionalScope": "Six Focus and five Unified bounded ordinary YouTube lifecycle cycles are recorded as passing; final owned playback-window closures are separately confirmed. These later passes do not erase earlier crashes, the prior unexpected anchor closure/menu-tracking incident, unexercised external authorization gates, or long-session uncertainty."
+  }
+}

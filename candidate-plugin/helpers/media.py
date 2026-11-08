@@ -401,9 +401,12 @@ def _youtube(source, metadata, quality):
     if not selected["has_audio"]:
         if not audio:
             raise MediaError("AUDIO_UNAVAILABLE")
+        # Live HLS may omit bitrate/codec while rating its audio variants numerically.
+        # Use those ratings after language, AAC and bitrate; display notes are not a contract.
         preferred_audio = max(audio, key=lambda item: (
             _number(item.get("language_preference"), -1), str(item.get("acodec") or "").startswith(("mp4a", "aac")),
-            _number(item.get("abr")), _number(item.get("asr")), item.get("protocol") == "https"))
+            _number(item.get("abr")), _number(item.get("quality"), -1), _number(item.get("source_preference"), -1),
+            _number(item.get("asr")), item.get("protocol") == "https"))
         result["audioURL"] = _media_url(preferred_audio.get("url"), "YouTube")
         audio_headers = preferred_audio.get("http_headers")
     result["headers"] = _headers("YouTube", metadata.get("http_headers"), audio_headers, raw.get("http_headers"))

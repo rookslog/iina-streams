@@ -1,0 +1,312 @@
+{
+  "publicURL": "https://www.youtube.com/watch?v=umLWFz4izTM",
+  "elapsedSeconds": 7.68087,
+  "checks": {
+    "videoDecoded": true,
+    "audioDecoded": true,
+    "sourceMatched": true,
+    "chatOffByDefault": true,
+    "noError": true,
+    "originalWindowUnchanged": true
+  },
+  "beforeOriginal": {
+    "id": "378852f2a2fc40fda81dd32e94a6e33d",
+    "time": "2026-11-08T18:30:34.595Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "afterOriginal": {
+    "id": "d49a208ee1bb4a10a063e41cfb7c1c2b",
+    "time": "2026-11-08T18:30:42.206Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "opened": {
+    "id": "9da42306e057416ca6684574915c2354",
+    "time": "2026-11-08T18:30:41.802Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "311",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "312",
+            "label": "1080p60 \u00b7 H.264"
+          },
+          {
+            "id": "311",
+            "label": "720p60 \u00b7 H.264"
+          },
+          {
+            "id": "231",
+            "label": "480p \u00b7 H.264"
+          },
+          {
+            "id": "230",
+            "label": "360p \u00b7 H.264"
+          },
+          {
+            "id": "229",
+            "label": "240p \u00b7 H.264"
+          },
+          {
+            "id": "269",
+            "label": "144p \u00b7 H.264"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "Watch Sky News live 2026-11-08 13:30",
+        "live": true,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "youtube",
+          "provider": "YouTube",
+          "id": "umLWFz4izTM"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 0,
+          "sourceName": "",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 0.3666666666666667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 0.3666666666666667,
+        "duration": 14.966666666667152,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "audioCodec": "aac",
+        "audioRate": 44100,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  }
+}

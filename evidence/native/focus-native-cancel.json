@@ -1,0 +1,221 @@
+{
+  "checks": {
+    "chatOff": true,
+    "noActiveHelpers": true,
+    "noMessages": true,
+    "noNewOutputOrStaging": true
+  },
+  "elapsedSeconds": 1.795173833,
+  "directoriesBefore": [
+    "replay-1794160344002-f1ajzr5",
+    "replay-1794160475130-ugouwfw",
+    "replay-1794161562721-3elbddy"
+  ],
+  "directoriesAfter": [
+    "replay-1794160344002-f1ajzr5",
+    "replay-1794160475130-ugouwfw",
+    "replay-1794161562721-3elbddy"
+  ],
+  "during": {
+    "id": "60b681f4349a481db8cb8ebcef2c454a",
+    "time": "2026-11-08T18:25:17.379Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "importing",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": [
+          "replay"
+        ]
+      }
+    }
+  },
+  "after": {
+    "id": "e7dfb074fc0b4b83a9545339c36a56b5",
+    "time": "2026-11-08T18:25:18.184Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  }
+}

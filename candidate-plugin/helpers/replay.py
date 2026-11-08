@@ -10,10 +10,12 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import sqlite3
 import stat
 import sys
 import tempfile
+import threading
 import time
 
 MAX_INPUT_BYTES = 1024 * 1024 * 1024
@@ -463,7 +465,27 @@ def write_private(path, payload):
         stream.write(payload)
 
 
-def import_archive(input_file, output_dir, provider='', requested_id=''):
+@contextlib.contextmanager
+def publication_receipt():
+    """Cancellation after a committed import must not hide its ownership."""
+    committed, previous = [], {}
+
+    def cancel(signum, frame):
+        if not committed:
+            raise KeyboardInterrupt()
+
+    if threading.current_thread() is threading.main_thread():
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            previous[signum] = signal.getsignal(signum)
+            signal.signal(signum, cancel)
+    try:
+        yield committed.append
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+def import_archive(input_file, output_dir, provider='', requested_id='', on_published=None):
     if requested_id and not source_id(requested_id):
         raise ImportFailure('INVALID_SOURCE_ID', 'The source identifier must be a plain platform identifier.')
     destination = Path(os.path.abspath(output_dir))
@@ -472,6 +494,7 @@ def import_archive(input_file, output_dir, provider='', requested_id=''):
     if not destination.parent.is_dir():
         raise ImportFailure('INVALID_DESTINATION', 'The destination parent directory does not exist.')
     stage = Path(tempfile.mkdtemp(prefix='.replay-', dir=str(destination.parent)))
+    owned_directory = stage.stat()
     deadline = time.monotonic() + MAX_IMPORT_SECONDS
     try:
         with contextlib.ExitStack() as stack:
@@ -502,7 +525,21 @@ def import_archive(input_file, output_dir, provider='', requested_id=''):
         if destination.exists():
             destination.rmdir()  # Fails safely if another writer made it nonempty.
         os.rename(stage, destination)
-        return {'ok': True, 'indexPath': str(destination / 'index.json'), 'metadata': index}
+        result = {'ok': True, 'indexPath': str(destination / 'index.json'), 'metadata': index}
+        if on_published is not None:
+            on_published(result)
+        return result
+    except BaseException:
+        # Publication may have completed immediately before an interruption.
+        # The staging inode identifies only the output created by this import.
+        try:
+            current = destination.lstat()
+            if (stat.S_ISDIR(current.st_mode) and
+                    (current.st_dev, current.st_ino) == (owned_directory.st_dev, owned_directory.st_ino)):
+                shutil.rmtree(destination)
+        except OSError:
+            pass
+        raise
     finally:
         if stage.exists():
             shutil.rmtree(stage)
@@ -513,7 +550,7 @@ class QuietParser(argparse.ArgumentParser):
         raise ImportFailure('INVALID_ARGUMENTS', 'Use import with an input file and an empty output directory.')
 
 
-def main(argv=None):
+def _main(argv=None, on_published=None):
     try:
         parser = QuietParser(add_help=False)
         parser.add_argument('action', choices=['import'])
@@ -522,7 +559,7 @@ def main(argv=None):
         parser.add_argument('--source-id', default='')
         parser.add_argument('--provider', choices=['twitch', 'youtube', 'generic'], default='')
         args = parser.parse_args(argv)
-        response = import_archive(args.input, args.output, args.provider, args.source_id)
+        response = import_archive(args.input, args.output, args.provider, args.source_id, on_published)
     except ImportFailure as error:
         response = {'ok': False, 'error': {'code': error.code, 'message': error.message}}
     except (ValueError, UnicodeError, EOFError, RecursionError):
@@ -533,6 +570,11 @@ def main(argv=None):
         response = {'ok': False, 'error': {'code': 'CANCELLED', 'message': 'Import cancelled.'}}
     print(dump(response))
     return 0 if response['ok'] else 1
+
+
+def main(argv=None):
+    with publication_receipt() as published:
+        return _main(argv, published)
 
 
 if __name__ == '__main__':

@@ -51,6 +51,23 @@ def youtube_metadata():
                         {"format_id": "sb0", "url": "https://i.ytimg.com/sb/example", "protocol": "mhtml", "vcodec": "none", "acodec": "none"}]}
 
 
+def youtube_live_metadata():
+    # Sky News' public HLS schema observed on 2026-11-08; transport URLs are fake.
+    fixture = youtube_metadata()
+    video = dict(fixture["formats"][1], format_id="311", fps=60, protocol="m3u8_native",
+                 url="https://manifest.googlevideo.com/video/311?sig=private-fixture")
+    fixture.update(id="umLWFz4izTM", is_live=True, live_status="is_live", duration=None,
+                   formats=[video] + [
+                       {"format_id": identifier, "vcodec": "none", "acodec": None,
+                        "audio_ext": "mp4", "protocol": "m3u8_native", "abr": None, "tbr": None,
+                        "language_preference": None, "quality": -1, "source_preference": preference,
+                        "format_note": note,
+                        "url": "https://manifest.googlevideo.com/audio/" + identifier + "?sig=private-fixture"}
+                       for identifier, preference, note in [("233", 0, "Default, low"), ("234", 1, "Default, high")]
+                   ])
+    return fixture
+
+
 class SourceTests(unittest.TestCase):
     def test_canonical_source_identity_and_start_offsets(self):
         cases = [
@@ -146,6 +163,37 @@ class MetadataTests(unittest.TestCase):
             self.assertIn(flag, cmd)
         self.assertNotIn("--cookies", cmd)
         self.assertNotIn("--cookies-from-browser", cmd)
+
+    def test_live_hls_audio_uses_provider_rating_when_bitrate_is_absent(self):
+        result = self.resolve_fixture("https://www.youtube.com/watch?v=umLWFz4izTM", youtube_live_metadata())
+        self.assertIn("/audio/234?", result["audioURL"])
+        self.assertEqual(result["quality"], "311")
+        self.assertIn("/video/311?", result["mediaURL"])
+        self.assertTrue(result["live"])
+
+    def test_audio_provider_rating_preserves_language_aac_and_bitrate_priorities(self):
+        for lower, higher in [
+                ({"language_preference": 1}, {"language_preference": 0}),
+                ({"acodec": "mp4a.40.2"}, {"acodec": "opus"}),
+                ({"abr": 160}, {"abr": 128})]:
+            with self.subTest(preferred=lower):
+                fixture = youtube_live_metadata()
+                fixture["formats"][1].update(lower)
+                fixture["formats"][2].update(higher)
+                result = self.resolve_fixture("https://www.youtube.com/watch?v=umLWFz4izTM", fixture)
+                self.assertIn("/audio/233?", result["audioURL"])
+
+    def test_audio_numeric_quality_precedes_source_rating_and_display_notes(self):
+        fixture = youtube_live_metadata()
+        fixture["formats"][1]["quality"] = 2
+        fixture["formats"][2]["quality"] = 1
+        result = self.resolve_fixture("https://www.youtube.com/watch?v=umLWFz4izTM", fixture)
+        self.assertIn("/audio/233?", result["audioURL"])
+        fixture["formats"][1]["quality"] = 1
+        fixture["formats"][1]["format_note"] = "Default, high"
+        fixture["formats"][2]["format_note"] = "Default, low"
+        result = self.resolve_fixture("https://www.youtube.com/watch?v=umLWFz4izTM", fixture)
+        self.assertIn("/audio/234?", result["audioURL"])
 
     def test_muxed_youtube_does_not_add_a_duplicate_audio_track(self):
         result = self.resolve_fixture("https://youtu.be/jNQXAC9IVRw", youtube_metadata(), "18")

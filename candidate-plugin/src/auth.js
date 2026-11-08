@@ -79,11 +79,24 @@ class TwitchAuth {
   return this.validate(generation,true);
  }
  async forget(){
-  const saved=this.secret;this.stop();let revoked=true;
-  if(saved&&saved.access_token)try{const r=await this.o.request('/revoke','POST',{client_id:saved.clientID,token:saved.access_token},{});revoked=!!r&&r.status===200;}catch(_){revoked=false;}
+  // Off deliberately releases the in-memory token. Explicit Forget may recover
+  // this plugin's own saved grant so revocation still works after disconnecting.
+  let saved=this.secret,known=true;
+  if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=JSON.parse(saved);}catch(_){saved=null;known=false;}
+  const grant=saved&&typeof saved.clientID==='string'&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID)&&typeof saved.access_token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(saved.access_token)?{clientID:saved.clientID,token:saved.access_token}:null;
+  if(saved&&!grant)known=false;
+  this.stop();const generation=this.generation;
+  // Clear before awaiting the network; an older Forget must never erase a new
+  // connection's persisted token when its revocation response arrives later.
   let removed=true;try{removed=this.o.write('')!==false;}catch(_){removed=false;}
-  if(!removed)this.publish('error','Keychain could not clear the saved authorization.');
-  else if(!revoked)this.publish('off','Saved authorization cleared. Twitch revocation could not be confirmed.');
+  let revoked=known&&!grant;
+  if(grant)try{const r=await this.o.request('/revoke','POST',{client_id:grant.clientID,token:grant.token},{});revoked=!!r&&r.status===200;}catch(_){revoked=false;}
+  const stale=generation!==this.generation;
+  if(!stale){
+   if(!removed)this.publish('error','Keychain could not clear the saved authorization.');
+   else if(!revoked)this.publish('off','Saved authorization cleared. Twitch revocation could not be confirmed.');
+  }
+  return{removed,revoked,stale};
  }
 }
 module.exports={TwitchAuth};

@@ -15,3 +15,7 @@ releases/*
 !releases/.gitkeep
 evidence/raw/*
 recordings/
+
+__pycache__/
+
+*.py[cod]

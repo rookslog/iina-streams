@@ -1,0 +1,10 @@
+{
+  "variant": "focus",
+  "source": {
+    "kind": "twitch-vod",
+    "provider": "Twitch",
+    "id": "2922164492",
+    "url": "https://www.twitch.tv/videos/2922164492",
+    "startSeconds": 90
+  }
+}

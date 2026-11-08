@@ -48,6 +48,7 @@ def build(output, qa=None):
                 target.write_bytes(path.read_bytes())
             info = json.loads((temp / 'Info.json').read_text())
             info.update(identifier=IDS[variant], name='Streams ' + ('QA Harness' if qa else variant.title() + ' Candidate'))
+            info['sidebarTab'] = {'name': 'Streams ' + (qa.get('variant', 'unified') if qa else variant).title()}
             (temp / 'Info.json').write_text(json.dumps(info, indent=2) + '\n')
             config = {'identifier': IDS[variant], 'variant': qa.get('variant', 'unified') if qa else variant, 'qa': qa or False}
             (temp / 'config.js').write_text('"use strict";\nmodule.exports=' + json.dumps(config, separators=(',', ':')) + ';\n')

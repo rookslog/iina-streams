@@ -1,0 +1,312 @@
+{
+  "publicURL": "https://www.twitch.tv/hutchmf",
+  "elapsedSeconds": 6.431654958,
+  "checks": {
+    "videoDecoded": true,
+    "audioDecoded": true,
+    "sourceMatched": true,
+    "chatOffByDefault": true,
+    "noError": true,
+    "originalWindowUnchanged": true
+  },
+  "beforeOriginal": {
+    "id": "ce187d2843264d06aa1338f0a1425cf4",
+    "time": "2026-11-08T18:31:21.223Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "afterOriginal": {
+    "id": "19e10322a6494530aa279cb1a118e376",
+    "time": "2026-11-08T18:31:27.667Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "opened": {
+    "id": "f55bb2ab7c134f2bb6f0e9e90e51c14d",
+    "time": "2026-11-08T18:31:27.418Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "720p60",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+        "live": true,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-live",
+          "provider": "Twitch",
+          "id": "hutchmf"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 0,
+          "sourceName": "",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 0.39999999999999997,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 0.39999999999999997,
+        "duration": 5.9993333333331975,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  }
+}

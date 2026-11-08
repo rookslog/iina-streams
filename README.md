@@ -1,59 +1,102 @@
-# IINA Streams
+# IINA Streams — candidate portfolio
 
-Lightweight Twitch/YouTube playback integration for the native IINA macOS player.
+**Status: 2026-11-08. Unified and Focus are isolated development candidates (source version 0.5.0). Final native evidence, resource results, and the acceptance ledger are still being assembled. No stable deployment is authorized by these build/install instructions.**
 
-**STATUS (2026-11-07): M2 development candidate implemented; runtime release gates NOT met due unresolved IINA startup crashes. No stable plugin promoted.** The original Streamlink Bridge remains unchanged.
+This work continues the existing IINA Streams implementation. The operational `plugin-dev/` source is retained as a baseline; the current portfolio lives in `candidate-plugin/`. Native tests and source review determine acceptance, not a successful archive build alone.
 
-Primary acceptance stream: https://www.twitch.tv/hutchmf
+## Candidates and identities
 
-## Project layout
+| Build | Plugin identifier | Purpose |
+| --- | --- | --- |
+| Unified | `local.iina.streams.candidate.unified` | Persistent playback controls and chat in a unified inspector. |
+| Focus | `local.iina.streams.candidate.focus` | Contextual Playback/Chat presentation with the shared playback/replay foundation. |
+| QA harness | `local.iina.streams.qa` | Explicitly configured native test players and diagnostics. Excluded from ordinary candidate archives. |
+| Existing development baseline | `local.iina.streams.dev` | Retained original implementation; the candidate manager does not install or remove it. |
 
-- `plugin-dev/` — development IINA plugin, separate identity `local.iina.streams.dev`.
-- `plugin-dev/global.js` — one Open Stream action; short Streamlink extraction; isolated IINA player creation.
-- `plugin-dev/main.js` — per-player quality and lazy sidebar controller.
-- `plugin-dev/ui/` — local CSS/HTML/JS sidebar; no framework, no chat connection.
-- `plugin-dev/src/` — provider routing and Streamlink JSON format selection.
-- `tests/` — pure helpers and mocked plugin-runtime interaction tests.
-- `scripts/verify.sh` — offline checks.
-- `scripts/preflight.sh --live` — channel availability, no playback.
-- `scripts/link-dev.sh` / `scripts/unlink-dev.sh` — safe dev lifecycle, no app restart.
-- `scripts/package-candidate.sh` — candidate archive and checksum, no install.
-- `scripts/resource-snapshot.sh` — read-only resource snapshot.
-- `docs/INVESTIGATION-2026-11-07.md` — crash signatures, Bridge forensic analysis, architectural rationale.
-- `docs/RELEASE.md` — manual testing, gates and rollback.
-- `docs/PERFORMANCE.md` — what was measured, and what was not.
-- `docs/reviews/M0-M2-2026-11-07.md` — milestone decision record.
-- `HANDOFF-GPT6-PRO.md` — full next-session execution and audit brief.
-- `evidence/bridge-0.1.0-original/` — unchanged failed plugin.
-- `releases/` — candidate archives, ignored by Git.
+Both candidates share public Twitch live/VOD and YouTube video/live acquisition, Auto with a 720p H.264 preference, actual-format quality choices, synchronized imported chat replay, sidebar/overlay presentation, and optional read-only Twitch chat authorization. Availability and native behavior depend on the provider and host. YouTube live chat is not connected. Automatic archived-chat retrieval is implemented for public YouTube replays exposed by yt-dlp; Twitch replay currently uses an authorized imported archive. TwitchDownloader-format JSON, yt-dlp live-chat replay JSONL, and the project's normalized replay format are supported by the importer.
 
-## Reproducible checks
+Live Twitch chat requires a registered public client ID and the user's explicit device authorization. The candidate requests read-only chat access; it does not post messages. Authorization, denied/revoked access, Keychain behavior, genuine archive playback, and lifecycle checks must be reported separately from mocked tests. No auth success is implied by this README.
+
+## Build and offline checks
+
+On Apollo, the isolated working tree is `/Users/rookslog/development/iina-streams-candidates`. The existing `/Users/rookslog/development/iina-streams` and adjacent design tree remain separate.
+
+The current environment uses IINA 1.5.1 build 183. Media extraction expects `/opt/homebrew/bin/streamlink`, `/opt/homebrew/bin/yt-dlp`, and `/opt/homebrew/bin/node`. Runtime helpers select `/opt/homebrew/bin/python3` when available, otherwise `/usr/bin/python3`; the helper source supports Python 3.9. These commands do not install dependencies.
 
 ```sh
-cd ~/development/iina-streams
-./scripts/verify.sh
-./scripts/preflight.sh --live
+cd /Users/rookslog/development/iina-streams-candidates
+/opt/homebrew/bin/node --test tests/*.test.js tests_candidate/*.test.js
+/usr/bin/python3 -B -m unittest discover -s tests_candidate -p 'test_*.py'
+/usr/bin/python3 -B scripts/build-candidates.py --output dist/candidates
 ```
 
-For development install after resolving the IINA startup-crash issue: `./scripts/link-dev.sh`; manually enable the development plugin and relaunch IINA. To roll back development linkage: `./scripts/unlink-dev.sh`. These operations do not touch stable IINA, existing Bridge or Safari. See [docs/RELEASE.md](docs/RELEASE.md) before GUI testing.
+The builder writes `dist/candidates/streams-unified.iinaplugin`, `streams-focus.iinaplugin`, the two versioned `.iinaplgz` ZIP archives, and `build-manifest.json`. The manifest records source-file and archive SHA-256 hashes plus the repository HEAD when available. HEAD alone does not identify uncommitted content; preserve the file hashes with the tested build. Rebuilding replaces recognized generated outputs in the selected output directory. Keep final reviewed artifacts in a separate versioned directory before another build.
 
-The critical missing evidence is **real extended UI playback and repeated quality switching with no IINA crash**. Static unit tests, a short real IINA file-loaded test, and an mpv headless decoder check do not establish M1/M2 acceptance.
+Ordinary packages contain `qa:false`, use only candidate identifiers, and exclude `qa-harness.js`. `--qa-config` produces a separate QA build; it is not an ordinary installation route. Archive structure/integrity tests do not establish IINA's GUI archive-installer compatibility. Development links below provide the explicit candidate installation path.
 
-## Latest November 7 runtime update
-The new `fix/closed-loop-m2-validation` branch corrected IINA's real `network-request` and `allowedDomains` permission errors and demonstrated 360p30 Twitch playback initialization and a same-resolution quality reconnect inside IINA. **The user reported that the stream began working.** The user's latest screenshot also shows native top-bar interference with the sidebar; tracked in `docs/BUG-002-OSC-SIDEBAR.md`. Full M2 acceptance still requires the sidebar bridge, visual controls, normal 10 start/stop cycles, isolation, and performance validation. The prior rc1 archive is missing essential permissions and must not be deployed.
+**Retired command:** `scripts/package-candidate.sh` now fails closed with exit status 2. Its inherited implementation copied `plugin-dev/`, rewrote the identifier to `local.iina.streams`, and validated the old 0.2.0 package. Such an archive could collide with a stable plugin when installed. Use `build-candidates.py` for this portfolio. Inherited `link-dev.sh`, `unlink-dev.sh`, and `verify.sh` target the original baseline and are not candidate lifecycle/full-suite commands.
 
+## Install, inspect, and roll back candidate links
 
-## November 7 usability fix — native title and working sidebar
-Current development source on `fix/title-and-streams-sidebar` opens Twitch with **hutchmf — Twitch** as the native IINA media title. IINA Streams controls appear automatically on the first file load in a new Twitch player; use **Hide controls** to dismiss them and **Plugin > IINA Streams (Development) > Show Streams Controls** to reopen. The panel can be on either side depending on IINA's Layout settings.
+The manager requires explicit absolute source and plugin directories. It validates candidate identities/configuration, rejects foreign destinations and duplicate installed identities, and changes only the selected candidate development links. It does not enable plugins, relaunch IINA, or change existing stable/development/design/QA installations.
 
-Verified on IINA **1.5.1 build 183** with real hutchmf playback: sidebar's webview now sends its ready signal, available qualities populate, quality reconnection reattaches the sidebar, and the title remains friendly. macOS Accessibility saw an actual player window named `hutchmf — Twitch`. See [BUG-003](docs/BUG-003-title-and-sidebar.md) and its sanitized QA evidence. A rendered screenshot / human interaction test is still outstanding because window capture was denied.
+Review the exact link operations first:
 
-The full-screen **native title bar** may remain visible while IINA 1.5's sidebars are displayed. That behavior belongs to IINA's layout; hiding the controls sidebar is a reversible way to compare. No global macOS/IINA UI preferences were modified.
+```sh
+/usr/bin/python3 -B scripts/manage-candidates.py install --dry-run \
+  --plugins-dir '/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins' \
+  --source-dir /Users/rookslog/development/iina-streams-candidates/dist/candidates
+```
 
+Create those candidate links:
 
-## Same-window quality switching update (November 7)
-**The current development branch changes Twitch quality without recreating IINA's window.** The official Online Media plugin uses the same mpv-level loadfile mechanism. Confirmed in a real IINA 1.5.1 run: hutchmf 160p30 switched to 360p30; resolution changed, playback resumed, sidebar remained connected, and no window-close event was observed. See `docs/BUG-004-quality-window-recreation.md`.
+```sh
+/usr/bin/python3 -B scripts/manage-candidates.py install \
+  --plugins-dir '/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins' \
+  --source-dir /Users/rookslog/development/iina-streams-candidates/dist/candidates
+```
 
-For interactive use, start a fresh Twitch stream with the currently linked development plugin, show the Streams panel, and change quality there. Do not use the old rc1/rc2 release archives: they predate the fix. The native titlebar overlap in fullscreen and the aesthetics of the first M2 panel remain user-reported defects for the Pro continuation. No accepted stable plugin was promoted.
+Add `--variant unified` or `--variant focus` to select one candidate. The default selects both. Enable the desired candidate through IINA's plugin controls when ready to test. Use **Open Stream — Unified…** or **Open Stream — Focus…** in that candidate's Plugin menu and enter a public Twitch channel/VOD or YouTube video URL. Use the candidate's **Show Streams** action to reopen its controls. Choose chat import/connect explicitly; ordinary playback starts with chat Off.
 
-Design exploration: [TNF principles → Quiet Streams](docs/design/TNF-INHERITANCE-QUIET-STREAMS.md). This is a reviewable proposal on `design/tnf-quiet-streams`; no code or deployed UI was changed in the design pass.
+Inspect linkage by replacing `install` with `status` in the same command. Roll back using the same source directory:
+
+```sh
+/usr/bin/python3 -B scripts/manage-candidates.py rollback \
+  --plugins-dir '/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins' \
+  --source-dir /Users/rookslog/development/iina-streams-candidates/dist/candidates
+```
+
+Rollback removes only exact, owned links to the selected candidate folders. It leaves generated packages and plugin data intact. Close any owned candidate player before unloading its plugin. Use the explicit Forget action if saved Twitch authorization should be removed/revoked; deleting a development link is not credential revocation. Stable adoption remains a separate user decision and is not implemented by the candidate manager.
+
+## Reproducible resource observations
+
+Read [the methodology](docs/RESOURCE-METHODOLOGY.md) before comparing runs. The sampler queries an existing process; it does not operate IINA or Safari. Replace `12345` with the observed IINA application PID and preserve the JSON output:
+
+```sh
+/usr/bin/python3 -B qa/measure-resources.py --pid 12345 --label unified-chat-off \
+  --duration 20 --interval 2
+```
+
+The sampling deadline is capped at 30 seconds. Warm up playback separately and use equal durations across conditions. Output includes exact UTC timestamps, actual elapsed/collection times, sampler hash, installed app/OS/hardware metadata, native `ps` CPU/RSS readings, WindowServer, memory-free percentage, swap allocation, and VM counter deltas when available. Query failures are explicit; network overhead remains unmeasured.
+
+Only verified descendants of the supplied app PID enter its automatic process total. WebKit processes with unclear ownership appear separately. If independent lifecycle evidence identifies an XPC WebKit helper, supply its PID with `--helper-pid`; its starting identity is checked during sampling and its operator attribution remains explicit. Never assign all WebKit processes to the candidate. The IINA process can include other players, and a Safari process can include other tabs.
+
+Use `--app safari --pid 12345` for an existing, independently identified Safari process. A comparison requires matching the actual source/segment, decoded codec/quality/fps/audio, video viewport, and chat state. Unmatched samples do not justify an improvement claim.
+
+Optional `--metadata-file /absolute/workload.json` accepts a small JSON object with allowlisted workload fields such as `candidate`, `pluginIdentifier`, `mode`, `sourceURL`, `quality`, `videoCodec`, `videoWidth`, `videoHeight`, `videoFps`, `audioCodec`, `hardwareDecode`, `playbackPosition`, `playbackSpeed`, `windowWidth`, `windowHeight`, `sidebarWidth`, `fullscreen`, `archiveId`, `rowLimit`, and `notes`. Supply observed public workload facts, never credentials. URLs must be canonical public Twitch/YouTube source URLs; signed media URLs and arbitrary nested data are rejected.
+
+## Evidence and current limits
+
+Final native screenshots, playback/quality/replay and lifecycle matrices, accessibility observations, resource readings, matched-browser conditions, archive-installer verification, and the acceptance ledger remain pending final consolidation. The QA harness and synthetic fixtures support diagnosis; they are not substitutes for genuine public media/chat or authorization evidence. No battery, energy-efficiency, long-session stability, or performance advantage is claimed here.
+
+The media resolver restricts Twitch CloudFront access to the observed distribution `d2vi6trrdongqn.cloudfront.net`. Another legitimate distribution can fail with `UNSAFE_MEDIA_URL` until independently verified. YouTube transport is restricted to HTTPS on `googlevideo.com` and its subdomains. Provider access, formats, live availability, archived chat, and expiring media addresses can change.
+
+Current source map:
+
+- `candidate-plugin/src/`: playback/source state, per-player lifecycle, replay, authorization, bridge, and helper I/O.
+- `candidate-plugin/helpers/`: bounded media resolution, replay import/acquisition, and owned helper supervision.
+- `candidate-plugin/ui/`: local sidebar and overlay presentation.
+- `tests_candidate/`: candidate contract and safety tests; `tests/`: inherited baseline tests.
+- `qa/`: isolated native diagnostic controls and resource sampling.
+- `scripts/build-candidates.py` / `manage-candidates.py`: candidate build and reversible link management.
+- `docs/superpowers/plans/2026-11-08-candidate-portfolio.md`: implementation plan and scope.

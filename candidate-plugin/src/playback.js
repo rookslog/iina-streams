@@ -1,7 +1,7 @@
 "use strict";
 class Playback {
  constructor(options){
-  this.o=options;this.generation=0;this.pending=null;this.deadline=null;this.closed=false;
+  this.o=options;this.generation=0;this.pending=null;this.deadline=null;this.closed=false;this.disabled=false;
   this.data={phase:'loading',quality:'auto720',formats:[],busy:false,error:'',title:'',live:false,duration:0};
  }
  snapshot(){return Object.assign({},this.data,{formats:this.data.formats.map(f=>({id:f.id,label:f.label}))});}
@@ -12,7 +12,7 @@ class Playback {
  }
  cancelDeadline(){if(this.deadline!==null){this.o.clearTimer(this.deadline);this.deadline=null;}}
  async change(quality){
-  if(this.closed||this.data.busy||!['playing','unconfirmed','stopped'].includes(this.data.phase))return false;
+  if(this.closed||this.disabled||this.data.busy||!['playing','unconfirmed','stopped'].includes(this.data.phase))return false;
   if(quality!=='auto720'&&!this.data.formats.some(f=>f.id===quality)){this.data.error='That quality is unavailable. Refresh the list.';this.emit();return false;}
   if(quality===this.data.quality&&this.data.phase==='playing')return true;
   const generation=++this.generation;this.data.busy=true;this.data.phase='resolving';this.data.error='';this.emit();
@@ -35,7 +35,7 @@ class Playback {
   }
  }
  loaded(generation){
-  if(this.closed)return false;
+  if(this.closed||this.disabled)return false;
   if(this.pending){
    if(generation!==this.pending.generation)return false;
    const result=this.pending.result;this.pending=null;this.cancelDeadline();this.adopt(result);this.data.busy=false;this.data.phase='playing';this.data.error='';this.emit();return true;
@@ -43,7 +43,8 @@ class Playback {
   if(generation===0&&this.generation===0){this.data.phase='playing';this.data.error='';this.emit();return true;}
   return false;
  }
- ended(){if(this.closed)return;if(!this.pending&&!this.data.busy){this.data.phase='stopped';this.emit();}}
+ ended(){if(this.closed||this.disabled)return;if(!this.pending&&!this.data.busy){this.data.phase='stopped';this.emit();}}
+ deactivate(){this.disabled=true;this.generation++;this.pending=null;this.cancelDeadline();this.data.busy=false;this.data.phase='inactive';this.emit();}
  close(){this.closed=true;this.generation++;this.pending=null;this.cancelDeadline();this.data.busy=false;this.data.phase='closed';this.emit();}
 }
 module.exports={Playback};

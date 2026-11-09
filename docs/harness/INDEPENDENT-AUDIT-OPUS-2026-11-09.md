@@ -253,6 +253,10 @@ This is a short native experiment and its result bounds every later design choic
 - **Against the role split (R01, R03):** none of the five papers tests a lead/subagent/reviewer topology, and R01 explicitly warns about transfer to multi-agent work.
 - **Cuts the other way (R02):** a testing skill *induced* real native test execution. A good skill can strengthen verification.
 
+Two more points come from Sol High and Sol Medium lanes run on the same brief (`evidence/2026-11-09-independent-audit/READING-LANES-COMPARISON.md`):
+- R02 **excluded "generative or subjective skills"** by design, so it says nothing about design or interaction skills.
+- R04's token reduction holds **for output tokens only**; median input and total tokens rose slightly.
+
 Net effect on this audit: §4.2's judgment that the benchmarks add little that is specific to IINA is confirmed. §4.1's R04 note is corrected (above).
 
 ---

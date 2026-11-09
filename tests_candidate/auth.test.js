@@ -6,6 +6,29 @@ function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;})
 test('loading and stopping auth does not read secrets, contact Twitch, or schedule work',()=>{const r=make();r.auth.stop();assert.equal(r.calls.length,0);assert.equal(r.readCount(),0);assert.equal(r.timers.length,0);assert.equal(r.auth.snapshot().phase,'off');});
 test('missing client ID is a concrete setup state with no network request',async()=>{const r=make();await r.auth.connect('');assert.equal(r.calls.length,0);assert.equal(r.auth.snapshot().phase,'needs-client');});
 test('device authorization asks only chat:read and does not expose device token in state',async()=>{const r=make([{status:200,data:{device_code:'private-device',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate?public=true',interval:5,expires_in:1800}}]);await r.auth.connect('a'.repeat(30));assert.deepEqual(r.calls[0].form,{client_id:'a'.repeat(30),scopes:'chat:read'});assert.equal(r.auth.snapshot().userCode,'ABCD');assert.equal(JSON.stringify(r.states).includes('private-device'),false);assert.equal(r.timers[0].ms,5000);r.auth.stop();assert.equal(r.timers[0].cancelled,true);});
+test('a pending device code keeps polling and connects after approval',async()=>{
+ const client='a'.repeat(30);
+ const r=make([
+  {status:200,data:{device_code:'pending-device-code',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate',expires_in:1800,interval:5}},
+  {status:400,data:{status:400,message:'authorization_pending'}},
+  {status:400,data:{status:400,message:'authorization_pending'}},
+  {status:200,data:{access_token:'x'.repeat(30),refresh_token:'r'.repeat(30),expires_in:14400}},
+  {status:200,data:{client_id:client,login:'reader',scopes:['chat:read'],expires_in:14400}}
+ ]);
+ await r.auth.connect(client);
+ for(let i=0;i<2;i++){
+  const prior=r.timers.at(-1);
+  await prior.fn();
+  assert.equal(r.auth.snapshot().phase,'waiting');
+  assert.equal(prior.cancelled,false);
+  assert.equal(r.timers.at(-1).ms,5000);
+ }
+ await r.timers.at(-1).fn();
+ assert.equal(r.auth.snapshot().phase,'ready');
+ assert.equal(r.ready.at(-1).login,'reader');
+ assert.equal(r.writes.length,1);
+ assert.deepEqual(r.calls.map(x=>x.path),['/device','/token','/token','/token','/validate']);
+});
 test('token becomes usable only after correct client and read scope validation',async()=>{const r=make([{status:200,data:{device_code:'code',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate',interval:5,expires_in:1800}},{status:200,data:{access_token:'x'.repeat(30),refresh_token:'r'.repeat(30),expires_in:14400}},{status:200,data:{client_id:'a'.repeat(30),login:'reader',user_id:'12',scopes:['chat:read'],expires_in:14400}}]);await r.auth.connect('a'.repeat(30));await r.timers[0].fn();assert.equal(r.auth.snapshot().phase,'ready');assert.equal(r.ready.at(-1).login,'reader');assert.equal(r.writes.length,1);assert.equal(JSON.stringify(r.states).includes('x'.repeat(30)),false);assert.equal(r.timers.at(-1).ms,3600000);});
 test('mismatched or broad token validation never starts chat',async()=>{const r=make([{status:200,data:{device_code:'code',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate',interval:5,expires_in:1800}},{status:200,data:{access_token:'x'.repeat(30),refresh_token:'r'.repeat(30)}},{status:200,data:{client_id:'a'.repeat(30),login:'reader',scopes:['chat:read','chat:edit'],expires_in:100}}]);await r.auth.connect('a'.repeat(30));await r.timers[0].fn();assert.equal(r.auth.snapshot().phase,'error');assert.equal(r.ready.filter(Boolean).length,0);assert.equal(r.writes.length,0);});
 test('a nearly expired token refreshes once instead of validating every second',async()=>{

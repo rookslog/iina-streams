@@ -26,13 +26,21 @@ function postChild(id,name,data){
  },0);
 }
 function sendAll(name,data){if(name==='auth-state')qaTrace('auth-state',{state:data.phase,targets:Array.from(audience)});for(const id of audience)postChild(id,name,data);}
+function normalizeHttpResponse(response){
+ const status=Number(response&&response.statusCode);
+ let data=response&&response.data;
+ if(!data||typeof data!=='object'||Array.isArray(data)){
+  try{data=JSON.parse(response&&typeof response.text==='string'?response.text:'{}');}catch(_){data={};}
+ }
+ return{status:Number.isInteger(status)&&status>=100&&status<=599?status:0,data:data&&typeof data==='object'&&!Array.isArray(data)?data:{}};
+}
 async function request(path,method,form,headers){
  try{
   const options={headers:headers||{}};
   if(form)options.data=form;
   const r=await http[method==='POST'?'post':'get']('https://id.twitch.tv/oauth2'+path,options);
-  return{status:r.statusCode,data:r.data||JSON.parse(r.text||'{}')};
- }catch(error){return{status:0,data:{}};}
+  return normalizeHttpResponse(r);
+ }catch(response){return normalizeHttpResponse(response);}
 }
 const auth=new TwitchAuth({request,read:()=>typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth'),write:value=>typeof utils.keychainWrite==='function'?utils.keychainWrite('twitch-readonly','oauth',value):utils.keyChainWrite('twitch-readonly','oauth',value),setTimer:timers.setTimeout,clearTimer:timers.clearTimeout,now:()=>Date.now(),onState:s=>sendAll('auth-state',s),onReady:c=>{credentials=c;sendAll('auth-ready',c);},onStop:()=>{credentials=null;sendAll('auth-stop',{});}});
 function openStream(input){

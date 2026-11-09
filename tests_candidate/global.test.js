@@ -14,7 +14,7 @@ function harness(overrides = {}) {
   const config = {identifier: 'local.iina.streams.candidate.unified', variant: 'unified', ...overrides};
   const handlers = new Map(), items = [], opens = [], messages = [], wires = [], httpCalls = [], timers = [];
   const files = new Map(), fileReads = [], fileWrites = [], keychainReads = [], keychainWrites = [], prompts = [], alerts = [];
-  let input = null, nextID = 0, auth, authOptions, nativeResult, response = {statusCode: 200, data: {ok: true}}, transportError = false;
+  let input = null, nextID = 0, auth, authOptions, nativeResult, response = {statusCode: 200, data: {ok: true}}, transportError = false, rejectHTTP = false;
   class CapturedAuth extends TwitchAuth {
     constructor(options) { super(options); auth = this; authOptions = options; }
   }
@@ -27,6 +27,7 @@ function harness(overrides = {}) {
   const request = method => async (url, options) => {
     httpCalls.push({method, url, options: plain(options)});
     if (transportError) throw new Error('Untrusted transport details');
+    if (rejectHTTP) throw response;
     return response;
   };
   const iina = {
@@ -64,7 +65,8 @@ function harness(overrides = {}) {
     config, handlers, items, opens, messages, wires, httpCalls, timers, files, fileReads, fileWrites,
     keychainReads, keychainWrites, prompts, alerts, auth, authOptions,
     open(value) { input = value; items[0].callback(); return opens.at(-1); },
-    setResponse(value) { response = value; },
+    setResponse(value) { response = value; rejectHTTP = false; },
+    rejectResponse(value) { response = value; rejectHTTP = true; },
     failTransport() { transportError = true; },
     setNativeResult(value) { nativeResult = value; },
     label(id = 1) { return id + '-' + config.identifier; },
@@ -178,6 +180,32 @@ test('OAuth POST fields use dictionary data while validation uses an Authorizati
   assert.deepEqual(validation.options, {headers: {Authorization: 'OAuth offline-access-secret'}});
   r.failTransport();
   assert.deepEqual(plain(await r.authOptions.request('/token', 'POST', form, {})), {status: 0, data: {}});
+});
+
+test('IINA HTTP rejection preserves Twitch authorization_pending and the global poller retries', async () => {
+  const r = harness();
+  const pending = {statusCode: 400, data: {status: 400, message: 'authorization_pending'}};
+  r.rejectResponse(pending);
+  assert.deepEqual(plain(await r.authOptions.request('/token', 'POST', {client_id: 'offline-client'}, {})),
+    {status: 400, data: {status: 400, message: 'authorization_pending'}});
+  r.rejectResponse({statusCode: 400, data: null, text: '{"status":400,"message":"authorization_pending"}'});
+  assert.deepEqual(plain(await r.authOptions.request('/token', 'POST', {}, {})),
+    {status: 400, data: {status: 400, message: 'authorization_pending'}});
+  r.rejectResponse({statusCode: 403, data: {message: 'access_denied'}});
+  assert.deepEqual(plain(await r.authOptions.request('/token', 'POST', {}, {})),
+    {status: 403, data: {message: 'access_denied'}});
+
+  r.open('example');
+  r.setResponse({statusCode: 200, data: {device_code: 'pending-device', user_code: 'ABCD-EFGH', verification_uri: 'https://www.twitch.tv/activate', expires_in: 1800, interval: 5}});
+  await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
+  assert.equal(r.auth.snapshot().phase, 'waiting');
+  const poll = r.timers.find(timer => timer.delay === 5000 && !timer.cancelled);
+  assert.ok(poll);
+  r.rejectResponse(pending);
+  await poll.fn();
+  assert.equal(r.auth.snapshot().phase, 'waiting');
+  assert.ok(r.timers.some(timer => timer !== poll && timer.delay === 5000 && !timer.cancelled));
+  assert.equal(r.auth.snapshot().message, 'Authorize read-only chat in Twitch.');
 });
 
 test('real authorization orchestration requests only chat:read in a POST form after explicit opt-in', async () => {

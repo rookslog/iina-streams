@@ -1,7 +1,7 @@
 {
   "name": "Streams Unified Candidate",
   "identifier": "local.iina.streams.candidate.unified",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Twitch and YouTube playback with optional read-only chat and synchronized replay.",
   "author": {"name": "IINA Streams"},
   "entry": "main.js",

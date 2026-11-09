@@ -3,7 +3,6 @@
  const $=id=>document.getElementById(id);let state=null,activeTab='playback',following=true,signature='';
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
  const messages=$('messages');
- let live=null,liveHistory=[];
  let scrollFrame=null,positionedTop=null,historyTop=0,pageClosed=false,scrollIntentUntil=0,pointerHeld=false;
  const messagesVisible=()=>!messages.hidden&&!$('chat-panel').hidden&&messages.clientHeight>0;
  function cancelScrollCorrection(){if(scrollFrame!==null){cancelAnimationFrame(scrollFrame);scrollFrame=null;}positionedTop=null;}
@@ -22,7 +21,6 @@
   });
  }
  const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
- function getLive(){if(!live&&window.StreamsLive&&window.StreamsLiveHistory){live=window.StreamsLive.create({onStatus:s=>post('live-state',{state:s.phase,message:({'authentication-failed':'Authorization was rejected. Reconnect to chat.','capability-rejected':'Twitch could not initialize chat. Turn it off and connect again.','invalid-configuration':'Chat could not start. Turn it off and connect again.','retry-exhausted':'Chat could not reconnect. Turn it off and connect again.','protocol-limit':'The chat server response exceeded its limits.','transport-unavailable':'Chat transport is unavailable.'})[s.reason]||''}),onBatch:events=>{liveHistory=window.StreamsLiveHistory.reduce(liveHistory,events,150);post('live-messages',liveHistory);}});}return live;}
  function clock(value){const s=Math.max(0,Math.floor(value||0));return(s>=3600?Math.floor(s/3600)+':':'')+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
  function tab(value){const wasHidden=$('chat-panel').hidden;activeTab=value;const focus=state&&state.variant==='focus';$('playback').hidden=focus&&value!=='playback';$('chat-panel').hidden=focus&&value!=='chat';for(const name of ['playback','chat']){const e=$(name+'-tab');e.setAttribute('aria-selected',String(name===value));e.tabIndex=name===value?0:-1;}if(wasHidden&&!$('chat-panel').hidden)positionMessages();}
  function render(s){
@@ -70,10 +68,8 @@
  window.addEventListener('resize',()=>{clearScrollIntent();positionMessages();});
  $('follow').addEventListener('click',()=>{clearScrollIntent();following=true;positionMessages();});
  on('state',render);
- on('live-config',data=>{liveHistory=[];const client=getLive();if(client)client.start(data);else post('live-state',{state:'error',message:'Live chat client is unavailable.'});});
- on('live-stop',()=>{if(live)live.stop();liveHistory=[];});
  on('qa-action',action=>{if(!state||!state.qa)return;try{if(action.name==='click')$(action.data.id).click();else if(action.name==='change'){const e=$(action.data.id);e.value=String(action.data.value);e.dispatchEvent(new Event('change',{bubbles:true}));}else if(action.name==='tab')tab(action.data);post('qa-result',{action:action.name,id:action.data&&action.data.id||'',title:$('title').textContent,quality:$('quality').value,messageCount:messages.children.length,following,scrollTop:messages.scrollTop,scrollHeight:messages.scrollHeight,clientHeight:messages.clientHeight,renderedMessages:action.name==='inspect'?Array.from(messages.children).slice(-12).map(e=>e.textContent.slice(0,2120)):[],tab:activeTab,bodyWidth:document.body.clientWidth,scrollWidth:document.body.scrollWidth,focused:document.activeElement&&document.activeElement.id,documentHidden:document.hidden,authPanelVisible:!$('auth-panel').hidden,authCodeVisible:!$('auth-code-panel').hidden,qualityDisabled:$('quality').disabled});}catch(_){post('qa-result',{action:action.name,error:'UI action failed'});}});
- window.addEventListener('pagehide',()=>{pageClosed=true;clearScrollIntent();cancelScrollCorrection();if(live)live.stop();});
+ window.addEventListener('pagehide',()=>{pageClosed=true;clearScrollIntent();cancelScrollCorrection();});
  document.addEventListener('visibilitychange',()=>post('surface-visibility',{visible:!document.hidden}));
  post('ready',{ready:true});
 })();

@@ -22,6 +22,7 @@ function start(host,config,services){
  let authBindTimer=null,authBound=false,pendingAuth=null;
  let restoration=null,restoreTimer=null,refreshing=false;
  let replay=null,replayPath='',replayMetadata=null,messages=[],timeObserver=null,updateTimer=null,lastTick=0,lastSignature='';
+ let liveCredential=null,liveStarted=false,liveRun=0;
  let chat={mode:'off',state:'off',error:'',count:0,sourceName:'',offset:0,available:false};
  const listeners=[];
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
@@ -30,7 +31,7 @@ function start(host,config,services){
  const player=new Playback({source,resolve:q=>services.resolve(source,q),readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),replace:(result,context)=>{context.frame=Object.assign({},core.window.frame);context.fullscreen=!!core.window.fullscreen;staged={result,context};mpv.command('loadfile',[source.url+'#streams-generation='+context.generation,'replace']);},onState:()=>send(),setTimer:timers.setTimeout,clearTimer:timers.clearTimeout});
  function snapshot(){const p=player.snapshot();return Object.assign(p,{variant,source:{kind:source.kind,provider:source.provider,id:source.id},title:p.title||source.id||'Streams',error:loadError||p.error,chat:Object.assign({},chat),auth:Object.assign({},auth),view:Object.assign({},view),messages:messages.slice(-150),position:Number(mpv.getNumber('time-pos'))||0,paused:!!mpv.getFlag('pause'),qa:!!config.qa});}
  function trace(name,extra){if(services.trace)services.trace(name,Object.assign({variant,sourceId:source.id},extra||{}));}
- function send(){if(closed)return;const s=snapshot();if(sidebarReady)postSidebar('state',s);if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});}
+ function send(){if(closed)return;const s=snapshot();if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});if(sidebarReady&&sidebarVisible)try{postSidebar('state',s);}catch(_){}}
  function connectMessages(){
   sidebar.onMessage('ready',()=>{if(closed)return;sidebarReady=true;send();trace('sidebar-ready');});
   sidebar.onMessage('change-quality',q=>player.change(String(q)));
@@ -54,8 +55,6 @@ function start(host,config,services){
   });
   sidebar.onMessage('authorize-open',()=>{if(auth.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);});
   sidebar.onMessage('forget-auth',()=>{chatOff();app.postMessage('auth-forget',{});});
-  sidebar.onMessage('live-state',data=>{if(chat.mode!=='live'||closed)return;chat.state=String(data&&data.state||'connecting');chat.error=String(data&&data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
-  sidebar.onMessage('live-messages',data=>{if(chat.mode!=='live'||closed||!Array.isArray(data))return;messages=data.slice(-150).map(safeMessage);chat.count=messages.length;send();});
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
  }
  function safeMessage(m){return{id:String(m.id||'').slice(0,160),time:Number(m.time||m.t)||0,author:String(m.author||'').slice(0,80),text:String(m.text||'').slice(0,2000),color:/^#[0-9a-f]{6}$/i.test(m.color||'')?m.color:'',kind:String(m.kind||'message')};}
@@ -66,6 +65,13 @@ function start(host,config,services){
   sidebarVisible=true;sidebar.show();send();
  }
  function hideSidebar(){controlsDesired=false;sidebarVisible=false;sidebar.hide();if(view.presentation==='sidebar')chatOff();}
+ function overlayNeeded(){return chat.mode==='live'||view.presentation==='overlay'&&(chat.mode!=='off'||view.editing);}
+ function stopLiveTransport(){liveRun++;liveCredential=null;liveStarted=false;if(overlayReady)postOverlay('live-stop',{});}
+ function startLiveTransport(){
+  if(closed||!sourceActive||chat.mode!=='live'||!overlayReady||!liveCredential||liveStarted)return;
+  const credential=liveCredential;liveCredential=null;liveStarted=true;
+  postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:++liveRun});
+ }
  function ensureOverlay(){
   if(closed||!windowLoaded)return;
   if(!overlayLoaded){overlayLoaded=true;overlay.loadFile('ui/overlay.html');return;}
@@ -73,23 +79,25 @@ function start(host,config,services){
  }
  on('iina.plugin-overlay-loaded',()=>{
   if(closed||!overlayLoaded)return;
-  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(view.presentation==='overlay'&&(chat.mode!=='off'||view.editing))ensureOverlay();send();trace('overlay-ready');});
+  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(overlayNeeded())ensureOverlay();startLiveTransport();send();trace('overlay-ready');});
+  overlay.onMessage('live-state',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;chat.state=String(data.state||'connecting');chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
+  overlay.onMessage('live-messages',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;messages=data.messages.slice(-150).map(safeMessage);chat.count=messages.length;send();});
   overlay.onMessage('position',p=>setView({x:p&&p.x,y:p&&p.y}));overlay.onMessage('position-done',()=>setView({editing:false}));if(config.qa)overlay.onMessage('qa-result',d=>trace('overlay-ui-result',d));
   postOverlay('hello',{});
  });
  function setView(change){
   if(!sourceActive||!change||typeof change!=='object')return;
   const editing=change.editing===undefined?view.editing:!!change.editing;
-  view=viewSettings(change.reset?{}:Object.assign({},view,change),variant);view.editing=editing;
+  view=viewSettings(change.reset?{}:Object.assign({},view,change),variant);view.editing=editing&&view.presentation==='overlay';
   if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false})});
-  if(view.presentation==='overlay'&&(chat.mode!=='off'||view.editing))ensureOverlay();else{if(overlayLoaded){overlay.setClickable(false);overlay.hide();}view.editing=false;}
+  if(overlayNeeded())ensureOverlay();else{if(overlayLoaded){overlay.setClickable(false);overlay.hide();}view.editing=false;}
   send();
  }
  function stopReplay(){if(timeObserver!==null){event.off('mpv.time-pos.changed',timeObserver);timeObserver=null;}if(updateTimer!==null){timers.clearTimeout(updateTimer);updateTimer=null;}if(replay)replay.clear();lastSignature='';}
  function requestAuth(clientID){const data={clientID};if(authBound)app.postMessage('auth-connect',data);else pendingAuth={data,generation:chatGeneration};}
  function cancelAuthBinding(){if(authBindTimer!==null){clearTimeout(authBindTimer);authBindTimer=null;}pendingAuth=null;}
  function chatOff(){
-  chatGeneration++;pendingAuth=null;stopReplay();if(services.cancelHelpers)try{services.cancelHelpers(['replay','acquire']);}catch(_){};if(sidebarReady)postSidebar('live-stop',{});app.postMessage('auth-disconnect',{});messages=[];chat.mode='off';chat.state='off';chat.error='';view.editing=false;if(overlayLoaded){overlay.setClickable(false);overlay.hide();}send();trace('chat-off');
+  chatGeneration++;pendingAuth=null;stopReplay();stopLiveTransport();if(services.cancelHelpers)try{services.cancelHelpers(['replay','acquire']);}catch(_){};app.postMessage('auth-disconnect',{});messages=[];chat.mode='off';chat.state='off';chat.error='';view.editing=false;if(overlayLoaded){overlay.setClickable(false);overlay.hide();}send();trace('chat-off');
  }
  function resumeReplay(){if(!replay||closed||!sourceActive)return;chatOff();chat.mode='replay';chat.state='ready';timeObserver=event.on('mpv.time-pos.changed',()=>tick(false));if(view.presentation==='overlay')ensureOverlay();tick(true);send();}
  function tick(force){
@@ -206,8 +214,8 @@ function start(host,config,services){
  };}
  const authCallbacks={
   'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=data;chat.state=data.phase;chat.error=data.message||'';send();}),
-  'auth-ready':authReceiver(data=>typeof data.token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(data.token)&&typeof data.login==='string'&&/^[a-z0-9_]{3,25}$/.test(data.login),data=>{if(chat.mode!=='live'||!sidebarReady)return;postSidebar('live-config',{token:data.token,login:data.login,channel:source.id});if(view.presentation==='overlay')ensureOverlay();}),
-  'auth-stop':authReceiver(()=>true,()=>{trace('auth-stop-received',{chatMode:chat.mode});if(sidebarReady)postSidebar('live-stop',{});if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}}),
+  'auth-ready':authReceiver(data=>typeof data.token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(data.token)&&typeof data.login==='string'&&/^[a-z0-9_]{3,25}$/.test(data.login),data=>{if(chat.mode!=='live')return;if(liveStarted)stopLiveTransport();liveCredential={token:data.token,login:data.login};ensureOverlay();startLiveTransport();}),
+  'auth-stop':authReceiver(()=>true,()=>{trace('auth-stop-received',{chatMode:chat.mode});stopLiveTransport();if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}}),
   'auth-forgotten':authReceiver(data=>typeof data.removed==='boolean'&&typeof data.revoked==='boolean'&&data.stale!==true,result=>{auth={phase:'off',message:''};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();})
  };
  // IINA creates the child while the parent's createPlayerInstance call is on

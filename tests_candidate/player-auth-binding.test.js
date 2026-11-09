@@ -6,7 +6,7 @@ const Sources=require('../candidate-plugin/src/source.js');
 const {start}=require('../candidate-plugin/src/player.js');
 
 function setup(){
- const callbacks={},events={},sidebar={},posts=[],cleared=[],scheduled=new Map(),allTimers=new Map();let timerID=0,path='https://www.twitch.tv/hutchmf';
+ const callbacks={},events={},sidebar={},overlayCallbacks={},posts=[],cleared=[],scheduled=new Map(),allTimers=new Map();let timerID=0,path='https://www.twitch.tv/hutchmf',sidebarFails=false;
  const originalSet=global.setTimeout,originalClear=global.clearTimeout;
  global.setTimeout=(fn,ms)=>{const id=++timerID;const value={fn,ms};scheduled.set(id,value);allTimers.set(id,value);return id;};
  global.clearTimeout=id=>{cleared.push(id);scheduled.delete(id);};
@@ -14,11 +14,11 @@ function setup(){
  const host={global:{getLabel:()=>Sources.label(source,'focus'),onMessage:(name,fn)=>callbacks[name]=fn,
    postMessage:(name,data)=>{posts.push([name,data]);if(name==='auth-connect')global.setTimeout(()=>{callbacks['auth-state'](JSON.stringify({phase:'off'}));callbacks['auth-state'](JSON.stringify({phase:'needs-client',message:'Synthetic client required'}));},0);}},
   mpv:{addHook:(name,p,fn)=>events[name]=fn,getString:()=>path,getNumber:()=>0,getFlag:()=>false},
-  core:{window:{loaded:true}},sidebar:{loadFile(){},onMessage:(name,fn)=>sidebar[name]=fn,postMessage:(...args)=>posts.push(['sidebar',...args]),show(){},hide(){}},
-  overlay:{loadFile(){},onMessage(){},postMessage(){},show(){},hide(){},setClickable(){},setOpacity(){}},
+  core:{window:{loaded:true}},sidebar:{loadFile(){},onMessage:(name,fn)=>sidebar[name]=fn,postMessage:(...args)=>{if(sidebarFails)throw Error('Sidebar WebView unavailable');posts.push(['sidebar',...args]);},show(){},hide(){}},
+  overlay:{loadFile(){},onMessage:(name,fn)=>overlayCallbacks[name]=fn,postMessage:(...args)=>posts.push(['overlay',...args]),show(){},hide(){},setClickable(){},setOpacity(){}},
   event:{on:(name,fn)=>{events[name]=fn;return name;},off(){}},menu:{addItem(){},item:()=>({})},utils:{}};
  const controller=start(host,{variant:'focus'},{readSettings:()=>({}),cancelHelpers(){}});
- return{controller,callbacks,events,sidebar,posts,cleared,scheduled,allTimers,
+ return{controller,callbacks,events,sidebar,overlay:overlayCallbacks,posts,cleared,scheduled,allTimers,failSidebar:()=>{sidebarFails=true;},
   flush(){for(const [id,{fn}] of [...scheduled]){scheduled.delete(id);fn();}},
   setPath:value=>path=value,
   restore(){global.setTimeout=originalSet;global.clearTimeout=originalClear;}};
@@ -113,40 +113,94 @@ test('malformed, non-object, oversized and wrong-shaped auth wire is ignored wit
  }finally{f.restore();}
 });
 
-test('valid credential strings reach only a live ready sidebar, and Off fences late delivery',()=>{
+test('live credentials start only in the loaded overlay and Off fences late delivery',()=>{
  const f=setup();try{
   f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
   const wire=JSON.stringify({token:'synthetic-only-token',login:'synthetic'});
   f.callbacks['auth-ready'](wire);
-  const delivered=f.posts.filter(([kind,name])=>kind==='sidebar'&&name==='live-config');
+  assert.equal(f.posts.some(([surface,name])=>surface==='sidebar'&&name==='live-config'),false);
+  assert.equal(f.posts.some(([surface,name])=>surface==='overlay'&&name==='live-config'),false);
+  f.events['iina.plugin-overlay-loaded']();
+  f.overlay['overlay-ready']({});
+  const delivered=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config');
   assert.equal(delivered.length,1);
-  assert.ok(JSON.stringify(delivered[0]).includes('synthetic-only-token'));
+  const config=JSON.parse(decodeURIComponent(delivered[0][2].encoded));
+  assert.equal(config.token,'synthetic-only-token');
+  assert.ok(Number.isInteger(config.session)&&config.session>0);
+  assert.ok(!JSON.stringify(f.controller.snapshot()).includes('synthetic-only-token'));
   f.controller.chatOff();const count=f.posts.length;
   f.callbacks['auth-ready'](wire);f.callbacks['auth-state'](JSON.stringify({phase:'ready'}));
   assert.equal(f.posts.length,count);assert.equal(f.controller.snapshot().chat.mode,'off');
  }finally{f.restore();}
 });
 
-test('session-only storage warning survives live progress, yields to transport errors, and clears at Off',()=>{
+test('overlay live chat continues after sidebar hides, and display changes reuse one connection',()=>{
+ const f=setup();try{
+  f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
+  f.callbacks['auth-ready'](JSON.stringify({token:'synthetic-only-token',login:'synthetic'}));
+  f.events['iina.plugin-overlay-loaded']();f.overlay['overlay-ready']({});
+  const configs=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config');
+  assert.equal(configs.length,1);
+  const session=JSON.parse(decodeURIComponent(configs[0][2].encoded)).session;
+  f.overlay['live-state']({session,state:'connected',message:''});
+  f.controller.setView({presentation:'overlay'});f.controller.hideSidebar();
+  const stopped=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-stop').length;
+  f.overlay['live-messages']({session,messages:[{id:'msg-after-hide',author:'Tester',text:'message arrived while sidebar was closed'}]});
+  assert.equal(f.controller.snapshot().chat.mode,'live');
+  assert.equal(f.controller.snapshot().chat.state,'connected');
+  assert.equal(f.controller.snapshot().messages[0].id,'msg-after-hide');
+  assert.equal(f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-stop').length,stopped);
+  f.controller.setView({presentation:'sidebar'});
+  f.overlay['live-messages']({session,messages:[{id:'msg-after-switch',author:'Tester',text:'kept streaming'}]});
+  assert.equal(f.controller.snapshot().messages[0].id,'msg-after-switch');
+  f.controller.setView({presentation:'overlay'});f.controller.showSidebar();
+  assert.equal(f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config').length,1);
+  f.controller.chatOff();
+  f.overlay['live-messages']({session,messages:[{id:'stale',author:'Tester',text:'do not show'}]});
+  assert.equal(f.controller.snapshot().messages.length,0);
+ }finally{f.restore();}
+});
+
+test('session-only storage warning survives overlay transport progress and clears at Off',()=>{
  const f=setup();try{
   f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
   const warning='Connected for this session; Keychain storage failed.';
   f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:warning}));
+  f.callbacks['auth-ready'](JSON.stringify({token:'synthetic-only-token',login:'synthetic'}));
+  f.events['iina.plugin-overlay-loaded']();f.overlay['overlay-ready']({});
+  const config=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config').at(-1);
+  const session=JSON.parse(decodeURIComponent(config[2].encoded)).session;
   for(const phase of ['connecting','authenticating','joining','connected']){
-   f.sidebar['live-state']({state:phase,message:''});
+   f.overlay['live-state']({session,state:phase,message:''});
    assert.equal(f.controller.snapshot().chat.error,warning,'ordinary '+phase+' progress must retain the storage limitation');
   }
-  const sent=f.posts.filter(([kind,name])=>kind==='sidebar'&&name==='state').at(-1);
+  const sent=f.posts.filter(([surface,name])=>surface==='sidebar'&&name==='state').at(-1);
   assert.equal(JSON.parse(decodeURIComponent(sent[2].encoded)).chat.error,warning);
-  f.sidebar['live-state']({state:'error',message:'Authorization was rejected. Reconnect to chat.'});
+  f.overlay['live-state']({session,state:'error',message:'Authorization was rejected. Reconnect to chat.'});
   assert.equal(f.controller.snapshot().chat.error,'Authorization was rejected. Reconnect to chat.');
-  f.sidebar['live-state']({state:'connected',message:''});
-  assert.equal(f.controller.snapshot().chat.error,warning,'recovery must restore the still-relevant storage warning');
+  f.overlay['live-state']({session,state:'connected',message:''});
+  assert.equal(f.controller.snapshot().chat.error,warning);
   f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:''}));
-  f.sidebar['live-state']({state:'connected',message:''});
-  assert.equal(f.controller.snapshot().chat.error,'','a later successful storage state must clear the old warning');
+  f.overlay['live-state']({session,state:'connected',message:''});
+  assert.equal(f.controller.snapshot().chat.error,'');
   f.callbacks['auth-state'](JSON.stringify({phase:'ready',message:warning}));
-  f.controller.chatOff();f.sidebar['live-state']({state:'connected',message:''});
+  f.controller.chatOff();f.overlay['live-state']({session,state:'connected',message:''});
   assert.equal(f.controller.snapshot().chat.mode,'off');assert.equal(f.controller.snapshot().chat.error,'');
+ }finally{f.restore();}
+});
+
+test('overlay delivery continues if an IINA-native collapsed sidebar rejects state posts',()=>{
+ const f=setup();try{
+  f.flush();f.sidebar.ready({});f.sidebar.connect({clientID:''});f.flush();
+  f.callbacks['auth-ready'](JSON.stringify({token:'synthetic-only-token',login:'synthetic'}));
+  f.events['iina.plugin-overlay-loaded']();f.overlay['overlay-ready']({});
+  f.controller.setView({presentation:'overlay'});
+  const config=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config').at(-1);
+  const session=JSON.parse(decodeURIComponent(config[2].encoded)).session;
+  f.failSidebar();
+  const before=f.posts.filter(([surface,name])=>surface==='overlay'&&name==='state').length;
+  assert.doesNotThrow(()=>f.overlay['live-messages']({session,messages:[{id:'while-collapsed',author:'Tester',text:'arrived'}]}));
+  assert.ok(f.posts.filter(([surface,name])=>surface==='overlay'&&name==='state').length>before);
+  assert.equal(f.controller.snapshot().messages[0].id,'while-collapsed');
  }finally{f.restore();}
 });

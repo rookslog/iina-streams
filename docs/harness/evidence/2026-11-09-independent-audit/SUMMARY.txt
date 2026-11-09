@@ -1,0 +1,16 @@
+== codex-debug-prompt-input-repo.json sha256 f49c764e75e32f0ccf93965f6f71acbde6424393607258bf895e9f8e7d608455 bytes 106881
+ concurrency slots: 30
+ spawn roles: ['default', 'explorer', 'harness_advisor_sol_high', 'harness_advisor_sol_medium', 'harness_advisor_sol_xhigh', 'harness_executor_luna_max', 'harness_explorer_luna_high', 'harness_explorer_luna_max', 'harness_explorer_terra_high', 'harness_explorer_terra_max', 'harness_explorer_terra_xhigh', 'impeccable_asset_producer', 'impeccable_documenter', 'impeccable_finish_reviewer', 'impeccable_manual_edit_applier', 'worker']
+ streams_* roles present: False
+ skill entries: 75 catalog bytes 30589
+ superpowers:*: 14 | project streams-*: 3 | delegate-triage present: True
+ multi_agent_mode: <multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask
+ AGENTS.md chain bytes: 10228
+== codex-debug-prompt-input-trusted-scratch-copy.json sha256 561ee1ab7926ec1b596eba7884d07714aad13485d8d89349fae40938d3b47c16 bytes 107711
+ concurrency slots: 30
+ spawn roles: ['default', 'explorer', 'harness_advisor_sol_high', 'harness_advisor_sol_medium', 'harness_advisor_sol_xhigh', 'harness_executor_luna_max', 'harness_explorer_luna_high', 'harness_explorer_luna_max', 'harness_explorer_terra_high', 'harness_explorer_terra_max', 'harness_explorer_terra_xhigh', 'impeccable_asset_producer', 'impeccable_documenter', 'impeccable_finish_reviewer', 'impeccable_manual_edit_applier', 'worker']
+ streams_* roles present: False
+ skill entries: 75 catalog bytes 30755
+ superpowers:*: 14 | project streams-*: 3 | delegate-triage present: True
+ multi_agent_mode: <multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask
+ AGENTS.md chain bytes: 10892

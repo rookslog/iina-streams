@@ -257,7 +257,16 @@ Two more points come from Sol High and Sol Medium lanes run on the same brief (`
 - R02 **excluded "generative or subjective skills"** by design, so it says nothing about design or interaction skills.
 - R04's token reduction holds **for output tokens only**; median input and total tokens rose slightly.
 
-Net effect on this audit: §4.2's judgment that the benchmarks add little that is specific to IINA is confirmed. §4.1's R04 note is corrected (above).
+Net effect on this audit: §4.2's judgment that the benchmarks add little that is specific to IINA is confirmed.
+
+**Round 2 and the inventory of inventories (revision 3, same day).**
+- Four more Terra lanes tested context isolation, launch surface and effort; results are in `READING-LANES-COMPARISON.md`, round 2.
+  - The isolated `reader` profile cut the prompt from 99 KB to 59 KB but did not change cost or quality measurably on this corpus.
+  - Max effort took 3.3× the time for two extra verified catches.
+  - The interactive Herdr lane read only part of the corpus, and said so. The cause is unconfirmed.
+- At the operator's request, two scouts then compiled every earlier attempt to inventory, audit or fix the setups. The register is at `~/Development/personal-work-ecosystem/local/2026-11-09-inventory-of-inventories/README.md`, which is git-ignored there by that workspace's convention.
+
+**It corrects advice given in this session's chat.** The cross-machine design proposed there (one composition repo, per-host overlays, a drift check) **already exists**: it was built on 2026-10-04 in `dionysus:/data/lanes/E-harness-repo/` and was never adopted. A drift audit the same day counted 6,869 file differences between the machines. Any setup redesign should start from that repo, not from this audit. §4.1's R04 note is corrected (above).
 
 ---
 

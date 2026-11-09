@@ -47,4 +47,34 @@ Each lane's verified additions beyond that core:
 - **Terra High was fastest and thinnest.** That does not support the project rule "Research and source-critical review should use Terra High" *for this task shape*. One run cannot overturn the rule either. It was made for broader research that involves web sources and conflicting evidence, which this task did not test.
 - The useful product is **the union**. For high-stakes readings, two lanes on one brief (for example Sol Medium + Sol High) caught more than either alone, at roughly twice the cost.
 
+## Round 2: context isolation, launch surface, and effort (Terra, same brief and corpus)
+
+Four more lanes, each designed to change one variable relative to a comparison lane. "Isolated" means the `reader` profile (`reader-codex-profile.config.toml`). Rendered with `codex debug prompt-input`, it removes the skill catalog, plugins, MCP, web search, hooks and memories, and takes the prompt from 99 KB to 59 KB. Two things remain: the global `AGENTS.md` (7 KB) and the subagent tool definitions, which no tried key removed.
+
+| Lane | Change vs. comparison | Wall time | Tokens | Coverage claimed |
+| --- | --- | --- | --- | --- |
+| T0 (round 1) | Terra High, default context, `exec` | 2 m 43 s | 163,093 | full |
+| **E1** | T0 with the isolated profile → **context** | 2 m 44 s | 158,624 | full |
+| **E2** | E1 at xhigh → **effort** | 3 m 28 s | 159,803 | full |
+| **E3** | E1 at max → **effort** | 9 m 06 s | 192,461 | full |
+| **H1** | E1, but interactive in a Herdr pane, brief delivered as a file → **surface** | 2 m 11 s | 368,338 total incl. 289,152 cached (different accounting; not comparable) | **partial**, honestly reported |
+
+**Findings that separate the lanes.** The table below scores all seven lanes against the round-1 union. Scoring was by key-term search, with the discriminating items adjudicated by reading the context. Earlier `grep` passes were invalid because `grep` here is `ugrep`, which rejected the patterns; the checks were redone in Python.
+
+| Finding | Lanes that state it |
+| --- | --- |
+| R02 deliberately excluded generative/subjective skills | SH, **E1**, **E2** |
+| R04 median input/total tokens *rose* | SH, **E3**, **H1** |
+| R02's helpful skill was 13.2K characters | SH, **E3** |
+| R04 kept architecture/conventions content | SM, **E1** |
+| R03 test coverage 75% avg / 2.5% min; R04 mean −20.08% | SM only |
+| R03 "no clear dependency" on file length | all except **E1** |
+| R03 +2.7% when docs removed; R05 proportional verification | all except **H1** |
+
+**Reading (inference; one run per lane, so differences of one or two items are within plausible run-to-run variance):**
+- **Context isolation (T0 → E1)** changed neither time nor tokens. The ~130k-token corpus dominates, so removing 40 KB of harness context barely moves the total. E1 caught two items T0 missed and missed one T0 caught. There is no clear quality effect in one pair.
+- **Effort (E1 → E2 → E3).** xhigh ≈ high in time, tokens and content. Max took **3.3× the time** and 21% more tokens and added two verified catches. For exhaustive close reading, max buys little per unit time. Sol Medium (round 1) remains the best value observed.
+- **Surface (E1 → H1).** The interactive Herdr lane hit tool-output truncation three times (session log), switched to targeted searches, and **read only part of four of the five papers**. It said so plainly in its coverage table, which is the right behavior. Its report omits two items every full reader found. Cause **unconfirmed** between three candidates: (a) the interactive surface's tool-output budget, (b) the brief arriving as a file instead of as the prompt, (c) run variance. The test that would decide: rerun H1 with the brief pasted as the prompt, and run an `exec` lane that is told to read BRIEF.md.
+- **Practical upshot:** for long-corpus reading, launch through `exec` (or verify full coverage in an interactive lane before trusting its verdicts). Two lanes on one brief keep beating one lane at higher effort.
+
 **What would test this further:** repeat the three lanes on a second, different corpus, ideally a web-research task where Terra's rule was meant to apply. Score completeness against a key built from the union before any lane is read.

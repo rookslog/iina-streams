@@ -268,6 +268,15 @@ Net effect on this audit: §4.2's judgment that the benchmarks add little that i
 
 **It corrects advice given in this session's chat.** The cross-machine design proposed there (one composition repo, per-host overlays, a drift check) **already exists**: it was built on 2026-10-04 in `dionysus:/data/lanes/E-harness-repo/` and was never adopted. A drift audit the same day counted 6,869 file differences between the machines. Any setup redesign should start from that repo, not from this audit. §4.1's R04 note is corrected (above).
 
+**Where this went next (revision 4, same day).** All of the following are in the same git-ignored folder as the register:
+- **`EVALUATION-oct4-19-steps.md`:** the Oct 4 repo's last revision (`V-H-harness-revise`), with its 19 owner steps checked against today. Its principles hold; its version facts and Vigil examples are stale; only D01 (which machine is the agents' workstation) needs the operator's view.
+- **`RELATED-apollo.md` and `RELATED-dionysus.md`:** a second, machine-split search for related work and unlaunched briefs. Most relevant here: the Oct 4 process research on return paths, never reviewed; the Pro H launch-layer design, never decided; and a Nov 3 runs catalogue whose search command crashes.
+- **`RETURN-MAP.md`:** the synthesis.
+- **`NOTE-launch-records-and-tags.md`:** input for the launcher talk.
+- **`ROADMAP-preliminary.md`:** the roadmap for discussion.
+  - §6 of this audit is its Phase 1: E1, then R1, R3, R4/R6 and R7, before any broader harness work.
+  - It sends each thread to the lead that already owns it.
+
 ---
 
 ## Appendix A — Reproduction

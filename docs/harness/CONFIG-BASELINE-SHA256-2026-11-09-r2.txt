@@ -1,4 +1,4 @@
-# IINA Streams harness source snapshot r2, 2026-11-09, after independent-audit corrections (INDEPENDENT-AUDIT-OPUS-2026-11-09.md, revision 2).
+# IINA Streams harness source snapshot r2, 2026-11-09, after independent-audit corrections (INDEPENDENT-AUDIT-OPUS-2026-11-09.md, revision 2); audit line refreshed at its revisions 3 and 4.
 # Supersedes CONFIG-BASELINE-SHA256-2026-11-09.txt as the current state; the original is kept as the pre-audit baseline.
 # SHA256 [two spaces] relative path; file integrity, not semantic or runtime proof.
 dddb942b161da533a06330df070d31c6d1073abafbc3c108c6fb127c9e7aa8be  AGENTS.md
@@ -15,7 +15,7 @@ c3b7459d349904f199c1e42833a73a9cd5e357b4489658af656059c8d1ae9756  .codex/agents/
 e009b152d7e4651595015a13cb1e3cc20bfa02178d1adf8828c3e5ee9d2324f2  docs/commission/INITIALIZE-SOL61-HIGH-2026-11-09.md
 8a44054d1570ab35922af7393d4827e5d307d499c9c977f9f1e2b2895b4fd361  docs/harness/EFFECTIVE-LOAD-AUDIT-2026-11-09.md
 a7a9b10185cf2460685fa8bf9c594e07fe98fc6324ae35ad41d13ca864a71834  docs/harness/IMPLEMENTATION-RATIONALE-TOULMIN-2026-11-09.md
-7ccec57114e8c532c20f007fd471379ecc94f93f36c2f9b8a98cbb13fe6c2e1b  docs/harness/INDEPENDENT-AUDIT-OPUS-2026-11-09.md
+be8b45d8eea1c973af6c747f540172c8d2c9038053e5a62b67a4da5c52e60f6c  docs/harness/INDEPENDENT-AUDIT-OPUS-2026-11-09.md
 9f0e45e149691ebf0d9eedfa1de1945566dbda22e1c5219585f79940ba3b9ba1  docs/harness/evidence/2026-11-09-independent-audit/FULLTEXT-READING-R01-R05-E1-terra-high-isolated.md
 5363fb1f52d2bf65acc41a357b5cf89fa2783f21360bac829c45abff050c43d7  docs/harness/evidence/2026-11-09-independent-audit/FULLTEXT-READING-R01-R05-E2-terra-xhigh-isolated.md
 ada8cf82267918f9ba8a0a14c06ab7ac062864e935992de0918790153750c55b  docs/harness/evidence/2026-11-09-independent-audit/FULLTEXT-READING-R01-R05-E3-terra-max-isolated.md

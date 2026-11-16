@@ -18,7 +18,7 @@ body{
  min-width:220px;
  min-height:100px;
  overflow:hidden;
- padding:10px 14px 12px;
+ padding:14px 14px 14px;
  border-radius:12px;
  background:rgba(20,22,28,var(--opacity,.58));
  -webkit-backdrop-filter:blur(22px) saturate(180%);
@@ -43,6 +43,21 @@ body{
  outline:2px solid #92c2ff;
  outline-offset:2px;
 }
+#drag-pill{
+ position:absolute;
+ top:5px;
+ left:50%;
+ transform:translateX(-50%);
+ width:32px;
+ height:4px;
+ border-radius:999px;
+ background:rgba(255,255,255,.32);
+ pointer-events:none;
+ transition:background 120ms ease;
+}
+#panel.dragging #drag-pill{
+ background:rgba(255,255,255,.78);
+}
 #messages{
  display:flex;
  flex-direction:column;
@@ -54,7 +69,7 @@ body{
  overscroll-behavior:contain;
  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 12px,#000);
  mask-image:linear-gradient(to bottom,transparent,#000 12px,#000);
- padding-top:6px;
+ padding-top:4px;
 }
 #messages::-webkit-scrollbar{
  display:none;
@@ -78,6 +93,21 @@ body{
 .author{
  font-weight:700;
  margin-right:6px;
+}
+#resize-handle{
+ position:absolute;
+ right:3px;
+ bottom:3px;
+ width:14px;
+ height:14px;
+ cursor:nwse-resize;
+ border-radius:3px;
+ opacity:.55;
+ transition:opacity 120ms ease;
+ background:linear-gradient(135deg,transparent 50%,rgba(255,255,255,.5) 50%,rgba(255,255,255,.5) 62%,transparent 62%,transparent 75%,rgba(255,255,255,.5) 75%,rgba(255,255,255,.5) 87%,transparent 87%);
+}
+#panel.resizing #resize-handle{
+ opacity:1;
 }
 [hidden]{display:none!important}
 @media(prefers-reduced-transparency:reduce){

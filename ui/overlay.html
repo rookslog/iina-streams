@@ -8,8 +8,10 @@
  <title>Chat overlay</title>
 </head>
 <body>
- <section id="panel" aria-label="Read-only chat overlay. Drag to move, drag edges or corners to resize." tabindex="0">
+ <section id="panel" aria-label="Read-only chat overlay. Drag to move, drag bottom-right corner to resize." tabindex="0">
+  <div id="drag-pill" aria-hidden="true"></div>
   <div id="messages" role="log" aria-live="off"></div>
+  <div id="resize-handle" aria-label="Resize chat overlay" title="Drag to resize"></div>
  </section>
  <script src="live.js"></script>
  <script src="live-history.js"></script>

@@ -10,6 +10,11 @@
  const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
  on('hello',()=>post('overlay-ready',{ready:true}));
 
+ function markClickable(){
+  panel.setAttribute('data-clickable','');
+  for(const el of panel.querySelectorAll('*'))el.setAttribute('data-clickable','');
+ }
+
  function authorColor(name,supplied){
   if(supplied&&/^#[0-9a-f]{6}$/i.test(supplied))return supplied;
   let h=0;const s=String(name||'');
@@ -64,8 +69,6 @@
   panel.style.setProperty('--opacity',s.view.opacity);
   panel.style.setProperty('--size',s.view.fontSize+'px');
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
-  panel.setAttribute('data-clickable','');
-  resizeHandle.setAttribute('data-clickable','');
   const list=s.view.presentation==='overlay'?(s.messages||[]):[];
   const replay=s.chat&&s.chat.mode==='replay';
   const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+'|r='+!!replay;
@@ -101,6 +104,7 @@
    if(following)messages.scrollTop=messages.scrollHeight;
    else messages.scrollTop=prevTop;
   }
+  markClickable();
   panel.hidden=s.view.presentation!=='overlay'||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
   position();
  });
@@ -116,32 +120,7 @@
   e.preventDefault();
   drag={x:e.clientX,y:e.clientY,left:panel.offsetLeft,top:panel.offsetTop};
   panel.classList.add('dragging');
-  panel.setPointerCapture(e.pointerId);
  });
-
- panel.addEventListener('pointermove',e=>{
-  if(!drag||!state)return;
-  const sz=clampedSize();
-  const g=geometry(sz.w,sz.h);
-  const rawX=Math.max(0,Math.min(g.maxX,drag.left+e.clientX-drag.x));
-  const rawY=Math.max(0,Math.min(g.maxY,drag.top+e.clientY-drag.y));
-  const sx=snapValue(rawX,g.maxX);
-  const sy=snapValue(rawY,g.maxY);
-  panel.classList.toggle('snapped',sx.snapped||sy.snapped);
-  state.view.x=g.maxX?sx.val/g.maxX:0;
-  state.view.y=g.maxY?sy.val/g.maxY:0;
-  position();
- });
-
- function endDrag(e){
-  if(!drag)return;
-  drag=null;
-  panel.classList.remove('dragging','snapped');
-  if(e&&e.pointerId!==undefined)try{panel.releasePointerCapture(e.pointerId);}catch(_){}
-  if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
- }
- panel.addEventListener('pointerup',endDrag);
- panel.addEventListener('pointercancel',endDrag);
 
  resizeHandle.addEventListener('pointerdown',e=>{
   if(!state||e.button!==0)return;
@@ -149,34 +128,51 @@
   e.stopPropagation();
   resize={x:e.clientX,y:e.clientY,w:panel.offsetWidth,h:panel.offsetHeight,left:panel.offsetLeft,top:panel.offsetTop};
   panel.classList.add('resizing');
-  resizeHandle.setPointerCapture(e.pointerId);
  });
 
- resizeHandle.addEventListener('pointermove',e=>{
-  if(!resize||!state)return;
-  const maxW=Math.max(MIN_W,innerWidth-resize.left);
-  const maxH=Math.max(MIN_H,innerHeight-resize.top);
-  let w=Math.max(MIN_W,Math.min(maxW,resize.w+e.clientX-resize.x));
-  let h=Math.max(MIN_H,Math.min(maxH,resize.h+e.clientY-resize.y));
-  if(maxW-w<=SNAP_THRESHOLD)w=maxW;
-  if(maxH-h<=SNAP_THRESHOLD)h=maxH;
-  state.view.width=Math.round(w);
-  state.view.height=Math.round(h);
-  const g=geometry(state.view.width,state.view.height);
-  state.view.x=g.maxX?Math.min(1,resize.left/g.maxX):0;
-  state.view.y=g.maxY?Math.min(1,resize.top/g.maxY):0;
-  position();
+ window.addEventListener('pointermove',e=>{
+  if(drag&&state){
+   const sz=clampedSize();
+   const g=geometry(sz.w,sz.h);
+   const rawX=Math.max(0,Math.min(g.maxX,drag.left+e.clientX-drag.x));
+   const rawY=Math.max(0,Math.min(g.maxY,drag.top+e.clientY-drag.y));
+   const sx=snapValue(rawX,g.maxX);
+   const sy=snapValue(rawY,g.maxY);
+   panel.classList.toggle('snapped',sx.snapped||sy.snapped);
+   state.view.x=g.maxX?sx.val/g.maxX:0;
+   state.view.y=g.maxY?sy.val/g.maxY:0;
+   position();
+  }else if(resize&&state){
+   const maxW=Math.max(MIN_W,innerWidth-resize.left);
+   const maxH=Math.max(MIN_H,innerHeight-resize.top);
+   let w=Math.max(MIN_W,Math.min(maxW,resize.w+e.clientX-resize.x));
+   let h=Math.max(MIN_H,Math.min(maxH,resize.h+e.clientY-resize.y));
+   if(maxW-w<=SNAP_THRESHOLD)w=maxW;
+   if(maxH-h<=SNAP_THRESHOLD)h=maxH;
+   state.view.width=Math.round(w);
+   state.view.height=Math.round(h);
+   const g=geometry(state.view.width,state.view.height);
+   state.view.x=g.maxX?Math.min(1,resize.left/g.maxX):0;
+   state.view.y=g.maxY?Math.min(1,resize.top/g.maxY):0;
+   position();
+  }
  });
 
- function endResize(e){
-  if(!resize)return;
-  resize=null;
-  panel.classList.remove('resizing');
-  if(e&&e.pointerId!==undefined)try{resizeHandle.releasePointerCapture(e.pointerId);}catch(_){}
-  if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
+ function finishPointer(){
+  if(drag){
+   drag=null;
+   panel.classList.remove('dragging','snapped');
+   if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
+  }
+  if(resize){
+   resize=null;
+   panel.classList.remove('resizing');
+   if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
+  }
  }
- resizeHandle.addEventListener('pointerup',endResize);
- resizeHandle.addEventListener('pointercancel',endResize);
+ window.addEventListener('pointerup',finishPointer);
+ window.addEventListener('pointercancel',finishPointer);
+ window.addEventListener('blur',finishPointer);
 
  panel.addEventListener('keydown',e=>{
   if(!state)return;

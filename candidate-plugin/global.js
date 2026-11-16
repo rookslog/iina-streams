@@ -50,14 +50,21 @@ function openStream(input){
  if(!source){utils.ask('Enter a Twitch channel or recording URL, or a YouTube video or livestream URL.');return;}
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label:Sources.label(source,config.variant)});
 }
-menu.addItem(menu.item('Open Stream — '+(config.variant==='focus'?'Focus':'Unified')+'…',()=>openStream()));
+menu.addItem(menu.item('Open Stream…',()=>openStream()));
 app.onMessage('open',()=>openStream());
 app.onMessage('auth-connect',async(data,label)=>{
  const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});if(id===null)return;nextSession(id);audience.add(id);
  if(credentials){postChild(id,'auth-state',auth.snapshot());postChild(id,'auth-ready',credentials);return;}
  if(['waiting','authorizing'].includes(auth.snapshot().phase)){postChild(id,'auth-state',auth.snapshot());return;}
- let clientID=String(data&&data.clientID||'');
+ let clientID=String(data&&data.clientID||'').trim();
  try{if(!clientID&&file.exists('@data/twitch-client.json'))clientID=JSON.parse(file.read('@data/twitch-client.json')).clientID||'';}catch(_){}
+ if(!clientID){
+  try{
+   const raw=typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth');
+   const saved=typeof raw==='string'&&raw?JSON.parse(raw):null;
+   if(saved&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID||''))clientID=saved.clientID;
+  }catch(_){}
+ }
  if(/^[A-Za-z0-9]{10,64}$/.test(clientID))file.write('@data/twitch-client.json',JSON.stringify({clientID}));
  await auth.connect(clientID);
 });

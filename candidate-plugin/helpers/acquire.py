@@ -22,7 +22,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 
-YTDLP = '/opt/homebrew/bin/yt-dlp'
+YTDLP = shutil.which('yt-dlp') or '/opt/homebrew/bin/yt-dlp'
 MAX_TOTAL_SECONDS = 120
 MAX_PREFLIGHT_SECONDS = 30
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024

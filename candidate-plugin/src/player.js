@@ -4,9 +4,9 @@ const {Playback}=require('./playback.js');
 const {envelope}=require('./bridge.js');
 const {Replay}=require('./replay.js');
 const {create:createTimers}=require('./timers.js');
-const DEFAULT_VIEW={presentation:'sidebar',fontSize:14,opacity:0.64,lines:6,x:1,y:0,density:'comfortable',editing:false};
+const DEFAULT_VIEW={presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,x:1,y:0,width:340,height:260,density:'comfortable',editing:false};
 function clamp(n,low,high,fallback){n=Number(n);return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fallback;}
-function viewSettings(value,variant){const v=value||{};return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0.2,0.9,0.64),lines:Math.round(clamp(v.lines,2,12,6)),x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),density:v.density==='compact'?'compact':'comfortable',editing:false};}
+function viewSettings(value,variant){const v=value||{};return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0.2,0.9,0.58),lines:Math.round(clamp(v.lines,2,12,6)),x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),width:Math.round(clamp(v.width,220,1200,340)),height:Math.round(clamp(v.height,100,1200,260)),density:v.density==='compact'?'compact':'comfortable',editing:false};}
 function start(host,config,services){
  const label=host.global.getLabel()||'';
  const identity=Sources.fromLabel(label);
@@ -18,7 +18,7 @@ function start(host,config,services){
  const persisted=services.readSettings?services.readSettings():{};
  let view=viewSettings(persisted.view,variant),auth={phase:'off',message:''};
  let closed=false,windowLoaded=!!core.window.loaded,sidebarLoaded=false,sidebarReady=false,sidebarVisible=false,controlsDesired=true,overlayLoaded=false,overlayReady=false;
- let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false,chatGeneration=0,sourceActive=true;
+ let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false,chatGeneration=0,sourceActive=true,autoReplayAttempted=false;
  let authBindTimer=null,authBound=false,pendingAuth=null;
  let restoration=null,restoreTimer=null,refreshing=false;
  let replay=null,replayPath='',replayMetadata=null,messages=[],timeObserver=null,updateTimer=null,lastTick=0,lastSignature='';
@@ -65,7 +65,7 @@ function start(host,config,services){
   sidebarVisible=true;sidebar.show();send();
  }
  function hideSidebar(){controlsDesired=false;sidebarVisible=false;sidebar.hide();if(view.presentation==='sidebar')chatOff();}
- function overlayNeeded(){return chat.mode==='live'||view.presentation==='overlay'&&(chat.mode!=='off'||view.editing);}
+ function overlayNeeded(){return chat.mode==='live'||view.presentation==='overlay'&&chat.mode!=='off';}
  function stopLiveTransport(){liveRun++;liveCredential=null;liveStarted=false;if(overlayReady)postOverlay('live-stop',{});}
  function startLiveTransport(){
   if(closed||!sourceActive||chat.mode!=='live'||!overlayReady||!liveCredential||liveStarted)return;
@@ -75,13 +75,14 @@ function start(host,config,services){
  function ensureOverlay(){
   if(closed||!windowLoaded)return;
   if(!overlayLoaded){overlayLoaded=true;overlay.loadFile('ui/overlay.html');return;}
-  overlay.setClickable(!!view.editing);overlay.setOpacity(1);overlay.show();send();
+  overlay.setClickable(view.presentation==='overlay');overlay.setOpacity(1);overlay.show();send();
  }
  on('iina.plugin-overlay-loaded',()=>{
   if(closed||!overlayLoaded)return;
   overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(overlayNeeded())ensureOverlay();startLiveTransport();send();trace('overlay-ready');});
   overlay.onMessage('live-state',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;chat.state=String(data.state||'connecting');chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
   overlay.onMessage('live-messages',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;messages=data.messages.slice(-150).map(safeMessage);chat.count=messages.length;send();});
+  overlay.onMessage('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));
   overlay.onMessage('position',p=>setView({x:p&&p.x,y:p&&p.y}));overlay.onMessage('position-done',()=>setView({editing:false}));if(config.qa)overlay.onMessage('qa-result',d=>trace('overlay-ui-result',d));
   postOverlay('hello',{});
  });
@@ -133,9 +134,10 @@ function start(host,config,services){
   }catch(error){if(closed||chatGeneration!==myGeneration)return false;chat.state='error';chat.error=String(error&&error.message||'Could not import chat.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);send();return false;}
   finally{if(outputOwned&&output!==replayPath&&services.deleteDataPath)services.deleteDataPath(output);}
  }
- async function fetchReplay(){
+ async function fetchReplay(options){
+  const auto=!!(options&&options.auto);
   if(closed||!sourceActive)return;
-  if(source.kind!=='youtube'){chat.error='Import a TwitchDownloader JSON archive for this recording.';send();return;}
+  if(source.kind!=='youtube'){if(!auto){chat.error='Import a TwitchDownloader JSON archive for this recording.';send();}return;}
   chatOff();const myGeneration=chatGeneration;chat.state='fetching';send();
   const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
   let downloadOwned=false;
@@ -146,7 +148,11 @@ function start(host,config,services){
    if(!result.ok)throw Error(result.error&&result.error.message||'Replay is unavailable for this video.');
    if(!downloadOwned)throw Error('The downloaded replay location is invalid.');
    await importArchive(result.path);
-  }catch(error){if(closed||chatGeneration!==myGeneration)return;chat.state='unavailable';chat.error=String(error&&error.message||'Replay is unavailable.').slice(0,180);send();}
+  }catch(error){
+   if(closed||chatGeneration!==myGeneration)return;
+   if(auto){chat.state='off';chat.error='';chat.available=false;send();return;}
+   chat.state='unavailable';chat.error=String(error&&error.message||'Replay is unavailable.').slice(0,180);send();
+  }
   finally{if(downloadOwned&&services.deleteDataPath)services.deleteDataPath(downloadPath);}
  }
  async function refresh(){if(closed||!sourceActive||refreshing||player.snapshot().busy)return;refreshing=true;try{const result=await services.resolve(source,player.snapshot().quality);if(closed||!sourceActive)return;if(!result.ok)throw Error('Unavailable');player.data.formats=result.formats;loadError='';send();}catch(_){if(!closed&&sourceActive){loadError='Qualities unavailable. Try again.';send();}}finally{refreshing=false;}}
@@ -201,7 +207,7 @@ function start(host,config,services){
  });
  on('iina.window-loaded',()=>{windowLoaded=true;if(controlsDesired)showSidebar();trace('window-loaded');});
  // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
- on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
+ on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();if(loadedGeneration===0&&source.kind==='youtube'&&!player.snapshot().live&&chat.mode==='off'&&!autoReplayAttempted){autoReplayAttempted=true;fetchReplay({auto:true});}tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
  on('mpv.end-file',()=>{player.ended();trace('end-file');});
  on('mpv.seek',()=>tick(true));on('mpv.pause.changed',()=>{tick(true);send();});
  on('iina.window-fs.changed',()=>{send();trace('fullscreen',{fullscreen:core.window.fullscreen});});
@@ -230,7 +236,7 @@ function start(host,config,services){
   if(pending&&pending.generation===chatGeneration&&chat.mode==='live')app.postMessage('auth-connect',pending.data);
  },0);
  authBindTimer=bindingTimer;
- menu.addItem(menu.item('Show Streams '+(variant==='focus'?'Focus':'Unified'),showSidebar));
+ menu.addItem(menu.item('Show Streams',showSidebar));
  menu.addItem(menu.item('Import Chat Archive…',()=>importArchive()));
  menu.addItem(menu.item('Turn Chat Off',chatOff));
  menu.addItem(menu.item('Chat in Sidebar',()=>setView({presentation:'sidebar'})));

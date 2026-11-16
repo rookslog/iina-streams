@@ -1,18 +1,19 @@
 #!/bin/sh
-# Link only the separate development plugin. Never restarts IINA or enables plugins.
+# Link the Streams plugin for live development. Never restarts IINA.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 IINA=/Applications/IINA.app/Contents/MacOS/iina-plugin
-DEST='/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/plugin-dev.iinaplugin-dev'
+DEST='/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/candidate-plugin.iinaplugin-dev'
 test -x "$IINA"
 if [ -e "$DEST" ] || [ -L "$DEST" ]; then
-  if [ -L "$DEST" ] && [ "$(readlink "$DEST")" = "$ROOT/plugin-dev" ]; then
-    echo 'Development link already points to checkout.'
+  if [ -L "$DEST" ] && [ "$(readlink "$DEST")" = "$ROOT/candidate-plugin" ]; then
+    echo 'Development link already points to candidate-plugin.'
   else
-    echo 'Existing plugin-dev link does not belong to this project; refusing.' >&2
+    echo 'Existing candidate-plugin link does not belong to this project; refusing.' >&2
     exit 3
   fi
 else
-  HOME=/Users/rookslog "$IINA" link "$ROOT/plugin-dev"
+  HOME=/Users/rookslog "$IINA" link "$ROOT/candidate-plugin"
 fi
-echo 'Linked development plugin only. Enable it in IINA Preferences > Plugins when ready; relaunch manually if needed.'
+defaults write com.colliderli.iina 'PluginEnabled.local.iina.streams' -bool true
+echo 'Linked Streams (0.5.2) development plugin and enabled local.iina.streams.'

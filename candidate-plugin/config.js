@@ -1,2 +1,2 @@
 "use strict";
-module.exports={identifier:"local.iina.streams.candidate.unified",variant:"unified",qa:false};
+module.exports={identifier:"local.iina.streams",variant:"unified",qa:false};

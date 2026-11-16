@@ -36,3 +36,24 @@ test('the native asynchronous file picker is awaited and Off fences a pending se
  const first=c.importArchive();assert.equal(paths.length,0);select('/archives/first.json');await first;assert.deepEqual(paths,['/archives/first.json']);
  const second=c.importArchive();c.chatOff();select('/archives/second.json');assert.equal(await second,false);assert.deepEqual(paths,['/archives/first.json']);
 });
+test('overlay viewSettings preserves width and height and geometry updates persist',()=>{
+ const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));
+ const saved=[];
+ const c=start(r.h,{variant:'unified'},{resolve:async()=>resolution,readSettings:()=>({view:{presentation:'overlay',width:420,height:310,x:0,y:1}}),saveSettings:v=>saved.push(v)});
+ assert.equal(c.snapshot().view.width,420);assert.equal(c.snapshot().view.height,310);
+ c.setView({width:500,height:360,x:0.5,y:0.5});
+ assert.equal(c.snapshot().view.width,500);assert.equal(c.snapshot().view.height,360);
+ assert.equal(saved.at(-1).view.width,500);assert.equal(saved.at(-1).view.height,360);
+ r.events['iina.window-will-close']();
+});
+test('YouTube VOD triggers automatic replay fetch silently on file-loaded',async()=>{
+ const yt=source.parse('https://www.youtube.com/watch?v=92h_kU8O58M');
+ const r=host(source.label(yt,'unified'));r.setPath(yt.url);
+ const helpers=[];
+ const c=start(r.h,{variant:'unified'},{resolve:async()=>({ok:true,title:'YT VOD',live:false,duration:100,quality:'720p',formats:[{id:'720p',label:'720p'}],mediaURL:'https://example.invalid/yt.mp4'}),readSettings:()=>({}),dataPath:n=>'/data/'+n,runHelper:async(name,args)=>{helpers.push([name,args]);return{ok:false,error:{message:'No archived live-chat replay is available for this video.'}};}});
+ await r.hooks.on_load(()=>{});
+ await finishLoad(r,yt.url);
+ assert.equal(helpers.length,1);assert.equal(helpers[0][0],'acquire');
+ assert.equal(c.snapshot().chat.state,'off');assert.equal(c.snapshot().chat.error,'');
+ r.events['iina.window-will-close']();
+});

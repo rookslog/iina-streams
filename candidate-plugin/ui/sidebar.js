@@ -3,8 +3,10 @@
  const $=id=>document.getElementById(id);let state=null,activeTab='playback',following=true,signature='';
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
  const messages=$('messages');
+ const FALLBACK_COLORS=['#1661c8','#b84b39','#1d7a6e','#7d49a6','#9a6700','#2e7d32','#ad1457','#0277bd'];
  let scrollFrame=null,positionedTop=null,historyTop=0,pageClosed=false,scrollIntentUntil=0,pointerHeld=false;
  const messagesVisible=()=>!messages.hidden&&!$('chat-panel').hidden&&messages.clientHeight>0;
+ function authorColor(name,supplied){if(supplied&&/^#[0-9a-f]{6}$/i.test(supplied))return supplied;let h=0;const s=String(name||'');for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return FALLBACK_COLORS[Math.abs(h)%FALLBACK_COLORS.length];}
  function cancelScrollCorrection(){if(scrollFrame!==null){cancelAnimationFrame(scrollFrame);scrollFrame=null;}positionedTop=null;}
  function clearScrollIntent(){pointerHeld=false;scrollIntentUntil=0;}
  function scrollIntent(){if(pageClosed||!messagesVisible())return;cancelScrollCorrection();scrollIntentUntil=Date.now()+750;}
@@ -30,27 +32,34 @@
   if($('quality').dataset.options!==optionKey){$('quality').replaceChildren();for(const f of options){const opt=document.createElement('option');opt.value=f.id;opt.textContent=f.label;$('quality').appendChild(opt);}$('quality').dataset.options=optionKey;}
   $('quality').value=s.quality;$('quality').disabled=s.busy||s.phase==='inactive'||!options.length;$('refresh').disabled=s.busy;
   const transitions={loading:'Opening…',resolving:'Finding quality…',buffering:'Changing quality…',stopped:'Playback stopped',unconfirmed:'Quality change unconfirmed'};$('transition').textContent=transitions[s.phase]||'';$('transition').hidden=!transitions[s.phase];$('playback-error').textContent=s.error||'';$('playback-error').hidden=!s.error;
-  const replay=s.chat.mode==='replay',on=s.chat.mode!=='off',twitch=s.source.kind==='twitch-live';
-  $('chat-kind').textContent=replay?'Replay':on?'Live':'';$('off').hidden=!on&&!['importing','fetching','authorizing','waiting'].includes(s.chat.state);$('connect').hidden=!twitch||on;$('import').hidden=on;$('fetch').hidden=s.source.kind!=='youtube'||s.live||on;$('resume').hidden=!s.chat.available||on;
+  const replay=s.chat.mode==='replay',on=s.chat.mode!=='off',twitch=s.source.kind==='twitch-live',busy=['importing','fetching','authorizing','waiting'].includes(s.chat.state);
+  const canToggle=twitch||s.chat.available||on||busy;
+  $('chat-kind').textContent=replay?'Replay':on?'Live':'';
+  $('chat-toggle').checked=on||busy;$('chat-toggle').disabled=!canToggle;
+  $('connect').hidden=!twitch||on||!!s.auth.login;$('import').hidden=on;$('fetch').hidden=s.source.kind!=='youtube'||s.live||on;$('resume').hidden=!s.chat.available||on;
   $('auth-panel').hidden=!['needs-client','error'].includes(s.auth.phase)||!on;$('auth-code-panel').hidden=s.auth.phase!=='waiting'||!on;$('auth-code').textContent=s.auth.userCode||'';
+  const showAccount=twitch&&(s.auth.phase==='ready'||s.auth.login);$('account-row').hidden=!showAccount;$('account-label').textContent=s.auth.login?'Signed in as '+s.auth.login:'';
   let status='';
-  if(s.chat.state==='importing')status='Indexing chat archive…';else if(s.chat.state==='fetching')status='Retrieving archived chat…';else if(s.chat.state==='waiting')status='Approve read-only access in Twitch.';else if(['authorizing','connecting','authenticating','joining'].includes(s.chat.state))status='Connecting…';else if(s.chat.state==='reconnecting')status='Reconnecting…';else if(replay)status=s.chat.sourceName+' · '+s.chat.count.toLocaleString()+' messages';else if(!on)status=twitch?'Chat connects only when you choose.':s.live?'YouTube live chat is not connected.':'Import a chat archive to follow the recording.';
+  if(s.chat.state==='importing')status='Indexing chat archive…';else if(s.chat.state==='fetching')status='Loading archived chat…';else if(s.chat.state==='waiting')status='Approve read-only access in Twitch.';else if(['authorizing','connecting','authenticating','joining'].includes(s.chat.state))status='Connecting…';else if(s.chat.state==='reconnecting')status='Reconnecting…';else if(replay)status=s.chat.sourceName+' · '+s.chat.count.toLocaleString()+' messages';else if(!on&&s.live&&s.source.kind==='youtube')status='YouTube live chat is unavailable; VOD replay loads automatically after streams end.';
   $('chat-status').textContent=status;$('chat-status').hidden=!status;$('chat-error').textContent=s.chat.error||'';$('chat-error').hidden=!s.chat.error;
   $('replay-controls').hidden=!replay;if(document.activeElement!==$('offset'))$('offset').value=s.chat.offset;
   $('presentation').value=s.view.presentation;$('font-size').value=s.view.fontSize;$('opacity').value=s.view.opacity;$('lines').value=s.view.lines;$('density').value=s.view.density;
-  $('overlay-settings').hidden=s.view.presentation!=='overlay';const x=s.view.x,y=s.view.y;$('placement').value=x===1&&y===0?'tr':x===0&&y===0?'tl':x===1&&y===1?'br':x===0&&y===1?'bl':'custom';$('position').textContent=s.view.editing?'Done positioning':'Move overlay…';
+  $('font-size-val').textContent=s.view.fontSize+'px';$('opacity-val').textContent=Math.round(s.view.opacity*100)+'%';$('lines-val').textContent=s.view.lines+' lines';
+  $('overlay-settings').hidden=s.view.presentation!=='overlay';const x=s.view.x,y=s.view.y;$('placement').value=x===1&&y===0?'tr':x===0&&y===0?'tl':x===1&&y===1?'br':x===0&&y===1?'bl':'custom';
   $('overlay-note').hidden=!on||s.view.presentation!=='overlay';messages.hidden=s.view.presentation==='overlay';
   const visibleMessages=s.view.presentation==='sidebar'?(s.messages||[]):[];
   const sig=visibleMessages.map(m=>m.id+':'+m.time+':'+m.text).join('|');
-  if(sig!==signature){signature=sig;if(!following&&messagesVisible())historyTop=messages.scrollTop;messages.replaceChildren();for(const m of visibleMessages){const row=document.createElement('div');row.className='message'+(m.kind==='notice'?' notice':'');if(replay){const time=document.createElement('button');time.className='time';time.textContent=clock(m.time);time.setAttribute('aria-label','Seek to chat message at '+clock(m.time));time.addEventListener('click',()=>post('seek-chat',m.time));row.appendChild(time);}const author=document.createElement('span');author.className='author';author.textContent=m.author;const text=document.createElement('span');text.textContent=m.text;row.append(author,text);messages.appendChild(row);}}
+  if(sig!==signature){signature=sig;if(!following&&messagesVisible())historyTop=messages.scrollTop;messages.replaceChildren();for(const m of visibleMessages){const row=document.createElement('div');row.className='message'+(m.kind==='notice'?' notice':'');if(replay){const time=document.createElement('button');time.className='time';time.textContent=clock(m.time);time.setAttribute('aria-label','Seek to chat message at '+clock(m.time));time.addEventListener('click',()=>post('seek-chat',m.time));row.appendChild(time);}const author=document.createElement('span');author.className='author';author.style.color=authorColor(m.author,m.color);author.textContent=m.author;const text=document.createElement('span');text.textContent=m.text;row.append(author,text);messages.appendChild(row);}}
   positionMessages();
  }
- for(const [id,event] of [['open','open'],['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],['off','chat-off'],['fetch','fetch-replay'],['resume','replay-resume'],['first','first-message'],['authorize-open','authorize-open'],['forget','forget-auth']])$(id).addEventListener('click',()=>post(event));
+ for(const [id,event] of [['open','open'],['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],['fetch','fetch-replay'],['resume','replay-resume'],['first','first-message'],['forget','forget-auth']])$(id).addEventListener('click',()=>post(event));
+ $('chat-toggle').addEventListener('change',()=>{if($('chat-toggle').checked){if(state&&state.chat&&state.chat.available)post('replay-resume');else if(state&&state.source&&state.source.kind==='twitch-live')post('connect',{clientID:''});}else{post('chat-off');}});
+ $('authorize-open').addEventListener('click',()=>{if(state&&state.auth&&state.auth.userCode&&navigator.clipboard&&navigator.clipboard.writeText)try{navigator.clipboard.writeText(state.auth.userCode);}catch(_){}post('authorize-open');});
  $('quality').addEventListener('change',()=>post('change-quality',$('quality').value));$('offset').addEventListener('change',()=>post('offset',Number($('offset').value)));
  $('connect').addEventListener('click',()=>post('connect',{clientID:''}));$('authorize').addEventListener('click',()=>post('connect',{clientID:$('client-id').value.trim()}));
  $('appearance-toggle').addEventListener('click',()=>{$('appearance').hidden=!$('appearance').hidden;$('appearance-toggle').setAttribute('aria-expanded',String(!$('appearance').hidden));});
  for(const [id,key] of [['presentation','presentation'],['font-size','fontSize'],['opacity','opacity'],['lines','lines'],['density','density']])$(id).addEventListener('change',()=>post('view',{[key]:$(id).value}));
- $('placement').addEventListener('change',()=>{const p={tr:[1,0],tl:[0,0],br:[1,1],bl:[0,1]}[$('placement').value];if(p)post('view',{x:p[0],y:p[1],editing:false});});$('position').addEventListener('click',()=>post('view',{presentation:'overlay',editing:!state.view.editing}));$('reset').addEventListener('click',()=>post('view',{reset:true,editing:false}));
+ $('placement').addEventListener('change',()=>{const p={tr:[1,0],tl:[0,0],br:[1,1],bl:[0,1]}[$('placement').value];if(p)post('view',{x:p[0],y:p[1],editing:false});});$('reset').addEventListener('click',()=>post('view',{reset:true,editing:false}));
  for(const name of ['playback','chat'])$(name+'-tab').addEventListener('click',()=>tab(name));$('tabs').addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();tab(e.key==='Home'?'playback':e.key==='End'?'chat':activeTab==='chat'?'playback':'chat');$(activeTab+'-tab').focus();}});
  messages.addEventListener('scroll',()=>{
   if(pageClosed||!messagesVisible())return;

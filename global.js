@@ -48,8 +48,7 @@ async function request(path,method,form,headers){
  try{
   const options={headers:headers||{}};
   if(form)options.data=form;
-  const req=http[method==='POST'?'post':'get']('https://id.twitch.tv/oauth2'+path,options);
-  const r=await Promise.race([req,new Promise((_,rej)=>timers.setTimeout(()=>rej({statusCode:0,data:{message:'timeout'}}),12000))]);
+  const r=await http[method==='POST'?'post':'get']('https://id.twitch.tv/oauth2'+path,options);
   const res=normalizeHttpResponse(r);
   gLog('http-done',{path,status:res.status});
   return res;

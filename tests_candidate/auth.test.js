@@ -1,6 +1,6 @@
 "use strict";
 const test=require('node:test');const assert=require('node:assert/strict');
-const {TwitchAuth}=require('../candidate-plugin/src/auth.js');
+const {TwitchAuth}=require('../src/auth.js');
 function make(responses=[],initialSaved=null){const calls=[],timers=[],states=[],ready=[],writes=[];let saved=initialSaved,reads=0;const auth=new TwitchAuth({request:async(path,method,form,headers)=>{calls.push({path,method,form,headers});return responses.shift();},read:()=>{reads++;return saved;},write:v=>{saved=v;writes.push(v);return true;},setTimer:(fn,ms)=>{const t={fn,ms,cancelled:false};timers.push(t);return t;},clearTimer:t=>{t.cancelled=true;},now:()=>0,onState:s=>states.push(s),onReady:c=>ready.push(c),onStop:()=>ready.push(null)});return{auth,calls,timers,states,ready,writes,saved:()=>saved,readCount:()=>reads};}
 function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;});return{promise,resolve};}
 test('loading and stopping auth does not read secrets, contact Twitch, or schedule work',()=>{const r=make();r.auth.stop();assert.equal(r.calls.length,0);assert.equal(r.readCount(),0);assert.equal(r.timers.length,0);assert.equal(r.auth.snapshot().phase,'off');});

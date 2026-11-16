@@ -2,8 +2,8 @@
 // Synthetic host bridge. No OAuth request, Keychain access, or chat connection.
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const Sources=require('../candidate-plugin/src/source.js');
-const {start}=require('../candidate-plugin/src/player.js');
+const Sources=require('../src/source.js');
+const {start}=require('../src/player.js');
 
 function setup(){
  const callbacks={},events={},sidebar={},overlayCallbacks={},posts=[],cleared=[],scheduled=new Map(),allTimers=new Map();let timerID=0,path='https://www.twitch.tv/hutchmf',sidebarFails=false;

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-HELPERS = Path(__file__).resolve().parents[1] / 'candidate-plugin' / 'helpers'
+HELPERS = Path(__file__).resolve().parents[1] / 'helpers'
 
 
 def load(name):

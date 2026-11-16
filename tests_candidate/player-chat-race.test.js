@@ -2,8 +2,8 @@
 // Synthetic host only: these tests do not authorize or connect to Twitch.
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const Sources=require('../candidate-plugin/src/source.js');
-const {start}=require('../candidate-plugin/src/player.js');
+const Sources=require('../src/source.js');
+const {start}=require('../src/player.js');
 function setup(){
  const handlers={},events={},posts=[],cancelled=[],deleted=[];
  const source=Sources.parse('https://www.twitch.tv/hutchmf');

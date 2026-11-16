@@ -4,7 +4,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const modulePath=path.join(__dirname,'../candidate-plugin/src/replay.js');
+const modulePath=path.join(__dirname,'../src/replay.js');
 const Replay=fs.existsSync(modulePath)?require(modulePath).Replay:undefined;
 function row(id,time,extra={}){return Object.assign({id:String(id),time,author:'Synthetic',text:String(id),color:'',badges:[],kind:'message'},extra);}
 function setup(groups){

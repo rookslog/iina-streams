@@ -1,7 +1,7 @@
 "use strict";
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const source = require('../candidate-plugin/src/source.js');
+const source = require('../src/source.js');
 
 test('canonicalizes supported stream and video identities without retaining tracking', () => {
   assert.deepEqual(source.parse('HutchMF'), {kind:'twitch-live',provider:'Twitch',id:'hutchmf',url:'https://www.twitch.tv/hutchmf',startSeconds:0});

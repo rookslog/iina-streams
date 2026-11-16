@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {reduce} = require('../candidate-plugin/ui/live-history.js');
+const {reduce} = require('../ui/live-history.js');
 const message = (id, extra = {}) => ({type: 'message', id, channel: 'example', author: 'Alice', login: 'alice', userId: '7', text: 'Hello', ...extra});
 
 test('the reducer is pure and preserves identity for later moderation', () => {

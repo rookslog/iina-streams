@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const StreamsLive = require('../candidate-plugin/ui/live.js');
+const StreamsLive = require('../ui/live.js');
 
 function harness(overrides = {}) {
   let clock = 1700000000000, nextId = 0;

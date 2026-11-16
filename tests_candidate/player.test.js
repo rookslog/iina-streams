@@ -1,7 +1,7 @@
 "use strict";
 const test=require('node:test');const assert=require('node:assert/strict');
-const source=require('../candidate-plugin/src/source.js');
-const {start}=require('../candidate-plugin/src/player.js');
+const source=require('../src/source.js');
+const {start}=require('../src/player.js');
 function host(label){const hooks={},events={},messages={},posts=[],sets=[],commands=[];let path='https://www.twitch.tv/videos/123456';const h={global:{getLabel:()=>label,onMessage(){},postMessage:(...a)=>posts.push(['global',...a])},mpv:{addHook:(n,p,fn)=>hooks[n]=fn,getString:n=>n==='path'||n==='stream-open-filename'?path:'',getNumber:()=>0,getFlag:()=>false,set:(...a)=>sets.push(a),command:(...a)=>commands.push(a)},core:{window:{loaded:true},osd(){}},sidebar:{loadFile(){for(const k of Object.keys(messages))delete messages[k];},onMessage:(n,fn)=>messages[n]=fn,postMessage:(...a)=>posts.push(['sidebar',...a]),show(){},hide(){}},overlay:{loadFile(){},onMessage(){},postMessage(){},show(){},hide(){},setClickable(){},setOpacity(){}},event:{on:(n,fn)=>{events[n]=fn;return n;},off(){}},menu:{addItem(){},item:(name,fn)=>({name,fn})},utils:{chooseFile:()=>false},console:{log(){},error(){}}};return{h,hooks,events,messages,posts,sets,commands,setPath:p=>path=p};}
 async function finishLoad(r,url){r.events['iina.file-loaded'](url);r.events['iina.window-size-adjusted']();await new Promise(resolve=>setTimeout(resolve,650));}
 const resolution={ok:true,title:'Recording',live:false,duration:100,quality:'360p30',formats:[{id:'360p30',label:'360p'}],mediaURL:'https://vod-secure.twitch.tv/transport'};

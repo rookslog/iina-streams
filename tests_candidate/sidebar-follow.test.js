@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const root=path.join(__dirname,'../candidate-plugin/ui');
+const root=path.join(__dirname,'../ui');
 
 function setup(){
  const callbacks={},posts=[],frames=new Map(),allFrames=new Map(),scrollEvents=[];

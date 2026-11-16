@@ -13,7 +13,7 @@ import time
 import unittest
 from unittest import mock
 
-HELPERS = Path(__file__).resolve().parents[1] / 'candidate-plugin' / 'helpers'
+HELPERS = Path(__file__).resolve().parents[1] / 'helpers'
 RUNNER = HELPERS / 'runner.py'
 SPEC = importlib.util.spec_from_file_location('candidate_runner', RUNNER)
 runner = importlib.util.module_from_spec(SPEC)

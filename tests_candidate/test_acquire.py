@@ -14,7 +14,7 @@ import time
 import unittest
 from unittest import mock
 
-HELPER = Path(__file__).resolve().parents[1] / 'candidate-plugin' / 'helpers' / 'acquire.py'
+HELPER = Path(__file__).resolve().parents[1] / 'helpers' / 'acquire.py'
 SPEC = importlib.util.spec_from_file_location('candidate_acquire', HELPER)
 acquire = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(acquire)

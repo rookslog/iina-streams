@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
-const root=path.join(__dirname,'../candidate-plugin/ui');
+const root=path.join(__dirname,'../ui');
 
 function runtime(){
  const handlers={},windowEvents={},messages=[],sockets=[],timers=new Map();

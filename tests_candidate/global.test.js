@@ -4,9 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const Sources = require('../candidate-plugin/src/source.js');
-const {TwitchAuth} = require('../candidate-plugin/src/auth.js');
-const scriptPath = path.join(__dirname, '../candidate-plugin/global.js');
+const Sources = require('../src/source.js');
+const {TwitchAuth} = require('../src/auth.js');
+const scriptPath = path.join(__dirname, '../global.js');
 const script = fs.readFileSync(scriptPath, 'utf8');
 const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 
@@ -54,7 +54,7 @@ function harness(overrides = {}) {
       if (moduleName === './config.js') return config;
       if (moduleName === './src/source.js') return Sources;
       if (moduleName === './src/auth.js') return {TwitchAuth: CapturedAuth};
-      if (moduleName === './src/timers.js') return require('../candidate-plugin/src/timers.js');
+      if (moduleName === './src/timers.js') return require('../src/timers.js');
       throw new Error('Unexpected module ' + moduleName);
     },
     setTimeout(fn, delay) { const timer = {fn, delay, cancelled: false}; timers.push(timer); return timer; },

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {create} = require('../candidate-plugin/src/timers.js');
+const {create} = require('../src/timers.js');
 
 // IINA's native polyfill leaves fired one-shots in this map until clearTimeout.
 function nativeTimers() {

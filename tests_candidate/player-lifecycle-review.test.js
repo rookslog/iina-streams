@@ -6,8 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const {createRequire} = require('node:module');
-const Sources = require('../candidate-plugin/src/source.js');
-const playerPath = path.join(__dirname, '../candidate-plugin/src/player.js');
+const Sources = require('../src/source.js');
+const playerPath = path.join(__dirname, '../src/player.js');
 const plain = value => JSON.parse(JSON.stringify(value));
 
 function fixture({retainFiredTimers = false} = {}) {

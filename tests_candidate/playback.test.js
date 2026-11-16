@@ -1,7 +1,7 @@
 "use strict";
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {Playback}=require('../candidate-plugin/src/playback.js');
+const {Playback}=require('../src/playback.js');
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
 function make(){
   const jobs=[],replacements=[],states=[],timers=[];

@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'candidate-plugin'
+SOURCE = ROOT
 HELPER_ORDER = {'runner': 0, 'media': 1, 'acquire': 2, 'replay': 3}
 
 
@@ -25,8 +25,9 @@ def build(output):
     version = info['version']
     identifier = info['identifier']
 
+    PLUGIN_ENTRIES = ['Info.json', 'config.js', 'global.js', 'main.js', 'src', 'ui', 'helpers']
     source_files = sorted(
-        p for p in SOURCE.rglob('*')
+        p for entry in PLUGIN_ENTRIES for p in ([SOURCE / entry] if (SOURCE / entry).is_file() else (SOURCE / entry).rglob('*'))
         if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'
     )
     helper_paths = sorted(

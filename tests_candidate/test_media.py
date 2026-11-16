@@ -15,7 +15,7 @@ import unittest
 from unittest import mock
 
 
-HELPER = pathlib.Path(__file__).resolve().parents[1] / "candidate-plugin" / "helpers" / "media.py"
+HELPER = pathlib.Path(__file__).resolve().parents[1] / "helpers" / "media.py"
 SPEC = importlib.util.spec_from_file_location("candidate_media", HELPER)
 media = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(media)

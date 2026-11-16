@@ -1,14 +1,25 @@
 "use strict";
-const embedded=require('./embedded-helpers.js');
+let embedded=null;
+try{embedded=require('./embedded-helpers.js');}catch(_){}
 function create(host){
  const python=host.utils.fileInPath('/opt/homebrew/bin/python3')?'/opt/homebrew/bin/python3':'/usr/bin/python3';
  const active=new Map();
  function dataPath(name){return host.utils.resolvePath('@data/'+name);}
  function materialize(name){
-  const helper=embedded[name];if(!helper)throw Error('This helper is unavailable in the package.');
-  const path='@data/'+name+'-'+helper.digest+'.py';
-  if(!host.file.exists(path)||host.file.read(path)!==helper.source)host.file.write(path,helper.source);
-  return host.utils.resolvePath(path);
+  const helper=embedded&&embedded[name];
+  if(helper){
+   const path='@data/'+name+'-'+helper.digest+'.py';
+   if(!host.file.exists(path)||host.file.read(path)!==helper.source)host.file.write(path,helper.source);
+   return host.utils.resolvePath(path);
+  }
+  const devSourcePath='helpers/'+name+'.py';
+  if(host.file.exists(devSourcePath)){
+   const source=host.file.read(devSourcePath);
+   const path='@data/'+name+'-dev.py';
+   if(!host.file.exists(path)||host.file.read(path)!==source)host.file.write(path,source);
+   return host.utils.resolvePath(path);
+  }
+  throw Error('This helper is unavailable in the package.');
  }
  async function runHelper(name,args){
   if(!['media','replay','acquire'].includes(name))throw Error('Unsupported helper.');

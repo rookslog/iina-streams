@@ -80,7 +80,7 @@ function start(host,config,services){
  }
  on('iina.plugin-overlay-loaded',()=>{
   if(closed||!overlayLoaded)return;
-  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(overlayNeeded())ensureOverlay();startLiveTransport();send();trace('overlay-ready');});
+  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(overlayNeeded())ensureOverlay();else{overlay.setClickable(false);overlay.hide();}startLiveTransport();send();trace('overlay-ready');});
   overlay.onMessage('live-state',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;chat.state=String(data.state||'connecting');chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
   overlay.onMessage('live-messages',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;messages=data.messages.slice(-150).map(safeMessage);chat.count=messages.length;send();});
   overlay.onMessage('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));

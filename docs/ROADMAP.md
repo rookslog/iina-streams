@@ -13,6 +13,7 @@ This document tracks the release plan for **Streams** (`local.iina.streams`). Co
 ## `0.5.4+` — Reliability, Persistence & Resource Tuning
 *Hardening existing features without expanding permissions or platform scope.*
 
+- **Quick `Open Stream…` shortcut:** Built-in `⌘⇧S` (`Meta+Shift+S`) key binding on the global `Open Stream…` menu item (staged in `0.5.4-beta`).
 - **Known Issue — Multi-edge & directional overlay resizing:** Support independent top, bottom, left, and right edge dragging (e.g., resizing upward/leftward when snapped to the bottom-right corner, or adjusting width/height independently along a single axis) without `data-clickable` hover-leave or cursor-sticking glitches in IINA's click-through overlay webview.
 - **Auth & multi-window resilience:** Verify Twitch Keychain token refresh across long-running sessions and multiple simultaneous player windows.
 - **Display & fullscreen geometry:** Clamp saved overlay coordinates and dimensions cleanly across windowed/fullscreen transitions and external display DPI changes.
@@ -26,6 +27,7 @@ This document tracks the release plan for **Streams** (`local.iina.streams`). Co
 ## `0.6.0` — New Platform & Chat Capabilities
 *Larger features introducing new acquisition pipelines, CSP rules, or rendering paths.*
 
+- **Automatic stream URL interception:** Hook `on_load` at higher priority than IINA's built-in Online Media (`io.iina.ytdl`) plugin so Twitch and YouTube URLs opened via `File → Open URL…` (`⌘⇧O`), drag-and-drop, or CLI automatically launch in Streams without racing Online Media.
 - **Automatic Twitch VOD chat:** Integrate a maintained acquisition path (e.g., `TwitchDownloaderCLI` or GraphQL comment replay) so Twitch VODs auto-load chat like YouTube VODs.
 - **YouTube Live chat:** Add live chat streaming/polling for active YouTube livestreams (separate from archived VOD replay).
 - **Emotes & badges:** Bounded, cached image rendering for official Twitch emotes (and optionally 7TV/BTTV/FFZ) with clean text fallback if images fail.

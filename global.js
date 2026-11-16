@@ -66,7 +66,7 @@ function openStream(input){
  if(!source){utils.ask('Enter a Twitch channel or recording URL, or a YouTube video or livestream URL.');return;}
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label:Sources.label(source,config.variant)});
 }
-menu.addItem(menu.item('Open Stream…',()=>openStream()));
+menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Meta+Shift+S'}));
 app.onMessage('open',()=>openStream());
 app.onMessage('auth-connect',async(data,label)=>{
  const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});gLog('auth-connect',{id,phase:auth.snapshot().phase,hasCred:!!credentials});if(id===null)return;nextSession(id);audience.add(id);

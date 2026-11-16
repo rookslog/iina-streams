@@ -3,12 +3,26 @@
  const panel=document.getElementById('panel');
  const messages=document.getElementById('messages');
  const resizeHandle=document.getElementById('resize-handle');
- let state=null,drag=null,resize=null,following=true,signature='';
+ let state=null,drag=null,resize=null,following=true,signature='',hoverTimer=null;
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
  const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
  on('hello',()=>post('overlay-ready',{ready:true}));
+
+ function clearHover(){
+  if(hoverTimer!==null){clearTimeout(hoverTimer);hoverTimer=null;}
+  panel.classList.remove('hovered');
+ }
+ function bumpHover(){
+  panel.classList.add('hovered');
+  if(hoverTimer!==null)clearTimeout(hoverTimer);
+  hoverTimer=setTimeout(()=>{hoverTimer=null;if(!drag&&!resize)panel.classList.remove('hovered');},900);
+ }
+ panel.addEventListener('pointerenter',bumpHover);
+ panel.addEventListener('pointermove',bumpHover);
+ panel.addEventListener('pointerleave',clearHover);
+ document.addEventListener('mouseleave',clearHover);
 
  function markClickable(){
   panel.setAttribute('data-clickable','');
@@ -118,6 +132,7 @@
   if(!state||e.button!==0)return;
   if(e.target===resizeHandle)return;
   e.preventDefault();
+  bumpHover();
   drag={x:e.clientX,y:e.clientY,left:panel.offsetLeft,top:panel.offsetTop};
   panel.classList.add('dragging');
  });
@@ -126,6 +141,7 @@
   if(!state||e.button!==0)return;
   e.preventDefault();
   e.stopPropagation();
+  bumpHover();
   resize={x:e.clientX,y:e.clientY,w:panel.offsetWidth,h:panel.offsetHeight,left:panel.offsetLeft,top:panel.offsetTop};
   panel.classList.add('resizing');
  });
@@ -162,17 +178,19 @@
   if(drag){
    drag=null;
    panel.classList.remove('dragging','snapped');
+   if(panel.blur)panel.blur();
    if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
   }
   if(resize){
    resize=null;
    panel.classList.remove('resizing');
+   if(panel.blur)panel.blur();
    if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
   }
  }
  window.addEventListener('pointerup',finishPointer);
  window.addEventListener('pointercancel',finishPointer);
- window.addEventListener('blur',finishPointer);
+ window.addEventListener('blur',()=>{clearHover();finishPointer();});
 
  panel.addEventListener('keydown',e=>{
   if(!state)return;

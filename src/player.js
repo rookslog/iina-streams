@@ -206,7 +206,7 @@ function start(host,config,services){
   }catch(error){if(!closed){loadError=String(error&&error.message||'Unable to open source.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);send();trace('load-error',{error:loadError});}}
   finally{finish();}
  });
- on('iina.window-loaded',()=>{windowLoaded=true;if(controlsDesired)showSidebar();trace('window-loaded');});
+ on('iina.window-loaded',()=>{windowLoaded=true;if(controlsDesired)showSidebar();if(overlayNeeded())ensureOverlay();trace('window-loaded');});
  // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
  on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();if(loadedGeneration===0&&source.kind==='youtube'&&!player.snapshot().live&&chat.mode==='off'&&!autoReplayAttempted){autoReplayAttempted=true;fetchReplay({auto:true});}tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
  on('mpv.end-file',()=>{player.ended();trace('end-file');});

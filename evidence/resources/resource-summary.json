@@ -1,0 +1,1204 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "file": "unified-off.json",
+      "sha256": "a12becdde9f04041cceae14e6d7740f9ed409e4373d77ff188c512f1737c1e04",
+      "conditionsSHA256": "332a6657490b1bab465433349ab1b65c2e4cf97b9b91f60d9608e164705b1784",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "unified-off",
+      "rootPID": 99898,
+      "startedUTC": "2026-11-08T19:20:10.561Z",
+      "endedUTC": "2026-11-08T19:20:30.632Z",
+      "elapsedSeconds": 20.071,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "unified",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "off",
+        "chatMode": "off",
+        "presentation": "sidebar",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 300,
+        "fullscreen": false,
+        "playbackPosition": 140.3,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 0,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 6,
+        "median": 7.3,
+        "max": 8
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 163.75,
+        "median": 174.297,
+        "max": 175.531
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 6,
+        "median": 7.3,
+        "max": 8
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 163.75,
+        "median": 174.297,
+        "max": 175.531
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 22.3,
+        "median": 26.35,
+        "max": 28.3
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 54.766,
+        "median": 55.133,
+        "max": 60.609
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        15
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 48,
+        "median": 49,
+        "max": 49
+      },
+      "swapUsedChangeBytes": 0,
+      "vmCounterDeltas": {
+        "Swapins": 294,
+        "Swapouts": 0,
+        "Pageins": 5551,
+        "Pageouts": 0
+      },
+      "beforeAfter": {
+        "position": [
+          140.3,
+          160.8
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    },
+    {
+      "file": "unified-sidebar.json",
+      "sha256": "86499cc0814b8fdea304d247c9aeff2cbcf1d228f2b852aa290ddbfd0419126c",
+      "conditionsSHA256": "332a6657490b1bab465433349ab1b65c2e4cf97b9b91f60d9608e164705b1784",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "unified-sidebar",
+      "rootPID": 99898,
+      "startedUTC": "2026-11-08T19:20:54.821Z",
+      "endedUTC": "2026-11-08T19:21:14.891Z",
+      "elapsedSeconds": 20.07,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "unified",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "sidebar",
+        "chatMode": "replay",
+        "presentation": "sidebar",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 300,
+        "fullscreen": false,
+        "playbackPosition": 139.9,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 11,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 6.6,
+        "median": 7.9,
+        "max": 8.6
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 176.406,
+        "median": 178.328,
+        "max": 180.078
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 6.6,
+        "median": 7.9,
+        "max": 8.6
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 176.406,
+        "median": 178.328,
+        "max": 180.078
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 3.5,
+        "median": 6.35,
+        "max": 9.1
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 67.75,
+        "median": 68.648,
+        "max": 69.922
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        15
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 52,
+        "median": 53,
+        "max": 54
+      },
+      "swapUsedChangeBytes": 0,
+      "vmCounterDeltas": {
+        "Swapins": 68,
+        "Swapouts": 0,
+        "Pageins": 5166,
+        "Pageouts": 0
+      },
+      "beforeAfter": {
+        "position": [
+          139.9,
+          160.43333333333334
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    },
+    {
+      "file": "unified-overlay.json",
+      "sha256": "4382b8ce6f3d66dcf906680c3f34ed7d8ba37022b59903215c4e0de892825b17",
+      "conditionsSHA256": "332a6657490b1bab465433349ab1b65c2e4cf97b9b91f60d9608e164705b1784",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "unified-overlay",
+      "rootPID": 99898,
+      "startedUTC": "2026-11-08T19:21:40.079Z",
+      "endedUTC": "2026-11-08T19:22:00.159Z",
+      "elapsedSeconds": 20.08,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "unified",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "overlay",
+        "chatMode": "replay",
+        "presentation": "overlay",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 0,
+        "fullscreen": false,
+        "playbackPosition": 140.33333333333334,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 11,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 5.3,
+        "median": 13.95,
+        "max": 42.4
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 178.781,
+        "median": 184.312,
+        "max": 199.047
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 5.3,
+        "median": 13.95,
+        "max": 42.4
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 178.781,
+        "median": 184.312,
+        "max": 199.047
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 8.8,
+        "median": 23.15,
+        "max": 45
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 80.844,
+        "median": 83.469,
+        "max": 85.516
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        15
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 45,
+        "median": 52,
+        "max": 53
+      },
+      "swapUsedChangeBytes": 0,
+      "vmCounterDeltas": {
+        "Swapins": 231,
+        "Swapouts": 0,
+        "Pageins": 14551,
+        "Pageouts": 9
+      },
+      "beforeAfter": {
+        "position": [
+          140.33333333333334,
+          160.83333333333334
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 135,
+            "x": 156,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 135,
+            "x": 156,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    },
+    {
+      "file": "focus-off.json",
+      "sha256": "ad4d3b36a144f2ca496c351dff87b6b8af02e7143702be472b0d3edec4ef53cc",
+      "conditionsSHA256": "3d9b99af08ca7b445ee3ee51245ee48d579be55cc742e76f49d46bc8adc002df",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "focus-off",
+      "rootPID": 40519,
+      "startedUTC": "2026-11-08T19:38:56.267Z",
+      "endedUTC": "2026-11-08T19:39:16.342Z",
+      "elapsedSeconds": 20.075,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "focus",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "off",
+        "chatMode": "off",
+        "presentation": "sidebar",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 300,
+        "fullscreen": false,
+        "playbackPosition": 140.3,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 0,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 5.5,
+        "median": 6.45,
+        "max": 8.5
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 109.656,
+        "median": 114.516,
+        "max": 116.875
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 5.5,
+        "median": 6.45,
+        "max": 8.5
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 109.656,
+        "median": 114.516,
+        "max": 116.875
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 5.3,
+        "median": 7.75,
+        "max": 16.8
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 47.469,
+        "median": 58.695,
+        "max": 69.047
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        16
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 43,
+        "median": 45,
+        "max": 47
+      },
+      "swapUsedChangeBytes": 0,
+      "vmCounterDeltas": {
+        "Swapins": 99,
+        "Swapouts": 0,
+        "Pageins": 27972,
+        "Pageouts": 12
+      },
+      "beforeAfter": {
+        "position": [
+          140.3,
+          160.8
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    },
+    {
+      "file": "focus-sidebar.json",
+      "sha256": "af886793c5f133a069312f770b27ad2730f59f7a7ad2b5a2c7e67b966221eca9",
+      "conditionsSHA256": "3d9b99af08ca7b445ee3ee51245ee48d579be55cc742e76f49d46bc8adc002df",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "focus-sidebar",
+      "rootPID": 40519,
+      "startedUTC": "2026-11-08T19:39:41.029Z",
+      "endedUTC": "2026-11-08T19:40:01.101Z",
+      "elapsedSeconds": 20.073,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "focus",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "sidebar",
+        "chatMode": "replay",
+        "presentation": "sidebar",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 300,
+        "fullscreen": false,
+        "playbackPosition": 140.3,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 11,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 6.4,
+        "median": 8.1,
+        "max": 25.3
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 118.578,
+        "median": 127.359,
+        "max": 133.062
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 6.4,
+        "median": 8.1,
+        "max": 25.3
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 118.578,
+        "median": 127.359,
+        "max": 133.062
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 8.6,
+        "median": 32.5,
+        "max": 47.9
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 47.359,
+        "median": 86.852,
+        "max": 92.125
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        16,
+        17
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 37,
+        "median": 44,
+        "max": 49
+      },
+      "swapUsedChangeBytes": -16777216,
+      "vmCounterDeltas": {
+        "Swapins": 931,
+        "Swapouts": 0,
+        "Pageins": 42135,
+        "Pageouts": 3
+      },
+      "beforeAfter": {
+        "position": [
+          140.3,
+          160.8
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    },
+    {
+      "file": "focus-overlay.json",
+      "sha256": "a47130f5117fcd6730afbbaef0125897d5f29f42bf8c764ff1baa9dd38e585fe",
+      "conditionsSHA256": "3d9b99af08ca7b445ee3ee51245ee48d579be55cc742e76f49d46bc8adc002df",
+      "conditionChecksumMatches": true,
+      "ok": true,
+      "label": "focus-overlay",
+      "rootPID": 40519,
+      "startedUTC": "2026-11-08T19:40:26.127Z",
+      "endedUTC": "2026-11-08T19:40:46.200Z",
+      "elapsedSeconds": 20.074,
+      "sampleCount": 10,
+      "terminationReason": "duration",
+      "warmupSeconds": 20,
+      "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+      "environment": {
+        "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+        "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+        "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+        "installedAppVersion": {
+          "CFBundleShortVersionString": "1.5.1",
+          "CFBundleVersion": "183",
+          "CFBundleIdentifier": "com.colliderli.iina"
+        }
+      },
+      "metadata": {
+        "candidate": "focus",
+        "pluginIdentifier": "local.iina.streams.qa",
+        "mode": "overlay",
+        "chatMode": "replay",
+        "presentation": "overlay",
+        "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+        "sourceId": "92h_kU8O58M",
+        "quality": "136",
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoWidth": 1280,
+        "videoHeight": 720,
+        "videoFps": 30,
+        "audioCodec": "aac",
+        "audioSampleRate": 44100,
+        "hardwareDecode": "videotoolbox-copy",
+        "windowWidth": 1280,
+        "windowHeight": 800,
+        "sidebarWidth": 0,
+        "fullscreen": false,
+        "playbackPosition": 140.3,
+        "playbackSpeed": 1,
+        "paused": false,
+        "archiveId": "92h_kU8O58M",
+        "messageCount": 11,
+        "rowLimit": 150,
+        "fontSize": 14,
+        "opacity": 0.64,
+        "replayOffset": 0,
+        "otherPlayerCount": 0,
+        "droppedFrames": 0,
+        "buffering": false,
+        "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+      },
+      "queryErrors": [],
+      "rootCPUPercent": {
+        "n": 10,
+        "min": 5.6,
+        "median": 8.65,
+        "max": 29.3
+      },
+      "rootRSSMiB": {
+        "n": 10,
+        "min": 94.641,
+        "median": 97.672,
+        "max": 107.422
+      },
+      "scopedCPUPercent": {
+        "n": 10,
+        "min": 5.6,
+        "median": 8.65,
+        "max": 29.3
+      },
+      "scopedRSSMiB": {
+        "n": 10,
+        "min": 94.641,
+        "median": 97.672,
+        "max": 107.422
+      },
+      "windowServerCPUPercent": {
+        "n": 10,
+        "min": 8.3,
+        "median": 30.45,
+        "max": 45
+      },
+      "windowServerRSSMiB": {
+        "n": 10,
+        "min": 66.891,
+        "median": 70.969,
+        "max": 83.578
+      },
+      "descendantCounts": [
+        0
+      ],
+      "explicitHelperCounts": [
+        0
+      ],
+      "unattributedWebKitCounts": [
+        16,
+        17
+      ],
+      "memoryFreePercent": {
+        "n": 10,
+        "min": 40,
+        "median": 47,
+        "max": 49
+      },
+      "swapUsedChangeBytes": -33554432,
+      "vmCounterDeltas": {
+        "Swapins": 784,
+        "Swapouts": 0,
+        "Pageins": 35121,
+        "Pageouts": 76
+      },
+      "beforeAfter": {
+        "position": [
+          140.3,
+          160.8
+        ],
+        "paused": [
+          false,
+          false
+        ],
+        "speed": [
+          1,
+          1
+        ],
+        "height": [
+          720,
+          720
+        ],
+        "videoCodec": [
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+          "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"
+        ],
+        "videoFps": [
+          30,
+          30
+        ],
+        "audioCodec": [
+          "aac",
+          "aac"
+        ],
+        "audioRate": [
+          44100,
+          44100
+        ],
+        "hwdec": [
+          "videotoolbox-copy",
+          "videotoolbox-copy"
+        ],
+        "activeHelpers": [
+          [],
+          []
+        ],
+        "droppedFrames": [
+          0,
+          0
+        ],
+        "pausedForCache": [
+          false,
+          false
+        ],
+        "fullscreen": [
+          false,
+          false
+        ],
+        "frame": [
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          },
+          {
+            "y": 140,
+            "x": 140,
+            "width": 1280,
+            "height": 800
+          }
+        ]
+      },
+      "rootIdentityStable": true
+    }
+  ],
+  "conditions": {
+    "unified": {
+      "sha256": "332a6657490b1bab465433349ab1b65c2e4cf97b9b91f60d9608e164705b1784",
+      "completedUTC": "2026-11-08T19:22:01.568802+00:00",
+      "pid": 99898,
+      "checks": {
+        "allThreeSamples": true,
+        "offClearedMessagesAndHelpers": true
+      },
+      "afterOff": {
+        "mode": "off",
+        "messageCount": 0,
+        "activeHelpers": []
+      }
+    },
+    "focus": {
+      "sha256": "3d9b99af08ca7b445ee3ee51245ee48d579be55cc742e76f49d46bc8adc002df",
+      "completedUTC": "2026-11-08T19:40:47.825767+00:00",
+      "pid": 40519,
+      "checks": {
+        "allThreeSamples": true,
+        "offClearedMessagesAndHelpers": true
+      },
+      "afterOff": {
+        "mode": "off",
+        "messageCount": 0,
+        "activeHelpers": []
+      }
+    }
+  },
+  "missingOrUnreadable": [],
+  "pairs": [
+    {
+      "mode": "off",
+      "metadataDifferences": {},
+      "missingMetadata": [],
+      "elapsedSeconds": [
+        20.071,
+        20.075
+      ],
+      "totalWebKitAttributionComplete": false
+    },
+    {
+      "mode": "sidebar",
+      "metadataDifferences": {},
+      "missingMetadata": [],
+      "elapsedSeconds": [
+        20.07,
+        20.073
+      ],
+      "totalWebKitAttributionComplete": false
+    },
+    {
+      "mode": "overlay",
+      "metadataDifferences": {},
+      "missingMetadata": [],
+      "elapsedSeconds": [
+        20.08,
+        20.074
+      ],
+      "totalWebKitAttributionComplete": false
+    }
+  ],
+  "limitations": [
+    "Short QA-host observations, not production-plugin overhead or long-session evidence.",
+    "WindowServer and system memory/swap are shared; unowned WebKit remains excluded.",
+    "No total-efficiency, battery, energy, or leak conclusion is generated."
+  ],
+  "allSixAvailable": true
+}

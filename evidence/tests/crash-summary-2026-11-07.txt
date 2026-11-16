@@ -1,0 +1,9 @@
+# IINA crash-signature summary (sanitized; no report bodies)
+2026-11-07; macOS 27.2 (26B123); IINA 1.4.4 (168)
+Raw .ips files remain ONLY in the user DiagnosticReports folder.
+IINA-2026-11-07-122452.ips | PID 34296 | EXC_BREAKPOINT / SIGTRAP | PlayerCore.startMPV() | parent=iina-cli
+IINA-2026-11-07-122522.ips | PID 34495 | EXC_BREAKPOINT / SIGTRAP | PlayerCore.startMPV() | parent=Exited process
+IINA-2026-11-07-130320.ips | PID 86796 | EXC_BREAKPOINT / SIGTRAP | PlayerCore.startMPV() | parent=Exited process
+IINA-2026-11-07-130348.ips | PID 86948 | EXC_BREAKPOINT / SIGTRAP | PlayerCore.startMPV() | parent=Exited process
+IINA-2026-11-07-130403.ips | PID 87451 | EXC_BREAKPOINT / SIGTRAP | PlayerCore.startMPV() | parent=iina-cli
+Two reports predate development plugin linking at 13:01; this does not establish their exact cause.

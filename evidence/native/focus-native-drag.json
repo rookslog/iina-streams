@@ -1,0 +1,200 @@
+{
+  "id": "cd7d0125d88240adab4c164139e2d9a1",
+  "time": "2026-11-08T18:15:05.596Z",
+  "result": true,
+  "state": {
+    "controller": {
+      "phase": "playing",
+      "quality": "360p30",
+      "formats": [
+        {
+          "id": "auto720",
+          "label": "Auto \u00b7 720p preferred"
+        },
+        {
+          "id": "1080p60",
+          "label": "1080p60"
+        },
+        {
+          "id": "720p60",
+          "label": "720p60"
+        },
+        {
+          "id": "480p30",
+          "label": "480p30"
+        },
+        {
+          "id": "360p30",
+          "label": "360p30"
+        },
+        {
+          "id": "160p30",
+          "label": "160p30"
+        },
+        {
+          "id": "audio_only",
+          "label": "Audio only"
+        }
+      ],
+      "busy": false,
+      "error": "",
+      "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+      "live": false,
+      "duration": 0,
+      "variant": "focus",
+      "source": {
+        "kind": "twitch-vod",
+        "provider": "Twitch",
+        "id": "2922164492"
+      },
+      "chat": {
+        "mode": "off",
+        "state": "off",
+        "error": "",
+        "count": 100000,
+        "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+        "offset": 0,
+        "available": true
+      },
+      "auth": {
+        "phase": "off",
+        "message": ""
+      },
+      "view": {
+        "presentation": "overlay",
+        "fontSize": 14,
+        "opacity": 0.64,
+        "lines": 6,
+        "x": 0.5,
+        "y": 0.2,
+        "density": "comfortable",
+        "editing": true
+      },
+      "messages": [],
+      "position": 83.249667,
+      "paused": true,
+      "qa": true
+    },
+    "native": {
+      "position": 83.249667,
+      "duration": 45140,
+      "paused": true,
+      "speed": 1.5,
+      "width": 640,
+      "height": 360,
+      "audioCodec": "aac",
+      "audioRate": 48000,
+      "playlistCount": 1,
+      "idle": false,
+      "fullscreen": false,
+      "frame": {
+        "y": 170,
+        "x": 180,
+        "width": 1180,
+        "height": 720
+      },
+      "hwdec": "videotoolbox-copy",
+      "activeHelpers": []
+    }
+  },
+  "actionResult": {
+    "id": "1d603a41d62e45c1bdb4a2acc7982724",
+    "time": "2026-11-08T18:15:04.790Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 0.5,
+          "y": 0.2,
+          "density": "comfortable",
+          "editing": true
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  }
+}

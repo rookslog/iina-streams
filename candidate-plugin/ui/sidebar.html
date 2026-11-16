@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src wss://irc-ws.chat.twitch.tv:443; img-src 'none'"><title>Streams</title><link rel="stylesheet" href="sidebar.css"></head>
+<body>
+ <header class="stream-header"><div class="identity"><h1 id="title">Streams</h1><div id="source" class="secondary"></div></div><button id="open" class="icon" title="Open another stream" aria-label="Open another stream">＋</button><button id="hide" class="icon" title="Hide Streams" aria-label="Hide Streams">×</button></header>
+ <nav id="tabs" class="tabs" role="tablist" aria-label="Stream inspector" hidden><button id="playback-tab" role="tab" aria-selected="true" aria-controls="playback">Playback</button><button id="chat-tab" role="tab" aria-selected="false" aria-controls="chat-panel" tabindex="-1">Chat</button></nav>
+ <section id="playback" aria-label="Playback settings"><div class="quality-row"><label for="quality">Quality</label><select id="quality" aria-label="Playback quality"></select><button id="refresh" class="icon" title="Refresh available qualities" aria-label="Refresh available qualities">↻</button></div><div id="transition" class="secondary" role="status" hidden></div><div id="playback-error" class="error" role="alert" hidden></div></section>
+ <section id="chat-panel" aria-label="Chat" class="chat-panel">
+  <div class="chat-heading"><h2>Chat</h2><span id="chat-kind" class="secondary"></span><div class="spacer"></div><button id="off" class="text-button" hidden>Off</button><button id="appearance-toggle" class="icon" aria-label="Chat appearance" title="Chat appearance" aria-expanded="false">•••</button></div>
+  <div id="chat-actions" class="action-row"><button id="connect">Connect Twitch…</button><button id="import">Import archive…</button><button id="fetch" hidden>Fetch replay</button><button id="resume" hidden>Resume replay</button></div>
+  <div id="auth-panel" class="auth-panel" hidden><label for="client-id">Twitch Public Client ID</label><input id="client-id" type="text" spellcheck="false" autocomplete="off"><p class="secondary">Connect a registered public app with read-only chat access.</p><button id="authorize">Authorize…</button></div>
+  <div id="auth-code-panel" class="auth-panel" hidden><div id="auth-code" class="auth-code"></div><button id="authorize-open">Continue in Twitch</button></div>
+  <div id="chat-status" class="chat-status secondary" role="status"></div>
+  <div id="chat-error" class="error" role="alert" hidden></div>
+  <section id="appearance" class="appearance" aria-label="Chat appearance" hidden>
+   <label class="setting"><span>Display</span><select id="presentation"><option value="sidebar">Sidebar</option><option value="overlay">Over video</option></select></label>
+   <label class="setting"><span>Text size</span><input id="font-size" type="range" min="12" max="24" step="1" aria-label="Chat text size"></label>
+   <label class="setting"><span>Spacing</span><select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+   <div id="overlay-settings"><label class="setting"><span>Background</span><input id="opacity" type="range" min="0.2" max="0.9" step="0.05" aria-label="Overlay background opacity"></label><label class="setting"><span>Messages</span><input id="lines" type="range" min="2" max="12" step="1" aria-label="Visible overlay messages"></label><label class="setting"><span>Position</span><select id="placement"><option value="tr">Top right</option><option value="tl">Top left</option><option value="br">Bottom right</option><option value="bl">Bottom left</option><option value="custom">Custom</option></select></label><button id="position">Move overlay…</button></div>
+   <div class="action-row"><button id="reset" class="text-button">Reset appearance</button><button id="forget" class="text-button">Forget Twitch login</button></div>
+  </section>
+  <div id="replay-controls" class="replay-controls" hidden><label for="offset">Chat offset</label><input id="offset" type="number" min="-2592000" max="2592000" step="1" value="0" title="Seconds added to video time to find the original chat"><span class="secondary">s</span><button id="first" class="text-button" title="Seek to the first available chat message">First message</button></div>
+  <div id="overlay-note" class="overlay-note secondary" hidden>Chat is displayed over the video.<button id="hide-for-overlay" class="text-button">Hide inspector</button></div>
+  <div id="messages" class="messages" role="log" aria-label="Read-only chat messages" aria-live="off" tabindex="0"></div>
+  <button id="follow" class="follow" hidden>Latest messages ↓</button>
+ </section>
+ <script src="sidebar.js"></script>
+</body></html>

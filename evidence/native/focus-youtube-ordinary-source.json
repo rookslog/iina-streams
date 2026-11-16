@@ -1,0 +1,336 @@
+{
+  "publicURL": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+  "elapsedSeconds": 4.988039542,
+  "checks": {
+    "videoDecoded": true,
+    "audioDecoded": true,
+    "sourceMatched": true,
+    "chatOffByDefault": true,
+    "noError": true,
+    "originalWindowUnchanged": true
+  },
+  "beforeOriginal": {
+    "id": "1287b3fb9dc44d308b0e2e54d8a2a870",
+    "time": "2026-11-08T18:31:28.072Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "afterOriginal": {
+    "id": "b94ee5d5a80f43b78a75fcfeec44f609",
+    "time": "2026-11-08T18:31:33.074Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "360p30",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+        "live": false,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-vod",
+          "provider": "Twitch",
+          "id": "2922164492"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 100000,
+          "sourceName": "Synthetic timing & stress fixture \u00b7 100,000 messages",
+          "offset": 0,
+          "available": true
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 83.249667,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 83.249667,
+        "duration": 45140,
+        "paused": true,
+        "speed": 1.5,
+        "width": 640,
+        "height": 360,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 170,
+          "x": 180,
+          "width": 1180,
+          "height": 720
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "opened": {
+    "id": "ee96e26da5a44626b309aea80f619424",
+    "time": "2026-11-08T18:31:32.670Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "134",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "229",
+            "label": "240p \u00b7 H.264"
+          },
+          {
+            "id": "230",
+            "label": "240p \u00b7 H.264"
+          },
+          {
+            "id": "134",
+            "label": "240p \u00b7 H.264"
+          },
+          {
+            "id": "133",
+            "label": "240p \u00b7 H.264"
+          },
+          {
+            "id": "604",
+            "label": "240p \u00b7 VP9"
+          },
+          {
+            "id": "242",
+            "label": "240p \u00b7 VP9"
+          },
+          {
+            "id": "395",
+            "label": "240p \u00b7 AV1"
+          },
+          {
+            "id": "269",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "160",
+            "label": "144p \u00b7 H.264"
+          },
+          {
+            "id": "602",
+            "label": "144p \u00b7 VP9"
+          },
+          {
+            "id": "603",
+            "label": "144p \u00b7 VP9"
+          },
+          {
+            "id": "278",
+            "label": "144p \u00b7 VP9"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "Me at the zoo",
+        "live": false,
+        "duration": 19,
+        "variant": "focus",
+        "source": {
+          "kind": "youtube",
+          "provider": "YouTube",
+          "id": "jNQXAC9IVRw"
+        },
+        "chat": {
+          "mode": "off",
+          "state": "off",
+          "error": "",
+          "count": 0,
+          "sourceName": "",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 0.7333333333333333,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 0.7333333333333333,
+        "duration": 18.933333333333334,
+        "paused": true,
+        "speed": 1,
+        "width": 320,
+        "height": 240,
+        "audioCodec": "aac",
+        "audioRate": 44100,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 429,
+          "x": 712,
+          "width": 348,
+          "height": 214
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  }
+}

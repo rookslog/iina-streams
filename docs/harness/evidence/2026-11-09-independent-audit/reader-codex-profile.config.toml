@@ -1,0 +1,251 @@
+# reader profile — isolated, read-only close-reading lanes (independent-audit experiment, 2026-11-09)
+# Layered on top of ~/.codex/config.toml by `codex -p reader`. Takes effect only when named.
+# Intent: shell tool in a read-only sandbox; no skills, plugins, MCP, hooks, memories, web or subagents.
+# Verify with: codex -p reader debug prompt-input probe
+model = "gpt-6.1-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+approval_policy = "never"
+web_search = "disabled"
+
+[features]
+plugins = false
+hooks = false
+memories = false
+multi_agent = false
+apps = false
+
+[skills.bundled]
+enabled = false
+
+[mcp_servers.hf-mcp-server]
+enabled = false
+[mcp_servers.headroom]
+enabled = false
+[mcp_servers.computer-use]
+enabled = false
+[mcp_servers.zlibrary]
+enabled = false
+[mcp_servers.codebase-memory-mcp]
+enabled = false
+[mcp_servers.node_repl]
+enabled = false
+[mcp_servers.openaiDeveloperDocs]
+enabled = false
+
+[[skills.config]]
+name = "advice-escalation"
+enabled = false
+
+[[skills.config]]
+name = "agent-browser"
+enabled = false
+
+[[skills.config]]
+name = "api-design"
+enabled = false
+
+[[skills.config]]
+name = "apple-design-skill"
+enabled = false
+
+[[skills.config]]
+name = "best-practices"
+enabled = false
+
+[[skills.config]]
+name = "btw"
+enabled = false
+
+[[skills.config]]
+name = "code-optimizer"
+enabled = false
+
+[[skills.config]]
+name = "codebase-design"
+enabled = false
+
+[[skills.config]]
+name = "codex-tend"
+enabled = false
+
+[[skills.config]]
+name = "core-web-vitals"
+enabled = false
+
+[[skills.config]]
+name = "create-workflow"
+enabled = false
+
+[[skills.config]]
+name = "debug-like-expert"
+enabled = false
+
+[[skills.config]]
+name = "decompose-into-slices"
+enabled = false
+
+[[skills.config]]
+name = "delegate-learn"
+enabled = false
+
+[[skills.config]]
+name = "delegate-to-antigravity"
+enabled = false
+
+[[skills.config]]
+name = "delegate-to-claude"
+enabled = false
+
+[[skills.config]]
+name = "delegate-to-open-code"
+enabled = false
+
+[[skills.config]]
+name = "delegate-triage"
+enabled = false
+
+[[skills.config]]
+name = "delegation-triage"
+enabled = false
+
+[[skills.config]]
+name = "domain-modeling"
+enabled = false
+
+[[skills.config]]
+name = "gh"
+enabled = false
+
+[[skills.config]]
+name = "github-workflows"
+enabled = false
+
+[[skills.config]]
+name = "goal-forge"
+enabled = false
+
+[[skills.config]]
+name = "grill-me"
+enabled = false
+
+[[skills.config]]
+name = "grilling"
+enabled = false
+
+[[skills.config]]
+name = "herdr-automations"
+enabled = false
+
+[[skills.config]]
+name = "herdr-gpui-browser"
+enabled = false
+
+[[skills.config]]
+name = "herdr-mods"
+enabled = false
+
+[[skills.config]]
+name = "imagegen"
+enabled = false
+
+[[skills.config]]
+name = "impeccable"
+enabled = false
+
+[[skills.config]]
+name = "lint"
+enabled = false
+
+[[skills.config]]
+name = "make-interfaces-feel-better"
+enabled = false
+
+[[skills.config]]
+name = "observability"
+enabled = false
+
+[[skills.config]]
+name = "openai-docs"
+enabled = false
+
+[[skills.config]]
+name = "orchestrating-multi-agent-v2"
+enabled = false
+
+[[skills.config]]
+name = "orchestration-learning"
+enabled = false
+
+[[skills.config]]
+name = "plan-fanout"
+enabled = false
+
+[[skills.config]]
+name = "prompt-fable"
+enabled = false
+
+[[skills.config]]
+name = "prototype"
+enabled = false
+
+[[skills.config]]
+name = "research"
+enabled = false
+
+[[skills.config]]
+name = "review"
+enabled = false
+
+[[skills.config]]
+name = "security-review"
+enabled = false
+
+[[skills.config]]
+name = "signal"
+enabled = false
+
+[[skills.config]]
+name = "simplified-technical-english"
+enabled = false
+
+[[skills.config]]
+name = "skill-creator"
+enabled = false
+
+[[skills.config]]
+name = "skill-installer"
+enabled = false
+
+[[skills.config]]
+name = "tdd"
+enabled = false
+
+[[skills.config]]
+name = "test"
+enabled = false
+
+[[skills.config]]
+name = "verify-before-complete"
+enabled = false
+
+[[skills.config]]
+name = "web-design-guidelines"
+enabled = false
+
+[[skills.config]]
+name = "web-quality-audit"
+enabled = false
+
+[[skills.config]]
+name = "write-docs"
+enabled = false
+
+[[skills.config]]
+name = "write-milestone-brief"
+enabled = false
+
+[[skills.config]]
+name = "writing-for-agents"
+enabled = false
+

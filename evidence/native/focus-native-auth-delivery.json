@@ -1,0 +1,142 @@
+{
+  "initial": {
+    "id": "197716faff044886868a7cf07abbb98c",
+    "time": "2026-11-08T18:57:21.573Z",
+    "result": true,
+    "state": {
+      "controller": {
+        "phase": "playing",
+        "quality": "720p60",
+        "formats": [
+          {
+            "id": "auto720",
+            "label": "Auto \u00b7 720p preferred"
+          },
+          {
+            "id": "1080p60",
+            "label": "1080p60"
+          },
+          {
+            "id": "720p60",
+            "label": "720p60"
+          },
+          {
+            "id": "480p30",
+            "label": "480p30"
+          },
+          {
+            "id": "360p30",
+            "label": "360p30"
+          },
+          {
+            "id": "160p30",
+            "label": "160p30"
+          },
+          {
+            "id": "audio_only",
+            "label": "Audio only"
+          }
+        ],
+        "busy": false,
+        "error": "",
+        "title": "SKINNY SUNDAY | SHADOW GOVERNMENT IN FULL EFFECT TODAY! WE TAKE CONTROL OF THE SERVER!",
+        "live": true,
+        "duration": 0,
+        "variant": "focus",
+        "source": {
+          "kind": "twitch-live",
+          "provider": "Twitch",
+          "id": "hutchmf"
+        },
+        "chat": {
+          "mode": "live",
+          "state": "authorizing",
+          "error": "",
+          "count": 0,
+          "sourceName": "hutchmf",
+          "offset": 0,
+          "available": false
+        },
+        "auth": {
+          "phase": "off",
+          "message": ""
+        },
+        "view": {
+          "presentation": "overlay",
+          "fontSize": 14,
+          "opacity": 0.64,
+          "lines": 6,
+          "x": 1,
+          "y": 0,
+          "density": "comfortable",
+          "editing": false
+        },
+        "messages": [],
+        "position": 79.64999999999999,
+        "paused": true,
+        "qa": true
+      },
+      "native": {
+        "position": 79.64999999999999,
+        "duration": 85.98333333333358,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      }
+    }
+  },
+  "global": [
+    {
+      "phase": "created",
+      "time": "2026-11-08T18:55:55.951Z",
+      "id": 1,
+      "type": "number"
+    },
+    {
+      "phase": "auth-state",
+      "time": "2026-11-08T18:57:20.773Z",
+      "state": "off",
+      "targets": []
+    },
+    {
+      "phase": "auth-connect",
+      "time": "2026-11-08T18:57:20.778Z",
+      "sender": "1-local.iina.streams.qa",
+      "id": 1,
+      "managed": [
+        1
+      ]
+    },
+    {
+      "phase": "auth-state",
+      "time": "2026-11-08T18:57:20.780Z",
+      "state": "off",
+      "targets": [
+        1
+      ]
+    },
+    {
+      "phase": "auth-state",
+      "time": "2026-11-08T18:57:20.821Z",
+      "state": "needs-client",
+      "targets": [
+        1
+      ]
+    }
+  ],
+  "callbacks": []
+}

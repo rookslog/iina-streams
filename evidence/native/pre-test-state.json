@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "io.iina.ytdl.iinaplugin": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/io.iina.ytdl.iinaplugin",
+    "io.iina.opensub.iinaplugin": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/io.iina.opensub.iinaplugin",
+    ".preferences": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/.preferences",
+    "plugin-dev.iinaplugin-dev": "/Users/rookslog/development/iina-streams/plugin-dev",
+    ".data": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/.data",
+    "local.iina.streamlink-bridge.iinaplugin": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/local.iina.streamlink-bridge.iinaplugin",
+    "io.iina.user-script.iinaplugin": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/io.iina.user-script.iinaplugin",
+    "preview-plugin.iinaplugin-dev": "/Users/rookslog/development/iina-streams-design/preview-plugin"
+  },
+  "qaPreference": ""
+}

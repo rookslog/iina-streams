@@ -1,0 +1,29 @@
+{
+  "phase": "window-loaded",
+  "time": "2026-11-07T20:00:05.653Z",
+  "loaded": false,
+  "status": "Connecting",
+  "sidebarReady": false,
+  "sidebarLoaded": false,
+  "controlsDesired": false,
+  "windowLoaded": true,
+  "formats": [
+    "auto720"
+  ],
+  "chosenQuality": "160p30",
+  "pendingQuality": null,
+  "qaWindowOpenCount": 1,
+  "qaWindowCloseCount": 0,
+  "formatQueryBusy": false,
+  "reconnectBusy": false,
+  "error": "",
+  "videoWidth": 0,
+  "videoHeight": 0,
+  "videoFrames": 0,
+  "droppedFrames": 0,
+  "playbackSeconds": 0,
+  "audioChannels": 0,
+  "mediaTitle": "",
+  "forcedTitle": "",
+  "sidebarSelection": null
+}

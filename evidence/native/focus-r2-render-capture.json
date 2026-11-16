@@ -1,0 +1,24 @@
+{
+  "windowBeforeHide": {
+    "bounds": {
+      "Height": 720,
+      "Width": 1280,
+      "X": 140,
+      "Y": 100
+    },
+    "id": 57072,
+    "pid": 55428,
+    "title": "All Aboard (ish) \u2014 YouTube"
+  },
+  "hideAction": {
+    "afterUTC": "2026-11-08T20:36:24Z",
+    "AXResult": 0,
+    "beforeUTC": "2026-11-08T20:36:24Z",
+    "button": "Hide Streams",
+    "normalNativeWebButton": true,
+    "pid": 55428,
+    "window": "All Aboard"
+  },
+  "normalInstalledArchive": true,
+  "archiveSHA256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24"
+}

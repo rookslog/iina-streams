@@ -1,0 +1,960 @@
+{
+  "recordedAt": "2026-11-08T21:06:52.612754+00:00",
+  "scope": "Independent technical acceptance audit of source/offline tests, saved native evidence, final R2 package records and preservation snapshot. No native UI or installation actions were performed by this auditor.",
+  "worktree": "/Users/rookslog/development/iina-streams-candidates",
+  "branch": "feature/candidate-portfolio-20261108",
+  "observedCheckpoint": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+  "qualification": "Release production code matches the R2 package record. Later QA/docs edits are separate. Final normal native gates remain scoped by their own artifact records.",
+  "tests": [
+    {
+      "path": "evidence/tests/node-final-follow.txt",
+      "passed": 143,
+      "failed": 0,
+      "durationMilliseconds": 5467.983667,
+      "sha256": "491fba5bd52c9b4926dd4d4d9044a26c48defd3f0817189794c39182ff1618d6",
+      "language": "JavaScript"
+    },
+    {
+      "path": "evidence/tests/python-final-follow.txt",
+      "passed": 103,
+      "failed": 0,
+      "durationSeconds": 12.456,
+      "sha256": "7c376d541fd8fd4ec176e04fb6e6c362b4029e794c53c961d4dff9d31feb06ea",
+      "language": "Python"
+    }
+  ],
+  "externalGate": "No real Twitch OAuth grant or authenticated IRC session was used",
+  "nativeGate": "Both R2 normal Fetch and bounded ordinary-YouTube lifecycle batches passed; external real-auth/Keychain/Twitch-provenance and unmeasured reliability/accessibility scope remain explicit.",
+  "incrementalUpdateAt": "2026-11-08T18:05:31Z",
+  "laterReviewerReport": {
+    "reviewer": "chat_research",
+    "javascriptPassed": 84,
+    "pythonPassed": 70,
+    "runnerFocusedPassed": 12,
+    "qualification": "Reported fresh complete-suite results after cancellation runner/integration additions; not this auditor's original run or final package certification",
+    "handoff": "/workspace/scratch/22929406a103/research/runner-handoff.md"
+  },
+  "overlayVisualEvidence": {
+    "path": "evidence/native/overlay-opacity-probe.png",
+    "independentlyViewed": true,
+    "observation": "Actual IINA capture paints six explicitly synthetic messages, edit outline, Move and Done",
+    "qualification": "Earlier visibility failure overcome in observed build; cause not isolated; this original capture alone does not prove input behavior"
+  },
+  "latestReviewUtcMinute": "2026-11-08 20:59 UTC",
+  "latestIndependentJavascript": {
+    "command": "node --test tests/*.test.js tests_candidate/*.test.js",
+    "passed": 128,
+    "failed": 0,
+    "durationMilliseconds": 6192.485421,
+    "playerSha256": "aee5f6bf2748a94463cd5204f00aaf4c92c69d3ffd442c24ab160d4c8bddadfa",
+    "globalSha256": "7ffb99c5e0698be64c1e2b0f1a61b567ddfcfede281031180d6909cda84544e4",
+    "timersSha256": "5665dd6421dcb37577b6967b9ddeccb7a9b37a9e7235228c494b45a0ca7d7402",
+    "qualification": "Historical independent working-copy run after serialized/deferred auth and per-child session guards. Later native setup/error receipt is established in the five-check records; final source counts are 143 JavaScript and 103 Python."
+  },
+  "authorizedReviewFixes": [
+    "One outstanding Refresh with failure/success release",
+    "First-message and offset stale-action guards",
+    "Document visibility advisory only",
+    "600 ms native sizing quiet period, 2500 ms absolute cap, 1600 ms no-event fallback",
+    "Injected native one-shot timer scope clears fired entries; player/global integrations and owned close/deactivation cleanup",
+    "Preserve session-only storage warning through ordinary live progress, while specific transport errors take precedence"
+  ],
+  "nativeFollowup": {
+    "editDrag": {
+      "path": "evidence/native/focus-full-capture-drag.json",
+      "panelBefore": [
+        420,
+        93
+      ],
+      "panelAfter": [
+        580,
+        188
+      ],
+      "windowFrameUnchanged": true
+    },
+    "done": {
+      "path": "evidence/native/focus-native-done.json",
+      "exitedEditing": true
+    },
+    "syntheticReplay": {
+      "path": "evidence/native/focus-replay-clock.json",
+      "checksPassed": 7,
+      "archiveMessages": 100000,
+      "synthetic": true
+    },
+    "replayOff": {
+      "path": "evidence/native/focus-native-cancel.json",
+      "totalSeconds": 1.795173833,
+      "noActiveHelpers": true,
+      "noNewOutputOrStaging": true
+    },
+    "smallWindow": {
+      "path": "evidence/native/focus-small-window-clamp.json",
+      "screenshotIndependentlyViewed": true,
+      "viewport": [
+        620,
+        440
+      ],
+      "panel": [
+        368,
+        56,
+        236,
+        296
+      ],
+      "controlsVisible": true
+    },
+    "genuineYoutube": {
+      "path": "evidence/native/focus-real-youtube-replay.json",
+      "sourceId": "92h_kU8O58M",
+      "archiveMessages": 693,
+      "checksPassed": 51,
+      "fetchButtonTested": true,
+      "recordCount": 16,
+      "sha256": "c3e5be4336045b25ca907e25b05be5b44ee1fbe3584a12094c52465d9f346554",
+      "qualification": "All 51 checks and real Fetch passed in the named QA build. Both final R2 packages separately show normal Fetch and 693-message UI; the normal run does not repeat every internal QA assertion.",
+      "previousSha256": "98c5198358111cb875335720f4d292a85360877f5e72c480ed754c141b8d949e"
+    },
+    "qualification": "Operator-run QA core observations in evolving builds. Final ordinary R2 archive checks are recorded separately below; no exact installed-byte equivalence is inferred from these earlier QA paths.",
+    "quality": {
+      "paths": [
+        "evidence/native/focus-final-quality-360.json",
+        "evidence/native/focus-final-quality-720.json"
+      ],
+      "checksPassedEach": 8,
+      "position": 83.249667,
+      "paused": true,
+      "speed": 1.5,
+      "playlistCount": 1,
+      "frame": {
+        "x": 180,
+        "y": 170,
+        "width": 1180,
+        "height": 720
+      },
+      "qualification": "Focus QA windowed 720p60→360p30→720p60; final package, Unified, fullscreen, and hidden-sidebar cases not certified"
+    },
+    "sourceClasses": {
+      "paths": [
+        "evidence/native/focus-final-twitch-live.json",
+        "evidence/native/focus-youtube-live-source.json",
+        "evidence/native/focus-youtube-ordinary-source.json",
+        "evidence/native/focus-youtube-replay-source.json"
+      ],
+      "checksPassedEach": 6,
+      "publicSources": [
+        "https://www.twitch.tv/hutchmf",
+        "https://www.youtube.com/watch?v=umLWFz4izTM",
+        "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+        "https://www.youtube.com/watch?v=92h_kU8O58M"
+      ],
+      "originalPlayerPreservedOnSeparateOpen": true,
+      "qualification": "Native active video/audio metadata and source state, not listening verification or long-session continuity"
+    },
+    "authBroker": {
+      "path": "evidence/native/focus-native-unavailable-and-auth.json",
+      "clientRequiredCheckPassed": false,
+      "laterQAProbeReportedPassed": true,
+      "probeChange": "Deferred registration and explicit retained child callback; one deferred numeric primitive reply",
+      "productionBindingRetest": "Deferred binding alone failed with immediate object delivery; later serialized/deferred protocol passed the final five-check native setup/error record.",
+      "reportedCrashUtc": "2026-11-08 18:41:33 UTC",
+      "crashCause": "Unproven; correlated with earlier probe sequence, not attributed to a proven host defect",
+      "productionBindingOnlyRetest": "failed with immediate object reply",
+      "productionProtocolRetest": "native no-client state passed",
+      "qualification": "Five Focus QA setup/rejection checks, invalid client only; no legitimate grant or authenticated chat",
+      "finalArtifact": "evidence/native/focus-final-native-auth.json",
+      "finalSha256": "b2e1e8f048892899941d3bf66bfc35fbeb69a924abf6f77d991d68c9f23ca532",
+      "observedTime": "2026-11-08T19:05:02.995Z",
+      "nativeStateDelivery": true,
+      "childAuthPhase": "needs-client",
+      "childChatState": "needs-client",
+      "previousFinalArtifactSha256": "eca2f333f21111d2e64eae997df567d81bf7b0c9bb9cbc01fd0abadbbf25ed44",
+      "observedTimeRange": [
+        "2026-11-08T19:07:57.284Z",
+        "2026-11-08T19:08:00.510Z"
+      ],
+      "finalChecks": {
+        "nativeStateDelivery": true,
+        "invalidClientActionableError": true,
+        "videoUnaffected": true,
+        "clientIDEditableAfterError": true,
+        "offCleared": true
+      }
+    },
+    "comparisonVisual": {
+      "path": "evidence/native/focus-comparison-real-replay.png",
+      "statePath": "evidence/native/focus-comparison-real-replay.json",
+      "independentlyViewed": true,
+      "sourceId": "92h_kU8O58M",
+      "position": 120,
+      "visibleMessages": 6,
+      "archiveMessages": 693,
+      "nativeOSCClear": true,
+      "qualification": "Bright-footage Focus QA capture, not controlled click-through or final A/B parity"
+    },
+    "fullscreenQuality": {
+      "path": "evidence/native/focus-final-fullscreen-quality-360.json",
+      "sha256": "6ebbe6fdbafc19ff0b26efeb2b21c4317b354448d18908b17341cba594521309",
+      "checksPassed": 9,
+      "position": 83.249667,
+      "speed": 1.5,
+      "paused": true,
+      "fullscreenPreserved": true,
+      "frame": [
+        0,
+        0,
+        1710,
+        1074
+      ]
+    },
+    "clickThrough": {
+      "path": "evidence/native/focus-final-click-through.json",
+      "sha256": "bb47da14b2fd4364aabbe07066afb51f849477656d8acd1a64c525ed68c38bc1",
+      "checksPassed": 4,
+      "outsideNativePoint": [
+        700,
+        300
+      ],
+      "insideNativePoint": [
+        1094,
+        644
+      ],
+      "downAndUpObservedBoth": true,
+      "editing": false,
+      "frameUnchanged": true,
+      "qualification": "Physical controlled clicks after activation; observers return false. Supersedes initial inconclusive probe, not every input/final-parity case"
+    },
+    "unified": {
+      "realReplay": {
+        "path": "evidence/native/unified-real-youtube-replay.json",
+        "sha256": "e6c0e2a8fcb2782e23ef1d29467d796e83a1cd952c6d881ee3c3e5536046be7a",
+        "checksPassed": 51,
+        "checksFailed": 0,
+        "fetchButtonTested": true,
+        "nativeRecords": 16,
+        "messageCount": 693
+      },
+      "quality360": {
+        "path": "evidence/native/unified-final-quality-360.json",
+        "sha256": "d7edeb6ea3497d2a76a6abd50fa23d1f8a0d2c033139981fe640f78fb8302daf",
+        "checksPassed": 11,
+        "checksFailed": 0
+      },
+      "fullscreenQuality720": {
+        "path": "evidence/native/unified-final-fullscreen-quality-720.json",
+        "sha256": "b7bb73061d74997c6cadb2d7ab9ddd72b04a75c92396622e0fb4fc3774a15f60",
+        "checksPassed": 11,
+        "checksFailed": 0
+      },
+      "authSetup": {
+        "path": "evidence/native/unified-final-native-auth.json",
+        "sha256": "7cd82a1ba1a880c9d3dfb46ac5481b0ee9d85aadcab960f0a482589831f1ff74",
+        "checksPassed": 5,
+        "checksFailed": 0,
+        "timeRange": "2026-11-08 19:25:57–19:26:00 UTC",
+        "realGrant": false
+      },
+      "liveOpen": {
+        "path": "evidence/native/unified-final-open-twitch-live.json",
+        "sha256": "32c6acef32590116ed60ec963b7375246d4f22e29a42b113db25adf5ac73d001",
+        "checksPassed": 6,
+        "checksFailed": 0
+      },
+      "vodOpen": {
+        "path": "evidence/native/unified-final-open-twitch-vod.json",
+        "sha256": "de02cdb947c4f0da24859ad179d1263d24da27d03b42a38d96b71d22e5cf98e3",
+        "checksPassed": 6,
+        "checksFailed": 0
+      },
+      "qualification": "Independently read QA-core artifacts. Final R2 installed-byte and ordinary workflow checks are separate records; exhaustive every-gesture parity is not claimed."
+    },
+    "focusRenderedViews": {
+      "path": "evidence/native/focus-final-render-check.json",
+      "sha256": "4459f9d4c21c94814e79dade4e092ecab13b0af433083d6f38fbcc311f93ef34",
+      "checksPassed": 5,
+      "checksFailed": 0,
+      "bothImagesIndependentlyViewed": true,
+      "qualification": "Fresh native five-check record passes; regenerated sidebar image independently shows newest01:59row atvideo02:00 without unwanted Latest button; normal archive acceptance separate",
+      "followingLatest": true,
+      "previousFailedFollowArtifactSha256": "604c7096dd525c1e1b6d8a9c2476451a357e13bcf3242b8cf8566a957ded8a82",
+      "latestSidebarImageIndependentlyViewed": true
+    },
+    "focusNativeCollapseQuality": {
+      "path": "evidence/native/focus-native-collapsed-quality-final.json",
+      "sha256": "6abc7f4069654cd74344e7158a561cc68e133fefbe3d2ee9495d92880120eca4",
+      "checksPassed": 12,
+      "checksFailed": 0,
+      "source": "92h_kU8O58M",
+      "qualityBefore": "136",
+      "qualityAfter": "134",
+      "nativePanelRemainedHidden": true,
+      "nativeAction": "Plugin > Hide Plugins Panel",
+      "afterQualityMenu": "Show Plugins Panel",
+      "timeRange": "2026-11-08 19:44:15–19:44:22 UTC",
+      "qualification": "Independently read JSON; native screenshot visual result reported by operator. Earlier pixel probe minimized an owned QA window and is superseded by the explicit native-menu action."
+    }
+  },
+  "nativeSidebarLimitation": "IINA 1.5.1 exposes no reliable plugin-sidebar visibility query/event. Explicit Streams Hide/Off and teardown control resource cleanup; native outer collapse automatic cleanup is not claimed.",
+  "previousSizingJavascript": {
+    "command": "node --test tests/*.test.js tests_candidate/*.test.js",
+    "passed": 102,
+    "failed": 0,
+    "durationMilliseconds": 5961.833394,
+    "playerSha256": "71e241c252b5cc80f0fd68b55df1ef51e32c7ccb2e2723c41ef5c3c6865787ef",
+    "qualification": "Working copy, before root's native retest of bounded sizing; Python helper changes continue separately"
+  },
+  "nativeTimerVerification": {
+    "threeActualPlayerRegressionsFailedBefore": true,
+    "factoryTestsPassed": 7,
+    "hostRetentionTestsPassed": 3,
+    "globalAuthTimerTestPassed": 1,
+    "nativeMemoryDeltaMeasured": false
+  },
+  "latestFocusedHelperReport": {
+    "command": "python3 -m unittest tests_candidate.test_acquire tests_candidate.test_runner tests_candidate.test_replay tests_candidate.test_publication",
+    "passed": 50,
+    "elapsedSeconds": 11.172,
+    "publicationRaceFixed": true,
+    "evidence": "evidence/tests/chat-helper-final-review.json",
+    "qualification": "Reported focused review, not an independently rerun full Python suite"
+  },
+  "rootApolloSuiteBeforeProtocolChange": {
+    "javascriptPassed": 120,
+    "pythonPassed": 97,
+    "qualification": "Historical operator-reported 120/97 run before the serialized/deferred auth protocol; superseded as the final source count by independently read 143/103 release logs.",
+    "supersededAsFinalCountBy": "latestIndependentlyReadReleaseTests: 143 JavaScript / 103 Python"
+  },
+  "preservationInterim": {
+    "document": "docs/PRESERVATION-AUDIT.md",
+    "observedAt": "2026-11-08T18:30:01Z",
+    "originalCheckoutsCleanAndUnchanged": true,
+    "originalPluginTargetsAndSelectedEnablementUnchanged": true,
+    "iinaVersion": "1.5.1",
+    "iinaBuild": 183,
+    "qaInstalledAndEnabled": true,
+    "finalPostCleanupCheck": "Completed later: final-preservation-snapshot.json, 20:56–20:59 UTC. This object retains the earlier QA-present snapshot only.",
+    "qualification": "Independent state reviewer report read; manifest/version scope, not full app or plugin directory fingerprints",
+    "latestObservedAt": "2026-11-08T19:13:22Z",
+    "sixOriginalManifestHashesUnchanged": true,
+    "qaManifestChangedWithAuthorizedBuild": true
+  },
+  "nativeTimerJavascript": {
+    "command": "node --test tests/*.test.js tests_candidate/*.test.js",
+    "passed": 120,
+    "failed": 0,
+    "durationMilliseconds": 5907.789525,
+    "playerSha256": "e0c1e86e7923c8d8490b428e1db1bdfd397c664eea992176fc72662c4f166a3e",
+    "globalSha256": "d2ad7b6b1fa7afabb844b9df18961f4d28c23ffb0bbb624b663da3c8b0b3d4e8",
+    "timersSha256": "5665dd6421dcb37577b6967b9ddeccb7a9b37a9e7235228c494b45a0ca7d7402",
+    "qualification": "Working-copy verification after deferred auth binding and native timer cleanup; native final rebuilt-package checks remain separate"
+  },
+  "authWireReview": {
+    "maximumCharacters": 8192,
+    "deferredNumericPrimitive": true,
+    "managedTargetGuard": true,
+    "perChildSessionGuard": true,
+    "readyAudienceAndCurrentTokenGuards": true,
+    "twoChildForgetRaceReproducedAndFixed": true,
+    "nativeProductionSuccess": "No-client delivery observed in Focus QA at 19:05:02.995Z"
+  },
+  "nativeCrashRecord": {
+    "path": "evidence/native/native-crash-observations.json",
+    "currentDayJscSweepUtc": "2026-11-08T18:41:33Z",
+    "currentDayAutoreleaseUtc": "2026-11-08T18:04:19Z",
+    "historicalSidebarReportDate": "2026-11-07",
+    "causality": "Unproved; do not classify historical record as a new candidate-run crash or infer root cause from timing"
+  },
+  "apolloFinalCoreLogs": {
+    "javascript": {
+      "path": "evidence/tests/node-final-core.txt",
+      "passed": 128,
+      "failed": 0,
+      "durationMilliseconds": 5447.333541,
+      "sha256": "0055d8b557ee6cc9019dc5a59978ec9f24911838735d4a55158de4b2a725d7dd"
+    },
+    "python": {
+      "path": "evidence/tests/python-final-core.txt",
+      "passed": 97,
+      "elapsedSeconds": 11.951,
+      "sha256": "12147666f8adb3eeda1146a08483d9eff56f7c3d9bbc8c5255b226031da0b7e5"
+    },
+    "qualification": "Independently read machine-side logs after wire fix, before subsequent one-line session-warning change"
+  },
+  "latestFocusedWarningVerification": {
+    "command": "node --test tests_candidate/player-auth-binding.test.js tests_candidate/auth.test.js tests_candidate/global.test.js tests_candidate/player-lifecycle-review.test.js",
+    "passed": 54,
+    "failed": 0,
+    "durationMilliseconds": 534.490402,
+    "newRegressionFailedBefore": true,
+    "playerSha256": "e84c2d6dd3927c8451d83c26930e308422bfc1348da42fe072ed6936f5849c3a",
+    "testSha256": "f8849fa794769d33b54d5442d4080a88db619196f3acb36a6d17e9e2082c3acf",
+    "qualification": "Normal progress retains session-only warning, with transport errors taking precedence; recovery/success/Off covered. Included in final R2 code and final passing source suite; actual successful persistence remains unverified."
+  },
+  "nativeKeychain": {
+    "path": "evidence/native/keychain-native-probe.json",
+    "sha256": "7c941932d3f9b0ab0a37e69d74b14ebec306a9bfaa189832ff3893107760a6f1",
+    "wrote": false,
+    "matched": false,
+    "cleared": false,
+    "cleanupExitCode": 44,
+    "qualification": "Dummy noncredential only, SecurityAgent interaction; native persistent-storage probe failed, real credential persistence unverified; no real user credential read/changed"
+  },
+  "resourceSamplerValidation": {
+    "document": "docs/RESOURCE-METHODOLOGY.md",
+    "pid": 75148,
+    "elapsedSeconds": 8.063,
+    "sampleCount": 4,
+    "queryErrors": 0,
+    "unattributedWebKitProcesses": 14,
+    "unattributedWorkersExcluded": true,
+    "networkMeasured": false,
+    "qualityChangeOverlap": "focus-final-fullscreen-quality-360.json at19:12:26–31 within sample19:12:24–32",
+    "qualification": "Sampler/parser validation only; uncontrolled replacement interval, incomplete worker attribution; no comparative, steady-state, timer-RSS, battery, or leak claim"
+  },
+  "currentRecommendation": "Accept Unified and Focus for conditional candidate evaluation; defer stable promotion. Final R2 installed-byte, ordinary Fetch, bounded lifecycle, UI/Off and scoped preservation checks are complete. Retain real grant/IRC and genuine Twitch archive as external gates, failed/unverified Keychain persistence, unmeasured long-session/accessibility/total-efficiency scope, historical incidents and unexplained final Safari inventory discrepancy.",
+  "latestApolloReleaseCore": {
+    "path": "evidence/tests/node-release-core.txt",
+    "passed": 137,
+    "failed": 0,
+    "durationMilliseconds": 5464.486542,
+    "sha256": "71f3694f86a517b91ffee0a3070e4e2f40bfdd5645c444207092e22cc5bac1a7",
+    "writtenUTC": "2026-11-08T19:36:56Z",
+    "qualification": "Independently read after warning/native-sidebar/follow corrections; normal archive acceptance separate",
+    "supersededAsFinalCountBy": "latestIndependentlyReadReleaseTests: 143 JavaScript / 103 Python"
+  },
+  "latestSidebarContinuityFix": {
+    "passed": 45,
+    "failed": 0,
+    "durationMilliseconds": 5473.938253,
+    "failingRegressionsBefore": 2,
+    "playerSha256": "61d2eee688a6c5974b6412c99d20986df89c6ec36b9371cde94423375174f619",
+    "testSha256": "ae2fc221b289535f59ff5fd7bc079af032493cfd04c4d6b5aa3105e2b938a7b5",
+    "behavior": "Quality generation>0 no longer forces sidebar show; initial/window-loaded/explicit Show retained",
+    "qualification": "Included in137-test full run and later twelve-check native Focus quality+outer-panel-collapse record; normal installed package separate"
+  },
+  "builderSecurityReview": {
+    "document": "docs/CHAT-AND-HELPER-AUDIT.md",
+    "passed": 20,
+    "failed": 0,
+    "failingAssertionsBefore": 5,
+    "sha256": "f93e3219ec054b767d1e1e65781e5b38bc2d4dde62d7bdd9b537042b54a0646b",
+    "qualification": "Reviewer execution/doc independently read; linked/foreign-output overwrite fixed. Final R2 installation and 25-file archive-byte match are now independently recorded for both candidates."
+  },
+  "controlledResourcesInterim": {
+    "variant": "unified",
+    "conditionsPath": "evidence/resources/unified-conditions.json",
+    "conditionsSha256": "332a6657490b1bab465433349ab1b65c2e4cf97b9b91f60d9608e164705b1784",
+    "warmupSeconds": 20,
+    "samplesPerMode": 10,
+    "sampleDurationSecondsApprox": 20,
+    "reportedRootProcessMedianCpuPercent": {
+      "off": 7.3,
+      "sidebar": 7.9,
+      "overlay": 13.95
+    },
+    "reportedRootProcessMedianRssMiB": {
+      "off": 174.297,
+      "sidebar": 178.328,
+      "overlay": 184.312
+    },
+    "unattributedWebKitProcesses": 15,
+    "qualification": "Historical Unified-only resource cutoff. Completed six-run analysis is in resourceFinalReview. Main-process-only scope excludes unattributed WebKit and supports no total efficiency or energy inference."
+  },
+  "preservationException": {
+    "kind": "unrelated Safari window resized during optional comparison setup",
+    "reportedBy": "Native operator; saved cleanup and final inventory independently reviewed",
+    "affectedWindowId": 55998,
+    "preExistingTabCount": 3,
+    "reportedBoundsWritten": [
+      140,
+      140,
+      1420,
+      940
+    ],
+    "ownedComparisonWindowId": 56467,
+    "priorBoundsRecorded": false,
+    "exactRestorationVerified": false,
+    "recoveryOwner": "Native operator",
+    "qualification": "Earlier cleanup at 19:34 recorded the original window with three tabs and approximate bounds. Final 20:57 read-only inventory differs; the original tabs are not certified preserved. Cause and attribution are unknown, and exact prior geometry remains unknown.",
+    "ownedWindowReportedClosed": true,
+    "affectedWindowReportedApproximateRestore": [
+      0,
+      34,
+      1688,
+      1107
+    ],
+    "cleanupRecordSha256": "b3e16655cdea1adc433f318f9e1ee5c72b3e261fc9b3d8517065e94fb463f00d",
+    "cleanupUTC": "2026-11-08T19:34:13.115469Z",
+    "reportedTabsNavigatedOrClosedAtEarlierCleanup": false,
+    "finalInventory": {
+      "timeRangeUTC": [
+        "2026-11-08T20:57:38.627467Z",
+        "2026-11-08T20:57:38.818380Z"
+      ],
+      "safariPID": 57089,
+      "windowID": 56800,
+      "tabCount": 1,
+      "bounds": [
+        139,
+        139,
+        1419,
+        939
+      ],
+      "earlierWindowPresent": false,
+      "originalTabPreservationVerified": false,
+      "causeAndAttribution": "unknown",
+      "operatorReportsNoSafariActionsAfterEarlierCleanup": true
+    }
+  },
+  "observedCheckpointReadUTC": "2026-11-08T19:34:44Z",
+  "latestApolloPythonReleaseCore": {
+    "path": "evidence/tests/python-release-core.txt",
+    "passed": 103,
+    "failed": 0,
+    "elapsedSeconds": 12.161,
+    "sha256": "69fe74f053933767a661257d05a5adbfa7a95283342f257ab5e1c19fa45dbd87",
+    "writtenUTC": "2026-11-08T19:37:09Z"
+  },
+  "latestSidebarFollowFix": {
+    "reportedBy": "chat_research reviewer",
+    "source": "candidate-plugin/ui/sidebar.js",
+    "sha256": "40d5c2259f00915cd93187406b3169ff06a95fc371b04c4ea985accc9b8feff5",
+    "tests": "tests_candidate/sidebar-follow.test.js",
+    "failingAssertionsBefore": 4,
+    "newTestsPassed": 6,
+    "combinedTestsPassed": 8,
+    "qualification": "Included in137-test full run; fresh native Focus render check five passes including follows-latest; real manual scrolling remains separately scoped"
+  },
+  "browserComparison": {
+    "attempted": true,
+    "matchedBenchmarkEstablished": false,
+    "reason": "Safari JavaScript inspection disabled and media quality/codec not verified; no preferences altered to bypass that boundary",
+    "efficiencyOrEnergyClaimAllowed": false
+  },
+  "previousApolloReleaseCore": {
+    "path": "evidence/tests/node-release-core.txt",
+    "passed": 129,
+    "failed": 0,
+    "durationMilliseconds": 5473.366292,
+    "sha256": "3f518d875f9a9ad34083cb304787db823273b7d32f552532600dc4e0fc90fc1f",
+    "qualification": "Independently read after warning fix, before native-sidebar correction; active log may be regenerated"
+  },
+  "resourceFinalReview": {
+    "document": "docs/RESOURCE-RESULTS.md",
+    "documentSha256": "15061fbf38e685d6816ffe15755532f0ec3a3ea1c47bf48a17294d619f5f51c6",
+    "summary": "evidence/resources/resource-summary.json",
+    "summarySha256": "d158e04cf9710fa96b94da052579cbb3bc5b9acb7f49dcaeedb54802ce98df13",
+    "runs": 6,
+    "samples": 60,
+    "samplesPerRun": 10,
+    "queryErrors": 0,
+    "conditionsAndHashesMatch": true,
+    "bothFinalOffCleared": true,
+    "rootMedianCPUPercent": {
+      "unified": [
+        7.3,
+        7.9,
+        13.95
+      ],
+      "focus": [
+        6.45,
+        8.1,
+        8.65
+      ]
+    },
+    "rootMedianRSSMiB": {
+      "unified": [
+        174.297,
+        178.328,
+        184.312
+      ],
+      "focus": [
+        114.516,
+        127.359,
+        97.672
+      ]
+    },
+    "modeOrder": [
+      "off",
+      "sidebar",
+      "overlay"
+    ],
+    "qualification": "Report independently read; analysis by resource reviewer; root process only, WebKit15vs16–17unattributed; evolvingQA builds, sequential modes,400ms polling and system variance; no winner/Safari/energy/leak claim"
+  },
+  "evidenceAppendix": "docs/EVIDENCE-APPENDIX.md",
+  "nativeCycleIncident": {
+    "log": "evidence/native/focus-native-cycles.log",
+    "intendedCycles": 10,
+    "completedPassingCycles": 1,
+    "nextCycle": "anchor snapshot timeout",
+    "anchor": "92h_kU8O58M",
+    "child": "hutchmf",
+    "childCreatedUTC": "2026-11-08T19:45:54.240Z",
+    "anchorClosedUTC": "2026-11-08T19:45:56.807Z",
+    "childLoadedUTC": "2026-11-08T19:45:57.103Z",
+    "childClosedUTC": "2026-11-08T19:45:59.532Z",
+    "appRemainedAliveReported": true,
+    "appCrashClaim": false,
+    "productionCloseStopCallFound": false,
+    "qaExplicitStopCommandExists": true,
+    "axInvocationTimesRecorded": false,
+    "cause": "unconfirmed",
+    "nextGate": "bounded ordinary-menu isolation/retest; preserve failed partial evidence",
+    "sourceConstraint": "native windowWillClose stops player before plugin event, then candidate teardown removes listeners; absence of later end-file does not identify initiator"
+  },
+  "nativeMenuTrackingObservation": {
+    "sampleUTC": "2026-11-08T20:26:16.229Z",
+    "pid": 5853,
+    "mainThreadSamples": 86,
+    "menuTrackingPathSamples": 86,
+    "record": "evidence/native/native-menu-tracking-observation.json",
+    "recordSha256": "b3cb8254077fe27e96ed9efb52f5f2e3bb526fcc2868b0be7b299094cc6a3cbd",
+    "privateSampleSha256": "c33ebfbb90bf7c33e2a5c4a5418f0c5795a8d5b522d4dc0cd6c9beb7eec71ce7",
+    "savedRecoveryRecordsIndependentlyRead": true,
+    "recoveryProven": false,
+    "classification": "Accessibility menu action inside AppKit menu tracking/event wait; not a crash report or demonstrated candidate playback deadlock",
+    "harnessCorrection": "Exact retained AXMenu AXCancel with one bounded owned-menu failure cleanup. AXCancel acceptance did not recover earlier PID 5853; fresh R2 normal batches passed six Focus and five Unified cycles.",
+    "subsequentFreshFocusNormalCyclesPassed": 6,
+    "subsequentFreshUnifiedNormalCyclesPassed": 5,
+    "historicalAttemptCompleted": false,
+    "subsequentFreshNormalLifecycleCompleted": true
+  },
+  "expandedCrashRecord": {
+    "record": "evidence/native/native-crash-observations.json",
+    "sha256": "ed14d76275d374709e5072e58b7223e0c3ebff4d2de63ea955c20edcc09e72f1",
+    "reports": 5,
+    "latestPid": 40519,
+    "latestCaptureUTC": "2026-11-08T19:56:22.017Z",
+    "latestType": "EXC_BREAKPOINT/SIGTRAP, SIGNAL5; native More handler via Accessibility",
+    "separateFromMenuTrackingSample": true,
+    "sourceHypothesisProven": false
+  },
+  "latestIndependentlyReadReleaseTests": {
+    "javascript": {
+      "path": "evidence/tests/node-final-follow.txt",
+      "passed": 143,
+      "failed": 0,
+      "durationMilliseconds": 5467.983667,
+      "sha256": "491fba5bd52c9b4926dd4d4d9044a26c48defd3f0817189794c39182ff1618d6"
+    },
+    "python": {
+      "path": "evidence/tests/python-final-follow.txt",
+      "passed": 103,
+      "failed": 0,
+      "durationSeconds": 12.456,
+      "sha256": "7c376d541fd8fd4ec176e04fb6e6c362b4029e794c53c961d4dff9d31feb06ea"
+    }
+  },
+  "r2NativePackage": {
+    "path": "evidence/native/package-acceptance-r2.json",
+    "sha256": "a7aa8e033cedef2b8dc9df8123be30f8d293e8b4ee055a52994817b6bb581580",
+    "timeUTC": "2026-11-08T20:31:31.549126Z",
+    "codeCommit": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+    "qaRetired": true,
+    "variants": [
+      {
+        "variant": "unified",
+        "archiveSha256": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+        "fileCount": 25,
+        "installedByteMatch": true,
+        "enabled": true,
+        "qaFalse": true,
+        "noQAHarness": true,
+        "permissionConfirmationObserved": false
+      },
+      {
+        "variant": "focus",
+        "archiveSha256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24",
+        "fileCount": 25,
+        "installedByteMatch": true,
+        "enabled": true,
+        "qaFalse": true,
+        "noQAHarness": true,
+        "permissionConfirmationObserved": true
+      }
+    ],
+    "limit": "Unified permission sheet existed but its confirmation action was unobserved after an AppleScript condition error. Final functional/lifecycle observations are separate.",
+    "lastUpdatedUTC": "2026-11-08T20:57:53.784616Z",
+    "normalMenuPlaybackPending": false
+  },
+  "nativePreviousArchiveRemoval": {
+    "independentlyReadSavedRecords": true,
+    "bothCandidateNamedConfirmations": true,
+    "bothRowsAbsent": true,
+    "bothInstalledFoldersAbsent": true,
+    "records": [
+      {
+        "path": "evidence/native/unified-native-uninstall.json",
+        "sha256": "a80f58253716bcc4e3d72f161c5a482498c2bb86f3f51dee6fce60ad6b6020fb"
+      },
+      {
+        "path": "evidence/native/focus-native-uninstall.json",
+        "sha256": "5f2bbaf832ee0ffd730f6e6b0c5afcdeb925a20d07fda4bf6755b15c7bf3608e"
+      }
+    ],
+    "limit": "Removal of the preceding normal candidate installs, not mislabeled as removal of the newly installed R2 bytes."
+  },
+  "focusR2NormalLifecycle": {
+    "pid": 55428,
+    "passedCycles": 6,
+    "checksPerCycle": 11,
+    "sameAXAnchorIdentity": true,
+    "frame": [
+      535,
+      391,
+      640,
+      360
+    ],
+    "nativePausedItem": "Resume",
+    "passedRecords": [
+      "evidence/native/focus-r2-normal-cycle-smoke.json",
+      "evidence/native/focus-r2-normal-cycles-batch1.json"
+    ],
+    "allShortAXWindowsTimeoutsRecoveredBySingleReadRetry": true,
+    "limit": "Ordinary YouTube new-child cycles only; does not resolve the earlier mixed Twitch QA anchor closure, JSC crashes, or exact clock/decoded-media continuity."
+  },
+  "focusR2NormalFetchUI": {
+    "path": "evidence/native/focus-r2-after-fetch-native-ui.json",
+    "sha256": "e9a3d6631202d7ac98790b9ca814a78cb0aedfcc3f25221529c1ee28db6b5dac",
+    "timeUTC": "2026-11-08T20:33:34Z",
+    "pid": 55428,
+    "windowMatches": 1,
+    "nativeClockText": "01:34",
+    "replayLabelObserved": true,
+    "importedMessageCount": 693,
+    "limit": "Final normal UI evidence complements earlier51-check QA timeline tests; it does not itself rerun those mpv assertions."
+  },
+  "finalDisposition": {
+    "unified": "Accept for conditional candidate evaluation",
+    "focus": "Accept for conditional candidate evaluation",
+    "stablePromotion": "Not authorized; deferred",
+    "sourceTests": {
+      "javascriptPassed": 143,
+      "pythonPassed": 103
+    },
+    "normalOrdinaryYouTubeCycles": {
+      "focusBatch": 5,
+      "unifiedBatch": 5,
+      "additionalFocusSmoke": 1,
+      "total": 11,
+      "checksPerCycle": 11
+    },
+    "deferredClaims": [
+      "Real Twitch read-only grant and IRC session",
+      "Successful persistent credential storage",
+      "Genuine Twitch archived replay provenance/end-to-end test",
+      "Long-session stability, complete accessibility coverage, total-app efficiency or battery savings"
+    ],
+    "earlierIncidentsRetained": true,
+    "finalNormalStillsMatchedInTime": false,
+    "earlierMatchedQAStillsTimeSeconds": 120,
+    "sourceReleaseCommit": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+    "finalNormalWorkflowAcceptedBoth": true,
+    "stableInstalled": false,
+    "originalProjectPluginPreservationVerifiedWithinScope": true,
+    "currentSafariOriginalTabsPreserved": "Unverified; final inventory differs from earlier cleanup, cause unknown",
+    "independentlyAchievableNativeWorkRemaining": false,
+    "focusInspectorAndOverlayCapturedSeparately": true
+  },
+  "unifiedR2NormalLifecycle": {
+    "record": "evidence/native/unified-r2-normal-cycles-batch1.json",
+    "sha256": "9f79273555932f3387349c7a2ebcfe9b8db541f84de9d321350588ff55793256",
+    "pid": 55428,
+    "passedCycles": 5,
+    "checksPerCycle": 11,
+    "frame": [
+      140,
+      100,
+      1280,
+      720
+    ],
+    "nativePausedItem": "Resume",
+    "timeUTC": [
+      "2026-11-08T20:41:45.132Z",
+      "2026-11-08T20:42:20.282Z"
+    ],
+    "allPassed": true
+  },
+  "unifiedR2NormalFetchUI": {
+    "actionRecord": "evidence/native/unified-r2-normal-fetch-action.json",
+    "actionSha256": "9e844861c29e8b9f30197c2a050bb74846248bc0c258ba310f382f2a05647645",
+    "actionAXResult": 0,
+    "uiRecord": "evidence/native/unified-r2-after-fetch-native-ui.json",
+    "uiSha256": "2394101a2bbd86665baef60629fa708d94784101284056649aa84a77007fa588",
+    "timeUTC": "2026-11-08T20:41:11Z",
+    "pid": 55428,
+    "windowMatches": 1,
+    "replayLabelObserved": true,
+    "importedMessageCount": 693,
+    "latestButtonPresent": false
+  },
+  "initialAuditRecordedAt": "2026-11-08T17:52:36Z",
+  "evidenceCutoffUTC": "2026-11-08T20:59:14.348129Z",
+  "initialIndependentTests": [
+    {
+      "command": "node --test tests/*.test.js tests_candidate/*.test.js",
+      "passed": 82,
+      "failed": 0,
+      "durationMilliseconds": 742.124296
+    },
+    {
+      "command": "python3 -m unittest discover -s tests_candidate -p 'test_*.py'",
+      "passed": 55,
+      "failed": 0,
+      "durationSeconds": 8.836
+    }
+  ],
+  "historyQualification": "Earlier named interim/source records preserve their original execution cutoffs. Current disposition and latestIndependentlyReadReleaseTests govern the final status; later native evidence does not retroactively turn earlier failures into passes.",
+  "unifiedR2FinalRender": {
+    "path": "evidence/native/unified-r2-render-check.json",
+    "sha256": "f35fd16d222ce802dcbfeebe04640898a817a6e6a1f5376b4366ebf96270c6dd",
+    "checksPassed": 5,
+    "checksFailed": 0,
+    "messageRows": 12,
+    "genuineArchiveMessages": 693,
+    "latestButtonPresent": false,
+    "lastRowFullyWithinViewport": true
+  },
+  "unifiedR2FinalOff": {
+    "path": "evidence/native/unified-r2-off-check.json",
+    "sha256": "6e84c488018d1b6adaa2c12f2bcdc2c4b38f294c8c87806cc91f8f0c0179cecf",
+    "checksPassed": 5,
+    "checksFailed": 0,
+    "nativeActionAXResult": 0,
+    "resumeReplayAvailable": true,
+    "renderedMessageRows": 0,
+    "activeReplayControlsHidden": true,
+    "selected720pH264Unchanged": true,
+    "qualification": "Initial aggregations expected a literal Off status and used an incorrect result key; preserved initial-assertion records are superseded by checks of intended UI and observed AXResult. Native action was not repeated."
+  },
+  "finalOwnedWindowClose": {
+    "pid": 55428,
+    "bothTargetsAbsent": true,
+    "allOtherNativeWindowIdentitiesPreserved": true,
+    "directCloseButtonAXWindowMatchedTarget": true,
+    "records": [
+      {
+        "variant": "focus",
+        "path": "evidence/native/focus-r2-confirmed-close.json",
+        "sha256": "458b592a2f93018f8e4749177580888a85df934599bcc1dfd9de4af4dfe20b8a",
+        "timeUTC": "2026-11-08T20:40:16Z"
+      },
+      {
+        "variant": "unified",
+        "path": "evidence/native/unified-r2-confirmed-close.json",
+        "sha256": "488630f420f02a7962113595bdeed57f0d29657de71c87581ebeee5ddf52a88a",
+        "timeUTC": "2026-11-08T20:54:44Z"
+      }
+    ]
+  },
+  "finalPreservation": {
+    "path": "evidence/native/final-preservation-snapshot.json",
+    "sha256": "77984ba394920cbce20c9b5b9d6e9d614eaad8ad41aa11a050b0758b445033ad",
+    "document": "docs/PRESERVATION-AUDIT.md",
+    "documentSha256": "201ece6c82026d722eda0f609e6a07afbe89b9c076d7d2a00c4d338e11071581",
+    "timeRangeUTC": [
+      "2026-11-08T20:56:37.391658Z",
+      "2026-11-08T20:59:14.348129Z"
+    ],
+    "originalRepositoriesCleanAtBaseline": true,
+    "sixOriginalManifestHashesAndSelectedEnablementMatch": true,
+    "originalSymlinkTargetsMatch": true,
+    "iinaVersion": "1.5.1",
+    "iinaBuild": 183,
+    "bothR2InstalledFilesMatch25Each": true,
+    "qaAbsent": true,
+    "stableAbsent": true,
+    "inactiveQADataRetained": true,
+    "iinaPID": 55428,
+    "nativeInitialWindowControlsVerified": true,
+    "iinaDescendants": 0,
+    "namedOwnedQAOrExtractorProcesses": 0,
+    "predatingUnrelatedPythonLeftUntouched": true,
+    "newerIinaCrashReportAfter195625Found": false,
+    "safariOriginalTabPreservationVerified": false,
+    "limits": [
+      "No full app-bundle or every-global-preference fingerprint",
+      "PPID-1 WebKit workers remain unattributed",
+      "Candidate documentation/evidence checkout was not clean at snapshot; final packaging is separate",
+      "No attribution of changed Safari inventory",
+      "No absence-of-failure or long-session stability guarantee"
+    ]
+  },
+  "finalNormalCaptures": {
+    "independentlyViewed": true,
+    "normalStillsTimeMatched": false,
+    "focusInspectorAndOverlayDeliberatelySeparate": true,
+    "files": [
+      {
+        "path": "evidence/native/unified-r2-sidebar.png",
+        "sha256": "0e39c5c84492b8dddb6d7906dac830a7f593fcd7a5f3a63300af8dddc9e7be09"
+      },
+      {
+        "path": "evidence/native/focus-r2-inspector.png",
+        "sha256": "9540fa8631a7d04c2b2281cd21a9a71e6d2e5fb6bda5f5e4a5fff6b8ff77e7d9"
+      },
+      {
+        "path": "evidence/native/focus-r2-overlay.png",
+        "sha256": "65867acbbaf31d43e8cfa7e06b9382782b0687dda0d1047ec817a3cec09a97e5"
+      }
+    ],
+    "exportProvenanceLedger": "evidence/native/capture-provenance.json",
+    "jpegExportCount": 10,
+    "originalPNGsRetainedOnApollo": true,
+    "exportMethodReported": "New sips JPEG quality 85, maximum dimension 1800, no edit/crop; two existing Focus final-render JPEGs unchanged",
+    "earlierMatchedQAStillsSeconds": 120
+  },
+  "auditDocuments": {
+    "docs/COMMISSION-AUDIT.md": {
+      "sha256": "4dc1abd3743431e9bf241dbccde44de03f620a5a0f5896769c6224431de32ca4",
+      "bytes": 107896
+    },
+    "docs/EVIDENCE-APPENDIX.md": {
+      "sha256": "0a9b3a1fec7050669e831ac66c58cd6b1e23138e7a765ac98db4ab6da732370d",
+      "bytes": 37614
+    }
+  },
+  "buildReproducibility": {
+    "recordedUTC": "2026-11-08T21:15:46.078956+00:00",
+    "scope": "Post-export build-tool and regression correction; no installed candidate or native runtime changes",
+    "finding": "Fresh standalone Linux build differed only in generated src/embedded-helpers.js JSON key order; parsed helper data was identical",
+    "publishedHelperOrder": [
+      "runner",
+      "media",
+      "acquire",
+      "replay"
+    ],
+    "observedGlobOrder": [
+      "runner",
+      "replay",
+      "media",
+      "acquire"
+    ],
+    "regression": "BuildTests.test_isolated_ids_reproducibility_and_no_autostart exercises forward/reverse Path.glob enumeration",
+    "failureBeforeFix": 1,
+    "fix": "Known helper rank in published order, followed by filename ordering for future helpers",
+    "reportedFocusedVerification": {
+      "passed": 20,
+      "failed": 0,
+      "durationSeconds": 1.101,
+      "scope": "Focused build/install tests"
+    },
+    "freshStandaloneArchiveHashesMatchPublishedR2": true,
+    "archiveHashes": {
+      "unified": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+      "focus": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24"
+    },
+    "runtimeSourceCommitUnchanged": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+    "releaseSuiteCountsUnchanged": {
+      "javascript": 143,
+      "python": 103
+    },
+    "installedBytesUnchanged": true,
+    "nativeClaimsUnchanged": true,
+    "evidence": [
+      "evidence/tests/build-reproducibility-closeout.json",
+      "evidence/tests/python-build-reproducibility.txt"
+    ],
+    "verificationAttribution": "Build operator report; not an independent rerun by this auditor",
+    "buildToolTestDocumentationCommit": "Separate handoff manifest"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "timeUTC": "2026-11-08T20:25:53.425599+00:00",
+  "ownedTestPID": 5853,
+  "terminationRequestedVia": "NSRunningApplication.terminate",
+  "PIDsAfterRequest": [
+    "5853"
+  ],
+  "latestCrashReport": "IINA-2026-11-08-145625.ips"
+}

@@ -1,0 +1,83 @@
+{
+  "pid": 40519,
+  "records": [
+    {
+      "cycle": 1,
+      "source": "hutchmf",
+      "elapsedSeconds": 7.3702960829999995,
+      "checks": {
+        "videoDecoded": true,
+        "audioDecoded": true,
+        "chatOff": true,
+        "noActiveHelpers": true,
+        "windowCloseDelivered": true,
+        "anchorUnchanged": true,
+        "sameAppProcess": true
+      },
+      "decoded": {
+        "position": 1.083,
+        "duration": 6.105999999999767,
+        "paused": true,
+        "speed": 1,
+        "width": 1280,
+        "height": 720,
+        "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "videoFps": 59.940059661865234,
+        "droppedFrames": 0,
+        "audioCodec": "aac",
+        "audioRate": 48000,
+        "playlistCount": 1,
+        "idle": false,
+        "seeking": false,
+        "pausedForCache": false,
+        "cacheBuffering": 100,
+        "fullscreen": false,
+        "frame": {
+          "y": 356,
+          "x": 535,
+          "width": 640,
+          "height": 360
+        },
+        "hwdec": "videotoolbox-copy",
+        "activeHelpers": []
+      },
+      "lastTrace": [
+        {
+          "phase": "sidebar-document-visibility",
+          "time": "2026-11-08T19:45:50.644Z",
+          "variant": "focus",
+          "sourceId": "hutchmf",
+          "visible": true
+        },
+        {
+          "phase": "state-restored",
+          "time": "2026-11-08T19:45:51.212Z",
+          "variant": "focus",
+          "sourceId": "hutchmf",
+          "generation": 0,
+          "paused": false,
+          "speed": 1,
+          "requestedPosition": 0
+        },
+        {
+          "phase": "chat-off",
+          "time": "2026-11-08T19:45:52.761Z",
+          "variant": "focus",
+          "sourceId": "hutchmf"
+        },
+        {
+          "phase": "window-closed",
+          "time": "2026-11-08T19:45:52.762Z",
+          "variant": "focus",
+          "sourceId": "hutchmf"
+        }
+      ]
+    }
+  ],
+  "completedCycles": 1,
+  "allPassed": false,
+  "provenance": "Five real Twitch live and five ordinary YouTube opens; each exact owned window closed through native AXCloseButton. No unrelated window/process closed.",
+  "plannedCycles": 10,
+  "complete": false,
+  "interruption": "Paused anchor closed during second child open. App40519 remained alive; no new crash report observed. Exact cause pending investigation."
+}

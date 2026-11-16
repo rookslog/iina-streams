@@ -1,0 +1,4789 @@
+{
+  "provenance": "Public YouTube ended livestream 92h_kU8O58M; authentic yt-dlp chat replay, not synthetic",
+  "fetchButtonTested": true,
+  "checks": {
+    "beginning-bounded": true,
+    "beginning-no-future": true,
+    "beginning-exact-rows": true,
+    "forward-120-bounded": true,
+    "forward-120-no-future": true,
+    "forward-120-exact-rows": true,
+    "forward-3600-bounded": true,
+    "forward-3600-no-future": true,
+    "forward-3600-exact-rows": true,
+    "backward-120-bounded": true,
+    "backward-120-no-future": true,
+    "backward-120-exact-rows": true,
+    "near-end-bounded": true,
+    "near-end-no-future": true,
+    "near-end-exact-rows": true,
+    "backward-300-bounded": true,
+    "backward-300-no-future": true,
+    "backward-300-exact-rows": true,
+    "paused-before-bounded": true,
+    "paused-before-no-future": true,
+    "paused-before-exact-rows": true,
+    "paused-after-bounded": true,
+    "paused-after-no-future": true,
+    "paused-after-exact-rows": true,
+    "pause-clock": true,
+    "pause-rows": true,
+    "rate-0.5-before-bounded": true,
+    "rate-0.5-before-no-future": true,
+    "rate-0.5-before-exact-rows": true,
+    "rate-0.5-playing-bounded": true,
+    "rate-0.5-playing-no-future": true,
+    "rate-0.5-clock": true,
+    "rate-0.5-paused-bounded": true,
+    "rate-0.5-paused-no-future": true,
+    "rate-0.5-paused-exact-rows": true,
+    "rate-2-before-bounded": true,
+    "rate-2-before-no-future": true,
+    "rate-2-before-exact-rows": true,
+    "rate-2-playing-bounded": true,
+    "rate-2-playing-no-future": true,
+    "rate-2-clock": true,
+    "rate-2-paused-bounded": true,
+    "rate-2-paused-no-future": true,
+    "rate-2-paused-exact-rows": true,
+    "offset-plus-30-bounded": true,
+    "offset-plus-30-no-future": true,
+    "offset-plus-30-exact-rows": true,
+    "restored-120-bounded": true,
+    "restored-120-no-future": true,
+    "restored-120-exact-rows": true,
+    "genuine-count": true
+  },
+  "records": [
+    {
+      "label": "beginning",
+      "clock": 0,
+      "expectedIds": [
+        "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+        "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+        "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+        "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+        "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+        "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+        "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+        "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+        "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+        "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+        "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+        "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+        "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+        "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "yay",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "im happy",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@TheLikeys",
+              "text": "See you in \u201815",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "wait im gonna miss it cuss diner",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "its never a bad idea:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "still fiiiiiiiiiine",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "is it gonna be LLM related?",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "we'll see!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+              "time": 0,
+              "author": "@mpanganiban",
+              "text": "a bad idea? is it vibe coding",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "i bet it might be related to the recent podcast he did",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "honestly there is almost no plan here, it's more of a hello, here is my fall schedule and what i want to cover and some Q&A",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "plus maybe a suprise weird demo",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+              "time": 0,
+              "author": "@dipamsen",
+              "text": ":eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "might be related to AI hosts or something",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "cant wait for the demo bit",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "and would love to see you getting creative with AI, been missing you with new stuff:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+              "time": 0,
+              "author": "@Umbra451",
+              "text": "He has risen!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "hi everyone!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "of course all my audio suddenly stopped working",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "it wouldn't be a proper coding train stream without at least one audio issue",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "oh no!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "starting count down",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "CHOOOCHOO",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@shahd3.1415",
+              "text": ":person-turquoise-waving-speech:",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 0,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 0,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "forward-120",
+      "clock": 120,
+      "expectedIds": [
+        "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+        "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+        "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+        "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+        "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+        "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+        "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+        "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+        "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+        "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+        "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+        "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+        "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+        "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+        "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+        "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+        "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+        "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+        "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "yay",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "im happy",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@TheLikeys",
+              "text": "See you in \u201815",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "wait im gonna miss it cuss diner",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "its never a bad idea:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "still fiiiiiiiiiine",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "is it gonna be LLM related?",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "we'll see!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+              "time": 0,
+              "author": "@mpanganiban",
+              "text": "a bad idea? is it vibe coding",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "i bet it might be related to the recent podcast he did",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "honestly there is almost no plan here, it's more of a hello, here is my fall schedule and what i want to cover and some Q&A",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "plus maybe a suprise weird demo",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+              "time": 0,
+              "author": "@dipamsen",
+              "text": ":eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "might be related to AI hosts or something",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "cant wait for the demo bit",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "and would love to see you getting creative with AI, been missing you with new stuff:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+              "time": 0,
+              "author": "@Umbra451",
+              "text": "He has risen!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "hi everyone!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "of course all my audio suddenly stopped working",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "it wouldn't be a proper coding train stream without at least one audio issue",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "oh no!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "starting count down",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "CHOOOCHOO",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@shahd3.1415",
+              "text": ":person-turquoise-waving-speech:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 120,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 120,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "forward-3600",
+      "clock": 3600,
+      "expectedIds": [
+        "ChwKGkNMak8tZnZ5LTQ0REZmX013Z1FkZURvOWRR",
+        "ChwKGkNLbVJ6NFh6LTQ0REZRY0wxZ0FkX0RzYTF3",
+        "ChwKGkNNYW00b1h6LTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNYS1yb2J6LTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKUEtxNGp6LTQ0REZmSER3Z1FkYllJdDhn",
+        "ChwKGkNPTDJ2b3Z6LTQ0REZWSVFyUVlkdkRvTmt3",
+        "ChwKGkNPN2tnWkR6LTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNNT2l0Skx6LTQ0REZZa1hyUVlkeDRjMTF3",
+        "ChwKGkNONk51Wkx6LTQ0REZlRXUxZ0FkRnBBUVBB",
+        "ChwKGkNOeXJ0NXZ6LTQ0REZTMHRyUVlkcGJvV0dn",
+        "ChwKGkNMNnAwcUR6LTQ0REZRSTUxZ0FkVXpRZ25B",
+        "ChwKGkNJR0VyN0R6LTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNNeW9yTEx6LTQ0REZXNFExZ0FkY1FvUjhB"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNMak8tZnZ5LTQ0REZmX013Z1FkZURvOWRR",
+              "time": 3484.791,
+              "author": "@vivsh.1999",
+              "text": "About LLM usage, let the children lose it let the children use it let the children boogie",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLbVJ6NFh6LTQ0REZRY0wxZ0FkX0RzYTF3",
+              "time": 3505.012,
+              "author": "@ITTom",
+              "text": "ElevenLabs voices",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYW00b1h6LTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 3505.286,
+              "author": "@HoloTheDrunk",
+              "text": "The coding train has always been about the enjoyment of the process no? AI has its place for productivity, but much the same as solving a sudoku with AI isn't useful, it doesn't really fit here imo",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYS1yb2J6LTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 3506.53,
+              "author": "@mandelum",
+              "text": "The stuff you could do if youembraced ai llms is amazing, becuase your technical expertise and ability to combine concepts, alsoyou could read, edit, combine manual work",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKUEtxNGp6LTQ0REZmSER3Z1FkYllJdDhn",
+              "time": 3510.753,
+              "author": "@VerneRoberts",
+              "text": "code is frustrating but satisfying to ultimately solve. AI shortcuts this by solving some of the frustration and giving the dopamine hit of solving without the effort, but leaves me a bit empty inside",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPTDJ2b3Z6LTQ0REZWSVFyUVlkdkRvTmt3",
+              "time": 3517.345,
+              "author": "@p16r",
+              "text": "What are you using to manage chat and favouriting messages? I know a streamer who's looking for that",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPN2tnWkR6LTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 3526.812,
+              "author": "@\u6076\u9b54\u6050\u6016",
+              "text": ":trophy-yellow-smiling:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNT2l0Skx6LTQ0REZZa1hyUVlkeDRjMTF3",
+              "time": 3531.848,
+              "author": "@dipamsen",
+              "text": "http://thecodingtrain.com/discord",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNONk51Wkx6LTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 3531.868,
+              "author": "@tayyabsajid7552",
+              "text": "@Carl Edwards but with gpt 5, its more like ai using coders..",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOeXJ0NXZ6LTQ0REZTMHRyUVlkcGJvV0dn",
+              "time": 3550.824,
+              "author": "@VerneRoberts",
+              "text": "I love how coding train focuses on relatively low level algorithms",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMNnAwcUR6LTQ0REZRSTUxZ0FkVXpRZ25B",
+              "time": 3561.692,
+              "author": "@carledwards9477",
+              "text": "@Tayyab Sajid I tried it, and it needs coders to turn code into useful code.",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJR0VyN0R6LTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 3594.672,
+              "author": "@schocker1997",
+              "text": "Unless I'm mistaken, discord has a streamer mode which will only show the initial letter of people's names",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeW9yTEx6LTQ0REZXNFExZ0FkY1FvUjhB",
+              "time": 3598.797,
+              "author": "@tayyabsajid7552",
+              "text": "@Carl Edwards idk does it need \"coders\"? regular people could do it just fine atp..",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 3600,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 3600,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "backward-120",
+      "clock": 120,
+      "expectedIds": [
+        "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+        "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+        "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+        "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+        "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+        "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+        "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+        "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+        "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+        "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+        "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+        "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+        "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+        "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+        "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+        "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+        "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+        "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+        "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "yay",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "im happy",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@TheLikeys",
+              "text": "See you in \u201815",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "wait im gonna miss it cuss diner",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "its never a bad idea:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "still fiiiiiiiiiine",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "is it gonna be LLM related?",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "we'll see!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+              "time": 0,
+              "author": "@mpanganiban",
+              "text": "a bad idea? is it vibe coding",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "i bet it might be related to the recent podcast he did",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "honestly there is almost no plan here, it's more of a hello, here is my fall schedule and what i want to cover and some Q&A",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "plus maybe a suprise weird demo",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+              "time": 0,
+              "author": "@dipamsen",
+              "text": ":eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "might be related to AI hosts or something",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "cant wait for the demo bit",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "and would love to see you getting creative with AI, been missing you with new stuff:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+              "time": 0,
+              "author": "@Umbra451",
+              "text": "He has risen!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "hi everyone!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "of course all my audio suddenly stopped working",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "it wouldn't be a proper coding train stream without at least one audio issue",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "oh no!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "starting count down",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "CHOOOCHOO",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@shahd3.1415",
+              "text": ":person-turquoise-waving-speech:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 120,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 120,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "near-end",
+      "clock": 5910,
+      "expectedIds": [
+        "ChwKGkNJXy0wTV83LTQ0REZiQUsxZ0FkOEJjZDFB",
+        "ChwKGkNQcmdnZEw3LTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNKZS16TlA3LTQ0REZRSTUxZ0FkVXpRZ25B",
+        "ChwKGkNNSGhqZFg3LTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNJaTMwTnI3LTQ0REZZZThyZ1VkSGZZTHJ3",
+        "ChwKGkNKdnAtOXI3LTQ0REZjZ3FyUVlkeHAwREZ3",
+        "ChwKGkNNalQxOXo3LTQ0REZXNFExZ0FkY1FvUjhB",
+        "ChwKGkNKbUc4Tno3LTQ0REZYVEdGZ2tkc1BVYndB",
+        "ChwKGkNPaXpxTjM3LTQ0REZZTER3Z1FkVGs0eHR3",
+        "ChwKGkNNR1M1ZWY3LTQ0REZhZ0sxZ0FkSVVVQjln",
+        "ChwKGkNJbmY2ZWo3LTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNQU3Y0T3I3LTQ0REZabzQxZ0FkNTJFWmNR",
+        "ChwKGkNJR0txdTM3LTQ0REZiZlRsQWtkUFhFUnF3",
+        "ChwKGkNKcUFzUEQ3LTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNPUzJ3X0Q3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+        "ChwKGkNOeTVfUEQ3LTQ0REZlb0wxZ0FkXzlNd093",
+        "ChwKGkNMeTR3UEg3LTQ0REZSc0wxZ0FkNGg0TERn",
+        "ChwKGkNLTFlxUEw3LTQ0REZlRXUxZ0FkRnBBUVBB",
+        "ChwKGkNKVEIwdlA3LTQ0REZUc0gxZ0FkWnFBR3Fn",
+        "ChwKGkNQaTk0X1A3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+        "ChwKGkNKcWxudlQ3LTQ0REZUYkR3Z1FkR0NVTTFn",
+        "ChwKGkNNbUYwZlg3LTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNOam4yX1g3LTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNJV3VwX2Y3LTQ0REZRY0wxZ0FkX0RzYTF3",
+        "ChwKGkNJUHU2UGY3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+        "ChwKGkNMT3Y4Zm43LTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNdXZ4UHo3LTQ0REZmQXRyUVlkMkVNWWt3",
+        "ChwKGkNPX1Vndjc3LTQ0REZhZ0sxZ0FkSVVVQjln",
+        "ChwKGkNQWFc0djc3LTQ0REZiRUgxZ0FkeGFjYzl3",
+        "ChwKGkNPLXZwZl83LTQ0REZZTER3Z1FkVGs0eHR3",
+        "ChwKGkNKV1dxUF83LTQ0REZYNGpyUVlkNnBzZFpn"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNJXy0wTV83LTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 5807.71,
+              "author": "@Elias07070",
+              "text": "Hi dad!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQcmdnZEw3LTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 5812.707,
+              "author": "@anthonyzornig",
+              "text": "Much love from hamburg to NYC",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZS16TlA3LTQ0REZRSTUxZ0FkVXpRZ25B",
+              "time": 5816.026,
+              "author": "@Gwen-Maker-of-Things",
+              "text": "Thanks Dan!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNSGhqZFg3LTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 5819.194,
+              "author": "@Diotallevi73",
+              "text": "have a nice weekend everyone :red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJaTMwTnI3LTQ0REZZZThyZ1VkSGZZTHJ3",
+              "time": 5830.813,
+              "author": "@AlcaTV",
+              "text": "Your Processing videos got me back into creative coding and I've been working on a creating coding job for 5 years now :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKdnAtOXI3LTQ0REZjZ3FyUVlkeHAwREZ3",
+              "time": 5831.591,
+              "author": "@saklaniaditya",
+              "text": "Thanks Dan :folded_hands:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNalQxOXo3LTQ0REZXNFExZ0FkY1FvUjhB",
+              "time": 5835.09,
+              "author": "@ITTom",
+              "text": "see you Dan ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKbUc4Tno3LTQ0REZYVEdGZ2tkc1BVYndB",
+              "time": 5835.52,
+              "author": "@danielrubio2746",
+              "text": "Horn again please",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPaXpxTjM3LTQ0REZZTER3Z1FkVGs0eHR3",
+              "time": 5836.477,
+              "author": "@charlesdilks3267",
+              "text": "Thanks for your time Dan. Have a good day everyone",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR1M1ZWY3LTQ0REZhZ0sxZ0FkSVVVQjln",
+              "time": 5858.398,
+              "author": "@Lexo-p4o",
+              "text": "bye !",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJbmY2ZWo3LTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 5860.54,
+              "author": "@teccc42",
+              "text": "Thank you for the stream!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQU3Y0T3I3LTQ0REZabzQxZ0FkNTJFWmNR",
+              "time": 5864.582,
+              "author": "@supercrafter100",
+              "text": "byee",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJR0txdTM3LTQ0REZiZlRsQWtkUFhFUnF3",
+              "time": 5869.981,
+              "author": "@MarkMusante",
+              "text": "o/",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKcUFzUEQ3LTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 5876.395,
+              "author": "@MarkMusante",
+              "text": "looking forward to sept 8th!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPUzJ3X0Q3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+              "time": 5876.715,
+              "author": "@SYNAPSEdwl",
+              "text": "Hello & Bye :slightly_smiling_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOeTVfUEQ3LTQ0REZlb0wxZ0FkXzlNd093",
+              "time": 5877.648,
+              "author": "@snowpoch42",
+              "text": "Bye ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMeTR3UEg3LTQ0REZSc0wxZ0FkNGg0TERn",
+              "time": 5878.762,
+              "author": "@colley001",
+              "text": "Bye",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLTFlxUEw3LTQ0REZlRXUxZ0FkRnBBUVBB",
+              "time": 5880.479,
+              "author": "@loic.bertrand",
+              "text": "goodbye :waving_hand:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKVEIwdlA3LTQ0REZUc0gxZ0FkWnFBR3Fn",
+              "time": 5883.261,
+              "author": "@rodakdev",
+              "text": "goodbye!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQaTk0X1A3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+              "time": 5883.604,
+              "author": "@supercrafter100",
+              "text": "did the license reset again",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKcWxudlQ3LTQ0REZUYkR3Z1FkR0NVTTFn",
+              "time": 5884.54,
+              "author": "@vivsh.1999",
+              "text": "byeiii",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNbUYwZlg3LTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 5887.446,
+              "author": "@mandelum",
+              "text": "Nice to see, happy coding",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOam4yX1g3LTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 5887.624,
+              "author": "@ThongTa",
+              "text": "bye",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJV3VwX2Y3LTQ0REZRY0wxZ0FkX0RzYTF3",
+              "time": 5890.864,
+              "author": "@anthonyzornig",
+              "text": "Bye",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJUHU2UGY3LTQ0REZYZ3YxZ0FkUjI0SWxn",
+              "time": 5891.935,
+              "author": "@thabo256",
+              "text": "byee",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMT3Y4Zm43LTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 5896.335,
+              "author": "@rodakdev",
+              "text": "see you in september!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNdXZ4UHo3LTQ0REZmQXRyUVlkMkVNWWt3",
+              "time": 5901.954,
+              "author": "@saklaniaditya",
+              "text": "Bye Dan",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPX1Vndjc3LTQ0REZhZ0sxZ0FkSVVVQjln",
+              "time": 5905.072,
+              "author": "@snowpoch42",
+              "text": "Was great to see you again",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQWFc0djc3LTQ0REZiRUgxZ0FkeGFjYzl3",
+              "time": 5906.587,
+              "author": "@Elias07070",
+              "text": "Thanks for existing king :crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPLXZwZl83LTQ0REZZTER3Z1FkVGs0eHR3",
+              "time": 5907.716,
+              "author": "@saklaniaditya",
+              "text": "do it",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKV1dxUF83LTQ0REZYNGpyUVlkNnBzZFpn",
+              "time": 5907.763,
+              "author": "@vivsh.1999",
+              "text": "love to see you back",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 5910,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 5910,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "backward-300",
+      "clock": 300,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 300,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 300,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "paused-before",
+      "clock": 300,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 300,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 300,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "paused-after",
+      "clock": 300,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 300,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 300,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-0.5-before",
+      "clock": 300,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 300,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 300,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 0.5,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-0.5-playing",
+      "clock": 301.3333333333333,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 301.3333333333333,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 301.3333333333333,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 0.5,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-0.5-paused",
+      "clock": 301.5333333333333,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 301.5333333333333,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 301.5333333333333,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 0.5,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-2-before",
+      "clock": 301.5333333333333,
+      "expectedIds": [
+        "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOWHV0dFhtLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 182.771,
+              "author": "@MarkMusante",
+              "text": "problem is our comments are not in realtime :(",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 301.5333333333333,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 301.5333333333333,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 2,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-2-playing",
+      "clock": 305.43333333333334,
+      "expectedIds": [
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNOcng5WV9uLTQ0REZRVUsxZ0FkcmFNOGNn"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 305.43333333333334,
+          "paused": false,
+          "qa": true
+        },
+        "native": {
+          "position": 305.43333333333334,
+          "duration": 5914.733333333334,
+          "paused": false,
+          "speed": 2,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "rate-2-paused",
+      "clock": 306.26666666666665,
+      "expectedIds": [
+        "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNOcng5WV9uLTQ0REZRVUsxZ0FkcmFNOGNn"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNPYUM4ZVRtLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 215.173,
+              "author": "@snowpoch42",
+              "text": "The audience absolutely desires more of you on the internet. Please and thank you ",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcng5WV9uLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 305.424,
+              "author": "@SergeyAlyaev",
+              "text": "Why not?",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 306.26666666666665,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 306.26666666666665,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 2,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 356,
+            "x": 535,
+            "width": 640,
+            "height": 360
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "offset-plus-30",
+      "clock": 336.26666666666665,
+      "expectedIds": [
+        "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+        "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+        "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+        "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+        "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+        "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+        "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNOcng5WV9uLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNKXzRvcGZuLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNJUy05cGpuLTQ0REZiQUsxZ0FkOEJjZDFB",
+        "ChwKGkNLSDJfWkxuLTQ0REZUc0gxZ0FkWnFBR3Fn"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 30,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNNeUNsX2ZtLTQ0REZRek9GZ2tkV2NvcTV3",
+              "time": 253.534,
+              "author": "@summaryp",
+              "text": "Missed you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJX2N5dmptLTQ0REZSSUsxZ0FkRlZna3F3",
+              "time": 256.465,
+              "author": "@supercrafter100",
+              "text": "you've got one and a half minutes",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLQ2QtZm5tLTQ0REZYZ0gxZ0FkdmF3TmN3",
+              "time": 259.336,
+              "author": "@OhHeyItsAnthony",
+              "text": "lol! I let my membership slip while you were away; I guess it's time to rejoin! :grinning_face:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLRDU0SUxuLTQ0REZlMFkxZ0FkYlZnM21n",
+              "time": 277.82,
+              "author": "@Diotallevi73",
+              "text": "Oh my God dear Dan I had so much fear something is wrong with your healrh or something :red_heart::red_heart::red_heart::red_heart::red_heart:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNS0N2SVRuLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 281.409,
+              "author": "@uwekretzschmarify",
+              "text": "what a pleasant surprise to see you online",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSGZ1NGpuLTQ0REZjblN3Z1FkbUF3bjF3",
+              "time": 289.838,
+              "author": "@mattl8390",
+              "text": "yay code train!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMS1RuSW5uLTQ0REZlQUkxZ0FkWVB3SjBn",
+              "time": 291.359,
+              "author": "@ITTom",
+              "text": "long time no see",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNblZfb25uLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 292.986,
+              "author": "@Diotallevi73",
+              "text": "So good to hear from you!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcng5WV9uLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 305.424,
+              "author": "@SergeyAlyaev",
+              "text": "Why not?",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKXzRvcGZuLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 320.836,
+              "author": "@ChristianSchmid",
+              "text": "cool to hear from u",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJUy05cGpuLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 324.307,
+              "author": "@StepByStepGamerYT",
+              "text": "choo choo!!!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSDJfWkxuLTQ0REZUc0gxZ0FkWnFBR3Fn",
+              "time": 325.354,
+              "author": "@ali709aliali",
+              "text": "love ya dan",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 306.26666666666665,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 306.26666666666665,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 2,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 343,
+            "width": 1024,
+            "height": 576
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    },
+    {
+      "label": "restored-120",
+      "clock": 120,
+      "expectedIds": [
+        "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+        "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+        "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+        "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+        "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+        "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+        "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+        "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+        "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+        "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+        "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+        "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+        "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+        "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+        "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+        "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+        "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+        "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+        "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+        "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+        "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+        "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+        "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+        "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+        "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+        "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+        "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR"
+      ],
+      "state": {
+        "controller": {
+          "phase": "playing",
+          "quality": "136",
+          "formats": [
+            {
+              "id": "auto720",
+              "label": "Auto \u00b7 720p preferred"
+            },
+            {
+              "id": "270",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "137",
+              "label": "1080p \u00b7 H.264"
+            },
+            {
+              "id": "399",
+              "label": "1080p \u00b7 AV1"
+            },
+            {
+              "id": "232",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "136",
+              "label": "720p \u00b7 H.264"
+            },
+            {
+              "id": "398",
+              "label": "720p \u00b7 AV1"
+            },
+            {
+              "id": "397",
+              "label": "480p \u00b7 AV1"
+            },
+            {
+              "id": "230",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "134",
+              "label": "360p \u00b7 H.264"
+            },
+            {
+              "id": "605",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "243",
+              "label": "360p \u00b7 VP9"
+            },
+            {
+              "id": "396",
+              "label": "360p \u00b7 AV1"
+            },
+            {
+              "id": "395",
+              "label": "240p \u00b7 AV1"
+            },
+            {
+              "id": "269",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "160",
+              "label": "144p \u00b7 H.264"
+            },
+            {
+              "id": "394",
+              "label": "144p \u00b7 AV1"
+            }
+          ],
+          "busy": false,
+          "error": "",
+          "title": "All Aboard (ish)",
+          "live": false,
+          "duration": 5915,
+          "variant": "focus",
+          "source": {
+            "kind": "youtube",
+            "provider": "YouTube",
+            "id": "92h_kU8O58M"
+          },
+          "chat": {
+            "mode": "replay",
+            "state": "ready",
+            "error": "",
+            "count": 693,
+            "sourceName": "Imported chat",
+            "offset": 0,
+            "available": true
+          },
+          "auth": {
+            "phase": "off",
+            "message": ""
+          },
+          "view": {
+            "presentation": "overlay",
+            "fontSize": 14,
+            "opacity": 0.64,
+            "lines": 6,
+            "x": 1,
+            "y": 0,
+            "density": "comfortable",
+            "editing": false
+          },
+          "messages": [
+            {
+              "id": "ChwKGkNOV2Q5bzNpLTQ0REZSc0wxZ0FkNGg0TERn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "yay",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMNmJqNUxpLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "im happy",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKN1EwNW5pLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@TheLikeys",
+              "text": "See you in \u201815",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVFl0cHJpLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "wait im gonna miss it cuss diner",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKV0F4WnZpLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "its never a bad idea:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOems4WjNpLTQ0REZhSUkxZ0FkT3hnWE5R",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "still fiiiiiiiiiine",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOR1hoOERpLTQ0REZRZkR3Z1FkRC1jWHhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "is it gonna be LLM related?",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOaVNvLUhpLTQ0REZiTUgxZ0FkanJFTk93",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "we'll see!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJS3JnNGZqLTQ0REZWZ1hyUVlkQXJjVHdB",
+              "time": 0,
+              "author": "@mpanganiban",
+              "text": "a bad idea? is it vibe coding",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUFgxbzNqLTQ0REZjZ3FyUVlkeHAwREZ3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "i bet it might be related to the recent podcast he did",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNYk1pcG5qLTQ0REZTa0lzd0FkcDlVdFJR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "honestly there is almost no plan here, it's more of a hello, here is my fall schedule and what i want to cover and some Q&A",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOcjY2SnZqLTQ0REZmTzdyZ1VkOHQ4cDdR",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "plus maybe a suprise weird demo",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLSzJrNXpqLTQ0REZla0lyUVlkenlVT1p3",
+              "time": 0,
+              "author": "@dipamsen",
+              "text": ":eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQRGJ0NlhqLTQ0REZTd1JyUVlkVWp3Tlln",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "might be related to AI hosts or something",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMUHJwNl9qLTQ0REZSZ1FyUVlkMV8wSzhB",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "cant wait for the demo bit",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJU0Mtc1BqLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "and would love to see you getting creative with AI, been missing you with new stuff:smiling_face_with_smiling_eyes:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOUEhnb2JrLTQ0REZlb0wxZ0FkXzlNd093",
+              "time": 0,
+              "author": "@Umbra451",
+              "text": "He has risen!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNdXQwN2prLTQ0REZaVUZyUVlkQVg4MmZn",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "hi everyone!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQbmg5LWprLTQ0REZkTUoxZ0FkVHIwNzlB",
+              "time": 0,
+              "author": "@TheCodingTrain",
+              "text": "of course all my audio suddenly stopped working",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPSE5pdm5rLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@MarkMusante",
+              "text": "it wouldn't be a proper coding train stream without at least one audio issue",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOVzQ0NFRsLTQ0REZWa0sxZ0FkWVQ0RkVR",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": "oh no!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPbjEwS1RsLTQ0REZXd3ByUVlkcVRrbmR3",
+              "time": 0,
+              "author": "@vivsh.1999",
+              "text": "starting count down",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMdk50TDdsLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": "CHOOOCHOO",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNLdU9xczNsLTQ0REZRRUgxZ0FkTVZFdU5n",
+              "time": 0,
+              "author": "@supercrafter100",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOM04xLVRsLTQ0REZaVUcxZ0FkMXpNdmt3",
+              "time": 0,
+              "author": "@Ctrl-Z-Renders",
+              "text": ":yt:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNPTHdrX25sLTQ0REZTTXQxZ0FkSmswVzFn",
+              "time": 0,
+              "author": "@shahd3.1415",
+              "text": ":person-turquoise-waving-speech:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNKZnQ5cExtLTQ0REZlazZyUVlkRUs4M2R3",
+              "time": 43.353,
+              "author": "@dipamsen",
+              "text": ":face-red-smiling-live:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJckF2SlBtLTQ0REZVa0cxZ0FkYmFFTE5B",
+              "time": 44.429,
+              "author": "@cs187kerem",
+              "text": "OMG YOU LIVE!",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNJRzh6cDNtLTQ0REZaUUt5d1FkRy1RWEZR",
+              "time": 65.708,
+              "author": "@SmoothCoaxing",
+              "text": "MY GOAT OH HOW IVE MISSED YOU SO :crown::red_heart::crown:",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQeXg0YVBtLTQ0REZhRUgxZ0FkZEpjY0VR",
+              "time": 78.577,
+              "author": "@mandelum",
+              "text": "Was just thinking its been a while :)",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNMVzg4S2ZtLTQ0REZRVUsxZ0FkcmFNOGNn",
+              "time": 87.239,
+              "author": "@snowpoch42",
+              "text": "HYPE! I was just thinking yesterday how much I missed your streams",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNQLTQ4SzdtLTQ0REZiQUsxZ0FkOEJjZDFB",
+              "time": 101.89,
+              "author": "@Ctrl-Z-Renders",
+              "text": "Only got the notification now sadly",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNNR3duYmJtLTQ0REZjVTZzd0FkVkZFOHlR",
+              "time": 117.32,
+              "author": "@MarkMusante",
+              "text": "music is still louder than your voice",
+              "color": "",
+              "kind": "message"
+            },
+            {
+              "id": "ChwKGkNOMlJxTGZtLTQ0REZkekJsQWtkR1djYVhR",
+              "time": 119.595,
+              "author": "@larryreaux1970",
+              "text": "You're incredibly soft and the music is incredibly loud",
+              "color": "",
+              "kind": "message"
+            }
+          ],
+          "position": 120,
+          "paused": true,
+          "qa": true
+        },
+        "native": {
+          "position": 120,
+          "duration": 5914.733333333334,
+          "paused": true,
+          "speed": 1,
+          "width": 1280,
+          "height": 720,
+          "audioCodec": "aac",
+          "audioRate": 44100,
+          "playlistCount": 1,
+          "idle": false,
+          "fullscreen": false,
+          "frame": {
+            "y": 140,
+            "x": 343,
+            "width": 1024,
+            "height": 576
+          },
+          "hwdec": "videotoolbox-copy",
+          "activeHelpers": []
+        }
+      }
+    }
+  ]
+}

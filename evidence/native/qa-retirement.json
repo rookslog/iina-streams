@@ -1,0 +1,14 @@
+{
+  "timeUTC": "2026-11-08T20:03:59.072084+00:00",
+  "IINARunningAtCleanup": false,
+  "lastIINATermination": "new crash report at 2026-11-08T19:56:25Z under investigation",
+  "exactQALinkRemoved": true,
+  "qaEnabledPreferenceRestoredAbsent": true,
+  "knownFakePublicClientIDRemoved": true,
+  "qaPrivateDataRetainedForEvidence": true,
+  "candidateInstallationsRetained": [
+    "local.iina.streams.candidate.focus.iinaplugin",
+    "local.iina.streams.candidate.unified.iinaplugin"
+  ],
+  "stablePluginFolderPresent": false
+}

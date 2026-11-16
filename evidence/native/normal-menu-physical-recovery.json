@@ -1,0 +1,11 @@
+{
+  "timeUTC": "2026-11-08T20:28:05.212565+00:00",
+  "ownedPID": 5853,
+  "menuRecovery": "One actual Escape after .activateAllWindows and runloop processing; exactfrontmostPID5853verified",
+  "normalQuitExit": 1,
+  "error": "53:57: execution error: IINA got an error: AppleEvent timed out. (-1712)",
+  "IINAPIDsAfter": [
+    "5853"
+  ],
+  "latestCrashReport": "IINA-2026-11-08-145625.ips"
+}

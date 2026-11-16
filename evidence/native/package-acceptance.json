@@ -1,0 +1,32 @@
+{
+  "timeUTC": "2026-11-08T19:54:24.298963+00:00",
+  "releaseCodeCommit": "b3b5f071ea832eb57a16b5f9703af2d1a5a32644",
+  "records": [
+    {
+      "variant": "unified",
+      "identifier": "local.iina.streams.candidate.unified",
+      "archiveSHA256": "adffe3fee069a3d0347741498b0489ce3aec9b8fe92a527b278497feba30e972",
+      "installedPath": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.candidate.unified.iinaplugin",
+      "fileCount": 25,
+      "allInstalledFilesMatchArchive": true,
+      "enabledValue": "1",
+      "config": "\"use strict\";\nmodule.exports={\"identifier\":\"local.iina.streams.candidate.unified\",\"variant\":\"unified\",\"qa\":false};\n",
+      "permissionPromptObserved": false,
+      "permissionObservation": "Native archive-open installation completed and enabled; transient confirmation action was not observed."
+    },
+    {
+      "variant": "focus",
+      "identifier": "local.iina.streams.candidate.focus",
+      "archiveSHA256": "d2ea7f01129a6006f73620d2e0ca365efd23027c6eda4082d4dca08dd8e61318",
+      "installedPath": "/Users/rookslog/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.candidate.focus.iinaplugin",
+      "fileCount": 25,
+      "allInstalledFilesMatchArchive": true,
+      "enabledValue": "1",
+      "config": "\"use strict\";\nmodule.exports={\"identifier\":\"local.iina.streams.candidate.focus\",\"variant\":\"focus\",\"qa\":false};\n",
+      "permissionPromptObserved": true,
+      "permissionObservation": "Warning/Cancel/Install observed; Install selected by verifier in one guarded UI sequence."
+    }
+  ],
+  "normalMenuPlaybackPending": true,
+  "rollbackPending": true
+}

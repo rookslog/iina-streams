@@ -1,0 +1,29 @@
+{
+  "timeUTC": "2026-11-08T20:54:43.399061Z",
+  "pid": 55428,
+  "snapshot": "unified-r2-after-off-native-ui.json",
+  "checks": [
+    {
+      "name": "native Off action completed",
+      "passed": true
+    },
+    {
+      "name": "Resume replay available after Off",
+      "passed": true
+    },
+    {
+      "name": "no rendered chat messages",
+      "passed": true
+    },
+    {
+      "name": "active replay controls hidden",
+      "passed": true
+    },
+    {
+      "name": "playback quality unchanged",
+      "passed": true
+    }
+  ],
+  "allPassed": true,
+  "note": "An initial QA assertion expected a literal Off status text. This UI instead indicates Off by the positive Resume replay control, an empty message region, and hidden active-replay controls. The first evidence aggregation read the wrong result-key name; it is corrected here to the observed AXResult=0. Native action was not repeated."
+}

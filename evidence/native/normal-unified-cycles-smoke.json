@@ -1,0 +1,42 @@
+{
+  "actionTimeline" : [
+
+  ],
+  "allPassed" : false,
+  "anchorTitle" : "All Aboard (ish) — YouTube",
+  "childTitle" : "Me at the zoo — YouTube",
+  "complete" : false,
+  "completedCycles" : 0,
+  "endedUTC" : "2026-11-08T20:24:17.324Z",
+  "expectedOpenMenuTitle" : "Open Stream — Unified…",
+  "lastSuccessfulAXWindowsRead" : {
+    "afterUTC" : "2026-11-08T20:24:17.324Z",
+    "attempt" : 1,
+    "AXResult" : 0,
+    "beforeUTC" : "2026-11-08T20:24:17.318Z",
+    "timeoutSeconds" : 0.25,
+    "validArray" : true,
+    "windowCount" : 0
+  },
+  "limits" : [
+    "Resume menu is native paused-state evidence only; exact 120-second position is not inspected.",
+    "A resolved child title does not prove decoded video\/audio or network quality.",
+    "This is a bounded ordinary-YouTube child lifecycle test, not mixed Twitch or long-session proof.",
+    "On failure no speculative cleanup, close, playback toggle, retry, or app termination is performed."
+  ],
+  "mode" : "run",
+  "ok" : false,
+  "phase" : "anchor-not-unique-or-child-preexists",
+  "pid" : 5853,
+  "plannedCycles" : 1,
+  "publicURL" : "https:\/\/www.youtube.com\/watch?v=jNQXAC9IVRw",
+  "reads" : 1,
+  "records" : [
+
+  ],
+  "schemaVersion" : 1,
+  "scope" : "Normal candidate menu, guarded public prompt, retained AX window identity and AXCloseButton. No QA bridge or mpv data.",
+  "startedUTC" : "2026-11-08T20:24:17.299Z",
+  "updatedUTC" : "2026-11-08T20:24:17.324Z",
+  "variant" : "unified"
+}

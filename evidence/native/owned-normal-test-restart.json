@@ -1,0 +1,9 @@
+{
+  "timeUTC": "2026-11-08T20:28:59.438797+00:00",
+  "ownedTestPID": 5853,
+  "identityBefore": "/Applications/IINA.app/Contents/MacOS/IINA",
+  "reason": "Normal quit timed out after an accessibility-opened native menu remained in tracking; thread sample retained; boundedAXCancel and actualEscape recovery did not complete quit. All media in this root-launchedprocess belonged to these tests.",
+  "signal": "SIGTERM",
+  "processAbsent": true,
+  "latestCrashReport": "IINA-2026-11-08-145625.ips"
+}

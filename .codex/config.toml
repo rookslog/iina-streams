@@ -1,0 +1,7 @@
+# Project-scoped profile. Inherits the user's configured model/provider/permissions.
+# Keep concurrency bounded: only one native-IINA operator at a time.
+[agents]
+max_concurrent_threads_per_session = 4
+
+[features]
+hooks = true

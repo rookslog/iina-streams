@@ -1,0 +1,17 @@
+# IINA Streams harness source snapshot, 2026-11-09
+# SHA256 [two spaces] relative path; file integrity, not semantic or runtime proof.
+# Superseded as current state by CONFIG-BASELINE-SHA256-2026-11-09-r2.txt (independent-audit corrections). This file remains the pre-audit baseline.
+e5f8e0a6f5c28850dc2a98321300eb90b9278905fb6e5fc73585c227857aaa30  AGENTS.md
+3335c2eacff90ab24965ef1e3ca9fedc4fdd74fcd86ee7788f8fefb2f748e373  .codex/config.toml
+8feb42fde1fa4708060c0f1806cddb2caa4106073518428df22607692748a7d8  .codex/agents/streams_auth_security.toml
+3755157dc649ae7c2b0190dc9476279706b3d9a43d653ce66b8d1ba990fd0498  .codex/agents/streams_docs_researcher.toml
+1830f8863be8588035d8ae9c67f369fc118c36f689d465bb4a30487c9bed8dbc  .codex/agents/streams_implementer.toml
+c8f4c14e1b5bb1394e1544e4b699c02fc62fa36b4eb932bd01a924c7ef2e9914  .codex/agents/streams_native_qa.toml
+c3b7459d349904f199c1e42833a73a9cd5e357b4489658af656059c8d1ae9756  .codex/agents/streams_ux_critic.toml
+5adf2b72ebe6d03e350fe345adf1ab0a401b1e932f8cc1fba3daeecf0287ad66  .agents/skills/streams-auth-replay/SKILL.md
+7dddbd4ccb24a969ad99b20963338f03f29ac76cddd9e7ec024fda2f666e74a8  .agents/skills/streams-interaction-design/SKILL.md
+7f2b54ae1792f34e32174b74260a89734d1d3ad8830d2b75b49b32e4f11279ee  .agents/skills/streams-native-acceptance/SKILL.md
+70595e243b3a2248321a9b49c7292f33e60a3188fcd11d07349ea4d1a7f71188  docs/commission/HANDOFF-SOL61-HIGH-2026-11-09.md
+e009b152d7e4651595015a13cb1e3cc20bfa02178d1adf8828c3e5ee9d2324f2  docs/commission/INITIALIZE-SOL61-HIGH-2026-11-09.md
+e138bce2f2aa9859144149428a880a886286db2572c3e00838730184bf7d8d78  docs/harness/EFFECTIVE-LOAD-AUDIT-2026-11-09.md
+14ba1b5fb155c8ad3f46f6b56fd2a84a9047ea265ee1f6ef775b558efab24584  docs/harness/IMPLEMENTATION-RATIONALE-TOULMIN-2026-11-09.md

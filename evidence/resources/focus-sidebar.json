@@ -1,0 +1,2067 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "label": "focus-sidebar",
+  "app": "iina",
+  "rootPID": 40519,
+  "startedUTC": "2026-11-08T19:39:41.029Z",
+  "requestedSeconds": 20.0,
+  "intervalSeconds": 2.0,
+  "samplerSHA256": "9e2846befd1b072f5ce34764b33b4127feb7d6a9f7c2179dbb4674c3e5db3862",
+  "operatorMetadata": {
+    "candidate": "focus",
+    "pluginIdentifier": "local.iina.streams.qa",
+    "mode": "sidebar",
+    "chatMode": "replay",
+    "presentation": "sidebar",
+    "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+    "sourceId": "92h_kU8O58M",
+    "quality": "136",
+    "videoCodec": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+    "videoWidth": 1280,
+    "videoHeight": 720,
+    "videoFps": 30,
+    "audioCodec": "aac",
+    "audioSampleRate": 44100,
+    "hardwareDecode": "videotoolbox-copy",
+    "windowWidth": 1280,
+    "windowHeight": 800,
+    "sidebarWidth": 300,
+    "fullscreen": false,
+    "playbackPosition": 140.3,
+    "playbackSpeed": 1,
+    "paused": false,
+    "archiveId": "92h_kU8O58M",
+    "messageCount": 11,
+    "rowLimit": 150,
+    "fontSize": 14,
+    "opacity": 0.64,
+    "replayOffset": 0,
+    "otherPlayerCount": 0,
+    "droppedFrames": 0,
+    "buffering": false,
+    "notes": "One fresh QA-managed player. Other IINA plugins retain original enablement. QA command polling every400ms; no acquisition/helper active. RSS excludes unattributed WebKit; short characterization, not battery or long-session proof."
+  },
+  "samples": [
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 9.9,
+        "rssKiB": 122464,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 9.9,
+        "rssKiB": 122464
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 8.6,
+          "rssKiB": 54944,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8688,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 11872,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 12672,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8496,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 27776,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 6064,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8240,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 17760,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 3232,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 5744,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 2240,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8608,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.7,
+          "rssKiB": 13632,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 14.2,
+          "rssKiB": 362848,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 1.9,
+          "rssKiB": 11024,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 16,
+      "utc": "2026-11-08T19:39:41.109Z",
+      "elapsedSeconds": 0.081,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 49,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7395868672,
+          "freeBytes": 1194065920
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 5689,
+          "Pages active": 246795,
+          "Pages inactive": 245187,
+          "Pages speculative": 581,
+          "Pages throttled": 0,
+          "Pages wired down": 181863,
+          "Pages purgeable": 5105,
+          "Pages copy-on-write": 1369478383,
+          "Pages zero filled": 8091037552,
+          "Pages reactivated": 7878814094,
+          "Pages purged": 1006650728,
+          "File-backed pages": 146353,
+          "Anonymous pages": 346210,
+          "Pages stored in compressor": 683819,
+          "Pages occupied by compressor": 328718,
+          "Decompressions": 13360951121,
+          "Compressions": 14202587366,
+          "Pageins": 1208571350,
+          "Pageouts": 7519202,
+          "Swapins": 81240585,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.047
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 10.2,
+        "rssKiB": 121760,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 10.2,
+        "rssKiB": 121760
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 16.7,
+          "rssKiB": 55168,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8688,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 10976,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.2,
+          "rssKiB": 15408,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8496,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.1,
+          "rssKiB": 28624,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 6064,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8240,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.1,
+          "rssKiB": 18480,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 4368,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 5744,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 2240,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8608,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.8,
+          "rssKiB": 13024,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 18.6,
+          "rssKiB": 336352,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 1.9,
+          "rssKiB": 9856,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 16,
+      "utc": "2026-11-08T19:39:43.182Z",
+      "elapsedSeconds": 2.153,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 47,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7395868672,
+          "freeBytes": 1194065920
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 5573,
+          "Pages active": 238841,
+          "Pages inactive": 237650,
+          "Pages speculative": 107,
+          "Pages throttled": 0,
+          "Pages wired down": 193295,
+          "Pages purgeable": 2023,
+          "Pages copy-on-write": 1369479005,
+          "Pages zero filled": 8091046057,
+          "Pages reactivated": 7878848131,
+          "Pages purged": 1006650732,
+          "File-backed pages": 145675,
+          "Anonymous pages": 330923,
+          "Pages stored in compressor": 691780,
+          "Pages occupied by compressor": 333367,
+          "Decompressions": 13360991945,
+          "Compressions": 14202636134,
+          "Pageins": 1208571367,
+          "Pageouts": 7519202,
+          "Swapins": 81240593,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.091
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 8.4,
+        "rssKiB": 121424,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 8.4,
+        "rssKiB": 121424
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 15.1,
+          "rssKiB": 48496,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8688,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 10976,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 15104,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8496,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 28480,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 6064,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8240,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 18352,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 4368,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 5744,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 2240,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8608,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.7,
+          "rssKiB": 12992,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 23.4,
+          "rssKiB": 335376,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 2.9,
+          "rssKiB": 10624,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 16,
+      "utc": "2026-11-08T19:39:45.249Z",
+      "elapsedSeconds": 4.221,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 47,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7395868672,
+          "freeBytes": 1194065920
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 5092,
+          "Pages active": 240613,
+          "Pages inactive": 236019,
+          "Pages speculative": 3591,
+          "Pages throttled": 0,
+          "Pages wired down": 187988,
+          "Pages purgeable": 5287,
+          "Pages copy-on-write": 1369481859,
+          "Pages zero filled": 8091053819,
+          "Pages reactivated": 7878865922,
+          "Pages purged": 1006650756,
+          "File-backed pages": 148759,
+          "Anonymous pages": 331464,
+          "Pages stored in compressor": 699224,
+          "Pages occupied by compressor": 335530,
+          "Decompressions": 13361013376,
+          "Compressions": 14202664908,
+          "Pageins": 1208573263,
+          "Pageouts": 7519202,
+          "Swapins": 81240713,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.095
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 25.3,
+        "rssKiB": 136256,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 25.3,
+        "rssKiB": 136256
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 35.8,
+          "rssKiB": 80928,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8688,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 12944,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.1,
+          "rssKiB": 8928,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8176,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.6,
+          "rssKiB": 24320,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5952,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7984,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.2,
+          "rssKiB": 13616,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 4000,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 19.8,
+          "rssKiB": 39520,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 13.9,
+          "rssKiB": 60896,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.4,
+          "rssKiB": 13056,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 9.8,
+          "rssKiB": 284960,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.7,
+          "rssKiB": 8448,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 16,
+      "utc": "2026-11-08T19:39:47.318Z",
+      "elapsedSeconds": 6.29,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 37,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7395868672,
+          "freeBytes": 1194065920
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 5900,
+          "Pages active": 189370,
+          "Pages inactive": 180969,
+          "Pages speculative": 7056,
+          "Pages throttled": 0,
+          "Pages wired down": 247581,
+          "Pages purgeable": 1769,
+          "Pages copy-on-write": 1369501884,
+          "Pages zero filled": 8091108694,
+          "Pages reactivated": 7878923463,
+          "Pages purged": 1006653151,
+          "File-backed pages": 140357,
+          "Anonymous pages": 237038,
+          "Pages stored in compressor": 758209,
+          "Pages occupied by compressor": 377957,
+          "Decompressions": 13361134299,
+          "Compressions": 14202845104,
+          "Pageins": 1208576874,
+          "Pageouts": 7519204,
+          "Swapins": 81240725,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.083
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 8.1,
+        "rssKiB": 132160,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 8.1,
+        "rssKiB": 132160
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 35.4,
+          "rssKiB": 88496,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8688,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.7,
+          "rssKiB": 39632,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.1,
+          "rssKiB": 13088,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8144,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 24608,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5872,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7952,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 14448,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 6.1,
+          "rssKiB": 58320,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 2.2,
+          "rssKiB": 12752,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 1.5,
+          "rssKiB": 33616,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 11.1,
+          "rssKiB": 66704,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.3,
+          "rssKiB": 9392,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 4.0,
+          "rssKiB": 206256,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.5,
+          "rssKiB": 8240,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:49.362Z",
+      "elapsedSeconds": 8.334,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 40,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7395868672,
+          "freeBytes": 1194065920
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 4978,
+          "Pages active": 203077,
+          "Pages inactive": 184268,
+          "Pages speculative": 13821,
+          "Pages throttled": 0,
+          "Pages wired down": 230843,
+          "Pages purgeable": 34,
+          "Pages copy-on-write": 1369504203,
+          "Pages zero filled": 8091178344,
+          "Pages reactivated": 7878967874,
+          "Pages purged": 1006666556,
+          "File-backed pages": 141267,
+          "Anonymous pages": 259899,
+          "Pages stored in compressor": 749540,
+          "Pages occupied by compressor": 371846,
+          "Decompressions": 13361218311,
+          "Compressions": 14202959750,
+          "Pageins": 1208590977,
+          "Pageouts": 7519204,
+          "Swapins": 81240733,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.097
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 8.1,
+        "rssKiB": 130224,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 8.1,
+        "rssKiB": 130224
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 31.8,
+          "rssKiB": 92720,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8672,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 39936,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 10784,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8128,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 23648,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5856,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7936,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 13808,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 51664,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 13920,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 2.2,
+          "rssKiB": 47872,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 20.3,
+          "rssKiB": 188016,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 4672,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 5.6,
+          "rssKiB": 224896,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.4,
+          "rssKiB": 10144,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:51.434Z",
+      "elapsedSeconds": 10.406,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 41,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7387480064,
+          "freeBytes": 1202454528
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 4886,
+          "Pages active": 208815,
+          "Pages inactive": 196037,
+          "Pages speculative": 11672,
+          "Pages throttled": 0,
+          "Pages wired down": 205869,
+          "Pages purgeable": 6298,
+          "Pages copy-on-write": 1369513813,
+          "Pages zero filled": 8091245463,
+          "Pages reactivated": 7878989197,
+          "Pages purged": 1006691331,
+          "File-backed pages": 143050,
+          "Anonymous pages": 273474,
+          "Pages stored in compressor": 757039,
+          "Pages occupied by compressor": 381554,
+          "Decompressions": 13361287662,
+          "Compressions": 14203044908,
+          "Pageins": 1208595041,
+          "Pageouts": 7519204,
+          "Swapins": 81240804,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.08
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 6.7,
+        "rssKiB": 131584,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 6.7,
+        "rssKiB": 131584
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 35.8,
+          "rssKiB": 94336,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8672,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.1,
+          "rssKiB": 39376,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 10016,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8128,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 23712,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 6336,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7936,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 13760,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 51648,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 4.1,
+          "rssKiB": 14912,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 26.9,
+          "rssKiB": 52576,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 63.8,
+          "rssKiB": 213504,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 4368,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 11.0,
+          "rssKiB": 238272,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.8,
+          "rssKiB": 7568,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:53.496Z",
+      "elapsedSeconds": 12.467,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 39,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7387480064,
+          "freeBytes": 1202454528
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 18986,
+          "Pages active": 195478,
+          "Pages inactive": 184464,
+          "Pages speculative": 7425,
+          "Pages throttled": 0,
+          "Pages wired down": 213128,
+          "Pages purgeable": 34,
+          "Pages copy-on-write": 1369515407,
+          "Pages zero filled": 8091326744,
+          "Pages reactivated": 7879018439,
+          "Pages purged": 1006713565,
+          "File-backed pages": 140729,
+          "Anonymous pages": 246638,
+          "Pages stored in compressor": 770921,
+          "Pages occupied by compressor": 389352,
+          "Decompressions": 13361352550,
+          "Compressions": 14203143844,
+          "Pageins": 1208607432,
+          "Pageouts": 7519204,
+          "Swapins": 81240884,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.08
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 6.6,
+        "rssKiB": 130576,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 6.6,
+        "rssKiB": 130576
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 16.1,
+          "rssKiB": 91312,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8672,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 39328,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 13232,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8128,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 27552,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5856,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7936,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 17472,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 51648,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 14048,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 1.8,
+          "rssKiB": 57392,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 19.1,
+          "rssKiB": 227808,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 4160,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 4.7,
+          "rssKiB": 240368,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.1,
+          "rssKiB": 9680,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:55.564Z",
+      "elapsedSeconds": 14.535,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 44,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7379091456,
+          "freeBytes": 1210843136
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 7432,
+          "Pages active": 220623,
+          "Pages inactive": 215563,
+          "Pages speculative": 4748,
+          "Pages throttled": 0,
+          "Pages wired down": 171813,
+          "Pages purgeable": 19073,
+          "Pages copy-on-write": 1369516694,
+          "Pages zero filled": 8091365894,
+          "Pages reactivated": 7879029199,
+          "Pages purged": 1006722938,
+          "File-backed pages": 137372,
+          "Anonymous pages": 303562,
+          "Pages stored in compressor": 766927,
+          "Pages occupied by compressor": 388654,
+          "Decompressions": 13361391034,
+          "Compressions": 14203180691,
+          "Pageins": 1208609764,
+          "Pageouts": 7519204,
+          "Swapins": 81241356,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.088
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 6.6,
+        "rssKiB": 131296,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 6.6,
+        "rssKiB": 131296
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 33.2,
+          "rssKiB": 91520,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8672,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 40000,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 12624,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8128,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 27568,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5856,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7936,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 17472,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 51648,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 14048,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 2.2,
+          "rssKiB": 60336,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 20.4,
+          "rssKiB": 228448,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 4176,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 14.4,
+          "rssKiB": 310720,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.2,
+          "rssKiB": 9952,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:57.639Z",
+      "elapsedSeconds": 16.61,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 44,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7379091456,
+          "freeBytes": 1210843136
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 5578,
+          "Pages active": 223875,
+          "Pages inactive": 221251,
+          "Pages speculative": 1790,
+          "Pages throttled": 0,
+          "Pages wired down": 193354,
+          "Pages purgeable": 2,
+          "Pages copy-on-write": 1369517539,
+          "Pages zero filled": 8091378527,
+          "Pages reactivated": 7879029232,
+          "Pages purged": 1006737214,
+          "File-backed pages": 133316,
+          "Anonymous pages": 313600,
+          "Pages stored in compressor": 723400,
+          "Pages occupied by compressor": 362985,
+          "Decompressions": 13361431838,
+          "Compressions": 14203180784,
+          "Pageins": 1208609859,
+          "Pageouts": 7519204,
+          "Swapins": 81241368,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.099
+    },
+    {
+      "root": {
+        "pid": 40519,
+        "ppid": 1,
+        "name": "IINA",
+        "cpuPercent": 6.4,
+        "rssKiB": 130256,
+        "startedUTC": "2026-11-08T19:37:09Z"
+      },
+      "descendants": [],
+      "explicitHelpers": [],
+      "missingOrChangedHelpers": [],
+      "scopedTotal": {
+        "cpuPercent": 6.4,
+        "rssKiB": 130256
+      },
+      "windowServer": [
+        {
+          "pid": 609,
+          "ppid": 1,
+          "name": "WindowServer",
+          "cpuPercent": 47.9,
+          "rssKiB": 89376,
+          "startedUTC": "2026-10-29T03:27:49Z"
+        }
+      ],
+      "unattributedWebKit": [
+        {
+          "pid": 18355,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 240,
+          "startedUTC": "2026-11-02T17:40:45Z"
+        },
+        {
+          "pid": 27036,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8672,
+          "startedUTC": "2026-11-08T19:30:41Z"
+        },
+        {
+          "pid": 36404,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 39920,
+          "startedUTC": "2026-11-08T19:35:38Z"
+        },
+        {
+          "pid": 40653,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 10096,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40660,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 8128,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40740,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 23600,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40760,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 5856,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 40775,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 7936,
+          "startedUTC": "2026-11-08T19:37:10Z"
+        },
+        {
+          "pid": 42057,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 13856,
+          "startedUTC": "2026-11-08T19:37:41Z"
+        },
+        {
+          "pid": 44996,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 0.0,
+          "rssKiB": 51632,
+          "startedUTC": "2026-11-08T19:39:48Z"
+        },
+        {
+          "pid": 57102,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.1,
+          "rssKiB": 13744,
+          "startedUTC": "2026-11-08T16:54:15Z"
+        },
+        {
+          "pid": 57113,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 5.0,
+          "rssKiB": 48288,
+          "startedUTC": "2026-11-08T16:54:16Z"
+        },
+        {
+          "pid": 57834,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 656,
+          "startedUTC": "2026-11-08T09:12:45Z"
+        },
+        {
+          "pid": 81553,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 9.8,
+          "rssKiB": 216352,
+          "startedUTC": "2026-11-08T18:07:05Z"
+        },
+        {
+          "pid": 85714,
+          "ppid": 1,
+          "name": "com.apple.WebKit.GPU",
+          "cpuPercent": 0.0,
+          "rssKiB": 4000,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85715,
+          "ppid": 1,
+          "name": "com.apple.WebKit.WebContent",
+          "cpuPercent": 12.6,
+          "rssKiB": 301072,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        },
+        {
+          "pid": 85717,
+          "ppid": 1,
+          "name": "com.apple.WebKit.Networking",
+          "cpuPercent": 0.0,
+          "rssKiB": 9488,
+          "startedUTC": "2026-11-08T11:09:31Z"
+        }
+      ],
+      "unattributedWebKitCount": 17,
+      "utc": "2026-11-08T19:39:59.712Z",
+      "elapsedSeconds": 18.684,
+      "system": {
+        "errors": [],
+        "memoryFreePercent": 46,
+        "swap": {
+          "totalBytes": 8589934592,
+          "usedBytes": 7379091456,
+          "freeBytes": 1210843136
+        },
+        "vmPageSizeBytes": 16384,
+        "vm": {
+          "Pages free": 6271,
+          "Pages active": 231876,
+          "Pages inactive": 228516,
+          "Pages speculative": 2032,
+          "Pages throttled": 0,
+          "Pages wired down": 192609,
+          "Pages purgeable": 6,
+          "Pages copy-on-write": 1369537258,
+          "Pages zero filled": 8091419926,
+          "Pages reactivated": 7879060138,
+          "Pages purged": 1006753367,
+          "File-backed pages": 136767,
+          "Anonymous pages": 325657,
+          "Pages stored in compressor": 705444,
+          "Pages occupied by compressor": 347529,
+          "Decompressions": 13361495065,
+          "Compressions": 14203229702,
+          "Pageins": 1208613485,
+          "Pageouts": 7519205,
+          "Swapins": 81241516,
+          "Swapouts": 89349877
+        }
+      },
+      "collectionSeconds": 0.088
+    }
+  ],
+  "environment": {
+    "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B123",
+    "hardware": "hw.model: Mac16,13\nhw.memsize: 17179869184\nhw.logicalcpu: 10\nhw.physicalcpu: 10",
+    "repositoryCommit": "ab4a00f0a1324769283275c39f3b7df3376c7a84",
+    "installedAppVersion": {
+      "CFBundleShortVersionString": "1.5.1",
+      "CFBundleVersion": "183",
+      "CFBundleIdentifier": "com.colliderli.iina"
+    }
+  },
+  "queryErrors": [],
+  "terminationReason": "duration",
+  "network": "unmeasured",
+  "interpretation": [
+    "CPU is native ps %cpu, without whole-machine normalization.",
+    "RSS is KiB; sums may double-count shared pages and are not physical footprint.",
+    "The root process includes all its players/tabs, not only the labeled workload.",
+    "Explicit WebKit helpers are operator-attributed; PID/start identity is checked.",
+    "WindowServer and unattributed WebKit are excluded from scopedTotal.",
+    "Memory/swap are system-wide; the sampler does not generate memory pressure."
+  ],
+  "explicitHelperIdentities": {},
+  "endedUTC": "2026-11-08T19:40:01.101Z",
+  "elapsedSeconds": 20.073,
+  "sampleCount": 10,
+  "vmCounterDeltas": {
+    "Swapins": 931,
+    "Swapouts": 0,
+    "Pageins": 42135,
+    "Pageouts": 3
+  },
+  "swapUsedChangeBytes": -16777216
+}

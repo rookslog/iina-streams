@@ -1,0 +1,41 @@
+{
+  "timeUTC": "2026-11-08T21:15:30.705377Z",
+  "runtimeCommit": "127f6b98587bbdb8a6f2c532ad2a97665b4a7611",
+  "candidatePluginChanged": false,
+  "installedArchivesChanged": false,
+  "finding": "Fresh-source build used filesystem-dependent embedded-helper object key order. Only src/embedded-helpers.js differed and parsed helper values were identical.",
+  "publishedHelperOrder": [
+    "runner",
+    "media",
+    "acquire",
+    "replay"
+  ],
+  "reproduction": {
+    "extendedExistingTest": "BuildTests.test_isolated_ids_reproducibility_and_no_autostart",
+    "injectedEnumeration": "forward and reverse helper filenames",
+    "beforeFix": "FAILED (failures=1); archive hashes differed",
+    "afterFixLocal": "20 build/install tests OK,1.101seconds; fresh Linux Python3.12.14 source build exactly reproduces both R2 archives"
+  },
+  "fix": "Explicit published helper order; future helper names sorted. Existing output ownership/preflight/atomic-publication guards unchanged.",
+  "apolloValidation": {
+    "command": "/usr/bin/python3 -B -m unittest tests_candidate.test_build tests_candidate.test_install",
+    "returncode": 0,
+    "log": "python-build-reproducibility.txt",
+    "logSHA256": "39790762e141dbf3d971e436e4c2084e76898be649f30289d67c081cb02e6908",
+    "output": "....................\n----------------------------------------------------------------------\nRan 20 tests in 0.629s\n\nOK"
+  },
+  "rebuiltPackages": [
+    {
+      "name": "iina-streams-unified-0.5.0.iinaplgz",
+      "sha256": "1ed65ddfe68d2c82066af91e7b0aa9520926fc0b02c19ffb3864cc35d0104726",
+      "byteIdenticalToInstalledR2": true
+    },
+    {
+      "name": "iina-streams-focus-0.5.0.iinaplgz",
+      "sha256": "642b1cbace5180cc6e176b15eb82e84a1fa0371c6e20d11c6afc55ca878c0d24",
+      "byteIdenticalToInstalledR2": true
+    }
+  ],
+  "builderSHA256": "c23b064571785fb749e3a7c41795658eb4fb08184866cf55d631a9f93c92e4ee",
+  "testSHA256": "31ae11c56d59e349922227a148990c3c3c86f4e17aa469383e18cd25b4e6fc83"
+}

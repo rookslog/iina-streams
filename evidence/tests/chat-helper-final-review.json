@@ -1,0 +1,92 @@
+{
+  "reviewedAt": "2026-11-08T18:37:36.540106+00:00",
+  "scope": "final focused helper/chat review",
+  "python": {
+    "command": "python3 -m unittest tests_candidate.test_acquire tests_candidate.test_runner tests_candidate.test_replay tests_candidate.test_publication",
+    "passed": 50,
+    "elapsedSeconds": 11.172
+  },
+  "node": {
+    "command": "node --test tests_candidate/player-chat-race.test.js tests_candidate/io.test.js",
+    "passed": 6
+  },
+  "actualLauncherAcquisition": {
+    "device": "apollo",
+    "sourceURL": "https://www.youtube.com/watch?v=92h_kU8O58M",
+    "success": true,
+    "exitCode": 0,
+    "stderrEmpty": true,
+    "elapsedSeconds": 6.622,
+    "watcherActive": true,
+    "path": "/Users/rookslog/development/iina-streams-candidates/evidence/raw/real-youtube-replay-launcher-92h_kU8O58M/replay.jsonl",
+    "bytes": 1008784,
+    "jsonLines": 701,
+    "sha256": "4db3504a8ec06f11f9a474e8f7c519e7cda89df91909f4d49fb0ffa18ec803a1",
+    "executedAcquireSha256": "41f7c8a0c34776bbd6a44862b32a55cb258157456678e31f1a64118250f691be",
+    "executedRunnerSha256": "92acd9f9c442a4a4135d81ce1594330fafa089083a13b2c4879da3c7c46bf931",
+    "qualification": "Executed before later publication-cleanup patch; those later changes have focused actual-helper interruption tests."
+  },
+  "evidenceDistinction": {
+    "genuineYoutubeImportedMessages": 693,
+    "twitch100000Stress": "synthetic",
+    "authenticatedTwitchLiveSession": false,
+    "twitchDownloaderAcquisition": false,
+    "actualMpvSync": "Root native Focus evidence independently read: real Fetch Replay button and 51 native checks pass."
+  },
+  "sourceSha256": {
+    "candidate-plugin/helpers/acquire.py": "197da6ff90f9a00bbaf97aee78c113f09fcac96321a1555df6bf0ef5916fe05b",
+    "candidate-plugin/helpers/replay.py": "e6f05acdec920849d6b83e0bf600f7bc28b88dfe31264c8a0a9ce2dbea902632",
+    "candidate-plugin/helpers/runner.py": "c1b4cda33b7c43d50e7530f2528b7e6eed13fabf24a909d6949f988c064fb3f3",
+    "candidate-plugin/src/io.js": "fa656d16851afb8f6545f4b9a8284316b43abc6882713b1eebf96d00bf8666bd",
+    "candidate-plugin/src/player.js": "1e1eb4eea27ec5b2ae812d0e4671dd2df5d907df7e85f51c07f7769b9b42b864",
+    "candidate-plugin/src/replay.js": "5985fcc51b86a774f383f981a94ec2595f0784878013292a96667a559f523a77",
+    "tests_candidate/test_acquire.py": "b589a1a043790d32b5a663365a068d9f8ca9efe716cfd8e8696f3cec136029b4",
+    "tests_candidate/test_runner.py": "d7fd8059779edb8c56715c46f013802e2f104166919c4ceaf290cad7688fcbaf",
+    "tests_candidate/test_publication.py": "6e964d07567ed441035aae748c1f74c7a13d9e5eb5f981227da4b4705abe5ad4",
+    "tests_candidate/player-chat-race.test.js": "f3816f93bb01c417d59247176eb273d77900f735959685abf419457f48b67b16",
+    "docs/CHAT-AND-HELPER-AUDIT.md": "490de921c821274e146b151e0ea88b16b2d62509da4b639e5dcabe48648280c0"
+  },
+  "nativeReplayFollowup": {
+    "reviewedAt": "2026-11-08T18:53:26.791261+00:00",
+    "artifact": "evidence/native/focus-real-youtube-replay.json",
+    "sha256": "98c5198358111cb875335720f4d292a85360877f5e72c480ed754c141b8d949e",
+    "fetchButtonTested": true,
+    "recordCount": 16,
+    "checksPassed": 51,
+    "checksTotal": 51,
+    "method": "Independent read of root native evidence, not this reviewer operating UI"
+  },
+  "authBindingFollowup": {
+    "focusedTests": 7,
+    "combinedHostTests": 32,
+    "command": "node --test tests_candidate/player-auth-binding.test.js tests_candidate/player-chat-race.test.js tests_candidate/player-lifecycle-review.test.js tests_candidate/player.test.js",
+    "nativeEvidence": "Root reported successful deferred retained QA pong probe only; production immediate object authorization state test pending.",
+    "oauthGrantUsed": false,
+    "playerSourceAtHandoff": "a201a342c7e7049c06709f70ccaffb324af185ae1e7b705cd446bd07ea1f5a00",
+    "note": "Root and native API reviewer subsequently own final timer integration; helper source remains frozen."
+  },
+  "authWireFollowup": {
+    "reviewedAt": "2026-11-08T19:06:36.386610+00:00",
+    "initialRegressionFailures": 9,
+    "broadRunBeforeOrderingRefinements": {
+      "command": "node --test tests_candidate/*.test.js",
+      "passed": 114
+    },
+    "finalFocusedRun": {
+      "command": "node --test tests_candidate/global.test.js tests_candidate/player-auth-binding.test.js tests_candidate/player-chat-race.test.js tests_candidate/timers.test.js",
+      "passed": 36
+    },
+    "protocol": "deferred bounded JSON primitive; managed child and per-child revision; state/ready opt-in; ready current token",
+    "sharedForgetOrderingRegression": "RED with global generation guard; GREEN with per-child sessions",
+    "nativeEvidence": "Root reported binding-only immediate object delivery failed. Earlier primitive QA probe passed. Final production primitive transport retest pending.",
+    "oauthGrantUsed": false,
+    "sourceSha256": {
+      "candidate-plugin/global.js": "7ffb99c5e0698be64c1e2b0f1a61b567ddfcfede281031180d6909cda84544e4",
+      "candidate-plugin/src/player.js": "aee5f6bf2748a94463cd5204f00aaf4c92c69d3ffd442c24ab160d4c8bddadfa",
+      "tests_candidate/global.test.js": "a75ce902fb298bffdcb26914c98faf7f0626e17d5f3b07440f70a39542b0c810",
+      "tests_candidate/player-auth-binding.test.js": "5aeb776eaa64e069e471becec1cc1ba41a992acdda2c6c983f19fef5f583f5c8",
+      "docs/CHAT-AND-HELPER-AUDIT.md": "e00c732346e5172143dc3100107599bf7f3d3bc00d376b6db5c206f53519c491",
+      "docs/INSTALL-AND-ROLLBACK.md": "ce46a921358adecff1518c35760ce20bd61587b6a7d2df11a4e92654b3df43e1"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "physicalPoint": {
+    "x": 998,
+    "y": 507
+  },
+  "geometry": {
+    "phase": "overlay-ui-result",
+    "time": "2026-11-08T18:21:29.459Z",
+    "variant": "focus",
+    "sourceId": "2922164492",
+    "x": 580,
+    "display": "flex",
+    "documentHidden": false,
+    "y": 241,
+    "messages": 6,
+    "width": 340,
+    "clickable": false,
+    "opacity": "1",
+    "action": "clickthrough-before",
+    "background": "rgba(12, 15, 21, 0.64)",
+    "visible": true,
+    "height": 287,
+    "visibility": "visible",
+    "viewportWidth": 1180,
+    "viewportHeight": 720,
+    "editing": false
+  },
+  "events": [],
+  "checks": {
+    "normalMode": true,
+    "clickPassedToNative": false
+  }
+}

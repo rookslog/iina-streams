@@ -1,0 +1,106 @@
+{
+  "timeUTC": "2026-11-08T20:59:27.946614Z",
+  "originalPNGs": "Retained on Apollo. Review exports contain the corresponding JPEG derivatives, with exact PNG hashes here.",
+  "images": [
+    {
+      "original": "evidence/native/unified-r2-sidebar.png",
+      "originalBytes": 3728268,
+      "originalSHA256": "0e39c5c84492b8dddb6d7906dac830a7f593fcd7a5f3a63300af8dddc9e7be09",
+      "reviewImage": "evidence/native/unified-r2-sidebar.jpg",
+      "reviewBytes": 322392,
+      "reviewSHA256": "1bb0b8ed4babd54b8bf0d34f32ab6aa7c117a36e4c4923e4013f1b3d6e1fd1bc",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/focus-r2-inspector.png",
+      "originalBytes": 3491753,
+      "originalSHA256": "9540fa8631a7d04c2b2281cd21a9a71e6d2e5fb6bda5f5e4a5fff6b8ff77e7d9",
+      "reviewImage": "evidence/native/focus-r2-inspector.jpg",
+      "reviewBytes": 305208,
+      "reviewSHA256": "09f6e168e7b7644cabcef78022982a9e6ba7612c2cbe168c785758e0b7ef7959",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/focus-r2-overlay.png",
+      "originalBytes": 3808110,
+      "originalSHA256": "65867acbbaf31d43e8cfa7e06b9382782b0687dda0d1047ec817a3cec09a97e5",
+      "reviewImage": "evidence/native/focus-r2-overlay.jpg",
+      "reviewBytes": 298632,
+      "reviewSHA256": "9c7334a9e8de9ccc012a70a1c93aa6b3edef535d38ee1ec53b6083d1f4cc9ae4",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/unified-final-comparison-sidebar.png",
+      "originalBytes": 3892123,
+      "originalSHA256": "6e79576ad85087114e690bd9381a62f5d26e7f0f8d3429c3e0ea5c1df08ef145",
+      "reviewImage": "evidence/native/unified-final-comparison-sidebar.jpg",
+      "reviewBytes": 339911,
+      "reviewSHA256": "7d28676c5542b490415597afdb34f7dacbb2fae8df4bff144b0f9f6dda1ac940",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/focus-final-render-sidebar.png",
+      "originalBytes": 3894090,
+      "originalSHA256": "638e3222ce8daa31c4c09a2c62f195f61cbfd13e367b69d0fa261bcbb6b92266",
+      "reviewImage": "evidence/native/focus-final-render-sidebar.jpg",
+      "reviewBytes": 198960,
+      "reviewSHA256": "81f0ab4f4c01f66ad594630fb60880324e524da0eba69fb2b85a8acbf3ccc6c7",
+      "newDerivative": false,
+      "processing": "Previously generated native screenshot JPEG; retained unchanged"
+    },
+    {
+      "original": "evidence/native/focus-final-render-overlay.png",
+      "originalBytes": 3822818,
+      "originalSHA256": "76b531cb852a5c52319bd338b24ea950b08cd2fbe1d10cdefe8092607b27cf1c",
+      "reviewImage": "evidence/native/focus-final-render-overlay.jpg",
+      "reviewBytes": 187141,
+      "reviewSHA256": "821e2b3b0025af8f7eefff5e8e9737cf7ff6dd89c155e6ebce8b5f616ca9e711",
+      "newDerivative": false,
+      "processing": "Previously generated native screenshot JPEG; retained unchanged"
+    },
+    {
+      "original": "evidence/native/focus-small-window-clamp.png",
+      "originalBytes": 1212305,
+      "originalSHA256": "59918a8143e9eabe6a3ceee40fa51ae9ae6e3febde5bbd3d91c01d69406adb6e",
+      "reviewImage": "evidence/native/focus-small-window-clamp.jpg",
+      "reviewBytes": 299316,
+      "reviewSHA256": "89685edd331702035fb758d839965e32fe9c2484ea5f11b154b516b631c16ed6",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/focus-fullscreen-overlay.png",
+      "originalBytes": 7547518,
+      "originalSHA256": "cb159bfedf3c388c7cd06ca7de2b6cbc99b160845a8ab544d77326e2ea9c9971",
+      "reviewImage": "evidence/native/focus-fullscreen-overlay.jpg",
+      "reviewBytes": 304512,
+      "reviewSHA256": "7922b9e703a933706f65a5e2bfa49b48548338ad1c5aa111a2fbf7d54207e85e",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/focus-native-collapsed-quality-final.png",
+      "originalBytes": 4341752,
+      "originalSHA256": "ba55b946a73ea7bf8755ad23696d6798d67b0c05be8f5bc383dbf6d21efdd411",
+      "reviewImage": "evidence/native/focus-native-collapsed-quality-final.jpg",
+      "reviewBytes": 253058,
+      "reviewSHA256": "2dbacbed2ac354097dce036d0cfa5ea7ca7d8d546c5ddbf10d2c695bfc4352e3",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    },
+    {
+      "original": "evidence/native/overlay-opacity-probe.png",
+      "originalBytes": 4643101,
+      "originalSHA256": "55f9cd88a672381ee95e2a348782a08e2b7c9d2f985ab61b021110052edd653d",
+      "reviewImage": "evidence/native/overlay-opacity-probe.jpg",
+      "reviewBytes": 368027,
+      "reviewSHA256": "d0a8e73c258675b7ca9dfccce30214ce6ad2606fe8245bdd10155559199348a9",
+      "newDerivative": true,
+      "processing": "sips JPEG quality85 maximum dimension1800; no crop or content edit"
+    }
+  ]
+}

@@ -1,0 +1,714 @@
+{
+  "schemaVersion": 2,
+  "collectedUTC": "2026-11-08T20:09:27.790978+00:00",
+  "collectionMethod": "Read-only selected-field extraction from five existing DiagnosticReports; no process or UI actions.",
+  "records": [
+    {
+      "filename": "IINA-2026-11-07-145729.ips",
+      "sha256": "bfb7f45ced440a5d81ff9673af97cc7cfa632affe6764447727f6ad74d4da26c",
+      "reportTimestamp": "2026-11-07 14:57:29.00 -0500",
+      "captureTime": "2026-11-07 14:56:58.2566 -0500",
+      "processLaunch": "2026-11-07 14:45:39.0437 -0500",
+      "pid": 41159,
+      "appVersion": "1.5.1",
+      "buildVersion": "183",
+      "exception": {
+        "type": "EXC_BREAKPOINT",
+        "signal": "SIGTRAP"
+      },
+      "termination": {
+        "namespace": "SIGNAL",
+        "code": 5,
+        "flags": 0,
+        "indicator": "Trace/BPT trap: 5"
+      },
+      "faultingThreadIndex": 0,
+      "threadQueue": "com.apple.main-thread",
+      "topFrames": [
+        {
+          "image": "IINA",
+          "symbol": "JavascriptAPISidebarView.cleanUp(_:)",
+          "symbolLocation": 256
+        },
+        {
+          "image": "IINA",
+          "symbol": "JavascriptPluginInstance.deinit",
+          "symbolLocation": 376
+        },
+        {
+          "image": "IINA",
+          "symbol": "JavascriptPluginInstance.__deallocating_deinit",
+          "symbolLocation": 12
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "symbol": "_swift_release_dealloc",
+          "symbolLocation": 64
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "symbol": "bool swift::RefCounts<swift::SideTableRefCountBits>::doDecrementSlow<(swift::PerformDeinit)1>(swift::SideTableRefCountBits, unsigned int)",
+          "symbolLocation": 176
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSMenuItem dealloc]",
+          "symbolLocation": 92
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__RELEASE_OBJECTS_IN_THE_ARRAY__",
+          "symbolLocation": 124
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "-[__NSArrayM dealloc]",
+          "symbolLocation": 124
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSMenu dealloc]",
+          "symbolLocation": 128
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSMenuItem dealloc]",
+          "symbolLocation": 64
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__RELEASE_OBJECTS_IN_THE_ARRAY__",
+          "symbolLocation": 124
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "-[__NSFrozenArrayM dealloc]",
+          "symbolLocation": 124
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "symbol": "AutoreleasePoolPage::releaseUntil(objc_object**)",
+          "symbolLocation": 204
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "symbol": "objc_autoreleasePoolPop",
+          "symbolLocation": 244
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "_CFAutoreleasePoolPop",
+          "symbolLocation": 32
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopPerCalloutARPEnd",
+          "symbolLocation": 32
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoBlocks",
+          "symbolLocation": 404
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopRun",
+          "symbolLocation": 2396
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "_CFRunLoopRunSpecificWithOptions",
+          "symbolLocation": 536
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "RunCurrentEventLoopInMode",
+          "symbolLocation": 320
+        }
+      ],
+      "kind": "historical-sidebar-teardown-trap",
+      "context": "Historical report from 2026-11-07; not evidence of this candidate run's new failure.",
+      "limits": "Sidebar cleanUp is called from plugin instance deinit. The report alone does not establish which object was nil or the plugin identity.",
+      "reportUTC": "2026-11-07T19:57:29.000Z",
+      "captureUTC": "2026-11-07T19:56:58.256Z",
+      "processLaunchUTC": "2026-11-07T19:45:39.043Z"
+    },
+    {
+      "filename": "IINA-2026-11-08-130419.ips",
+      "sha256": "029f89b21cc5287f4ee75c31261e76820f9537473f98e4edf180c8346d745324",
+      "reportTimestamp": "2026-11-08 13:04:19.00 -0500",
+      "captureTime": "2026-11-08 13:03:49.3495 -0500",
+      "processLaunch": "2026-11-08 12:47:25.7620 -0500",
+      "pid": 55192,
+      "appVersion": "1.5.1",
+      "buildVersion": "183",
+      "exception": {
+        "type": "EXC_BAD_ACCESS",
+        "signal": "SIGSEGV"
+      },
+      "termination": {
+        "namespace": "SIGNAL",
+        "code": 11,
+        "flags": 0,
+        "indicator": "Segmentation fault: 11"
+      },
+      "faultingThreadIndex": 0,
+      "threadQueue": "com.apple.main-thread",
+      "topFrames": [
+        {
+          "image": "libobjc.A.dylib",
+          "symbol": "objc_release",
+          "symbolLocation": 16
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "symbol": "AutoreleasePoolPage::releaseUntil(objc_object**)",
+          "symbolLocation": 204
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "symbol": "objc_autoreleasePoolPop",
+          "symbolLocation": 244
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "_CFAutoreleasePoolPop",
+          "symbolLocation": 32
+        },
+        {
+          "image": "Foundation",
+          "symbol": "-[NSAutoreleasePool drain]",
+          "symbolLocation": 136
+        },
+        {
+          "image": "Foundation",
+          "symbol": "_NSAppleEventManagerGenericHandler",
+          "symbolLocation": 92
+        },
+        {
+          "image": "AE"
+        },
+        {
+          "image": "AE"
+        },
+        {
+          "image": "AE",
+          "symbol": "aeProcessAppleEvent",
+          "symbolLocation": 484
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "AEProcessAppleEvent",
+          "symbolLocation": 68
+        },
+        {
+          "image": "AppKit",
+          "symbol": "_DPSNextEvent",
+          "symbolLocation": 1268
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+          "symbolLocation": 832
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+          "symbolLocation": 344
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSApplication run]",
+          "symbolLocation": 396
+        },
+        {
+          "image": "AppKit",
+          "symbol": "NSApplicationMain",
+          "symbolLocation": 880
+        },
+        {
+          "image": "IINA",
+          "symbol": "main",
+          "symbolLocation": 12
+        },
+        {
+          "image": "dyld",
+          "symbol": "start",
+          "symbolLocation": 6652
+        }
+      ],
+      "kind": "objective-c-release-segfault",
+      "context": "2026-11-08 QA session, Objective-C release/autorelease and AppleEvent stack.",
+      "limits": "No candidate JavaScript frame appears in the selected top stack. Origin is unresolved.",
+      "reportUTC": "2026-11-08T18:04:19.000Z",
+      "captureUTC": "2026-11-08T18:03:49.349Z",
+      "processLaunchUTC": "2026-11-08T17:47:25.762Z"
+    },
+    {
+      "filename": "IINA-2026-11-08-134133.ips",
+      "sha256": "e13798d8b2d7fb781d8e2c7c9b179341af99d88cd7b93833f617ab68194dccd1",
+      "reportTimestamp": "2026-11-08 13:41:33.00 -0500",
+      "captureTime": "2026-11-08 13:41:30.6410 -0500",
+      "processLaunch": "2026-11-08 13:40:12.2171 -0500",
+      "pid": 32982,
+      "appVersion": "1.5.1",
+      "buildVersion": "183",
+      "exception": {
+        "type": "EXC_BREAKPOINT",
+        "signal": "SIGKILL"
+      },
+      "termination": {
+        "namespace": "FOUNDATION",
+        "code": 1,
+        "flags": 2
+      },
+      "faultingThreadIndex": 0,
+      "threadQueue": "com.apple.main-thread",
+      "topFrames": [
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTFCrashWithInfoImpl(int, char const*, char const*, unsigned long long)",
+          "symbolLocation": 4
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTF::StringImpl::~StringImpl()",
+          "symbolLocation": 928
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::SymbolTable::destroy(JSC::JSCell*)",
+          "symbolLocation": 1356
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::HeapCellType::finishSweep(JSC::MarkedBlock::Handle&, JSC::FreeList*) const",
+          "symbolLocation": 616
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::MarkedBlock::Handle::sweep(JSC::FreeList*)",
+          "symbolLocation": 1424
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::BlockDirectory::sweep()",
+          "symbolLocation": 208
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::sweepSynchronously()",
+          "symbolLocation": 92
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::handleNeedFinalize(unsigned int)",
+          "symbolLocation": 2816
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::acquireAccessSlow()",
+          "symbolLocation": 124
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::JSLock::lock(long)",
+          "symbolLocation": 1004
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::JSRunLoopTimer::Manager::timerDidFireCallback()",
+          "symbolLocation": 704
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTF::RunLoop::TimerBase::start(WTF::Seconds, bool)::$_0::__invoke(__CFRunLoopTimer*, void*)",
+          "symbolLocation": 88
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__",
+          "symbolLocation": 32
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoTimer",
+          "symbolLocation": 1084
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoTimers",
+          "symbolLocation": 280
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopRun",
+          "symbolLocation": 1852
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "_CFRunLoopRunSpecificWithOptions",
+          "symbolLocation": 536
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "RunCurrentEventLoopInMode",
+          "symbolLocation": 320
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "ReceiveNextEventCommon",
+          "symbolLocation": 492
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "_BlockUntilNextEventMatchingListInMode",
+          "symbolLocation": 48
+        }
+      ],
+      "kind": "javascriptcore-heap-sweep-trap",
+      "context": "During evolving native global/child callback diagnostics, before final serialized/deferred bridge.",
+      "limits": "Temporal correlation does not prove callback protocol, candidate code, or host implementation caused this crash.",
+      "reportUTC": "2026-11-08T18:41:33.000Z",
+      "captureUTC": "2026-11-08T18:41:30.641Z",
+      "processLaunchUTC": "2026-11-08T18:40:12.217Z"
+    },
+    {
+      "filename": "IINA-2026-11-08-140109.ips",
+      "sha256": "e521e64791e8c0dc6813e8557b9bce48d8f3ccdb474487492c23c9a079e9c514",
+      "reportTimestamp": "2026-11-08 14:01:09.00 -0500",
+      "captureTime": "2026-11-08 14:01:06.2211 -0500",
+      "processLaunch": "2026-11-08 13:55:54.6788 -0500",
+      "pid": 57821,
+      "appVersion": "1.5.1",
+      "buildVersion": "183",
+      "exception": {
+        "type": "EXC_BREAKPOINT",
+        "signal": "SIGKILL"
+      },
+      "termination": {
+        "namespace": "FOUNDATION",
+        "code": 1,
+        "flags": 2
+      },
+      "faultingThreadIndex": 0,
+      "threadQueue": "com.apple.main-thread",
+      "topFrames": [
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTFCrashWithInfoImpl(int, char const*, char const*, unsigned long long)",
+          "symbolLocation": 4
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTF::StringImpl::~StringImpl()",
+          "symbolLocation": 928
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::IsoInlinedHeapCellType<JSC::JSString>::finishSweep(JSC::MarkedBlock::Handle&, JSC::FreeList*) const",
+          "symbolLocation": 9164
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::MarkedBlock::Handle::sweep(JSC::FreeList*)",
+          "symbolLocation": 1424
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::BlockDirectory::sweep()",
+          "symbolLocation": 208
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::sweepSynchronously()",
+          "symbolLocation": 92
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::handleNeedFinalize(unsigned int)",
+          "symbolLocation": 2816
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::Heap::acquireAccessSlow()",
+          "symbolLocation": 124
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::JSLock::lock(long)",
+          "symbolLocation": 1004
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "JSC::JSRunLoopTimer::Manager::timerDidFireCallback()",
+          "symbolLocation": 704
+        },
+        {
+          "image": "JavaScriptCore",
+          "symbol": "WTF::RunLoop::TimerBase::start(WTF::Seconds, bool)::$_0::__invoke(__CFRunLoopTimer*, void*)",
+          "symbolLocation": 88
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__",
+          "symbolLocation": 32
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoTimer",
+          "symbolLocation": 1084
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoTimers",
+          "symbolLocation": 280
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopRun",
+          "symbolLocation": 1852
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "_CFRunLoopRunSpecificWithOptions",
+          "symbolLocation": 536
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "RunCurrentEventLoopInMode",
+          "symbolLocation": 320
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "ReceiveNextEventCommon",
+          "symbolLocation": 492
+        },
+        {
+          "image": "HIToolbox",
+          "symbol": "_BlockUntilNextEventMatchingListInMode",
+          "symbolLocation": 48
+        },
+        {
+          "image": "AppKit",
+          "symbol": "_DPSBlockUntilNextEventMatchingListInMode",
+          "symbolLocation": 292
+        }
+      ],
+      "kind": "javascriptcore-heap-sweep-trap",
+      "context": "Later native QA process, before final serialized/deferred bridge; JSString sweep differs from the earlier SymbolTable sweep.",
+      "limits": "Broad stack family matches the 18:41 report, but exact initiating cause is unresolved.",
+      "reportUTC": "2026-11-08T19:01:09.000Z",
+      "captureUTC": "2026-11-08T19:01:06.221Z",
+      "processLaunchUTC": "2026-11-08T18:55:54.678Z"
+    },
+    {
+      "filename": "IINA-2026-11-08-145625.ips",
+      "sha256": "675c05a910b034ff31d56dae8a511920b8fa92214180f228a8d3465b1dce132f",
+      "reportTimestamp": "2026-11-08 14:56:25.00 -0500",
+      "captureTime": "2026-11-08 14:56:22.0172 -0500",
+      "processLaunch": "2026-11-08 14:37:09.4810 -0500",
+      "pid": 40519,
+      "appVersion": "1.5.1",
+      "buildVersion": "183",
+      "exception": {
+        "type": "EXC_BREAKPOINT",
+        "signal": "SIGTRAP"
+      },
+      "termination": {
+        "namespace": "SIGNAL",
+        "code": 5,
+        "flags": 0,
+        "indicator": "Trace/BPT trap: 5"
+      },
+      "faultingThreadIndex": 0,
+      "threadQueue": "com.apple.main-thread",
+      "topFrames": [
+        {
+          "image": "IINA",
+          "symbol": "PluginListView.ItemView.actionsBtnAction(_:)",
+          "symbolLocation": 1396
+        },
+        {
+          "image": "IINA",
+          "symbol": "@objc PluginListView.ItemView.actionsBtnAction(_:)",
+          "symbolLocation": 52
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSApplication(NSResponder) sendAction:to:from:]",
+          "symbolLocation": 540
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSControl sendAction:to:]",
+          "symbolLocation": 88
+        },
+        {
+          "image": "AppKit",
+          "symbol": "__26-[NSCell _sendActionFrom:]_block_invoke",
+          "symbolLocation": 100
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSCell _sendActionFrom:]",
+          "symbolLocation": 204
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSButtonCell _sendActionFrom:]",
+          "symbolLocation": 96
+        },
+        {
+          "image": "AppKit",
+          "symbol": "__29-[NSButtonCell performClick:]_block_invoke",
+          "symbolLocation": 56
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSButtonCell performClick:]",
+          "symbolLocation": 552
+        },
+        {
+          "image": "AppKit",
+          "symbol": "-[NSCell accessibilityPerformPress]",
+          "symbolLocation": 28
+        },
+        {
+          "image": "AppKit",
+          "symbol": "NSAccessibilityPerformEntryPointBOOL",
+          "symbolLocation": 44
+        },
+        {
+          "image": "AppKit",
+          "symbol": "NSAccessibilityEntryPointPerformAction",
+          "symbolLocation": 220
+        },
+        {
+          "image": "AppKit",
+          "symbol": "PerformAction",
+          "symbolLocation": 200
+        },
+        {
+          "image": "CoreAccessibility"
+        },
+        {
+          "image": "HIServices",
+          "symbol": "_AXXMIGPerformAction",
+          "symbolLocation": 428
+        },
+        {
+          "image": "HIServices",
+          "symbol": "_XPerformAction",
+          "symbolLocation": 340
+        },
+        {
+          "image": "HIServices",
+          "symbol": "mshMIGPerform",
+          "symbolLocation": 216
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE1_PERFORM_FUNCTION__",
+          "symbolLocation": 60
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopDoSource1",
+          "symbolLocation": 604
+        },
+        {
+          "image": "CoreFoundation",
+          "symbol": "__CFRunLoopRun",
+          "symbolLocation": 2208
+        }
+      ],
+      "kind": "native-plugin-actions-menu-trap",
+      "context": "Parent reports attempting More in native plugin management during ordinary archive install/uninstall checks. No confirmed Uninstall or confirmation action before this crash.",
+      "limits": "Stack establishes native actionsBtnAction reached by Accessibility press. It does not establish that NSApp.currentEvent was nil, nor exclude a stale weak plugin/list reference.",
+      "reportUTC": "2026-11-08T19:56:25.000Z",
+      "captureUTC": "2026-11-08T19:56:22.017Z",
+      "processLaunchUTC": "2026-11-08T19:37:09.481Z"
+    }
+  ],
+  "sourceVersion": {
+    "app": "IINA",
+    "version": "1.5.1",
+    "build": "183",
+    "tag": "v1.5.1",
+    "note": "Source pinned to v1.5.1; current report stacks are from installed build 183. No debug-symbol line mapping or process-memory inspection was performed."
+  },
+  "latestAssessment": {
+    "observed": "2026-11-08T19:56:22.017Z capture, reported at 19:56:25 UTC: native plugin More/action handler trapped on the main thread through Accessibility press.",
+    "hypothesis": {
+      "status": "source-and-stack-consistent, unproven",
+      "description": "More calls NSMenu.popUpContextMenu with force-unwrapped NSApp.currentEvent. An Accessibility press can reach the action outside a normal pointer event; a nil current event is a concrete hypothesis. The row also contains weak implicitly unwrapped plugin/listView references, so stale target lifetime is an alternative."
+    },
+    "boundedRecommendation": "For the authorized native uninstall check, obtain a fresh exact candidate row and use a real pointer click on its verified More control. Inspect the candidate-specific menu and confirmation. Do not fall back to AXPress on More. No IINA.app modification or global preference change is proposed.",
+    "notEstablished": [
+      "Uninstall was invoked before the crash",
+      "Candidate JavaScript or plugin teardown caused the latest crash",
+      "A proven IINA or JavaScriptCore defect",
+      "Long-session stability from later short successful sessions"
+    ],
+    "separateLifecycleObservation": "The 19:45:56.807 UTC unexpected anchor window-closed event occurred about ten minutes earlier while the IINA process remained alive at that time. It is a separate unresolved lifecycle observation, not this crash."
+  },
+  "primarySources": [
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/SettingsPagePlugin.swift#L410-L420",
+      "sha256": "ea4ee440b956088f3721131793ed43e6781f6800fe6048f8d36c810e7f9073d7",
+      "finding": "More assigns currentPlugin, constructs the action menu, and force-unwraps NSApp.currentEvent for NSMenu.popUpContextMenu."
+    },
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/SettingsPagePlugin.swift#L513-L521",
+      "sha256": "ea4ee440b956088f3721131793ed43e6781f6800fe6048f8d36c810e7f9073d7",
+      "finding": "Uninstall is a separate handler; disabling/removal follows the candidate-named confirmation's affirmative response."
+    },
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPluginInstance.swift#L72-L78",
+      "finding": "Instance deinit removes native polyfill timers and calls cleanup on its APIs."
+    },
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPluginInstance.swift#L163-L172",
+      "finding": "Sidebar is instantiated only in non-global contexts; no automatic nil-player global Sidebar cleanup path."
+    },
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPISidebarView.swift",
+      "finding": "Sidebar cleanup force-uses player and instance.plugin; historical teardown trap merits cautious unload testing but does not prove which reference failed."
+    },
+    {
+      "url": "https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPIGlobal.swift#L36-L43",
+      "finding": "Global controller cleanup closes and shuts down its managed players; candidate removal/reload can therefore close candidate-owned windows as host lifecycle behavior."
+    }
+  ],
+  "privacyScope": {
+    "included": [
+      "Selected app version, process ID and timestamps",
+      "Exception type/signal and termination summary",
+      "At most 20 top triggered-thread symbols with image names",
+      "SHA-256 of each selected source report"
+    ],
+    "excluded": [
+      "Registers and memory addresses",
+      "Full diagnostic payload and binary image list",
+      "System/user identifiers and UUIDs",
+      "Arguments, environment, credentials or unrelated reports"
+    ],
+    "nativeMutations": false
+  },
+  "currentProcessStatus": "Not sampled by this record. Earlier currentIINA fields in the three-report predecessor are stale and intentionally omitted.",
+  "teardownReview": {
+    "verifiedHostBehavior": [
+      "JavascriptPlugin.enabled reloads global and player instances. Disabling drops globalInstance; a forced reload replaces it.",
+      "Global controller cleanup closes and shuts down its managed player instances, then clears its maps.",
+      "JavascriptPluginInstance deinit removes all polyfill timers and invokes cleanup for each instantiated API.",
+      "Sidebar cleanup force-uses weak player and instance.plugin references, but Sidebar is only instantiated for non-global contexts."
+    ],
+    "candidateInspection": [
+      "Current production player window-will-close handler cancels auth setup, turns chat off, cancels helpers, releases replay cache, reports player-closed, closes the playback state object, clears owned timers, and unregisters its event listeners.",
+      "No production call to native core.stop(), native window.close(), or app quit was found in the reviewed player/global/timer sources. Playback state object's close() is distinct from a native close command.",
+      "No delayed timer path was identified that explains the earlier isolated anchor window closure."
+    ],
+    "assessment": "The historical Sidebar teardown trap warrants preserving unload evidence; the selected stack and source do not establish the exact stale or nil reference. The latest More trap occurs before the separate Uninstall handler in the selected stack, so it must not be reported as a reproduced candidate unload failure."
+  }
+}

@@ -28,3 +28,10 @@ Out of initial V1 scope: native IINA seekbar patches, video-embedded chat overla
 ## Gate escalation
 
 Any crash, stuck stream process, unexpectedly exposed localhost listener, secret leakage, or repeated failure to play hutchmf blocks promotion. If the live channel is offline, technical tests may use a named backup, but hutchmf-specific acceptance is marked pending. If credentials or permissions are unavailable, omit the chat milestone and preserve working video-only deployment. Promotion always leaves an earlier working artifact available.
+
+## 2026-11-07 implementation checkpoint (does not override technical gates)
+- M0: repository, crash reports and original Bridge investigated; original exact failure still unconfirmed. IINA app startup crash is a new release blocker.
+- M1: new one-shot direct URL path implemented and short IINA file-loaded proof acquired. Full real playback/audio, 10 stop cycles and rollback gate remain **not passed**.
+- M2: sidebar, dynamic quality selection and window-isolation logic **implemented** with 11 Node tests, but real GUI quality change, multiple live windows, performance and VoiceOver remain **not passed**. Candidate packaged for audit only.
+- M3/M4/M5: not implemented/accepted. See `HANDOFF-GPT6-PRO.md` for independent audit and onward execution brief.
+No stable installation or production acceptance.

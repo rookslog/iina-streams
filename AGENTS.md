@@ -1,0 +1,14 @@
+# IINA Streams — project agent guidance
+
+Start by checking current Git status, exact IINA plugin identities, and the user's immediate task. For substantial Streams design/engineering work, read `docs/commission/HANDOFF-SOL61-HIGH-2026-11-09.md`. **Only for harness configuration, agent/skill selection, or audits**, consult `docs/harness/EFFECTIVE-LOAD-AUDIT-2026-11-09.md`, `docs/harness/IMPLEMENTATION-RATIONALE-TOULMIN-2026-11-09.md` and `docs/harness/INDEPENDENT-AUDIT-OPUS-2026-11-09.md`. Treat historical reports as evidence from their dated state, not runtime proof.
+
+- The operator's task is a usable **native IINA** streaming/chat experience, not a finished plan or screenshot. Directly movable/resizable overlay, coherent chat/account UI and real Twitch VOD chat are priority journeys.
+- Preserve the operational M2 worktree, original preview, current candidate archives, stable ID, installed plugins, and unrelated IINA/Safari windows. Stable deployment requires explicit user approval.
+- The operator launches the Sol High Codex lead **locally in Herdr**. Research and source-critical review should use **Terra High, not Luna**. Independent Opus review runs in a separately scoped Claude Code Herdr pane, not as a Codex subagent. Only one agent at a time may operate native IINA; the lead owns that testing slot, installation decisions, merges and release gates.
+- Give each subagent a bounded brief with known source checkpoint, exact file/test ownership, expected evidence, and a deadline. Reviews are independent of builder reports. Never allow parallel writers to change shared files.
+- Evidence hierarchy: observed native IINA result > real-source integration test > source/automated mock test > past agent claim > untested proposal. Label claims and counterevidence; no synthetic test implies authentic Twitch acquisition or OAuth persistence.
+- Never expose tokens, Keychain values, device codes or signed URLs in logs. Never perform account authorization without the operator.
+- Prefer a distinct development-plugin identity/worktree over reinstalling the same archive for a CSS or JS change. Preserve rollback and verify IINA reloading before asserting hot reload.
+- On UI work use `.agents/skills/streams-interaction-design/SKILL.md`; on native testing `.agents/skills/streams-native-acceptance/SKILL.md`; on auth/replay `.agents/skills/streams-auth-replay/SKILL.md`. They supplement, not override, Apple's HIG or the operator's feedback.
+- Keep the skill roster narrow. Do not simultaneously invoke the complete Matt Pocock, Superpowers, P Stack, and Addy Osmani workflow routers.
+- Each completed slice needs reproducible observed behavior, tests where appropriate, preserved source SHA, and an honest record of what was **not** tested.

@@ -1,0 +1,1237 @@
+{
+  "elements": [
+    {
+      "depth": 0,
+      "description": "",
+      "position": [
+        140,
+        100
+      ],
+      "role": "AXWindow",
+      "size": [
+        1280,
+        720
+      ],
+      "title": "All Aboard (ish) — YouTube",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        235,
+        107
+      ],
+      "role": "AXGroup",
+      "size": [
+        152,
+        38
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "Back",
+      "position": [
+        393,
+        107
+      ],
+      "role": "AXButton",
+      "size": [
+        38,
+        38
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXGroup",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        158,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        204,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 1,
+      "description": "",
+      "position": [
+        181,
+        118
+      ],
+      "role": "AXButton",
+      "size": [
+        16,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "Streams Unified",
+      "position": [
+        236,
+        109
+      ],
+      "role": "AXButton",
+      "size": [
+        112,
+        36
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "go down",
+      "position": [
+        348,
+        109
+      ],
+      "role": "AXButton",
+      "size": [
+        40,
+        36
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXGroup",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 2,
+      "description": "",
+      "position": [
+        205,
+        119
+      ],
+      "role": "AXGroup",
+      "size": [
+        14,
+        14
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 3,
+      "description": "",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXScrollArea",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 4,
+      "description": "Streams",
+      "position": [
+        140,
+        153
+      ],
+      "role": "AXWebArea",
+      "size": [
+        300,
+        667
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "",
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        42
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "Playback settings",
+      "position": [
+        156,
+        228
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        45
+      ],
+      "title": "Playback settings",
+      "value": ""
+    },
+    {
+      "depth": 5,
+      "description": "Chat",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        536
+      ],
+      "title": "Chat",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "numericValue": 1,
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXHeading",
+      "size": [
+        202,
+        21
+      ],
+      "title": "All Aboard (ish)",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        195
+      ],
+      "role": "AXGroup",
+      "size": [
+        202,
+        18
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Open another stream",
+      "position": [
+        363,
+        177
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Open another stream",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Hide Streams",
+      "position": [
+        396,
+        177
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Hide Streams",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        234
+      ],
+      "role": "AXStaticText",
+      "size": [
+        40,
+        16
+      ],
+      "title": "",
+      "value": "Quality"
+    },
+    {
+      "depth": 6,
+      "description": "Playback quality",
+      "position": [
+        205,
+        231
+      ],
+      "role": "AXPopUpButton",
+      "size": [
+        181,
+        22
+      ],
+      "title": "Playback quality",
+      "value": "720p · H.264"
+    },
+    {
+      "depth": 6,
+      "description": "Refresh available qualities",
+      "position": [
+        396,
+        228
+      ],
+      "role": "AXButton",
+      "size": [
+        28,
+        29
+      ],
+      "title": "Refresh available qualities",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "numericValue": 2,
+      "position": [
+        156,
+        293
+      ],
+      "role": "AXHeading",
+      "size": [
+        31,
+        17
+      ],
+      "title": "Chat",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        194,
+        294
+      ],
+      "role": "AXStaticText",
+      "size": [
+        36,
+        14
+      ],
+      "title": "",
+      "value": "Replay"
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        360,
+        287
+      ],
+      "role": "AXButton",
+      "size": [
+        27,
+        29
+      ],
+      "title": "Off",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Chat appearance",
+      "position": [
+        394,
+        287
+      ],
+      "role": "AXButton",
+      "size": [
+        31,
+        29
+      ],
+      "title": "Chat appearance",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        333
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        18
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        272
+      ],
+      "role": "AXMenu",
+      "size": [
+        268,
+        10
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        156,
+        367
+      ],
+      "role": "AXStaticText",
+      "size": [
+        59,
+        14
+      ],
+      "title": "",
+      "value": "Chat offset"
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        219,
+        361
+      ],
+      "role": "AXTextField",
+      "size": [
+        62,
+        26
+      ],
+      "title": "Chat offset",
+      "value": "0"
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        285,
+        367
+      ],
+      "role": "AXStaticText",
+      "size": [
+        7,
+        14
+      ],
+      "title": "",
+      "value": "s"
+    },
+    {
+      "depth": 6,
+      "description": "",
+      "position": [
+        340,
+        360
+      ],
+      "role": "AXButton",
+      "size": [
+        84,
+        29
+      ],
+      "title": "First message",
+      "value": ""
+    },
+    {
+      "depth": 6,
+      "description": "Read-only chat messages",
+      "position": [
+        156,
+        396
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        412
+      ],
+      "title": "Read-only chat messages",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        171
+      ],
+      "role": "AXStaticText",
+      "size": [
+        116,
+        20
+      ],
+      "title": "",
+      "value": "All Aboard (ish)"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        197
+      ],
+      "role": "AXStaticText",
+      "size": [
+        85,
+        14
+      ],
+      "title": "",
+      "value": "YouTube · Video"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        235
+      ],
+      "role": "AXStaticText",
+      "size": [
+        40,
+        15
+      ],
+      "title": "",
+      "value": "Quality"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        293
+      ],
+      "role": "AXStaticText",
+      "size": [
+        31,
+        16
+      ],
+      "title": "",
+      "value": "Chat"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        335
+      ],
+      "role": "AXStaticText",
+      "size": [
+        161,
+        14
+      ],
+      "title": "",
+      "value": "Imported chat · 693 messages"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        367
+      ],
+      "role": "AXStaticText",
+      "size": [
+        59,
+        14
+      ],
+      "title": "",
+      "value": "Chat offset"
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "numericValue": 0,
+      "position": [
+        261,
+        366
+      ],
+      "role": "AXIncrementor",
+      "size": [
+        12,
+        16
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        208
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        52
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        259
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        53
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        311
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        52
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        362
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        32
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        393
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        52
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        444
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        53
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        496
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        52
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        547
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        53
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        599
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        31
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        629
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        53
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        681
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        52
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 7,
+      "description": "",
+      "position": [
+        156,
+        732
+      ],
+      "role": "AXGroup",
+      "size": [
+        268,
+        73
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        261,
+        366
+      ],
+      "role": "AXIncrementorArrow",
+      "size": [
+        12,
+        8
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        261,
+        374
+      ],
+      "role": "AXIncrementorArrow",
+      "size": [
+        12,
+        8
+      ],
+      "title": "",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 01:41",
+      "position": [
+        156,
+        217
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 01:41",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        215
+      ],
+      "role": "AXStaticText",
+      "size": [
+        237,
+        38
+      ],
+      "title": "",
+      "value": "@Ctrl-Z-RendersOnly got the notification now sadly"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 01:57",
+      "position": [
+        156,
+        269
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 01:57",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        266
+      ],
+      "role": "AXStaticText",
+      "size": [
+        226,
+        39
+      ],
+      "title": "",
+      "value": "@MarkMusantemusic is still louder than your voice"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 01:59",
+      "position": [
+        156,
+        320
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 01:59",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        318
+      ],
+      "role": "AXStaticText",
+      "size": [
+        265,
+        38
+      ],
+      "title": "",
+      "value": "@larryreaux1970You're incredibly soft and the music is incredibly loud"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:00",
+      "position": [
+        156,
+        372
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:00",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        190,
+        369
+      ],
+      "role": "AXStaticText",
+      "size": [
+        221,
+        18
+      ],
+      "title": "",
+      "value": "@javiert_01This brings joy to me"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:02",
+      "position": [
+        156,
+        402
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:02",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        400
+      ],
+      "role": "AXStaticText",
+      "size": [
+        243,
+        38
+      ],
+      "title": "",
+      "value": "@supercrafter100we can hear you but your mic is just very quiet"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:04",
+      "position": [
+        156,
+        454
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:04",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        451
+      ],
+      "role": "AXStaticText",
+      "size": [
+        236,
+        39
+      ],
+      "title": "",
+      "value": "@snowpoch42I can hear you, music too loud in comparison"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:20",
+      "position": [
+        156,
+        505
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:20",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        503
+      ],
+      "role": "AXStaticText",
+      "size": [
+        251,
+        38
+      ],
+      "title": "",
+      "value": "@OhHeyItsAnthonyWelcome to Passengers!"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:21",
+      "position": [
+        156,
+        557
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:21",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        554
+      ],
+      "role": "AXStaticText",
+      "size": [
+        236,
+        39
+      ],
+      "title": "",
+      "value": "@Jonesiblitzvoice up slightly, music lower slightly more"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:32",
+      "position": [
+        156,
+        608
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:32",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        190,
+        606
+      ],
+      "role": "AXStaticText",
+      "size": [
+        171,
+        17
+      ],
+      "title": "",
+      "value": "@dinglesteinsup gamers"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 02:54",
+      "position": [
+        156,
+        639
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 02:54",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        636
+      ],
+      "role": "AXStaticText",
+      "size": [
+        258,
+        39
+      ],
+      "title": "",
+      "value": "@Ctrl-Z-Rendersthat square has a huge cake"
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 03:02",
+      "position": [
+        156,
+        690
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 03:02",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        688
+      ],
+      "role": "AXStaticText",
+      "size": [
+        240,
+        38
+      ],
+      "title": "",
+      "value": "@MarkMusanteproblem is our comments are not in realtime :("
+    },
+    {
+      "depth": 8,
+      "description": "Seek to chat message at 03:35",
+      "position": [
+        156,
+        742
+      ],
+      "role": "AXButton",
+      "size": [
+        35,
+        16
+      ],
+      "title": "Seek to chat message at 03:35",
+      "value": ""
+    },
+    {
+      "depth": 8,
+      "description": "",
+      "position": [
+        156,
+        739
+      ],
+      "role": "AXStaticText",
+      "size": [
+        243,
+        59
+      ],
+      "title": "",
+      "value": "@snowpoch42The audience absolutely desires more of you on the internet. Please and thank you"
+    }
+  ],
+  "pid": 55428,
+  "readErrors": {
+    "AXChildren:-25212": 5,
+    "AXDescription:-25205": 7,
+    "AXDescription:-25212": 1,
+    "AXSheets:-25205": 10,
+    "AXSheets:-25212": 71,
+    "AXTitle:-25205": 5,
+    "AXTitle:-25212": 4,
+    "AXValue:-25205": 20,
+    "AXValue:-25212": 2
+  },
+  "timeUTC": "2026-11-08T20:54:14Z",
+  "windowMatches": 1,
+  "withinDeadline": true
+}

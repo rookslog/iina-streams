@@ -1,0 +1,98 @@
+{
+  "id": "c0d1ae80fca74e1d8fe960d0805832b8",
+  "time": "2026-11-08T17:48:13.449Z",
+  "result": true,
+  "state": {
+    "controller": {
+      "phase": "playing",
+      "quality": "720p60",
+      "formats": [
+        {
+          "id": "auto720",
+          "label": "Auto \u00b7 720p preferred"
+        },
+        {
+          "id": "1080p60",
+          "label": "1080p60"
+        },
+        {
+          "id": "720p60",
+          "label": "720p60"
+        },
+        {
+          "id": "480p30",
+          "label": "480p30"
+        },
+        {
+          "id": "360p30",
+          "label": "360p30"
+        },
+        {
+          "id": "160p30",
+          "label": "160p30"
+        },
+        {
+          "id": "audio_only",
+          "label": "Audio only"
+        }
+      ],
+      "busy": false,
+      "error": "",
+      "title": "SLUR SATURDAY | EL JEFE OF CDRS - ON THE JOURNEY TO SHADOW GOVERNOR",
+      "live": false,
+      "duration": 0,
+      "variant": "unified",
+      "source": {
+        "kind": "twitch-vod",
+        "provider": "Twitch",
+        "id": "2922164492"
+      },
+      "chat": {
+        "mode": "off",
+        "state": "off",
+        "error": "",
+        "count": 0,
+        "sourceName": "",
+        "offset": 0,
+        "available": false
+      },
+      "auth": {
+        "phase": "off",
+        "message": ""
+      },
+      "view": {
+        "presentation": "sidebar",
+        "fontSize": 14,
+        "opacity": 0.64,
+        "lines": 6,
+        "x": 1,
+        "y": 0,
+        "density": "comfortable",
+        "editing": false
+      },
+      "messages": [],
+      "position": 131.582667,
+      "paused": false,
+      "qa": true
+    },
+    "native": {
+      "position": 131.582667,
+      "duration": 45140,
+      "paused": false,
+      "speed": 1,
+      "width": 1280,
+      "height": 720,
+      "audioCodec": "aac",
+      "audioRate": 48000,
+      "playlistCount": 1,
+      "idle": false,
+      "fullscreen": false,
+      "frame": {
+        "y": 356,
+        "x": 535,
+        "width": 640,
+        "height": 360
+      }
+    }
+  }
+}

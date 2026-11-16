@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "process": {
+    "name": "IINA",
+    "pid": 5853,
+    "version": "1.5.1",
+    "build": "183"
+  },
+  "sampleUTC": "2026-11-08T20:26:16.229Z",
+  "processLaunchUTC": "2026-11-08T20:04:10.550Z",
+  "samplingIntervalMilliseconds": 10,
+  "evidenceType": "bounded process sample during normal-package native menu automation; not a crash report",
+  "source": {
+    "path": "evidence/native/iina-normal-unresponsive-sample-private.txt",
+    "sha256": "c33ebfbb90bf7c33e2a5c4a5418f0c5795a8d5b522d4dc0cd6c9beb7eec71ce7",
+    "bytes": 312614,
+    "publication": "Full sample retained privately on Apollo; only selected main-thread symbols are copied here."
+  },
+  "observed": {
+    "mainThreadSamples": 86,
+    "menuTrackingPathSamples": 86,
+    "selectedFrames": [
+      {
+        "samples": 86,
+        "symbol": "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]  (in AppKit) + 344"
+      },
+      {
+        "samples": 86,
+        "symbol": "__56-[NSMenuItem(Accessibility) accessibilityPerformAction:]_block_invoke  (in AppKit) + 480"
+      },
+      {
+        "samples": 86,
+        "symbol": "-[NSCocoaMenuImpl openWithOptions:]  (in AppKit) + 1196"
+      },
+      {
+        "samples": 86,
+        "symbol": "-[NSMenuTrackingSession startMonitoringEvents:]  (in AppKit) + 316"
+      },
+      {
+        "samples": 86,
+        "symbol": "-[NSMenuTrackingSession startRunningMenuEventLoop:]  (in AppKit) + 352"
+      },
+      {
+        "samples": 86,
+        "symbol": "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]  (in AppKit) + 344"
+      },
+      {
+        "samples": 86,
+        "symbol": "__CFRunLoopServiceMachPort  (in CoreFoundation) + 160"
+      },
+      {
+        "samples": 86,
+        "symbol": "mach_msg2_trap  (in libsystem_kernel.dylib) + 8"
+      }
+    ],
+    "candidateFrameInSelectedMainThreadPath": false
+  },
+  "interpretation": "All 86 main-thread samples show NSMenuItem Accessibility action entering NSCocoaMenuImpl and the NSMenuTrackingSession event loop, then waiting for events. This supports native menu-tracking wait during the automation sequence. It does not identify a candidate playback deadlock or establish why later cancellation requests did not restore AppleEvent responsiveness.",
+  "knownAutomationLimit": "The initial QA harness used a process-targeted synthetic Escape to dismiss menus and did not cancel its opened Plugin menu on a missing-command failure. That method did not demonstrate tracking exit. IINA also builds Plugin commands from the active player's loaded plugins, so Focus was unavailable in the Unified-only managed player's menu.",
+  "recovery": {
+    "independentlyReadSavedRecords": true,
+    "savedRecoveryObservations": [
+      "AXCancel on the exact Plugin AXMenu returned success (0), but a subsequent bounded quit AppleEvent timed out.",
+      "One physical Escape after exact-process activation also did not restore the bounded quit AppleEvent."
+    ],
+    "evidencePointers": [
+      "evidence/native/normal-menu-recovery.json",
+      "evidence/native/normal-menu-physical-recovery.json"
+    ],
+    "recordHashes": {
+      "normal-menu-recovery.json": "1c33df52bd70af39a8813183de5002425d9a2ba914e50d10be60fb4eeaf4eaa2",
+      "normal-menu-physical-recovery.json": "4b7a4132ad5e50a4175664d9297aa8b7326fcf1f86060b1d5cbc8d21370ca83a"
+    },
+    "status": "The recorded AXCancel and physical Escape requests did not restore the bounded quit request in PID 5853. The native operator retired only that identified owned test process and later launched PID 55428. No recovery of PID 5853 or universal responsiveness fix is claimed."
+  },
+  "harnessCorrection": {
+    "path": "qa/native-normal-cycles.swift",
+    "sha256": "27c4118ca24f16c218f5ce1eb45e27aa6d0c50b40cf68f22efe56668b11f630c",
+    "changes": [
+      "Retain the exact native AXMenu child before opening it; verify same process and AXCancel capability.",
+      "Use one bounded AXCancel request for normal dismissal and controlled failure cleanup.",
+      "Remove CGEvent/Escape dispatch.",
+      "Record request acceptance separately from independently verified menu-tracking exit.",
+      "Stop on unavailable window-list reads; do not interpret IPC failure as a closed anchor."
+    ],
+    "nativeVerification": "On fresh final R2 PID 55428, one Focus smoke cycle, five Focus batch cycles and five Unified batch cycles passed with the corrected exact-menu harness. This bounded result does not establish recovery of earlier PID 5853 or explain the prior failures."
+  },
+  "distinctions": [
+    "Separate from the 19:56 native More/accessibilityPerformPress trap in PID40519.",
+    "Separate from the 18:41/19:01 JavaScriptCore heap-sweep reports.",
+    "Separate from the 19:45 unexpected anchor window-closed event."
+  ],
+  "primarySource": {
+    "url": "https://github.com/iina/iina/blob/v1.5.1/iina/MenuController.swift#L642-L647",
+    "sha256": "d6c05a417d85ed693afa4376445c724403d6be38983b9e74da70e212dba0917b",
+    "finding": "Plugin menu iterates active player plugins and includes each such plugin's global menu items."
+  },
+  "privacy": {
+    "included": "Source sample hash, process ID, bounded sample counts and selected symbol names.",
+    "excluded": "Full thread dump, addresses, binary image list, unique machine identifiers, environment, credentials and unrelated process data."
+  },
+  "nativeActionsByAuthor": false,
+  "laterBoundedNativeEvidence": {
+    "pid": 55428,
+    "passedCycles": 11,
+    "source": "jNQXAC9IVRw",
+    "anchor": "92h_kU8O58M",
+    "records": [
+      {
+        "path": "evidence/native/focus-r2-normal-cycle-smoke.json",
+        "sha256": "d1343df2a1e697a59a359b8ebe3b24c8328ab435032aeeccf42f80d88202d523",
+        "passed": 1
+      },
+      {
+        "path": "evidence/native/focus-r2-normal-cycles-batch1.json",
+        "sha256": "5397ac307bff47f1d3d36510e89cf0d52d03a21bccd47e615943ed25f9402e23",
+        "passed": 5
+      },
+      {
+        "path": "evidence/native/unified-r2-normal-cycles-batch1.json",
+        "sha256": "9f79273555932f3387349c7a2ebcfe9b8db541f84de9d321350588ff55793256",
+        "passed": 5
+      }
+    ],
+    "checksPerCycle": 11,
+    "scope": "Exact retained new child closed; retained anchor identity/title/frame, native Resume, prior window set and application PID preserved. No exact mpv-time/decoded-media inference.",
+    "candidates": [
+      "focus",
+      "unified"
+    ],
+    "matchedBatchCyclesPerCandidate": 5,
+    "additionalFocusSmokeCycles": 1
+  }
+}

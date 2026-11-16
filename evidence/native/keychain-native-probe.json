@@ -1,0 +1,9 @@
+{
+  "result": {
+    "wrote": false,
+    "matched": false,
+    "cleared": false
+  },
+  "cleanupExitCode": 44,
+  "observation": "Noncredential private QA item only. Native write/read/clear returned false after SecurityAgent interaction; no persistent-storage acceptance claim. No user credential was read or changed."
+}

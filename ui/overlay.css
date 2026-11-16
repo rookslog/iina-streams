@@ -83,6 +83,26 @@ body{
  font-weight:700;
  margin-right:6px;
 }
+#drag-pill{
+ position:absolute;
+ top:5px;
+ left:50%;
+ transform:translateX(-50%);
+ width:32px;
+ height:4px;
+ border-radius:999px;
+ background:rgba(255,255,255,.45);
+ opacity:0;
+ pointer-events:none;
+ transition:opacity 140ms ease,background 140ms ease;
+}
+#panel:hover #drag-pill,#panel:focus-visible #drag-pill{
+ opacity:1;
+}
+#panel.dragging #drag-pill{
+ opacity:1;
+ background:rgba(255,255,255,.8);
+}
 #resize-handle{
  position:absolute;
  right:3px;

@@ -34,13 +34,30 @@ function normalizeHttpResponse(response){
  }
  return{status:Number.isInteger(status)&&status>=100&&status<=599?status:0,data:data&&typeof data==='object'&&!Array.isArray(data)?data:{}};
 }
+const globalDiag=[];
+function gLog(step,extra){
+ if(!config.beta&&!config.qa)return;
+ try{
+  globalDiag.push(Object.assign({step,t:Date.now()},extra||{}));
+  if(globalDiag.length>60)globalDiag.shift();
+  file.write('@data/beta-global.json',JSON.stringify(globalDiag));
+ }catch(_){}
+}
 async function request(path,method,form,headers){
+ gLog('http-start',{path,method});
  try{
   const options={headers:headers||{}};
   if(form)options.data=form;
-  const r=await http[method==='POST'?'post':'get']('https://id.twitch.tv/oauth2'+path,options);
-  return normalizeHttpResponse(r);
- }catch(response){return normalizeHttpResponse(response);}
+  const req=http[method==='POST'?'post':'get']('https://id.twitch.tv/oauth2'+path,options);
+  const r=await Promise.race([req,new Promise((_,rej)=>timers.setTimeout(()=>rej({statusCode:0,data:{message:'timeout'}}),12000))]);
+  const res=normalizeHttpResponse(r);
+  gLog('http-done',{path,status:res.status});
+  return res;
+ }catch(response){
+  const res=normalizeHttpResponse(response);
+  gLog('http-catch',{path,status:res.status});
+  return res;
+ }
 }
 const auth=new TwitchAuth({request,read:()=>typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth'),write:value=>typeof utils.keychainWrite==='function'?utils.keychainWrite('twitch-readonly','oauth',value):utils.keyChainWrite('twitch-readonly','oauth',value),setTimer:timers.setTimeout,clearTimer:timers.clearTimeout,now:()=>Date.now(),onState:s=>sendAll('auth-state',s),onReady:c=>{credentials=c;sendAll('auth-ready',c);},onStop:()=>{credentials=null;sendAll('auth-stop',{});}});
 function openStream(input){
@@ -53,7 +70,7 @@ function openStream(input){
 menu.addItem(menu.item('Open Stream…',()=>openStream()));
 app.onMessage('open',()=>openStream());
 app.onMessage('auth-connect',async(data,label)=>{
- const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});if(id===null)return;nextSession(id);audience.add(id);
+ const id=targetID(label);qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});gLog('auth-connect',{id,phase:auth.snapshot().phase,hasCred:!!credentials});if(id===null)return;nextSession(id);audience.add(id);
  if(credentials){postChild(id,'auth-state',auth.snapshot());postChild(id,'auth-ready',credentials);return;}
  if(['waiting','authorizing'].includes(auth.snapshot().phase)){postChild(id,'auth-state',auth.snapshot());return;}
  let clientID=String(data&&data.clientID||'').trim();
@@ -66,10 +83,11 @@ app.onMessage('auth-connect',async(data,label)=>{
   }catch(_){}
  }
  if(/^[A-Za-z0-9]{10,64}$/.test(clientID))file.write('@data/twitch-client.json',JSON.stringify({clientID}));
+ gLog('auth-connect-run',{hasClient:/^[A-Za-z0-9]{10,64}$/.test(clientID)});
  await auth.connect(clientID);
 });
 app.onMessage('auth-probe',(_,label)=>{
- const id=targetID(label);if(id===null)return;
+ const id=targetID(label);gLog('auth-probe',{id,hasCred:!!credentials});if(id===null)return;
  if(credentials){postChild(id,'auth-status',{saved:true,login:credentials.login});return;}
  let saved=false;
  try{
@@ -77,6 +95,7 @@ app.onMessage('auth-probe',(_,label)=>{
   const parsed=typeof raw==='string'&&raw?JSON.parse(raw):null;
   saved=!!(parsed&&typeof parsed.access_token==='string'&&parsed.access_token&&typeof parsed.clientID==='string'&&parsed.clientID);
  }catch(_){}
+ gLog('auth-probe-reply',{id,saved});
  postChild(id,'auth-status',{saved});
 });
 app.onMessage('auth-disconnect',(_,label)=>{const id=targetID(label);if(id===null)return;nextSession(id);audience.delete(id);if(!audience.size)auth.stop();});

@@ -30,7 +30,17 @@ function start(host,config,services){
  function on(name,fn){const id=event.on(name,fn);listeners.push([name,id]);}
  const player=new Playback({source,resolve:q=>services.resolve(source,q),readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),replace:(result,context)=>{context.frame=Object.assign({},core.window.frame);context.fullscreen=!!core.window.fullscreen;staged={result,context};mpv.command('loadfile',[source.url+'#streams-generation='+context.generation,'replace']);},onState:()=>send(),setTimer:timers.setTimeout,clearTimer:timers.clearTimeout});
  function snapshot(){const p=player.snapshot();return Object.assign(p,{variant,source:{kind:source.kind,provider:source.provider,id:source.id},title:p.title||source.id||'Streams',error:loadError||p.error,chat:Object.assign({},chat),auth:Object.assign({},auth),view:Object.assign({},view),messages:messages.slice(-150),position:Number(mpv.getNumber('time-pos'))||0,paused:!!mpv.getFlag('pause'),qa:!!config.qa});}
- function trace(name,extra){if(services.trace)services.trace(name,Object.assign({variant,sourceId:source.id},extra||{}));}
+ function trace(name,extra){
+  if(services.trace)services.trace(name,Object.assign({variant,sourceId:source.id},extra||{}));
+ }
+ const diag=[];
+ function diagLog(step,extra){
+  try{
+   diag.push(Object.assign({step,t:Date.now()},extra||{}));
+   if(diag.length>40)diag.shift();
+   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(diag));
+  }catch(_){}
+ }
  function send(){if(closed)return;const s=snapshot();if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});if(sidebarReady&&sidebarVisible)try{postSidebar('state',s);}catch(_){}}
  function connectMessages(){
   sidebar.onMessage('ready',()=>{if(closed)return;sidebarReady=true;send();trace('sidebar-ready');});
@@ -74,14 +84,16 @@ function start(host,config,services){
   postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:++liveRun});
  }
  function ensureOverlay(){
+  diagLog('ensureOverlay',{windowLoaded,overlayLoaded,overlayReady,mode:chat.mode,pres:view.presentation});
   if(closed||!windowLoaded)return;
   if(!overlayLoaded){overlayLoaded=true;overlay.loadFile('ui/overlay.html');return;}
   overlay.setClickable(view.presentation==='overlay');overlay.setOpacity(1);overlay.show();send();
  }
  on('iina.plugin-overlay-loaded',()=>{
+  diagLog('plugin-overlay-loaded',{overlayLoaded});
   if(closed||!overlayLoaded)return;
-  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;if(overlayNeeded())ensureOverlay();else{overlay.setClickable(false);overlay.hide();}startLiveTransport();send();trace('overlay-ready');});
-  overlay.onMessage('live-state',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;chat.state=String(data.state||'connecting');chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
+  overlay.onMessage('overlay-ready',()=>{if(closed)return;overlayReady=true;diagLog('overlay-ready',{needed:overlayNeeded(),hasCred:!!liveCredential});if(overlayNeeded())ensureOverlay();else{overlay.setClickable(false);overlay.hide();}startLiveTransport();send();trace('overlay-ready');});
+  overlay.onMessage('live-state',data=>{diagLog('live-state',{state:data&&data.state,session:data&&data.session,liveRun,liveStarted});if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;chat.state=String(data.state||'connecting');chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);send();});
   overlay.onMessage('live-messages',data=>{if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;messages=data.messages.slice(-150).map(safeMessage);chat.count=messages.length;send();});
   overlay.onMessage('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));
   overlay.onMessage('position',p=>setView({x:p&&p.x,y:p&&p.y}));overlay.onMessage('position-done',()=>setView({editing:false}));if(config.qa)overlay.onMessage('qa-result',d=>trace('overlay-ui-result',d));

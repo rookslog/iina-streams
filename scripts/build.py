@@ -55,7 +55,7 @@ def build(output, beta=False):
             beta_info.pop('ghVersion', None)
             (temp / 'Info.json').write_text(json.dumps(beta_info, indent=2) + '\n')
             (temp / 'config.js').write_text(
-                '"use strict";\nmodule.exports=' + json.dumps({'identifier': identifier, 'variant': 'unified', 'qa': False}, separators=(',', ':')) + ';\n'
+                '"use strict";\nmodule.exports=' + json.dumps({'identifier': identifier, 'variant': 'unified', 'beta': True, 'qa': False}, separators=(',', ':')) + ';\n'
             )
         (temp / 'src' / 'embedded-helpers.js').write_text(
             '"use strict";\nmodule.exports=' + json.dumps(embedded, ensure_ascii=True, separators=(',', ':')) + ';\n'

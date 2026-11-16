@@ -1,13 +1,16 @@
 {
   "name": "iina-streams",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": false,
   "description": "Twitch and YouTube streaming plugin for IINA with draggable glassy chat overlay, read-only Twitch chat, and automatic VOD replay.",
   "scripts": {
     "test": "node --test tests/*.test.js tests_candidate/*.test.js",
     "test:py": "python3 -B -m unittest discover -s tests_candidate -p 'test_*.py'",
     "build": "python3 -B scripts/build.py --output dist/release",
+    "build:beta": "python3 -B scripts/build.py --beta --output dist/beta",
     "install-local": "npm run build && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\" && cp -R dist/release/streams.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\"",
+    "install-beta": "npm run build:beta && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\" && cp -R dist/beta/streams-beta.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
+    "uninstall-beta": "rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
     "link-dev": "bash scripts/link-dev.sh",
     "unlink-dev": "bash scripts/unlink-dev.sh"
   }

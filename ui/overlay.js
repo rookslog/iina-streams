@@ -3,7 +3,7 @@
  const panel=document.getElementById('panel');
  const messages=document.getElementById('messages');
  const resizeHandle=document.getElementById('resize-handle');
- let state=null,drag=null,resize=null;
+ let state=null,drag=null,resize=null,following=true,signature='';
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
@@ -15,6 +15,15 @@
   let h=0;const s=String(name||'');
   for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;
   return FALLBACK_COLORS[Math.abs(h)%FALLBACK_COLORS.length];
+ }
+
+ function formatTime(value,replay){
+  if(replay){
+   const s=Math.max(0,Math.floor(value||0));
+   return(s>=3600?Math.floor(s/3600)+':':'')+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }
+  const d=value?new Date(value):new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
  }
 
  function clampedSize(){
@@ -37,6 +46,7 @@
   const g=geometry(sz.w,sz.h);
   panel.style.left=Math.round((Number(state.view.x)||0)*g.maxX)+'px';
   panel.style.top=Math.round((Number(state.view.y)||0)*g.maxY)+'px';
+  if(following)messages.scrollTop=messages.scrollHeight;
  }
 
  function snapValue(val,max){
@@ -51,34 +61,53 @@
    s.view.width=state.view.width;s.view.height=state.view.height;
   }
   state=s;
-  document.body.classList.toggle('compact',s.view.density==='compact');
   panel.style.setProperty('--opacity',s.view.opacity);
   panel.style.setProperty('--size',s.view.fontSize+'px');
+  panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
   panel.setAttribute('data-clickable','');
   resizeHandle.setAttribute('data-clickable','');
-  messages.replaceChildren();
-  const list=s.view.presentation==='overlay'?(s.messages||[]).slice(-s.view.lines):[];
-  for(const m of list){
-   const row=document.createElement('div');
-   row.className='message';
-   const author=document.createElement('span');
-   author.className='author';
-   author.style.color=authorColor(m.author,m.color);
-   author.textContent=m.author;
-   const text=document.createElement('span');
-   text.textContent=m.text;
-   row.append(author,text);
-   messages.appendChild(row);
-  }
-  if(s.view.presentation==='overlay'&&!messages.children.length&&s.chat&&s.chat.mode!=='off'){
-   const note=document.createElement('div');
-   note.className='message';
-   note.style.opacity='0.7';
-   note.textContent='Chat will appear here.';
-   messages.appendChild(note);
+  const list=s.view.presentation==='overlay'?(s.messages||[]):[];
+  const replay=s.chat&&s.chat.mode==='replay';
+  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+'|r='+!!replay;
+  if(sig!==signature){
+   signature=sig;
+   const prevTop=messages.scrollTop;
+   messages.replaceChildren();
+   for(const m of list){
+    const row=document.createElement('div');
+    row.className='message';
+    if(s.view.timestamps){
+     const ts=document.createElement('span');
+     ts.className='msg-time';
+     ts.textContent=formatTime(m.time,replay);
+     row.appendChild(ts);
+    }
+    const author=document.createElement('span');
+    author.className='author';
+    author.style.color=authorColor(m.author,m.color);
+    author.textContent=m.author;
+    const text=document.createElement('span');
+    text.textContent=m.text;
+    row.append(author,text);
+    messages.appendChild(row);
+   }
+   if(s.view.presentation==='overlay'&&!messages.children.length&&s.chat&&s.chat.mode!=='off'){
+    const note=document.createElement('div');
+    note.className='message';
+    note.style.opacity='0.7';
+    note.textContent='Chat will appear here.';
+    messages.appendChild(note);
+   }
+   if(following)messages.scrollTop=messages.scrollHeight;
+   else messages.scrollTop=prevTop;
   }
   panel.hidden=s.view.presentation!=='overlay'||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
   position();
+ });
+
+ messages.addEventListener('scroll',()=>{
+  const max=Math.max(0,messages.scrollHeight-messages.clientHeight);
+  following=max-messages.scrollTop<24;
  });
 
  panel.addEventListener('pointerdown',e=>{
@@ -176,7 +205,7 @@
   if(!state||!state.qa)return;
   post('qa-result',{
    action:a.name,
-   messageIds:(state.messages||[]).slice(-state.view.lines).map(m=>m.id),
+   messageIds:(state.messages||[]).map(m=>m.id),
    renderedMessages:Array.from(messages.children).map(e=>e.textContent.slice(0,2100)),
    visible:!panel.hidden,
    messages:messages.children.length,

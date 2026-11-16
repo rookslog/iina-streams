@@ -13,7 +13,7 @@ This document tracks the release plan for **Streams** (`local.iina.streams`). Co
 ## `0.5.4+` — Reliability, Persistence & Resource Tuning
 *Hardening existing features without expanding permissions or platform scope.*
 
-- **Quick `Open Stream…` shortcut:** Built-in `⌥⌘S` (`Meta+Alt+S`) key binding on the global `Open Stream…` menu item (staged in `0.5.4-beta`).
+- **Quick `Open Stream…` shortcut:** Built-in `⇧⌘S` (`Meta+Shift+S`) key binding on the global `Open Stream…` menu item (staged in `0.5.4-beta`).
 - **Known Issue — Multi-edge & directional overlay resizing:** Support independent top, bottom, left, and right edge dragging (e.g., resizing upward/leftward when snapped to the bottom-right corner, or adjusting width/height independently along a single axis) without `data-clickable` hover-leave or cursor-sticking glitches in IINA's click-through overlay webview.
 - **Auth & multi-window resilience:** Verify Twitch Keychain token refresh across long-running sessions and multiple simultaneous player windows.
 - **Display & fullscreen geometry:** Clamp saved overlay coordinates and dimensions cleanly across windowed/fullscreen transitions and external display DPI changes.

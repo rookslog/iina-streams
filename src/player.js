@@ -108,7 +108,7 @@ function start(host,config,services){
   send();
  }
  function stopReplay(){if(timeObserver!==null){event.off('mpv.time-pos.changed',timeObserver);timeObserver=null;}if(updateTimer!==null){timers.clearTimeout(updateTimer);updateTimer=null;}if(replay)replay.clear();lastSignature='';}
- function requestAuth(clientID){const data={clientID},myGen=chatGeneration;if(authBound)timers.setTimeout(()=>{if(!closed&&sourceActive&&chat.mode==='live'&&chatGeneration===myGen)app.postMessage('auth-connect',data);},0);else pendingAuth={data,generation:chatGeneration};}
+ function requestAuth(clientID){const data={clientID};if(authBound)app.postMessage('auth-connect',data);else pendingAuth={data,generation:chatGeneration};}
  function cancelAuthBinding(){if(authBindTimer!==null){clearTimeout(authBindTimer);authBindTimer=null;}pendingAuth=null;}
  function chatOff(){
   chatGeneration++;pendingAuth=null;stopReplay();stopLiveTransport();if(services.cancelHelpers)try{services.cancelHelpers(['replay','acquire']);}catch(_){};app.postMessage('auth-disconnect',{});messages=[];chat.mode='off';chat.state='off';chat.error='';view.editing=false;if(overlayLoaded){overlay.setClickable(false);overlay.hide();}send();trace('chat-off');
@@ -238,7 +238,8 @@ function start(host,config,services){
     auth=Object.assign({},auth,{saved:true});
     if(chatPreferred&&chat.mode==='off'&&source.kind==='twitch-live'){
      chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
-     requestAuth('');
+     const myGen=chatGeneration;
+     timers.setTimeout(()=>{if(!closed&&sourceActive&&chat.mode==='live'&&chatGeneration===myGen)requestAuth('');},0);
     }
    }
    send();

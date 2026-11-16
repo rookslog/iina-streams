@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -22,3 +23,25 @@ jobs:
         run: npm run test:py
       - name: Build plugin package
         run: npm run build
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iina-streams-release
+          path: dist/release/*.iinaplgz
+
+  release:
+    needs: test-and-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: iina-streams-release
+          path: dist/release
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/release/*.iinaplgz
+          generate_release_notes: true

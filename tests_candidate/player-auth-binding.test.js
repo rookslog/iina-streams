@@ -30,10 +30,10 @@ test('child auth listeners bind once on a deferred turn with explicit retained r
   assert.equal(f.scheduled.size,1);assert.equal([...f.scheduled.values()][0].ms,0);
   assert.deepEqual(f.posts,[],'passive setup must not request authentication');
   f.flush();
-  assert.deepEqual(Object.keys(f.callbacks).sort(),['auth-forgotten','auth-ready','auth-state','auth-stop']);
+  assert.deepEqual(Object.keys(f.callbacks).sort(),['auth-forgotten','auth-ready','auth-state','auth-status','auth-stop']);
   assert.equal(f.scheduled.size,0);assert.equal(f.cleared.length,1,'clear fired native timer entry');
   for(const [name,callback] of Object.entries(f.callbacks))assert.equal(f.controller._authCallbacks[name],callback);
-  f.flush();assert.equal(f.cleared.length,1);assert.deepEqual(f.posts,[]);
+  f.flush();assert.equal(f.cleared.length,1);assert.deepEqual(f.posts.filter(([n])=>n!=='auth-probe'),[]);
  }finally{f.restore();}
 });
 
@@ -65,7 +65,7 @@ test('Off fences a queued Connect while passive binding remains network-inert',(
   f.sidebar.connect({clientID:''});f.controller.chatOff();f.flush();
   assert.equal(f.posts.filter(([name])=>name==='auth-connect').length,0);
   assert.equal(f.controller.snapshot().chat.mode,'off');
-  assert.equal(Object.keys(f.callbacks).length,4);
+  assert.equal(Object.keys(f.callbacks).length,5);
  }finally{f.restore();}
 });
 

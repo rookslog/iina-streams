@@ -2,34 +2,18 @@
 
 This document tracks the release plan for **Streams** (`local.iina.streams`). Completed releases are recorded in [CHANGELOG.md](../CHANGELOG.md); items below are scoped by semantic version and risk rather than fixed calendar dates.
 
-## Current Baseline — `0.5.2` (Shipped)
+## Current Baseline — `0.5.3` (Shipped)
 - **Playback & Quality:** Direct Streamlink HLS extraction for Twitch live/VOD and YouTube, with in-window `mpv` quality switching (`loadfile … replace`).
-- **Chat Overlay & Sidebar:** Directly draggable, edge-snappable, corner-resizable glassy overlay with colored usernames; persistent macOS-style On/Off chat switch in the sidebar.
-- **Auth & Replay:** Twitch device-code OAuth with Keychain persistence, and automatic live-chat replay loading for YouTube VODs via `yt-dlp`.
-- **Distribution:** Repo-root plugin layout (`Info.json` with `ghRepo` / `ghVersion` for IINA in-app auto-updates) and GitHub Actions CI (`npm test`, `npm run test:py`, `npm run build`).
-
----
-
-## `0.5.3` — UI Polish & Release Automation
-*Small, low-risk fixes from live `0.5.2` testing.*
-
-- **Contextual VOD actions:** Hide **Import archive…** on live streams so it only appears for VODs and recordings.
-- **Settings popover:** Replace `•••` with a gear (`⚙`) icon that opens an anchored popover beneath the button (click-outside or `Escape` to dismiss, no layout shift in the sidebar).
-- **Overlay legibility & controls:**
-  - Lower **Glass opacity** floor from `20%` to `0%` (`0%–90%`).
-  - Add a top fade `mask-image` on overlay messages to prevent hard-clipped lines at the top edge.
-  - Replace the `Compact / Comfortable` dropdown with a **Message spacing** slider (`2px–10px` gap).
-  - Add a **Timestamps** toggle (default off for live chat, on for VOD replay).
-  - Support trackpad/mouse-wheel scrolling inside the overlay while preserving click-and-drag movement.
-- **Release workflow:** Add a tag-triggered (`v*`) GitHub Release job in `.github/workflows/ci.yml` that attaches `iina-streams-<version>.iinaplgz`, and bump `ghVersion` in `Info.json` on each release.
-
-**Gate:** Visual check in live IINA (windowed + fullscreen, light + dark, narrow sidebar) and all JS/Python unit tests green.
+- **Chat Overlay & Sidebar:** Directly draggable, edge-snappable, bottom-right corner-resizable glassy overlay with top fade mask, scrollable history, `0%–90%` glass opacity, `2–10px` message spacing slider, and `Timestamps` toggle.
+- **Quiet UI & Auth:** Anchored `⚙` settings popover, contextual VOD-only **Import archive…** button, persistent macOS-style On/Off chat switch separated from Twitch Keychain auth (with automatic connect on stream open when signed in).
+- **Distribution & Beta Staging:** Repo-root plugin layout (`Info.json` with `ghRepo` / `ghVersion: 2`), `beta` staging build (`npm run install-beta`), and tag-triggered (`v*`) GitHub Release CI.
 
 ---
 
 ## `0.5.4+` — Reliability, Persistence & Resource Tuning
 *Hardening existing features without expanding permissions or platform scope.*
 
+- **Known Issue — Multi-edge & directional overlay resizing:** Support independent top, bottom, left, and right edge dragging (e.g., resizing upward/leftward when snapped to the bottom-right corner, or adjusting width/height independently along a single axis) without `data-clickable` hover-leave or cursor-sticking glitches in IINA's click-through overlay webview.
 - **Auth & multi-window resilience:** Verify Twitch Keychain token refresh across long-running sessions and multiple simultaneous player windows.
 - **Display & fullscreen geometry:** Clamp saved overlay coordinates and dimensions cleanly across windowed/fullscreen transitions and external display DPI changes.
 - **Resource efficiency:** Measure and minimize background WebKit CPU/memory when chat is `Off` or the inspector is collapsed.

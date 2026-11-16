@@ -1,37 +1,56 @@
-# Roadmap and review gates
+# Roadmap
 
-All gates are evidence-based. Code review is separate from user acceptance. A compile, a valid manifest and a local command-line play test do not establish a release.
+This document tracks the release plan for **Streams** (`local.iina.streams`). Completed releases are recorded in [CHANGELOG.md](../CHANGELOG.md); items below are scoped by semantic version and risk rather than fixed calendar dates.
 
-| Milestone | Deliverable | Technical gate | User feedback gate | Promotion |
-|---|---|---|---|---|
-| M0 / diagnosis | Reproduce Bridge failure; make source baseline, preflight, logging/cleanup design | IINA log and observed click-path or documented inability to reproduce | Agree on actual failed step and desired minimal launch | No deployment |
-| M1 / v0.1 usable | One Open Stream action in IINA; hutchmf playback; stop/close; offline error | 10 start/stop cycles, 5 on hutchmf when live, no orphans, 1.4.4 compatible, tested rollback | User watches a real session and accepts launch workflow | Manual dev -> v0.1 |
-| M2 / v0.2 integrated | Streams sidebar and quality controls, native-looking compact UI | Quality fallback, multi-window isolation, sidebar lazy loading, keyboard behavior | Approve visual/interaction design and quality interruption | Manual v0.2 |
-| M3 / v0.3 chat | Opt-in Twitch read-only chat, show/hide, bounded history, Keychain auth | Synthetic burst test; OAuth real chat; connection off when chat off; memory budget measured | Approve chat aesthetics and privacy/auth UX | Manual v0.3 |
-| M4 / v0.4 routing | YouTube Live backend comparison and VOD fallback; configurable defaults | Twitch and YouTube test matrix, codecs, interruptions, offline errors | Approve automatic routing behavior | Manual v0.4 |
-| M5 / v1.0 stable | Soak, documented energy/memory comparison, reproducible install and rollback | No critical known defects; stable artifact hash and changelog; restore verified | Explicit accept / revise / rollback / defer | Manual stable v1.0 |
+## Current Baseline — `0.5.2` (Shipped)
+- **Playback & Quality:** Direct Streamlink HLS extraction for Twitch live/VOD and YouTube, with in-window `mpv` quality switching (`loadfile … replace`).
+- **Chat Overlay & Sidebar:** Directly draggable, edge-snappable, corner-resizable glassy overlay with colored usernames; persistent macOS-style On/Off chat switch in the sidebar.
+- **Auth & Replay:** Twitch device-code OAuth with Keychain persistence, and automatic live-chat replay loading for YouTube VODs via `yt-dlp`.
+- **Distribution:** Repo-root plugin layout (`Info.json` with `ghRepo` / `ghVersion` for IINA in-app auto-updates) and GitHub Actions CI (`npm test`, `npm run test:py`, `npm run build`).
 
-Out of initial V1 scope: native IINA seekbar patches, video-embedded chat overlay, sending messages, uncontrolled automatic background updates, broad platform scraping. Reassess with evidence.
+---
 
-## REVIEW record required for each milestone
+## `0.5.3` — UI Polish & Release Automation
+*Small, low-risk fixes from live `0.5.2` testing.*
 
-- Milestone, timestamp, git SHA, IINA/Streamlink/OS versions:
-- Exact source, resolution/codec, playback topology:
-- Tests passed / failed / not run with command and evidence links:
-- Observed memory pressure, per-process memory, CPU, swap-in/out changes, dropped frames:
-- Design feedback and accessibility notes:
-- Regressions, uncertainties, known limitations, fallback:
-- Decision: Accept | Revise | Roll back | Defer
-- Who approved and date:
-- Release or rollback artifact SHA-256:
+- **Contextual VOD actions:** Hide **Import archive…** on live streams so it only appears for VODs and recordings.
+- **Settings popover:** Replace `•••` with a gear (`⚙`) icon that opens an anchored popover beneath the button (click-outside or `Escape` to dismiss, no layout shift in the sidebar).
+- **Overlay legibility & controls:**
+  - Lower **Glass opacity** floor from `20%` to `0%` (`0%–90%`).
+  - Add a top fade `mask-image` on overlay messages to prevent hard-clipped lines at the top edge.
+  - Replace the `Compact / Comfortable` dropdown with a **Message spacing** slider (`2px–10px` gap).
+  - Add a **Timestamps** toggle (default off for live chat, on for VOD replay).
+  - Support trackpad/mouse-wheel scrolling inside the overlay while preserving click-and-drag movement.
+- **Release workflow:** Add a tag-triggered (`v*`) GitHub Release job in `.github/workflows/ci.yml` that attaches `iina-streams-<version>.iinaplgz`, and bump `ghVersion` in `Info.json` on each release.
 
-## Gate escalation
+**Gate:** Visual check in live IINA (windowed + fullscreen, light + dark, narrow sidebar) and all JS/Python unit tests green.
 
-Any crash, stuck stream process, unexpectedly exposed localhost listener, secret leakage, or repeated failure to play hutchmf blocks promotion. If the live channel is offline, technical tests may use a named backup, but hutchmf-specific acceptance is marked pending. If credentials or permissions are unavailable, omit the chat milestone and preserve working video-only deployment. Promotion always leaves an earlier working artifact available.
+---
 
-## 2026-11-07 implementation checkpoint (does not override technical gates)
-- M0: repository, crash reports and original Bridge investigated; original exact failure still unconfirmed. IINA app startup crash is a new release blocker.
-- M1: new one-shot direct URL path implemented and short IINA file-loaded proof acquired. Full real playback/audio, 10 stop cycles and rollback gate remain **not passed**.
-- M2: sidebar, dynamic quality selection and window-isolation logic **implemented** with 11 Node tests, but real GUI quality change, multiple live windows, performance and VoiceOver remain **not passed**. Candidate packaged for audit only.
-- M3/M4/M5: not implemented/accepted. See `HANDOFF-GPT6-PRO.md` for independent audit and onward execution brief.
-No stable installation or production acceptance.
+## `0.5.4+` — Reliability, Persistence & Resource Tuning
+*Hardening existing features without expanding permissions or platform scope.*
+
+- **Auth & multi-window resilience:** Verify Twitch Keychain token refresh across long-running sessions and multiple simultaneous player windows.
+- **Display & fullscreen geometry:** Clamp saved overlay coordinates and dimensions cleanly across windowed/fullscreen transitions and external display DPI changes.
+- **Resource efficiency:** Measure and minimize background WebKit CPU/memory when chat is `Off` or the inspector is collapsed.
+- **Repo & docs cleanup:** Retire remaining legacy `candidate` references in `docs/` and `README.md`.
+
+**Gate:** Multi-hour soak check with no orphaned helper processes, verified Keychain persistence across app restarts, and no off-screen overlay drift.
+
+---
+
+## `0.6.0` — New Platform & Chat Capabilities
+*Larger features introducing new acquisition pipelines, CSP rules, or rendering paths.*
+
+- **Automatic Twitch VOD chat:** Integrate a maintained acquisition path (e.g., `TwitchDownloaderCLI` or GraphQL comment replay) so Twitch VODs auto-load chat like YouTube VODs.
+- **YouTube Live chat:** Add live chat streaming/polling for active YouTube livestreams (separate from archived VOD replay).
+- **Emotes & badges:** Bounded, cached image rendering for official Twitch emotes (and optionally 7TV/BTTV/FFZ) with clean text fallback if images fail.
+
+**Gate:** Real-source integration tests for each new provider, bounded memory/cache limits, and explicit permission/CSP review before release.
+
+---
+
+## Out of Scope / Non-Goals
+- Sending chat messages or moderation actions (Streams is strictly read-only).
+- Modifying IINA's native seekbar/OSC or patching IINA binaries.
+- Unbounded background polling when chat is turned `Off`.

@@ -7,6 +7,7 @@
     "test": "node --test tests/*.test.js tests_candidate/*.test.js",
     "test:py": "python3 -B -m unittest discover -s tests_candidate -p 'test_*.py'",
     "build": "python3 -B scripts/build.py --output dist/release",
+    "install-local": "npm run build && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\" && cp -R dist/release/streams.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\"",
     "link-dev": "bash scripts/link-dev.sh",
     "unlink-dev": "bash scripts/unlink-dev.sh"
   }

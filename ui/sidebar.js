@@ -38,7 +38,7 @@
   const canToggle=twitch||s.chat.available||on||busy;
   $('chat-kind').textContent=replay?'Replay':on?'Live':'';
   $('chat-toggle').checked=on||busy;$('chat-toggle').disabled=!canToggle;
-  $('connect').hidden=!twitch||on||!!s.auth.login;
+  $('connect').hidden=!twitch||on||!!s.auth.login||!!s.auth.saved;
   $('import').hidden=on||s.live||twitch;
   $('fetch').hidden=s.source.kind!=='youtube'||s.live||on;
   $('resume').hidden=!s.chat.available||on;

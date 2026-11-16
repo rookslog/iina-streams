@@ -68,6 +68,17 @@ app.onMessage('auth-connect',async(data,label)=>{
  if(/^[A-Za-z0-9]{10,64}$/.test(clientID))file.write('@data/twitch-client.json',JSON.stringify({clientID}));
  await auth.connect(clientID);
 });
+app.onMessage('auth-probe',(_,label)=>{
+ const id=targetID(label);if(id===null)return;
+ if(credentials){postChild(id,'auth-status',{saved:true,login:credentials.login});return;}
+ let saved=false;
+ try{
+  const raw=typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth');
+  const parsed=typeof raw==='string'&&raw?JSON.parse(raw):null;
+  saved=!!(parsed&&typeof parsed.access_token==='string'&&parsed.access_token&&typeof parsed.clientID==='string'&&parsed.clientID);
+ }catch(_){}
+ postChild(id,'auth-status',{saved});
+});
 app.onMessage('auth-disconnect',(_,label)=>{const id=targetID(label);if(id===null)return;nextSession(id);audience.delete(id);if(!audience.size)auth.stop();});
 app.onMessage('player-closed',(_,label)=>{const id=targetID(label);if(id===null)return;audience.delete(id);managed.delete(id);sessions.delete(id);if(!audience.size)auth.stop();});
 app.onMessage('auth-forget',async(_,label)=>{const id=targetID(label);if(id===null)return;nextSession(id);const pending=auth.forget();audience.clear();const result=await pending;if(result&&!result.stale&&managed.has(id))postChild(id,'auth-forgotten',result);});

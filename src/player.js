@@ -16,7 +16,7 @@ function start(host,config,services){
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
  const timers=createTimers(setTimeout,clearTimeout);
  const persisted=services.readSettings?services.readSettings():{};
- let view=viewSettings(persisted.view,variant),auth={phase:'off',message:''};
+ let view=viewSettings(persisted.view,variant),auth={phase:'off',message:'',saved:false},chatPreferred=persisted.chatEnabled!==false;
  let closed=false,windowLoaded=!!core.window.loaded,sidebarLoaded=false,sidebarReady=false,sidebarVisible=false,controlsDesired=true,overlayLoaded=false,overlayReady=false;
  let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false,chatGeneration=0,sourceActive=true,autoReplayAttempted=false;
  let authBindTimer=null,authBound=false,pendingAuth=null;
@@ -41,7 +41,7 @@ function start(host,config,services){
   sidebar.onMessage('open',()=>app.postMessage('open',{}));
   sidebar.onMessage('import',()=>importArchive());
   sidebar.onMessage('replay-resume',resumeReplay);
-  sidebar.onMessage('chat-off',chatOff);
+  sidebar.onMessage('chat-off',()=>{chatPreferred=false;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:false});chatOff();});
   sidebar.onMessage('fetch-replay',fetchReplay);
   sidebar.onMessage('view',setView);
   sidebar.onMessage('offset',value=>{if(closed||!sourceActive)return;chat.offset=clamp(value,-2592000,2592000,0);lastSignature='';tick(true);send();});
@@ -50,6 +50,7 @@ function start(host,config,services){
   sidebar.onMessage('connect',data=>{
    if(closed||!sourceActive)return;
    if(source.kind!=='twitch-live'){chat.error='Live chat is available for Twitch channels.';send();return;}
+   chatPreferred=true;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
    chatOff();chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
    requestAuth(String(data&&data.clientID||''));send();
   });
@@ -219,10 +220,21 @@ function start(host,config,services){
   handler(data);
  };}
  const authCallbacks={
-  'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=data;chat.state=data.phase;chat.error=data.message||'';send();}),
+  'auth-status':authReceiver(data=>typeof data.saved==='boolean',data=>{
+   if(data.login)auth=Object.assign({},auth,{login:data.login});
+   if(data.saved){
+    auth=Object.assign({},auth,{saved:true});
+    if(chatPreferred&&chat.mode==='off'&&source.kind==='twitch-live'){
+     chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
+     requestAuth('');
+    }
+   }
+   send();
+  }),
+  'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});chat.state=data.phase;chat.error=data.message||'';send();}),
   'auth-ready':authReceiver(data=>typeof data.token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(data.token)&&typeof data.login==='string'&&/^[a-z0-9_]{3,25}$/.test(data.login),data=>{if(chat.mode!=='live')return;if(liveStarted)stopLiveTransport();liveCredential={token:data.token,login:data.login};ensureOverlay();startLiveTransport();}),
   'auth-stop':authReceiver(()=>true,()=>{trace('auth-stop-received',{chatMode:chat.mode});stopLiveTransport();if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}}),
-  'auth-forgotten':authReceiver(data=>typeof data.removed==='boolean'&&typeof data.revoked==='boolean'&&data.stale!==true,result=>{auth={phase:'off',message:''};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();})
+  'auth-forgotten':authReceiver(data=>typeof data.removed==='boolean'&&typeof data.revoked==='boolean'&&data.stale!==true,result=>{auth={phase:'off',message:'',saved:false};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();})
  };
  // IINA creates the child while the parent's createPlayerInstance call is on
  // stack. Bind from a later child turn and retain callbacks in the controller.
@@ -234,11 +246,12 @@ function start(host,config,services){
   authBound=true;
   const pending=pendingAuth;pendingAuth=null;
   if(pending&&pending.generation===chatGeneration&&chat.mode==='live')app.postMessage('auth-connect',pending.data);
+  else if(source.kind==='twitch-live'&&chat.mode==='off')app.postMessage('auth-probe',{});
  },0);
  authBindTimer=bindingTimer;
  menu.addItem(menu.item('Show Streams',showSidebar));
  menu.addItem(menu.item('Import Chat Archive…',()=>importArchive()));
- menu.addItem(menu.item('Turn Chat Off',chatOff));
+ menu.addItem(menu.item('Turn Chat Off',()=>{chatPreferred=false;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:false});chatOff();}));
  menu.addItem(menu.item('Chat in Sidebar',()=>setView({presentation:'sidebar'})));
  menu.addItem(menu.item('Chat over Video',()=>setView({presentation:'overlay'})));
  if(windowLoaded)showSidebar();

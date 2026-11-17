@@ -44,8 +44,13 @@ class TwitchAcquisitionTests(unittest.TestCase):
             return ([edge('m1', 3.25, 'c1')], True) if offset == 0 else (
                 [edge('m2', 5.25, 'c2', body='second')], False)
         result = acquire.twitch_acquire(URL, str(self.output), fetch_page=fetch)
-        self.assertEqual(seen, [('2922164492', 0), ('2922164492', 3)])
-        self.assertEqual(result, {'ok': True, 'path': str(self.output.resolve() / 'replay.jsonl')})
+        self.assertEqual(seen, [('2922164492', 0), ('2922164492', 4)])
+        self.assertEqual(result['ok'], True)
+        self.assertEqual(result['path'], str(self.output.resolve() / 'replay.jsonl'))
+        self.assertEqual(result['window']['requested'], 0)
+        self.assertEqual(result['window']['start'], 3.25)
+        self.assertEqual(result['window']['end'], 5.25)
+        self.assertFalse(result['window']['hasMore'])
         path = Path(result['path'])
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(sorted(p.name for p in self.output.iterdir()), ['replay.jsonl'])
@@ -69,11 +74,58 @@ class TwitchAcquisitionTests(unittest.TestCase):
         def fetch(video_id, offset, **kwargs):
             if offset == 0:
                 return [edge('m1', 3.25, 'c1')], True
-            self.assertEqual(offset, 3)
+            self.assertEqual(offset, 4)
             return [edge('m1', 3.25, 'c1'), edge('m2', 5.25, 'c2')], False
         result = acquire.twitch_acquire(URL, str(self.output), fetch_page=fetch)
         raw = json.loads(Path(result['path']).read_text())
         self.assertEqual([x['id'] for x in raw['records']], ['m1', 'm2'])
+
+    def test_busy_timeline_with_same_second_page_stall_advances_instead_of_aborting(self):
+        # Real regression: VOD 2930971003, page 50, offset 290, last=290, hasNext=True.
+        offsets = []
+        def fetch(vid, offset, **kwargs):
+            offsets.append(offset)
+            if offset == 282:
+                return [edge('a', 289), edge('b', 290)], True
+            if offset == 291:
+                return [edge('b', 290), edge('c', 290), edge('d', 291)], True
+            if offset == 292:
+                return [edge('d', 291), edge('e', 361)], True
+            raise AssertionError('Unexpected network pagination')
+        result = acquire.twitch_acquire(URL, str(self.output), at=290, fetch_page=fetch)
+        self.assertEqual(offsets, [282, 291, 292])
+        data = json.loads(Path(result['path']).read_text())
+        self.assertEqual([x['id'] for x in data['records']], ['a', 'b', 'c', 'd', 'e'])
+        self.assertEqual(result['window']['end'], 361)
+        self.assertEqual(result['window']['requested'], 290)
+        self.assertFalse(result['window']['bounded'])
+
+    def test_requests_window_near_seek_without_scanning_earlier_vod(self):
+        offsets = []
+        def fetch(vid, offset, **kwargs):
+            offsets.append(offset)
+            return [edge('late', 32004)], False
+        result = acquire.twitch_acquire(URL, str(self.output), at=32000, fetch_page=fetch)
+        self.assertEqual(offsets, [31992])
+        self.assertEqual(result['window']['requested'], 32000)
+        self.assertEqual(result['window']['end'], 32004)
+
+    def test_window_page_budget_returns_bounded_segment_not_misleading_failure(self):
+        def fetch(vid, offset, **kwargs):
+            return [edge('m'+str(offset), offset+1)], True
+        with mock.patch.object(acquire, 'TWITCH_MAX_PAGES', 3):
+            result = acquire.twitch_acquire(URL, str(self.output), at=500, fetch_page=fetch)
+        self.assertTrue(result['window']['bounded'])
+        self.assertTrue(result['window']['hasMore'])
+        self.assertEqual(result['window']['pages'], 3)
+        self.assertGreater(result['window']['end'], result['window']['start'])
+
+    def test_out_of_range_seek_is_rejected_before_network_or_writing(self):
+        for at in ('nan', 'inf', '-1', '2592001', [], None, True):
+            with self.subTest(at=str(at)), self.assertRaises(acquire.AcquireError) as raised:
+                acquire.twitch_acquire(URL, str(self.output), at=at, fetch_page=lambda *a, **kw: self.fail('Network used'))
+            self.assertEqual(raised.exception.code, 'INVALID_ARGUMENTS')
+        self.assertEqual(list(self.base.iterdir()), [])
 
     def test_canonical_public_source_only_and_no_output_on_bad_input(self):
         bad = ['https://twitch.tv/videos/123456', 'http://www.twitch.tv/videos/123456',
@@ -89,7 +141,7 @@ class TwitchAcquisitionTests(unittest.TestCase):
     def test_no_replay_and_partial_failures_never_publish(self):
         cases = [
             (lambda *a, **kw: ([], False), 'NO_REPLAY'),
-            (lambda *a, **kw: ([edge()], True) if a[1] == 0 else ([edge(cursor='c1')], True), 'INVALID_ARCHIVE'),
+            (lambda *a, **kw: ([edge()], True) if a[1] == 0 else ([], True), 'INVALID_ARCHIVE'),
             (lambda *a, **kw: (_ for _ in ()).throw(acquire.AcquireError('EXTRACTOR_FAILED')), 'EXTRACTOR_FAILED'),
         ]
         for fetch, code in cases:

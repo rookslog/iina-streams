@@ -22,6 +22,7 @@ function start(host,config,services){
  let authBindTimer=null,authBound=false,pendingAuth=null;
  let restoration=null,restoreTimer=null,refreshing=false;
  let replay=null,replayPath='',replayMetadata=null,messages=[],timeObserver=null,updateTimer=null,lastTick=0,lastSignature='';
+ let twitchWindow=null,twitchFetchBusy=false,twitchFetchAt=0,twitchQueuedAt=null,twitchNextAttempt=0;
  let liveCredential=null,liveStarted=false,liveRun=0;
  let chat={mode:'off',state:'off',error:'',count:0,sourceName:'',offset:0,available:false};
  const listeners=[];
@@ -50,11 +51,11 @@ function start(host,config,services){
   sidebar.onMessage('surface-visibility',data=>{if(closed||!data||typeof data.visible!=='boolean')return;trace('sidebar-document-visibility',{visible:data.visible});});
   sidebar.onMessage('open',()=>app.postMessage('open',{}));
   sidebar.onMessage('import',()=>importArchive());
-  sidebar.onMessage('replay-resume',resumeReplay);
+  sidebar.onMessage('replay-resume',()=>{chatPreferred=true;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});resumeReplay();});
   sidebar.onMessage('chat-off',()=>{chatPreferred=false;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:false});chatOff();});
   sidebar.onMessage('fetch-replay',fetchReplay);
   sidebar.onMessage('view',setView);
-  sidebar.onMessage('offset',value=>{if(closed||!sourceActive)return;chat.offset=clamp(value,-2592000,2592000,0);lastSignature='';tick(true);send();});
+  sidebar.onMessage('offset',value=>{if(closed||!sourceActive)return;chat.offset=clamp(value,-2592000,2592000,0);lastSignature='';tick(true);maybeRefreshTwitch(true);send();});
   sidebar.onMessage('seek-chat',value=>{const t=Number(value)-chat.offset;if(chat.mode==='replay'&&Number.isFinite(t)&&t>=0)mpv.command('seek',[String(t),'absolute+exact']);});
   sidebar.onMessage('first-message',()=>{if(!closed&&sourceActive&&chat.mode==='replay'&&replayMetadata){const t=Math.max(0,replayMetadata.timeline.availableStart-chat.offset);mpv.command('seek',[String(t),'absolute+exact']);}});
   sidebar.onMessage('connect',data=>{
@@ -114,6 +115,20 @@ function start(host,config,services){
   chatGeneration++;pendingAuth=null;stopReplay();stopLiveTransport();if(services.cancelHelpers)try{services.cancelHelpers(['replay','acquire']);}catch(_){};app.postMessage('auth-disconnect',{});messages=[];chat.mode='off';chat.state='off';chat.error='';view.editing=false;if(overlayLoaded){overlay.setClickable(false);overlay.hide();}send();trace('chat-off');
  }
  function resumeReplay(){if(!replay||closed||!sourceActive)return;chatOff();chat.mode='replay';chat.state='ready';timeObserver=event.on('mpv.time-pos.changed',()=>tick(false));if(view.presentation==='overlay')ensureOverlay();tick(true);send();}
+ function twitchTime(){return Math.max(0,(Number(mpv.getNumber('time-pos'))||0)+chat.offset);}
+ function maybeRefreshTwitch(seeking){
+  if(source.kind!=='twitch-vod'||!chatPreferred||closed||!sourceActive)return;
+  const t=twitchTime();
+  if(twitchFetchBusy){
+   if(seeking&&Math.abs(t-twitchFetchAt)>25)twitchQueuedAt=t;
+   return;
+  }
+  if(chat.mode!=='replay'||!twitchWindow||(!seeking&&Date.now()<twitchNextAttempt))return;
+  if(t<twitchWindow.start-2||(twitchWindow.hasMore&&t>=twitchWindow.end-15)){
+   twitchNextAttempt=Date.now()+2500;
+   fetchTwitchWindow({auto:true,at:t});
+  }
+ }
  function tick(force){
   if(closed||chat.mode!=='replay'||!replay)return;
   const elapsed=Date.now()-lastTick;
@@ -122,14 +137,17 @@ function start(host,config,services){
   try{
    const t=Number(mpv.getNumber('time-pos'))||0;const result=replay.windowAt(t,{offsetSeconds:chat.offset,limit:150,windowSeconds:120});
    const signature=result.map(m=>m.id+':'+m.time).join('|');if(signature!==lastSignature){lastSignature=signature;messages=result.map(safeMessage);send();}
-  }catch(_){chat.error='The chat archive could not be read. Import it again.';chat.state='error';stopReplay();messages=[];send();}
+  }catch(_){chat.error='The chat archive could not be read. Import it again.';chat.state='error';stopReplay();messages=[];send();return;}
+  maybeRefreshTwitch(false);
  }
- async function importArchive(path){
+ async function importArchive(path,options){
   if(closed||!sourceActive)return false;
+  const preserve=!!(options&&options.preserve&&chat.mode==='replay');
   const selectionGeneration=chatGeneration;
   if(!path)path=await host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']});
   if(!path||closed||selectionGeneration!==chatGeneration)return false;
-  chatOff();const myGeneration=chatGeneration;chat.state='importing';chat.error='';send();
+  if(!preserve){chatOff();chat.state='importing';chat.error='';send();}
+  const myGeneration=chatGeneration;
   let output='',outputOwned=false;
   try{
    output=services.dataPath('replay-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
@@ -139,18 +157,71 @@ function start(host,config,services){
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The archive could not be imported.');
    if(result.indexPath!==output+'/index.json')throw Error('The imported archive location is invalid.');
    const index=JSON.parse(services.readFile(result.indexPath));
+   if(options&&options.twitch&&String(index.sourceId||'')!==String(source.id))throw Error('The downloaded chat does not belong to this recording.');
    if(index.sourceId&&source.kind!=='local-test'&&String(index.sourceId)!==String(source.id)){
     if(!host.utils.ask('This chat archive belongs to '+index.sourceId+', while this video is '+source.id+'. Use this archive and align it manually?')){chat.state='off';send();return false;}
    }
-   const nextReplay=new Replay(index,file=>JSON.parse(services.readFile(output+'/'+file)));const oldPath=replayPath;replay=nextReplay;replayPath=output;replayMetadata=index;if(oldPath&&services.deleteDataPath)services.deleteDataPath(oldPath);
-   chat.count=index.count;chat.sourceName=index.title||'Imported chat';chat.available=true;chat.offset=0;resumeReplay();trace('replay-imported',{count:index.count,format:index.provenance&&index.provenance.format});return true;
-  }catch(error){if(closed||chatGeneration!==myGeneration)return false;chat.state='error';chat.error=String(error&&error.message||'Could not import chat.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);send();return false;}
-  finally{if(outputOwned&&output!==replayPath&&services.deleteDataPath)services.deleteDataPath(output);}
+   const nextReplay=new Replay(index,file=>JSON.parse(services.readFile(output+'/'+file)));
+   const oldPath=replayPath;replay=nextReplay;replayPath=output;replayMetadata=index;
+   if(oldPath&&services.deleteDataPath)services.deleteDataPath(oldPath);
+   chat.count=index.count;chat.sourceName=options&&options.twitch?'Twitch chat near playback':index.title||'Imported chat';
+   chat.available=true;chat.error='';if(!preserve)chat.offset=0;
+   twitchWindow=options&&options.twitch?options.window:null;
+   if(preserve){lastSignature='';tick(true);send();}else resumeReplay();
+   trace('replay-imported',{count:index.count,format:index.provenance&&index.provenance.format,windowed:!!(options&&options.twitch)});
+   return true;
+  }catch(error){
+   if(closed||chatGeneration!==myGeneration)return false;
+   if(!preserve)chat.state='error';
+   chat.error=String(error&&error.message||'Could not import chat.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
+   send();return false;
+  }finally{if(outputOwned&&output!==replayPath&&services.deleteDataPath)services.deleteDataPath(output);}
+ }
+ async function fetchTwitchWindow(options){
+  const auto=!!(options&&options.auto);
+  if(closed||!sourceActive||source.kind!=='twitch-vod'||(auto&&!chatPreferred))return false;
+  const at=Number.isFinite(Number(options&&options.at))?Math.max(0,Number(options.at)):twitchTime();
+  if(twitchFetchBusy){if(Math.abs(at-twitchFetchAt)>25)twitchQueuedAt=at;return false;}
+  if(!auto){chatPreferred=true;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});}
+  const preserve=chat.mode==='replay'&&!!replay;
+  if(!preserve){chatOff();chat.state='fetching';chat.error='';send();}
+  const generation=chatGeneration;
+  const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
+  let owned=false;twitchFetchBusy=true;twitchFetchAt=at;twitchNextAttempt=Date.now()+2500;
+  try{
+   const result=await services.runHelper('acquire',['--url',source.url,'--output',downloadPath,'--at',String(at)]);
+   owned=!!result&&result.ok&&result.path===downloadPath+'/replay.jsonl';
+   if(closed||!sourceActive||generation!==chatGeneration)return false;
+   if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'Twitch chat could not be fetched.');
+   if(!owned)throw Error('The downloaded chat location is invalid.');
+   const w=result.window;
+   if(!w||![w.start,w.end,w.requested].every(Number.isFinite)||w.start<0||w.end<w.start||w.end>2592000||w.requested<0||w.requested>2592000||typeof w.hasMore!=='boolean'||w.requested!==at)throw Error('The chat window metadata is invalid.');
+   const now=twitchTime();
+   if(Math.abs(now-at)>25&&(now<w.start-10||now>w.end+10)){twitchQueuedAt=now;return false;}
+   const ok=await importArchive(result.path,{preserve,twitch:true,window:{start:w.start,end:w.end,hasMore:w.hasMore}});
+   if(ok){twitchNextAttempt=w.end<=at+15?Date.now()+2500:0;return true;}
+   return false;
+  }catch(error){
+   if(!closed&&sourceActive&&generation===chatGeneration){
+    twitchNextAttempt=Date.now()+30000;
+    if(!preserve){chat.state='unavailable';chat.available=false;}
+    chat.error=String(error&&error.message||'Twitch replay is unavailable.').slice(0,180);send();
+   }
+   return false;
+  }finally{
+   if(owned&&services.deleteDataPath)services.deleteDataPath(downloadPath);
+   twitchFetchBusy=false;
+   const pending=twitchQueuedAt;twitchQueuedAt=null;
+   if(pending!==null&&!closed&&sourceActive&&chatPreferred&&(chat.mode==='replay'||chat.state==='fetching')){
+    if(!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10)fetchTwitchWindow({auto:true,at:pending});
+   }
+  }
  }
  async function fetchReplay(options){
   const auto=!!(options&&options.auto);
   if(closed||!sourceActive)return;
-  if(source.kind!=='youtube'&&source.kind!=='twitch-vod'){return;}
+  if(source.kind==='twitch-vod')return fetchTwitchWindow(options||{});
+  if(source.kind!=='youtube')return;
   chatOff();const myGeneration=chatGeneration;chat.state='fetching';send();
   const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
   let downloadOwned=false;
@@ -222,7 +293,7 @@ function start(host,config,services){
  // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
  on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();if(overlayNeeded())ensureOverlay();if(loadedGeneration===0&&(source.kind==='youtube'||source.kind==='twitch-vod')&&!player.snapshot().live&&chat.mode==='off'&&chatPreferred&&!autoReplayAttempted){autoReplayAttempted=true;fetchReplay({auto:true});}tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
  on('mpv.end-file',()=>{player.ended();trace('end-file');});
- on('mpv.seek',()=>tick(true));on('mpv.pause.changed',()=>{tick(true);send();});
+ on('mpv.seek',()=>{tick(true);maybeRefreshTwitch(true);});on('mpv.pause.changed',()=>{tick(true);send();});
  on('iina.window-fs.changed',()=>{send();trace('fullscreen',{fullscreen:core.window.fullscreen});});
  on('iina.window-will-close',()=>{if(closed)return;cancelAuthBinding();chatOff();if(services.cancelHelpers)services.cancelHelpers();if(replayPath&&services.deleteDataPath)services.deleteDataPath(replayPath);replay=null;replayPath='';app.postMessage('player-closed',{});closed=true;generation++;player.close();timers.clearAll();restoreTimer=null;restoration=null;for(const [name,id] of listeners)try{event.off(name,id);}catch(_){};trace('window-closed');});
  function authReceiver(accept,handler){return wire=>{

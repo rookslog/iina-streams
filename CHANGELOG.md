@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.6-beta (2026-11-17) — on-demand VOD chat, regression correction
+- Reproduced 0.5.5 failure on Twitch VOD 2930971003, page 50: requested 290 s, final comment at 290 s, hasNextPage true; error was misclassified as malformed archive.
+- Fetch bounded windows near the current mpv timestamp instead of full-history all-or-nothing archives; request additional windows during playback, distant seeks and chat offset changes.
+- Advance offset requests past repeated timestamps; deduplicate known message IDs; disclose that the public API can miss messages in very dense same-second bursts.
+- Preserve replay and video on background refresh failures, retain explicit Off and manual archive import, and coalesce stale seek requests.
+- Real-source helper+import tests completed at 0, 290, 500, 20,000 and 32,000 seconds of the nine-hour VOD; 168 JavaScript tests and 120 Python tests (nine legacy-layout skips) pass. Native IINA acceptance remains open.
+- See docs/TWITCH-VOD-ON-DEMAND-0.5.6.md for exact limits, evidence and rollback.
+
 ## 0.5.5-beta (2026-11-17) — automatic Twitch VOD chat, native acceptance pending
 - On first successful public Twitch VOD load, fetch archived chat automatically, normalize it, and synchronize it to mpv playback through the existing replay engine.
 - Use public GraphQL time-offset pagination with overlap; no cookies, user OAuth, or extra CLI needed. Cursor pagination failed an integrity check during development.

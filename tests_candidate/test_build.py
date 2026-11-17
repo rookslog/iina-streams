@@ -12,6 +12,7 @@ SPEC = importlib.util.spec_from_file_location('candidate_build', ROOT / 'scripts
 BUILD = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BUILD)
 
+@unittest.skipUnless((ROOT / 'candidate-plugin').is_dir(), 'Legacy candidate-plugin layout absent; current root builder tested in test_build_current.py')
 class BuildTests(unittest.TestCase):
     def test_isolated_ids_reproducibility_and_no_autostart(self):
         with tempfile.TemporaryDirectory() as temp:

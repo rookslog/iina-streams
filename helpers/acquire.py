@@ -401,10 +401,13 @@ TWITCH_CANONICAL = re.compile(r'https://www\.twitch\.tv/videos/([0-9]{1,20})\Z')
 TWITCH_GQL_URL = 'https://gql.twitch.tv/gql'
 TWITCH_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'  # Public Twitch web client, not a secret.
 TWITCH_QUERY_HASH = 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a'
-TWITCH_MAX_SECONDS = 600
-TWITCH_MAX_PAGES = 30000
-TWITCH_MAX_MESSAGES = 2000000
-TWITCH_MAX_BYTES = 128 * 1024 * 1024
+# Bounded around-playback acquisition, never a full multi-hour VOD download.
+TWITCH_MAX_SECONDS = 50
+TWITCH_MAX_PAGES = 64
+TWITCH_MAX_MESSAGES = 15000
+TWITCH_MAX_BYTES = 16 * 1024 * 1024
+TWITCH_LOOKBACK_SECONDS = 8
+TWITCH_LOOKAHEAD_SECONDS = 60
 TWITCH_MAX_PAGE_BYTES = 2 * 1024 * 1024
 
 
@@ -493,10 +496,24 @@ def normalize_twitch_comment(edge):
             'text': body, 'color': user_color, 'badges': badge_ids}
 
 
-def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
+def twitch_acquire(url, output, *, at=0, fetch_page=twitch_page, on_published=None):
+    """Acquire a bounded replay window around playback time, not the whole VOD.
+
+    Offset pagination is inherently lossy during bursts of more than one page
+    per second; never claim this is an exhaustive archive. Earlier whole-VOD
+    acquisition stalled when a page's latest second equaled its query offset.
+    """
     match = TWITCH_CANONICAL.fullmatch(url) if isinstance(url, str) else None
     if not match:
         raise AcquireError('UNSUPPORTED_SOURCE')
+    if isinstance(at, bool):
+        raise AcquireError('INVALID_ARGUMENTS')
+    try:
+        position = float(at)
+    except (TypeError, ValueError, OverflowError):
+        raise AcquireError('INVALID_ARGUMENTS') from None
+    if not math.isfinite(position) or not 0 <= position <= 2592000:
+        raise AcquireError('INVALID_ARGUMENTS')
     if not isinstance(output, str) or not output or len(output) > 4096 or re.search(r'[\x00-\x1f\x7f]', output):
         raise AcquireError('INVALID_DESTINATION')
     video_id = match.group(1)
@@ -504,13 +521,17 @@ def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
     if destination.exists() or destination.is_symlink() or not destination.parent.is_dir():
         raise AcquireError('INVALID_DESTINATION')
     destination = destination.parent.resolve(strict=True) / destination.name
-    stage = Path(tempfile.mkdtemp(prefix='.twitch-chat-', dir=destination.parent))
+    stage = Path(tempfile.mkdtemp(prefix='.twitch-window-', dir=destination.parent))
     owned_directory = stage.stat()
     deadline = time.monotonic() + TWITCH_MAX_SECONDS
+    target_start = max(0, int(position) - TWITCH_LOOKBACK_SECONDS)
+    target_end = min(2592000, int(position) + TWITCH_LOOKAHEAD_SECONDS)
     with cancellation_scope() as cancelled:
         try:
             path = stage / 'replay.jsonl'
-            total, messages, pages, offset, recent_ids = 0, 0, 0, 0, set()
+            total, messages, pages = 0, 0, 0
+            offset, seen_ids = target_start, set()
+            maximum, minimum, more, bounded = -1.0, None, True, False
             with path.open('x', encoding='utf-8') as out:
                 os.chmod(path, 0o600)
                 def emit(value):
@@ -521,43 +542,46 @@ def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
                         raise AcquireError('OUTPUT_LIMIT')
                     out.write(value)
                 emit('{"version":1,"provider":"twitch","sourceId":' + json.dumps(video_id) +
-                     ',"title":"Twitch VOD ' + video_id + '","records":[')
-                while True:
+                     ',"title":"Twitch replay near playback","records":[')
+                while more and maximum < target_end:
+                    if pages >= TWITCH_MAX_PAGES or messages >= TWITCH_MAX_MESSAGES:
+                        bounded = True
+                        break
                     pages += 1
-                    if pages > TWITCH_MAX_PAGES:
-                        raise AcquireError('OUTPUT_LIMIT')
                     edges, more = fetch_page(video_id, offset, timeout=remaining(deadline, cancelled, 12))
                     remaining(deadline, cancelled)
                     if not isinstance(edges, list) or type(more) is not bool or len(edges) > 500:
                         raise AcquireError('INVALID_ARCHIVE')
-                    current_ids = set()
+                    if not edges:
+                        if more:
+                            raise AcquireError('INVALID_ARCHIVE')
+                        break
                     page_max = -1
                     for edge in edges:
                         node = edge.get('node') if isinstance(edge, dict) else None
-                        value = node.get('contentOffsetSeconds') if isinstance(node, dict) else None
-                        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
-                            page_max = max(page_max, value)
+                        when = node.get('contentOffsetSeconds') if isinstance(node, dict) else None
+                        if isinstance(when, (int, float)) and not isinstance(when, bool) and math.isfinite(when) and 0 <= when <= 2592000:
+                            page_max = max(page_max, when)
                         row = normalize_twitch_comment(edge)
-                        if row is None or (row['id'] and row['id'] in recent_ids):
+                        if row is None or (row['id'] and row['id'] in seen_ids):
                             continue
                         if row['id']:
-                            current_ids.add(row['id'])
-                        if messages >= TWITCH_MAX_MESSAGES:
-                            raise AcquireError('OUTPUT_LIMIT')
+                            seen_ids.add(row['id'])
                         emit((',' if messages else '') + json.dumps(row, ensure_ascii=True, separators=(',', ':')))
                         messages += 1
-                    if not more:
-                        break
-                    if not edges:
+                        minimum = row['time'] if minimum is None else min(minimum, row['time'])
+                        maximum = max(maximum, row['time'])
+                        if messages >= TWITCH_MAX_MESSAGES:
+                            bounded = True
+                            break
+                    if page_max < 0:
                         raise AcquireError('INVALID_ARCHIVE')
-                    # Request the last observed second again, so the next page
-                    # overlaps instead of silently discarding same-second chat.
-                    # Refuse to publish a partial archive if it cannot advance.
-                    next_offset = int(page_max)
-                    if next_offset <= offset or next_offset > 2592000:
-                        raise AcquireError('INVALID_ARCHIVE')
-                    offset = next_offset
-                    recent_ids = current_ids
+                    # Advance by at least one integer second even when an entire
+                    # response is stuck at the previous offset. This is best-
+                    # effort pagination, not a claim of missing-second recovery.
+                    offset = max(offset + 1, int(page_max) + 1)
+                    if offset > 2592000:
+                        more = False
                 emit(']}')
             if not messages:
                 raise AcquireError('NO_REPLAY')
@@ -566,7 +590,14 @@ def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
                 raise AcquireError('INVALID_DESTINATION')
             os.rename(stage, destination)
             remaining(deadline, cancelled)
-            result = {'ok': True, 'path': str(destination / 'replay.jsonl')}
+            result = {
+                'ok': True, 'path': str(destination / 'replay.jsonl'),
+                'window': {
+                    'requested': position, 'start': minimum, 'end': maximum,
+                    'hasMore': more, 'bounded': bounded,
+                    'pages': pages, 'count': messages
+                },
+            }
             if on_published is not None:
                 on_published(result)
             return result
@@ -584,16 +615,19 @@ def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
                 shutil.rmtree(stage)
 
 
-
 def _main(argv=None, on_published=None):
     try:
         parser = SafeParser(add_help=False, allow_abbrev=False)
         parser.add_argument('--url', required=True)
         parser.add_argument('--output', required=True)
+        parser.add_argument('--at', default='0')
         args = parser.parse_args(argv)
-        response = (twitch_acquire(args.url, args.output, on_published=on_published)
-                    if TWITCH_CANONICAL.fullmatch(args.url) else
-                    acquire(args.url, args.output, on_published=on_published))
+        if TWITCH_CANONICAL.fullmatch(args.url):
+            response = twitch_acquire(args.url, args.output, at=args.at, on_published=on_published)
+        else:
+            if args.at != '0':
+                raise AcquireError('INVALID_ARGUMENTS')
+            response = acquire(args.url, args.output, on_published=on_published)
     except AcquireError as error:
         response = {'ok': False, 'error': {'code': error.code, 'message': str(error)}}
     except KeyboardInterrupt:

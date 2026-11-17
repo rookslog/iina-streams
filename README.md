@@ -1,6 +1,6 @@
 # IINA Streams — Unified and Focus
 
-> **0.5.5 Beta (Nov 17, 2026):** automatic Twitch VOD chat retrieval was added on a separate branch. Open a public Twitch recording and the plugin fetches available chat without manual exports. It retains **Fetch replay** retry and **Import archive…** fallback. This is a beta awaiting native IINA acceptance, not stable promotion. See [0.5.5 release verification](docs/AUTO-TWITCH-VOD-0.5.5.md). The 0.5.0 candidate portfolio description below is historical.
+> **0.5.6 Beta (Nov 17, 2026):** corrected Twitch VOD replay to retrieve chat **around the current playback position** and refetch on seeks/normal advancement. This fixes the failure seen on a nine-hour VOD, where the old full-history downloader stalled on overlapping timestamps. Real-source acquisition/import and automated playback integration tests passed; native IINA presentation remains the next acceptance gate. See [0.5.6 regression record](docs/TWITCH-VOD-ON-DEMAND-0.5.6.md). The 0.5.0 candidate portfolio below is historical, and the previous [0.5.5 beta](docs/AUTO-TWITCH-VOD-0.5.5.md) is superseded.
 
 **Two isolated native candidates, version 0.5.0.** Unified keeps playback and chat together; Focus uses a quieter Playback/Chat inspector with overlay-oriented defaults. Both share the same playback, authorization, replay, and overlay engine. Chat starts Off, and stable promotion remains a separate user decision.
 

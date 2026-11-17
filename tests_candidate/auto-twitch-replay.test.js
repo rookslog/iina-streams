@@ -54,7 +54,7 @@ test('opening a public Twitch VOD automatically acquires its original chat and d
  const index={version:1,provider:'twitch',sourceId:f.source.id,title:'Public VOD chat',count:1,
   timeline:{unit:'seconds',availableStart:0,availableEnd:0},chunks:[{file:'chunk-000000.json',start:0,end:0,count:1}]};
  // A test helper can derive the normalized output from the import call.
- f.resolveAcquisition({ok:true,path:download+'/replay.jsonl'});
+ f.resolveAcquisition({ok:true,path:download+'/replay.jsonl',window:{requested:0,start:0,end:80,hasMore:true}});
  await wait();
  assert.equal(f.calls[1].name,'replay');
  const normalized=f.calls[1].args.at(-1);
@@ -75,7 +75,7 @@ test('explicit Off during automatic acquisition cancels and fences late result',
  const f=fixture();
  await f.hooks.on_load(()=>{});
  f.events['iina.file-loaded'](f.source.url);
- const path=f.calls[0].args.at(-1);
+ const path=f.calls[0].args[3];
  f.controller.chatOff();
  f.resolveAcquisition({ok:true,path:path+'/replay.jsonl'});
  await wait();
@@ -95,7 +95,7 @@ test('persisted Off disables automatic retrieval, but manual Fetch remains possi
  f.side['fetch-replay']();
  assert.equal(f.calls.length,1);
  assert.equal(f.controller.snapshot().chat.state,'fetching');
- const path=f.calls[0].args.at(-1);
+ const path=f.calls[0].args[3];
  f.resolveAcquisition({ok:false,error:{message:'No VOD chat available'}});
  await wait();
  assert.equal(f.controller.snapshot().chat.state,'unavailable');

@@ -173,6 +173,7 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(os.path.lexists(self.link('unified')))
         self.assertFalse(os.path.lexists(self.link('focus')))
 
+    @unittest.skipUnless((SCRIPT.parents[1] / 'candidate-plugin').is_dir(), 'Legacy candidate builder source layout is no longer present')
     def test_fresh_candidate_builder_output_passes_install_and_rollback(self):
         spec = importlib.util.spec_from_file_location('candidate_builder_for_install', SCRIPT.parent / 'build-candidates.py')
         builder = importlib.util.module_from_spec(spec)

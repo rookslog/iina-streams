@@ -19,13 +19,39 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def git_state():
+    """Build identity is the actual source commit, never a made-up release number."""
+    try:
+        commit = subprocess.check_output(
+            ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+        dirty = bool(subprocess.check_output(
+            ['git', '-C', str(ROOT), 'status', '--porcelain', '--untracked-files=all'],
+            stderr=subprocess.DEVNULL, text=True
+        ).strip())
+        tags = set(subprocess.check_output(
+            ['git', '-C', str(ROOT), 'tag', '--points-at', 'HEAD'],
+            stderr=subprocess.DEVNULL, text=True
+        ).splitlines())
+        return commit, dirty, tags
+    except (OSError, subprocess.CalledProcessError):
+        return 'working-copy', True, set()
+
+
 def build(output, beta=False):
-    output = Path(output).resolve()
-    output.mkdir(parents=True, exist_ok=True)
     info = json.loads((SOURCE / 'Info.json').read_text())
     version = info['version']
+    commit, dirty, tags = git_state()
+    ref = ('g' + commit[:8]) if commit != 'working-copy' else 'working'
+    if dirty:
+        ref += '.dirty'
+    if not beta and (dirty or 'v' + version not in tags):
+        raise ValueError('Stable packaging requires a clean checkout at its matching release tag.')
+    output = Path(output).resolve()
+    output.mkdir(parents=True, exist_ok=True)
     identifier = info['identifier'] + ('.beta' if beta else '')
     name = info['name'] + (' Beta' if beta else '')
+    beta_version = version + '-dev.' + ref
 
     source_files = sorted(
         p for entry in PLUGIN_ENTRIES for p in ([SOURCE / entry] if (SOURCE / entry).is_file() else (SOURCE / entry).rglob('*'))
@@ -38,7 +64,7 @@ def build(output, beta=False):
     embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in helper_paths}
 
     bundle = output / ('streams-beta.iinaplugin' if beta else 'streams.iinaplugin')
-    archive = output / (f'iina-streams-beta-{version}.iinaplgz' if beta else f'iina-streams-{version}.iinaplgz')
+    archive = output / (f'iina-streams-beta-{version}-{ref}.iinaplgz' if beta else f'iina-streams-{version}.iinaplgz')
 
     temp = Path(tempfile.mkdtemp(prefix='.build-', dir=str(output)))
     try:
@@ -50,7 +76,7 @@ def build(output, beta=False):
             beta_info = dict(info)
             beta_info['name'] = name
             beta_info['identifier'] = identifier
-            beta_info['version'] = version + '-beta'
+            beta_info['version'] = beta_version
             beta_info.pop('ghRepo', None)
             beta_info.pop('ghVersion', None)
             (temp / 'Info.json').write_text(json.dumps(beta_info, indent=2) + '\n')
@@ -78,16 +104,15 @@ def build(output, beta=False):
     with zipfile.ZipFile(archive) as packed:
         assert packed.testzip() is None
 
-    try:
-        commit = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL, text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        commit = 'working-copy'
 
     manifest = {
         'sourceCommit': commit,
+        'sourceDirty': dirty,
+        'buildRef': ref,
+        'releaseVersion': version,
         'name': name,
         'identifier': identifier,
-        'version': version + ('-beta' if beta else ''),
+        'version': beta_version if beta else version,
         'archive': archive.name,
         'sha256': digest(archive.read_bytes()),
     }

@@ -1,6 +1,6 @@
-# IINA Streams 0.5.5 Beta — Automatic Twitch VOD Chat
+# IINA Streams — Initial automatic Twitch VOD chat experiment (superseded)
 
-**Status:** source and beta package ready for a native installation smoke; **not yet promoted to the stable plugin**.
+**Historical status:** This first experiment was built with an incremented local beta version label, but was **never a tagged release**. It was superseded after a long VOD failed. New development snapshots use Git commit IDs while the released version remains v0.5.3.
 
 ## Behaviour
 
@@ -30,7 +30,7 @@ cd /Users/rookslog/Development/iina-streams-auto-vod
 /usr/bin/python3 -B scripts/build.py --beta --output dist/beta
 ```
 
-Open `dist/beta/iina-streams-beta-0.5.5.iinaplgz` with IINA, or use **IINA → Settings → Plugins → Install Local Package**. It uses `local.iina.streams.beta` and does not replace the stable plugin. Installing it updates the existing beta plugin if the user approves the installer.
+The former local package `iina-streams-beta-0.5.5.iinaplgz` is superseded and retained only as historical evidence. Install the current commit-stamped development package instead; beta identity remains `local.iina.streams.beta`, distinct from stable.
 
 For rollback, reinstall the existing saved beta 0.5.4 package from `/Users/rookslog/Development/iina-streams/dist/beta/` or disable the beta plugin in IINA Plugins settings. Keep the stable plugin intact. Avoid directly deleting installed plugin directories while IINA is running.
 

@@ -1,8 +1,8 @@
-# IINA Streams 0.5.6-beta — Bounded on-demand Twitch VOD replay
+# IINA Streams — Bounded on-demand Twitch VOD replay (unreleased)
 
 **Status:** Corrected beta implementation on an isolated branch, not a stable release; installed IINA plugins are unchanged until the user explicitly installs the new beta. Authoritative record: the test report and exact package SHA attached to the release build.
 
-## Root cause: v0.5.5-beta
+## Root cause: previous unreleased full-download experiment
 
 The user's real VOD was `https://www.twitch.tv/videos/2930971003` (a roughly nine-hour broadcast). The previous code tried to download the entire VOD's chat before replay began.
 
@@ -42,15 +42,15 @@ This network test is intentionally **not** in the default offline unit suite.
 ## Tests and remaining gates
 
 - Full JavaScript suite: **168 passed, zero failed**. Includes initial autoplay, automatic prefetch, 5-hour seek, 8-hour seek during an outstanding request, Chat Off and late helper publication, manual Fetch after persisted Off, background failure preserves replay, bad metadata, mismatched VOD ID, manual import independence, offset, and no-more-chat behavior.
-- Full Python suite: **120 tests, zero failed, nine explicit skips**. The skips belong to the previous `candidate-plugin/` builder layout, which no longer exists in this root-layout branch. New `test_build_current.py` covers the current 0.5.6 builder, source identity, reproducibility, and embedding.
+- Full Python suite: **120 tests, zero failed, nine explicit skips**. The skips belong to the previous `candidate-plugin/` builder layout, which no longer exists in this root-layout branch. New `test_build_current.py` covers the current commit-stamped development builder, source identity, reproducibility, and embedding.
 - Native IINA WKWebView UI presentation and uninterrupted video playback under the newly installed beta are **not yet observed**. Those are appropriate real end-to-end experiential checks once the user installs this beta; do not claim them from mocks.
 - Extreme same-second comment floods may omit some messages because Twitch's public offset pagination is not a lossless archival interface. The dependency is undocumented and can change.
 - Sustained multi-hour foreground viewing, memory/energy metrics and rate limiting over many consecutive windows remain unmeasured. These are not represented as passing.
-- Original beta 0.5.5 remains available for rollback; stable 0.5.3 stays untouched.
+- The previously built local beta archives remain available as historical rollback files; tagged stable v0.5.3 stays untouched.
 
 ## Installation
 
-The beta package identifier is `local.iina.streams.beta`, version `0.5.6-beta`. Build with:
+The development plugin identifier remains `local.iina.streams.beta`. Its displayed version is `0.5.3-dev.g<commit>`, not a newly incremented release version. Build with:
 
 ```sh
 cd /Users/rookslog/Development/iina-streams-auto-vod

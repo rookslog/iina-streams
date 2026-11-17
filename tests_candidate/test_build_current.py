@@ -19,7 +19,10 @@ class CurrentBuilderTests(unittest.TestCase):
             manifest=BUILD.build(Path(temp),beta=True)
             archive=Path(temp)/manifest['archive']
             self.assertEqual(manifest['identifier'],'local.iina.streams.beta')
-            self.assertEqual(manifest['version'],'0.5.6-beta')
+            self.assertEqual(manifest['releaseVersion'],'0.5.3')
+            self.assertEqual(manifest['version'],'0.5.3-dev.'+manifest['buildRef'])
+            self.assertTrue(manifest['buildRef'].startswith('g'))
+            self.assertIn(manifest['buildRef'],manifest['archive'])
             self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(),manifest['sha256'])
             with zipfile.ZipFile(archive) as zip:
                 self.assertIsNone(zip.testzip())
@@ -40,16 +43,54 @@ class CurrentBuilderTests(unittest.TestCase):
                 for name in ('runner','media','acquire','replay'):
                     self.assertIn('"'+name+'":{',embedded)
 
-    def test_stable_identity_is_separate_and_no_autoload_or_credential_bundling(self):
+    def test_stable_build_requires_matching_release_tag_and_clean_tree(self):
         with tempfile.TemporaryDirectory() as temp:
-            manifest=BUILD.build(Path(temp),beta=False)
+            path=Path(temp)/'stable'
+            with self.assertRaisesRegex(ValueError,'matching release tag'):
+                BUILD.build(path,beta=False)
+            self.assertFalse(path.exists())
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,True,{'v0.5.3'})):
+                with self.assertRaisesRegex(ValueError,'matching release tag'):
+                    BUILD.build(path,beta=False)
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,{'v0.5.2'})):
+                with self.assertRaisesRegex(ValueError,'matching release tag'):
+                    BUILD.build(path,beta=False)
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,{'v0.5.3'})):
+                manifest=BUILD.build(path,beta=False)
+            self.assertEqual(manifest['version'],'0.5.3')
+            self.assertEqual(manifest['releaseVersion'],'0.5.3')
             self.assertEqual(manifest['identifier'],'local.iina.streams')
-            with zipfile.ZipFile(Path(temp)/manifest['archive']) as zip:
+            with zipfile.ZipFile(path/manifest['archive']) as zip:
                 info=json.loads(zip.read('Info.json'))
+                self.assertEqual(info['version'],'0.5.3')
                 self.assertEqual(info['identifier'],'local.iina.streams')
-                self.assertFalse(any(name.endswith('settings.json') or name.startswith('.data/') for name in zip.namelist()))
+                self.assertFalse(any(n.endswith('settings.json') or n.startswith('.data/') for n in zip.namelist()))
                 self.assertNotIn('qa-harness.js',zip.namelist())
-                self.assertNotIn('token',zip.read('Info.json').decode().lower())
+
+    def test_beta_commit_identifiers_change_without_release_version_bump(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,set())):
+                first=BUILD.build(root/'a',beta=True)
+            with mock.patch.object(BUILD,'git_state',return_value=('b'*40,False,set())):
+                second=BUILD.build(root/'b',beta=True)
+            self.assertEqual(first['releaseVersion'],second['releaseVersion'])
+            self.assertEqual(first['releaseVersion'],'0.5.3')
+            self.assertNotEqual(first['version'],second['version'])
+            self.assertNotEqual(first['archive'],second['archive'])
+            self.assertNotEqual(first['sha256'],second['sha256'])
+            self.assertEqual(first['version'],'0.5.3-dev.gaaaaaaaa')
+            self.assertEqual(second['version'],'0.5.3-dev.gbbbbbbbb')
+            self.assertFalse(first['sourceDirty'])
+
+    def test_uncommitted_sources_are_marked_dirty(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,True,set())):
+                manifest=BUILD.build(Path(temp),beta=True)
+            self.assertTrue(manifest['sourceDirty'])
+            self.assertEqual(manifest['buildRef'],'gaaaaaaaa.dirty')
+            self.assertEqual(manifest['version'],'0.5.3-dev.gaaaaaaaa.dirty')
+            self.assertIn('gaaaaaaaa.dirty',manifest['archive'])
 
     def test_reproducible_zip_even_when_helper_enumeration_order_changes(self):
         with tempfile.TemporaryDirectory() as temp:

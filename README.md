@@ -1,6 +1,6 @@
 # IINA Streams — Unified and Focus
 
-> **0.5.6 Beta (Nov 17, 2026):** corrected Twitch VOD replay to retrieve chat **around the current playback position** and refetch on seeks/normal advancement. This fixes the failure seen on a nine-hour VOD, where the old full-history downloader stalled on overlapping timestamps. Real-source acquisition/import and automated playback integration tests passed; native IINA presentation remains the next acceptance gate. See [0.5.6 regression record](docs/TWITCH-VOD-ON-DEMAND-0.5.6.md). The 0.5.0 candidate portfolio below is historical, and the previous [0.5.5 beta](docs/AUTO-TWITCH-VOD-0.5.5.md) is superseded.
+> **Unreleased development (November 17, 2026):** Twitch VOD chat now loads in bounded windows around playback and refreshes on seeks. The last tagged release remains **v0.5.3**. Experimental beta builds use the Git commit identifier (for example, `0.5.3-dev.g<commit>`) rather than incrementing release numbers. Real-source and automated tests have passed; native IINA experience remains for evaluation. See [the on-demand VOD regression report](docs/TWITCH-VOD-ON-DEMAND-2026-11-17.md). Older candidate-portfolio material below is historical.
 
 **Two isolated native candidates, version 0.5.0.** Unified keeps playback and chat together; Focus uses a quieter Playback/Chat inspector with overlay-oriented defaults. Both share the same playback, authorization, replay, and overlay engine. Chat starts Off, and stable promotion remains a separate user decision.
 

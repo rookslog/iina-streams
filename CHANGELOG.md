@@ -1,19 +1,20 @@
 # Changelog
 
-## 0.5.6-beta (2026-11-17) — on-demand VOD chat, regression correction
-- Reproduced 0.5.5 failure on Twitch VOD 2930971003, page 50: requested 290 s, final comment at 290 s, hasNextPage true; error was misclassified as malformed archive.
+## Unreleased (2026-11-17) — on-demand VOD chat, regression correction
+- Reproduced the initial full-history downloader failure on Twitch VOD 2930971003, page 50: requested 290 s, final comment at 290 s, hasNextPage true; error was misclassified as malformed archive.
 - Fetch bounded windows near the current mpv timestamp instead of full-history all-or-nothing archives; request additional windows during playback, distant seeks and chat offset changes.
 - Advance offset requests past repeated timestamps; deduplicate known message IDs; disclose that the public API can miss messages in very dense same-second bursts.
 - Preserve replay and video on background refresh failures, retain explicit Off and manual archive import, and coalesce stale seek requests.
 - Real-source helper+import tests completed at 0, 290, 500, 20,000 and 32,000 seconds of the nine-hour VOD; 168 JavaScript tests and 120 Python tests (nine legacy-layout skips) pass. Native IINA acceptance remains open.
-- See docs/TWITCH-VOD-ON-DEMAND-0.5.6.md for exact limits, evidence and rollback.
+- See docs/TWITCH-VOD-ON-DEMAND-2026-11-17.md for exact limits, evidence and rollback.
+- Development versions are commit-identified snapshots (`0.5.3-dev.g<commit>`), not new release versions. Stable builds require a clean checkout at the matching release tag.
 
-## 0.5.5-beta (2026-11-17) — automatic Twitch VOD chat, native acceptance pending
+## Earlier unreleased experiment (2026-11-17) — initial automatic Twitch VOD chat
 - On first successful public Twitch VOD load, fetch archived chat automatically, normalize it, and synchronize it to mpv playback through the existing replay engine.
 - Use public GraphQL time-offset pagination with overlap; no cookies, user OAuth, or extra CLI needed. Cursor pagination failed an integrity check during development.
 - Keep manual Fetch retry, authorized archive import, Off/cancellation, private staging and limits; do not interrupt video when chat is unavailable.
 - Genuine end-to-end retrieval/import verified on two public short VODs (54 and 83 messages) and an eight-page partial sample from a longer one (365 distinct messages). Native installation and long VOD acceptance are not yet claimed.
-- See docs/AUTO-TWITCH-VOD-0.5.5.md for scope and release gates.
+- See docs/AUTO-TWITCH-VOD-INITIAL-2026-11-17.md for scope and release gates.
 
 ## 0.2.0-rc1 (2026-11-07) — development only / promotion blocked
 - New Twitch URL extraction architecture, no long-lived Streamlink process or local listener.

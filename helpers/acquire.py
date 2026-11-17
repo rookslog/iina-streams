@@ -21,6 +21,8 @@ import tempfile
 import threading
 import time
 from urllib.parse import parse_qs, urlsplit
+import urllib.error
+import urllib.request
 
 YTDLP = shutil.which('yt-dlp') or '/opt/homebrew/bin/yt-dlp'
 MAX_TOTAL_SECONDS = 120
@@ -61,6 +63,7 @@ ERRORS = {
     'INVALID_ARCHIVE': 'The downloaded file is not a complete supported chat replay.',
     'CANCELLED': 'Replay fetch was cancelled. No partial archive was kept.',
     'INTERNAL_ERROR': 'Replay fetch could not finish. Check the destination and available disk space.',
+    'RATE_LIMITED': 'Twitch is limiting chat requests. Retry later or import an authorized archive.',
 }
 
 
@@ -392,13 +395,205 @@ def acquire(url, output, *, runner=None, on_published=None):
                 shutil.rmtree(stage)
 
 
+# Public Twitch VOD chat retrieval. The GraphQL query is undocumented and may change.
+# No cookies, tokens, alternate endpoints, or restriction workarounds are used.
+TWITCH_CANONICAL = re.compile(r'https://www\.twitch\.tv/videos/([0-9]{1,20})\Z')
+TWITCH_GQL_URL = 'https://gql.twitch.tv/gql'
+TWITCH_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'  # Public Twitch web client, not a secret.
+TWITCH_QUERY_HASH = 'b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a'
+TWITCH_MAX_SECONDS = 600
+TWITCH_MAX_PAGES = 30000
+TWITCH_MAX_MESSAGES = 2000000
+TWITCH_MAX_BYTES = 128 * 1024 * 1024
+TWITCH_MAX_PAGE_BYTES = 2 * 1024 * 1024
+
+
+def twitch_page(video_id, offset=0, *, timeout=12):
+    # Offset pagination is supported by the same public operation and does not
+    # require the cursor request that may fail Twitch's integrity checks.
+    variables = {'videoID': video_id, 'contentOffsetSeconds': int(offset)}
+    query = {'operationName': 'VideoCommentsByOffsetOrCursor',
+             'variables': variables,
+             'extensions': {'persistedQuery': {'version': 1, 'sha256Hash': TWITCH_QUERY_HASH}}}
+    request = urllib.request.Request(
+        TWITCH_GQL_URL, data=json.dumps(query, separators=(',', ':')).encode('utf-8'),
+        headers={'Client-ID': TWITCH_CLIENT_ID, 'Content-Type': 'application/json',
+                 'Accept': 'application/json'}, method='POST')
+    try:
+        with urllib.request.urlopen(request, timeout=max(1, timeout)) as response:
+            if response.geturl() != TWITCH_GQL_URL:
+                raise AcquireError('INVALID_ARCHIVE')
+            content = response.read(TWITCH_MAX_PAGE_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise AcquireError('ACCESS_REQUIRED') from None
+        if exc.code == 429:
+            raise AcquireError('RATE_LIMITED') from None
+        raise AcquireError('EXTRACTOR_FAILED') from None
+    except (urllib.error.URLError, OSError, TimeoutError):
+        raise AcquireError('EXTRACTOR_FAILED') from None
+    if len(content) > TWITCH_MAX_PAGE_BYTES:
+        raise AcquireError('OUTPUT_LIMIT')
+    try:
+        data = json.loads(content)
+    except (ValueError, UnicodeError, RecursionError):
+        raise AcquireError('INVALID_ARCHIVE') from None
+    if not isinstance(data, dict):
+        raise AcquireError('INVALID_ARCHIVE')
+    if data.get('errors'):
+        raise AcquireError('EXTRACTOR_FAILED')
+    video = data.get('data', {}).get('video') if isinstance(data.get('data'), dict) else None
+    if video is None:
+        raise AcquireError('NO_REPLAY')
+    comments = video.get('comments') if isinstance(video, dict) else None
+    if comments is None:
+        raise AcquireError('NO_REPLAY')
+    if not isinstance(comments, dict) or not isinstance(comments.get('edges'), list):
+        raise AcquireError('INVALID_ARCHIVE')
+    page = comments.get('pageInfo')
+    if not isinstance(page, dict) or type(page.get('hasNextPage')) is not bool:
+        raise AcquireError('INVALID_ARCHIVE')
+    edges = comments['edges']
+    if len(edges) > 500:
+        raise AcquireError('INVALID_ARCHIVE')
+    return edges, page['hasNextPage']
+
+
+def normalize_twitch_comment(edge):
+    if not isinstance(edge, dict):
+        return None
+    node = edge.get('node')
+    if not isinstance(node, dict):
+        return None
+    when = node.get('contentOffsetSeconds')
+    if (isinstance(when, bool) or not isinstance(when, (int, float)) or
+            not math.isfinite(when) or not 0 <= when <= 2592000):
+        return None
+    message = node.get('message')
+    commenter = node.get('commenter')
+    if not isinstance(message, dict):
+        return None
+    fragments = message.get('fragments')
+    if not isinstance(fragments, list):
+        return None
+    body = ''.join(f.get('text', '') for f in fragments[:3000]
+                   if isinstance(f, dict) and isinstance(f.get('text'), str))[:16000]
+    if not body.strip():
+        return None
+    author = (commenter.get('displayName') or commenter.get('login')) if isinstance(commenter, dict) else None
+    user_color = message.get('userColor')
+    if not isinstance(user_color, str) or not re.fullmatch(r'#[0-9A-Fa-f]{6}', user_color):
+        user_color = ''
+    badges = message.get('userBadges')
+    badge_ids = [b['id'][:40] for b in badges[:16]
+                 if isinstance(b, dict) and isinstance(b.get('id'), str)] if isinstance(badges, list) else []
+    identifier = node.get('id')
+    return {'id': identifier[:256] if isinstance(identifier, str) else '',
+            'time': when, 'author': author[:128] if isinstance(author, str) else 'Unknown',
+            'text': body, 'color': user_color, 'badges': badge_ids}
+
+
+def twitch_acquire(url, output, *, fetch_page=twitch_page, on_published=None):
+    match = TWITCH_CANONICAL.fullmatch(url) if isinstance(url, str) else None
+    if not match:
+        raise AcquireError('UNSUPPORTED_SOURCE')
+    if not isinstance(output, str) or not output or len(output) > 4096 or re.search(r'[\x00-\x1f\x7f]', output):
+        raise AcquireError('INVALID_DESTINATION')
+    video_id = match.group(1)
+    destination = Path(os.path.abspath(output))
+    if destination.exists() or destination.is_symlink() or not destination.parent.is_dir():
+        raise AcquireError('INVALID_DESTINATION')
+    destination = destination.parent.resolve(strict=True) / destination.name
+    stage = Path(tempfile.mkdtemp(prefix='.twitch-chat-', dir=destination.parent))
+    owned_directory = stage.stat()
+    deadline = time.monotonic() + TWITCH_MAX_SECONDS
+    with cancellation_scope() as cancelled:
+        try:
+            path = stage / 'replay.jsonl'
+            total, messages, pages, offset, recent_ids = 0, 0, 0, 0, set()
+            with path.open('x', encoding='utf-8') as out:
+                os.chmod(path, 0o600)
+                def emit(value):
+                    nonlocal total
+                    encoded = value.encode('utf-8')
+                    total += len(encoded)
+                    if total > TWITCH_MAX_BYTES:
+                        raise AcquireError('OUTPUT_LIMIT')
+                    out.write(value)
+                emit('{"version":1,"provider":"twitch","sourceId":' + json.dumps(video_id) +
+                     ',"title":"Twitch VOD ' + video_id + '","records":[')
+                while True:
+                    pages += 1
+                    if pages > TWITCH_MAX_PAGES:
+                        raise AcquireError('OUTPUT_LIMIT')
+                    edges, more = fetch_page(video_id, offset, timeout=remaining(deadline, cancelled, 12))
+                    remaining(deadline, cancelled)
+                    if not isinstance(edges, list) or type(more) is not bool or len(edges) > 500:
+                        raise AcquireError('INVALID_ARCHIVE')
+                    current_ids = set()
+                    page_max = -1
+                    for edge in edges:
+                        node = edge.get('node') if isinstance(edge, dict) else None
+                        value = node.get('contentOffsetSeconds') if isinstance(node, dict) else None
+                        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+                            page_max = max(page_max, value)
+                        row = normalize_twitch_comment(edge)
+                        if row is None or (row['id'] and row['id'] in recent_ids):
+                            continue
+                        if row['id']:
+                            current_ids.add(row['id'])
+                        if messages >= TWITCH_MAX_MESSAGES:
+                            raise AcquireError('OUTPUT_LIMIT')
+                        emit((',' if messages else '') + json.dumps(row, ensure_ascii=True, separators=(',', ':')))
+                        messages += 1
+                    if not more:
+                        break
+                    if not edges:
+                        raise AcquireError('INVALID_ARCHIVE')
+                    # Request the last observed second again, so the next page
+                    # overlaps instead of silently discarding same-second chat.
+                    # Refuse to publish a partial archive if it cannot advance.
+                    next_offset = int(page_max)
+                    if next_offset <= offset or next_offset > 2592000:
+                        raise AcquireError('INVALID_ARCHIVE')
+                    offset = next_offset
+                    recent_ids = current_ids
+                emit(']}')
+            if not messages:
+                raise AcquireError('NO_REPLAY')
+            remaining(deadline, cancelled)
+            if destination.exists() or destination.is_symlink():
+                raise AcquireError('INVALID_DESTINATION')
+            os.rename(stage, destination)
+            remaining(deadline, cancelled)
+            result = {'ok': True, 'path': str(destination / 'replay.jsonl')}
+            if on_published is not None:
+                on_published(result)
+            return result
+        except BaseException:
+            try:
+                current = destination.lstat()
+                if (stat.S_ISDIR(current.st_mode) and
+                        (current.st_dev, current.st_ino) == (owned_directory.st_dev, owned_directory.st_ino)):
+                    shutil.rmtree(destination)
+            except OSError:
+                pass
+            raise
+        finally:
+            if stage.exists():
+                shutil.rmtree(stage)
+
+
+
 def _main(argv=None, on_published=None):
     try:
         parser = SafeParser(add_help=False, allow_abbrev=False)
         parser.add_argument('--url', required=True)
         parser.add_argument('--output', required=True)
         args = parser.parse_args(argv)
-        response = acquire(args.url, args.output, on_published=on_published)
+        response = (twitch_acquire(args.url, args.output, on_published=on_published)
+                    if TWITCH_CANONICAL.fullmatch(args.url) else
+                    acquire(args.url, args.output, on_published=on_published))
     except AcquireError as error:
         response = {'ok': False, 'error': {'code': error.code, 'message': str(error)}}
     except KeyboardInterrupt:

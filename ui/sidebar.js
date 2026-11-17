@@ -39,8 +39,8 @@
   $('chat-kind').textContent=replay?'Replay':on?'Live':'';
   $('chat-toggle').checked=on||busy;$('chat-toggle').disabled=!canToggle;
   $('connect').hidden=!twitch||on||!!s.auth.login||!!s.auth.saved;
-  $('import').hidden=on||s.live||twitch;
-  $('fetch').hidden=s.source.kind!=='youtube'||s.live||on;
+  $('import').hidden=on||s.live;
+  $('fetch').hidden=!['youtube','twitch-vod'].includes(s.source.kind)||s.live||on;
   $('resume').hidden=!s.chat.available||on;
   $('auth-panel').hidden=!['needs-client','error'].includes(s.auth.phase)||!on;$('auth-code-panel').hidden=s.auth.phase!=='waiting'||!on;$('auth-code').textContent=s.auth.userCode||'';
   const showAccount=twitch&&(s.auth.phase==='ready'||s.auth.login);$('account-row').hidden=!showAccount;$('account-label').textContent=s.auth.login?'Signed in as '+s.auth.login:'';

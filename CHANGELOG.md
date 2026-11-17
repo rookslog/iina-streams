@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.5-beta (2026-11-17) — automatic Twitch VOD chat, native acceptance pending
+- On first successful public Twitch VOD load, fetch archived chat automatically, normalize it, and synchronize it to mpv playback through the existing replay engine.
+- Use public GraphQL time-offset pagination with overlap; no cookies, user OAuth, or extra CLI needed. Cursor pagination failed an integrity check during development.
+- Keep manual Fetch retry, authorized archive import, Off/cancellation, private staging and limits; do not interrupt video when chat is unavailable.
+- Genuine end-to-end retrieval/import verified on two public short VODs (54 and 83 messages) and an eight-page partial sample from a longer one (365 distinct messages). Native installation and long VOD acceptance are not yet claimed.
+- See docs/AUTO-TWITCH-VOD-0.5.5.md for scope and release gates.
+
 ## 0.2.0-rc1 (2026-11-07) — development only / promotion blocked
 - New Twitch URL extraction architecture, no long-lived Streamlink process or local listener.
 - A single global Open Stream… action; Twitch channel URL validation.

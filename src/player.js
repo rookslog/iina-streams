@@ -73,9 +73,9 @@ function start(host,config,services){
   controlsDesired=true;
   if(closed||!windowLoaded)return;
   if(!sidebarLoaded){sidebar.loadFile('ui/sidebar.html');connectMessages();sidebarLoaded=true;sidebarReady=false;}
-  sidebarVisible=true;sidebar.show();send();
+  sidebarVisible=true;sidebar.show();if(chat.mode==='replay')tick(true);send();
  }
- function hideSidebar(){controlsDesired=false;sidebarVisible=false;sidebar.hide();if(view.presentation==='sidebar')chatOff();}
+ function hideSidebar(){controlsDesired=false;sidebarVisible=false;sidebar.hide();if(view.presentation==='sidebar'&&chat.mode==='live')chatOff();}
  function overlayNeeded(){return chat.mode==='live'||view.presentation==='overlay'&&chat.mode!=='off';}
  function stopLiveTransport(){liveRun++;liveCredential=null;liveStarted=false;if(overlayReady)postOverlay('live-stop',{});}
  function startLiveTransport(){
@@ -150,7 +150,7 @@ function start(host,config,services){
  async function fetchReplay(options){
   const auto=!!(options&&options.auto);
   if(closed||!sourceActive)return;
-  if(source.kind!=='youtube'){if(!auto){chat.error='Import a TwitchDownloader JSON archive for this recording.';send();}return;}
+  if(source.kind!=='youtube'&&source.kind!=='twitch-vod'){return;}
   chatOff();const myGeneration=chatGeneration;chat.state='fetching';send();
   const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
   let downloadOwned=false;
@@ -163,7 +163,7 @@ function start(host,config,services){
    await importArchive(result.path);
   }catch(error){
    if(closed||chatGeneration!==myGeneration)return;
-   if(auto){chat.state='off';chat.error='';chat.available=false;send();return;}
+   if(auto&&source.kind==='youtube'){chat.state='off';chat.error='';chat.available=false;send();return;}
    chat.state='unavailable';chat.error=String(error&&error.message||'Replay is unavailable.').slice(0,180);send();
   }
   finally{if(downloadOwned&&services.deleteDataPath)services.deleteDataPath(downloadPath);}
@@ -220,7 +220,7 @@ function start(host,config,services){
  });
  on('iina.window-loaded',()=>{windowLoaded=true;if(controlsDesired)showSidebar();if(overlayNeeded())ensureOverlay();trace('window-loaded');});
  // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
- on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();if(overlayNeeded())ensureOverlay();if(loadedGeneration===0&&source.kind==='youtube'&&!player.snapshot().live&&chat.mode==='off'&&!autoReplayAttempted){autoReplayAttempted=true;fetchReplay({auto:true});}tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
+ on('iina.file-loaded',url=>{if(closed||!sourceActive)return;let decoded=String(url||'');try{decoded=decodeURIComponent(decoded);}catch(_){}const parsed=Sources.parse(decoded);if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;const marker=/#streams-generation=(\d+)$/.exec(decoded);const loadedGeneration=marker?Number(marker[1]):0;if(loadedGeneration!==activeGeneration)return;if(restoration){if(!restoration.loaded){restoration.loaded=true;restoration.loadedAt=Date.now();}restoreAfterNativeLoad();}if(controlsDesired&&loadedGeneration===0)showSidebar();if(overlayNeeded())ensureOverlay();if(loadedGeneration===0&&(source.kind==='youtube'||source.kind==='twitch-vod')&&!player.snapshot().live&&chat.mode==='off'&&chatPreferred&&!autoReplayAttempted){autoReplayAttempted=true;fetchReplay({auto:true});}tick(true);trace('file-loaded',{generation:loadedGeneration,reportedQuality:player.snapshot().quality,width:mpv.getNumber('video-params/w'),height:mpv.getNumber('video-params/h')});});
  on('mpv.end-file',()=>{player.ended();trace('end-file');});
  on('mpv.seek',()=>tick(true));on('mpv.pause.changed',()=>{tick(true);send();});
  on('iina.window-fs.changed',()=>{send();trace('fullscreen',{fullscreen:core.window.fullscreen});});

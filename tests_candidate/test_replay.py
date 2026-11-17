@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-HELPER = pathlib.Path(__file__).resolve().parents[1] / 'candidate-plugin/helpers/replay.py'
+HELPER = pathlib.Path(__file__).resolve().parents[1] / 'helpers/replay.py'
 
 
 class ReplayImportTests(unittest.TestCase):

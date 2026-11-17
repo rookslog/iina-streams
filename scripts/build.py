@@ -51,7 +51,7 @@ def build(output, beta=False):
     output.mkdir(parents=True, exist_ok=True)
     identifier = info['identifier'] + ('.beta' if beta else '')
     name = info['name'] + (' Beta' if beta else '')
-    beta_version = version + '-dev.' + ref
+    beta_version = version + '-beta+' + ref
 
     source_files = sorted(
         p for entry in PLUGIN_ENTRIES for p in ([SOURCE / entry] if (SOURCE / entry).is_file() else (SOURCE / entry).rglob('*'))
@@ -109,7 +109,7 @@ def build(output, beta=False):
         'sourceCommit': commit,
         'sourceDirty': dirty,
         'buildRef': ref,
-        'releaseVersion': version,
+        'targetVersion': version,
         'name': name,
         'identifier': identifier,
         'version': beta_version if beta else version,

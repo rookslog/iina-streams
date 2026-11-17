@@ -50,7 +50,7 @@ This network test is intentionally **not** in the default offline unit suite.
 
 ## Installation
 
-The development plugin identifier remains `local.iina.streams.beta`. Its displayed version is `0.5.3-dev.g<commit>`, not a newly incremented release version. Build with:
+The development plugin identifier remains `local.iina.streams.beta`. Its displayed version is `0.5.4-beta+g<commit>`, marking each build of the upcoming 0.5.4 release. The last stable release remains v0.5.3. Build with:
 
 ```sh
 cd /Users/rookslog/Development/iina-streams-auto-vod

@@ -8,6 +8,12 @@ const {createEstimator}=require('./live-latency.js');
 const {createChatTiming}=require('./chat-timing.js');
 const {createLiveClock}=require('./live-clock.js');
 const {createAuthority}=require('./authority.js');
+const {listen}=require('./listeners.js');
+
+// #60 lifetime probe: one id and start time per JS context (IINA creates one per plugin instance), written with
+// every last-session.json. A new id for the same window shows its context was replaced.
+const INSTANCE_ID=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
+const INSTANCE_STARTED_AT=new Date().toISOString();
 
 // Live latency (#2, #16, #51). The spike's 30 s window held with 18 samples when mpv was read every 1 s; the
 // live clock samples once per 2 s playlist poll, so a 30 s window holds at most 16 samples. 10 samples cover
@@ -500,7 +506,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   try{
    diag.push(Object.assign({step,t:Date.now()},extra||{}));
    if(diag.length>40)diag.shift();
-   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(diag));
+   const record={instanceId:INSTANCE_ID,instanceStartedAt:INSTANCE_STARTED_AT,steps:diag};
+   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(record));
   }catch(_){}
  }
 
@@ -550,15 +557,15 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onSidebar(name,handler){
-  sidebar.onMessage(name,whileActive(handler));
+  listen(sidebar,'sidebar',name,whileActive(handler));
  }
 
  function onSidebarWindow(name,handler){
-  sidebar.onMessage(name,whileWindow(handler));
+  listen(sidebar,'sidebar',name,whileWindow(handler));
  }
 
  function onOverlay(name,handler){
-  overlay.onMessage(name,whileActive(handler));
+  listen(overlay,'overlay',name,whileActive(handler));
  }
 
  // Actions for the source act only for the current activation; the rest belong to the window.
@@ -2011,8 +2018,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function registerAppListeners(){
   if(closed||appListenersRegistered)return;
   appListenersRegistered=true;
-  app.onMessage('open-error',whileWindow(onOpenError));
-  for(const name of Object.keys(authCallbacks))app.onMessage(name,authCallbacks[name]);
+  listen(app,'global','open-error',whileWindow(onOpenError));
+  for(const name of Object.keys(authCallbacks))listen(app,'global',name,authCallbacks[name]);
  }
 
  // Review r5 #1: each activation's first turn sends its own sign-in request, or asks for sign-in state.

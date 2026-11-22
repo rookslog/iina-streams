@@ -196,10 +196,18 @@ function start(host,config,services){
   trace('sidebar-document-visibility',{visible:data.visible});
  }
 
+ // Saves one change into the latest persisted settings. Other fields, and anything another window saved
+ // since this one started, survive; the whole file is replaced on every save.
+ function saveSetting(change){
+  if(!services.saveSettings)return;
+  const latest=services.readSettings?services.readSettings():{};
+  services.saveSettings(Object.assign({},latest,change));
+ }
+
  // Remember whether the user wants chat, so the next player opens with it on or off.
  function setChatPreferred(enabled){
   chatPreferred=enabled;
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:enabled});
+  saveSetting({chatEnabled:enabled});
  }
 
  function onReplayResume(){
@@ -371,7 +379,7 @@ function start(host,config,services){
   const editing=change.editing===undefined?view.editing:!!change.editing;
   view=viewSettings(change.reset?{}:Object.assign({},view,change));
   view.editing=editing&&view.presentation==='overlay';
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false})});
+  saveSetting({view:Object.assign({},view,{editing:false})});
   if(overlayNeeded()){
    ensureOverlay();
   }else{

@@ -91,36 +91,121 @@ function adoptableSource(path){
  return source&&ADOPTABLE_KINDS.includes(source.kind)?source:null;
 }
 
+// How IINA v1.5.1 runs this hook (MPVController.swift, MPVHookValue.call; JavascriptAPISidebarView.swift):
+// - It is called on mpv's event queue, not the main thread. sidebar.loadFile there is DispatchQueue.main.sync,
+//   and sidebar.show touches the window, so the controller is built on a main-thread turn (setTimeout), never
+//   on the hook's own stack.
+// - IINA calls next itself as soon as the hook returns, unless the hook is an async function. So onLoad below
+//   is async, and it alone continues the load: once, from the adopted pipeline or from the watchdog.
+const ADOPTION_WATCHDOG_MS=10000;
+
 function waitForNativeStream(host,config,services){
+ const qaTrace=adoptedTracer(host,config);
  let adoptedLoadHook=null;
+ let controller=null;
  function adoptLoadHook(onLoad){
   adoptedLoadHook=onLoad;
  }
- function onLoad(next){
-  if(adoptedLoadHook)return adoptedLoadHook(next);
-  const source=adoptableSource(loadingPath(host.mpv));
-  if(!source){
-   continueLoad(next);
-   return undefined;
-  }
-  // A window Streams does not own must never be left waiting: if adoption fails, the load goes on untouched.
-  try{
-   run(host,config,services,{source,variant:config.variant},adoptLoadHook);
-  }catch(_){
-   adoptedLoadHook=null;
-   continueLoad(next);
-   return undefined;
-  }
-  return adoptedLoadHook(next);
+ function passThrough(){
+  if(controller)controller.passThrough();
  }
- function continueLoad(next){
-  if(typeof next==='function')next();
+ // This hook runs for every file in this window, and an async hook is never continued by IINA: any throw
+ // passes the file through.
+ async function onLoad(next){
+  const load=holdLoad(next,qaTrace,passThrough);
+  try{
+   await adoptOrPass(load);
+  }catch(error){
+   qaTrace('error',{error:publicError(error,'Adoption failed.')});
+   load.release('pass-through');
+  }
+ }
+ async function adoptOrPass(load){
+  qaTrace('hook-entered',{adopted:!!adoptedLoadHook});
+  if(adoptedLoadHook){
+   load.arm();
+   await adoptedLoadHook(load.continueFromHook);
+   return;
+  }
+  const source=adoptableSource(loadingPath(host.mpv));
+  qaTrace('source',source?{kind:source.kind,sourceId:source.id}:{kind:null});
+  if(!source){
+   load.release('pass-through');
+   return;
+  }
+  load.arm();
+  await mainThreadTurn();
+  if(load.released)return;
+  try{
+   const lifecycle={phase:qaTrace};
+   controller=run(host,config,services,{source,variant:config.variant},adoptLoadHook,lifecycle);
+  }catch(error){
+   adoptedLoadHook=null;
+   throw error;
+  }
+  await adoptedLoadHook(load.continueFromHook);
  }
  host.mpv.addHook('on_load',20,onLoad);
 }
 
+// IINA's setTimeout schedules its callback on the main thread (JavascriptPolyfill.swift createTimer), and
+// keeps a fired timer registered until it is cleared.
+function mainThreadTurn(){
+ return new Promise(resolve=>{
+  const id=setTimeout(()=>{
+   clearTimeout(id);
+   resolve();
+  },0);
+ });
+}
+
+// One load: `next` runs exactly once, from the pipeline or, for a held load (arm), after
+// ADOPTION_WATCHDOG_MS from the watchdog, which first tells the controller to drop the load (onWatchdog) so
+// IINA's own loader plays it. A file that is not adopted never arms a timer. The watchdog needs the main
+// thread and the JS context to be free; nothing in JS can fire while either is blocked.
+function holdLoad(next,qaTrace,onWatchdog){
+ const load={released:false};
+ let watchdog=null;
+ load.arm=()=>{
+  if(!load.released&&watchdog===null)watchdog=setTimeout(fireWatchdog,ADOPTION_WATCHDOG_MS);
+ };
+ function fireWatchdog(){
+  if(load.released)return;
+  qaTrace('watchdog-fired',{ms:ADOPTION_WATCHDOG_MS});
+  try{
+   onWatchdog();
+  }catch(_){}
+  load.release('watchdog');
+ }
+ load.release=by=>{
+  if(load.released)return;
+  load.released=true;
+  if(watchdog!==null)clearTimeout(watchdog);
+  qaTrace('next-called',{by});
+  if(typeof next==='function')next();
+ };
+ load.continueFromHook=()=>load.release('hook');
+ return load;
+}
+
+// QA builds only: the phases of adopted windows, in the shape main.js's services.trace writes. Adopted
+// windows have no stream label, so main.js has no per-source trace file for them. Never media URLs.
+function adoptedTracer(host,config){
+ if(!config.qa)return()=>{};
+ const events=[];
+ return(phase,data)=>{
+  try{
+   events.push(Object.assign({phase,time:new Date().toISOString()},data||{}));
+   if(events.length>300)events.shift();
+   host.file.write('@data/qa-events-adopted.json',JSON.stringify(events));
+  }catch(_){}
+ };
+}
+
 // The Streams controller for one window and one source. registerLoadHook receives the on_load handler.
-function run(host,config,services,identity,registerLoadHook){
+// lifecycle.phase, when given, observes the load's resolve phases (adopted windows' QA trace).
+function run(host,config,services,identity,registerLoadHook,lifecycle){
+ const phase=lifecycle&&lifecycle.phase||(()=>{});
  const source=identity.source;
  const variant=identity.variant;
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
@@ -853,6 +938,14 @@ function run(host,config,services,identity,registerLoadHook){
   send();
  }
 
+ // The adopted hook's watchdog gave up on this load (see holdLoad): drop any late result, and leave this and
+ // later files to IINA's own loader.
+ function passThrough(){
+  if(closed)return;
+  generation++;
+  deactivateForForeignFile();
+ }
+
  function initialContext(){
   return{generation:0,position:source.startSeconds||0,paused:false,speed:1};
  }
@@ -893,7 +986,10 @@ function run(host,config,services,identity,registerLoadHook){
     };
     context=initialContext();
    }else{
+    phase('resolve-start',{quality:'auto720'});
     result=await services.resolve(source,'auto720');
+    // A failed result is traced as 'error' by the catch below.
+    if(result&&result.ok)phase('resolve-done',{quality:result.quality,live:!!result.live});
     context=initialContext();
    }
    if(closed||mine!==generation){
@@ -910,6 +1006,7 @@ function run(host,config,services,identity,registerLoadHook){
    loadError='';
    trace('resolved',{quality:result.quality,live:result.live});
   }catch(error){
+   phase('error',{error:publicError(error,'Unable to open source.')});
    if(!closed){
     loadError=publicError(error,'Unable to open source.');
     send();
@@ -1141,6 +1238,7 @@ function run(host,config,services,identity,registerLoadHook){
    if(config.qa&&overlayReady)postOverlay('qa-action',{name,data});
   },
   trace,
+  passThrough,
   _authCallbacks:authCallbacks
  };
 }

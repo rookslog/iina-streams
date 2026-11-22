@@ -2,6 +2,7 @@
 
 ## 0.5.5-beta (unreleased) — chat on your timeline
 - **Open Stream without a modal (#50).** ⌃⌘O opens a small Open Stream window, and **＋** in the sidebar shows an inline field. Invalid input is marked in place. The old blocking prompt, which crashed IINA about 5 s after it opened, is gone.
+- **Adopted loads are held correctly (#35):** IINA continues a non-async `on_load` hook by itself, so the first adoption code never held the load and called `next` twice. The hook is now async, the controller is built off the hook's thread, and a 10 s watchdog hands a stuck load back to IINA. The sidebar's open field closes on × (the + turns into it) or when focus moves elsewhere. Escape doesn't reach the page in IINA 1.5.1 (observed).
 - **Twitch and YouTube URLs opened in IINA itself** (Open URL, `open -a IINA <url>`) are adopted by Streams, which brings quality, chat and replay (#35, part 1).
 - **QA mode on the dev identity (#33):** `npm run qa:deploy` stages a dev build with a request/response harness, driven by `qa/control.py` (open, click, state, wait). Release and beta builds never contain it.
 - **VOD chat acquisition is pinned by recorded Twitch fixtures and property tests (#17).** An empty page that claims more follow is retried once, then the window ends with a diagnostic.

@@ -5,8 +5,8 @@
 .busy-indicator{display:inline-block;width:12px;height:12px;margin-right:8px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;opacity:.6;animation:streams-spin .9s linear infinite;vertical-align:middle}
 .busy-indicator[hidden]{display:none}
 @keyframes streams-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}}
+@media (prefers-reduced-motion:reduce){.busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}#open{transition:none}}
 /* #50: inline Open Stream field. Invalid input is shown by state, not text. */
-.open-form{flex:none;margin:-8px 0 14px}
+#open{transition:transform 120ms ease}#open[aria-expanded=true]{transform:rotate(45deg)}.open-form{flex:none;margin:-8px 0 14px}
 .open-form input{width:100%}
 .open-form input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}

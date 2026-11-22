@@ -65,12 +65,13 @@ function sidebarFixture() {
     cancelAnimationFrame() {},
   }, {filename: 'sidebar.js'});
 
-  function render(behindLive, kind = 'twitch-live') {
+  function render(behindLive, kind = 'twitch-live', atLiveEdge = false) {
     page.receiveEnvelope('state', {
       title: 'Synthetic stream',
       source: {kind, provider: 'Twitch'},
       live: kind === 'twitch-live',
       behindLive,
+      atLiveEdge,
       phase: 'playing',
       chat: {mode: 'off', state: 'off'},
       chatTiming: {mode: 'manual', manualDelay: 10, fineTune: 0, delay: 10, state: 'manual'},
@@ -91,13 +92,13 @@ function sidebarFixture() {
 test('sidebar Live pill changes from hidden to Live to behind using behindLive', () => {
   const {render} = sidebarFixture();
   assert.equal(render(null).hidden, true, 'no confident estimate means no pill');
-  const live = render(5);
+  const live = render(5, 'twitch-live', true);
   assert.equal(live.hidden, false);
-  assert.equal(live.dataset.state, 'live', '5 s is still in the red Live state');
+  assert.equal(live.dataset.state, 'live', 'atLiveEdge from the player gives the red Live state (#51)');
   assert.equal(live.textContent.trim(), 'Live');
   const behind = render(12);
   assert.equal(behind.hidden, false);
-  assert.equal(behind.dataset.state, 'behind', 'more than 5 s uses the grey behind state');
+  assert.equal(behind.dataset.state, 'behind', 'without atLiveEdge the pill is the grey behind state');
   assert.equal(behind.textContent.trim().replace(/\s+/g, ' '), '−12 s');
   assert.equal(render(null).hidden, true, 'hide the pill again when confidence drops');
   assert.equal(render(12, 'twitch-vod').hidden, true, 'VOD does not display a live pill');

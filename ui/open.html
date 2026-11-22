@@ -12,6 +12,11 @@
   <input id="open-input" type="text" placeholder="Channel or URL" aria-label="Channel or URL" spellcheck="false"
    autocomplete="off" autocapitalize="off" autofocus>
  </form>
+ <div id="offline-vods" class="offline-vods" hidden>
+  <span id="offline-busy" class="busy-indicator" role="status" aria-label="Loading recent broadcasts" hidden></span>
+  <p id="offline-empty" class="muted" role="status" hidden></p>
+  <ul id="offline-list" class="vod-list" aria-label="Recent broadcasts" hidden></ul>
+ </div>
  <script src="open.js"></script>
 </body>
 </html>

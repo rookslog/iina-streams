@@ -78,7 +78,9 @@ function loadGlobal() {
     ['./src/source.js', Sources],
     ['./src/auth.js', require('../src/auth.js')],
     ['./src/timers.js', require('../src/timers.js')],
-    ['./src/twitch-app.js', {clientID: ''}]
+    ['./src/twitch-app.js', {clientID: ''}],
+    ['./src/twitch-vods.js', require('../src/twitch-vods.js')],
+    ['./src/bridge.js', require('../src/bridge.js')]
   ]);
   shim.runScript(path.join(__dirname, '../global.js'), {
     require(name) {
@@ -98,7 +100,8 @@ test('A1 window page: named field focused on load, Return submits, blanks and Es
 
   field.value = '   ';
   press('Enter');
-  assert.deepEqual(page.posts, [], 'a blank field posts nothing');
+  // r6c (B6c, #32): the page now posts open-ready on load, so check only that a blank field does not submit.
+  assert.deepEqual(page.messages('open-stream'), [], 'a blank field posts nothing');
 
   field.value = '  XqC ';
   press('Enter');

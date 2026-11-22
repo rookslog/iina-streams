@@ -1,9 +1,8 @@
 'use strict';
 
-// B6b contract: the state envelope carries a plain playback error and offlineVods: {state, items}.
-// Ready replaces the error line with up to ten rows. Loading shows a busy indicator; none and
-// error fall back to the original error line. A row click posts open with {input: item.url}.
-// Check the real sidebar markup and script in a DOM double, not CSS layout, clipping, or animation.
+// B6c contract (#32): the sidebar no longer lists an offline channel's broadcasts; IINA closes a player
+// window whose load failed, so that list moved to the Open Stream window. The sidebar keeps the plain
+// playback error line. Check the real sidebar markup and script in a DOM double.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -131,10 +130,11 @@ function sidebarFixture() {
     requestAnimationFrame: () => 1, cancelAnimationFrame() {},
   }, {filename: 'sidebar.js'});
 
-  function render(state, items = []) {
+  // `extra` lets a test send a field an older player sent (offlineVods) to prove the sidebar ignores it.
+  function render(extra = {}) {
     page.receiveEnvelope('state', {
       title: 'Synthetic offline channel', source: {kind: 'twitch-live', provider: 'Twitch'},
-      phase: 'loading', error: MESSAGE, offlineVods: {state, items},
+      phase: 'loading', error: MESSAGE, ...extra,
       chat: {mode: 'off', state: 'off'}, auth: {phase: 'off'},
       view: {presentation: 'sidebar', fontSize: 14, spacing: 4, x: 1, y: 0}, messages: [],
     });
@@ -153,52 +153,21 @@ function sidebarFixture() {
   return {page, render, visibleNodes, visibleText, markupWrites};
 }
 
-test('B6b sidebar renders up to ten archive rows with literal titles, date, and duration', () => {
-  const {render, visibleText, visibleNodes, markupWrites} = sidebarFixture();
-  const items = [VOD, ...Array.from({length: 10}, (_, offset) => {
-    const id = String(1234567891 + offset);
-    return {...VOD, id, title: `Archive item ${id}`, url: `https://www.twitch.tv/videos/${id}`};
-  })];
-  render('ready', items);
-
-  assert.ok(!markupWrites.some(markup => markup.includes('B6b fixture title')), 'do not render a title as HTML');
-  assert.ok(visibleText(TITLE), 'the untrusted title is visible as literal text');
-  for (const item of items.slice(1, 10)) assert.ok(visibleText(item.title), `missing ${item.title}`);
-  assert.equal(visibleText(items[10].title), undefined, 'only ten rows are shown');
-  assert.ok(visibleText('47:34:18'), 'long durations use h:mm:ss without wrapping at 24 hours');
-  assert.ok(visibleNodes().some(node => /\b20\b/.test(node.ownText)), 'show the date without fixing its locale');
-  assert.equal(visibleText(MESSAGE), undefined, 'ready rows replace the plain error');
+test('B6c sidebar markup has no broadcast list', () => {
+  for (const removed of ['offline-vods', 'offline-busy', 'offline-list', 'vod-row', 'vod-list']) {
+    assert.ok(!HTML.includes(removed), `sidebar.html still contains ${removed}`);
+    assert.ok(!SCRIPT.includes(removed), `sidebar.js still contains ${removed}`);
+  }
+  assert.ok(!SCRIPT.includes('offlineVods'), 'sidebar.js no longer reads offlineVods');
 });
 
-test('B6b sidebar clicking a VOD title posts the existing open payload with its URL', () => {
-  const {page, render, visibleText} = sidebarFixture();
-  const other = {...VOD, title: 'Other archive', id: '1234567891', url: 'https://www.twitch.tv/videos/1234567891'};
-  render('ready', [other, VOD]);
+test('B6c sidebar shows the plain error line and no rows, even if a state carries offlineVods', () => {
+  const {render, visibleText, markupWrites} = sidebarFixture();
+  render({offlineVods: {state: 'ready', items: [VOD]}});
+  assert.ok(visibleText(MESSAGE), 'the plain error line is visible');
+  assert.equal(visibleText(TITLE), undefined, 'no broadcast row is rendered');
+  assert.ok(!markupWrites.some(markup => markup.includes('B6b fixture title')));
 
-  const title = visibleText(TITLE);
-  assert.ok(title, 'the selected VOD title must be visible before clicking it');
-  (title.nodeType === 3 ? title.parentNode : title).click();
-  assert.deepEqual(page.messages('open'), [{name: 'open', data: {input: VOD.url}}]);
+  render({offlineVods: {state: 'loading', items: []}});
+  assert.ok(visibleText(MESSAGE), 'loading no longer hides the error line');
 });
-
-test('B6b sidebar shows a busy indicator while the archive request is loading', () => {
-  const {render, visibleNodes, visibleText} = sidebarFixture();
-  render('loading');
-
-  const indicator = visibleNodes().find(node => node.tagName === 'PROGRESS' ||
-    node.getAttribute?.('role') === 'progressbar' || /\b(?:busy-indicator|spinner)\b/.test(node.className || ''));
-  assert.ok(indicator, 'show a visible spinner or progress indicator');
-  assert.equal(visibleText(TITLE), undefined);
-});
-
-for (const fallback of ['none', 'error']) {
-  test(`B6b sidebar restores the plain playback error from ready to ${fallback}`, () => {
-    const {render, visibleText} = sidebarFixture();
-    render('ready', [VOD]);
-    assert.ok(visibleText(TITLE), 'the ready row must exist before testing its removal');
-
-    render(fallback);
-    assert.equal(visibleText(TITLE), undefined, 'no stale archive row is left visible');
-    assert.ok(visibleText(MESSAGE), 'the original error line is visible');
-  });
-}

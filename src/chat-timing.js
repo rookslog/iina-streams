@@ -52,6 +52,8 @@ function createChatTiming(options = {}) {
   };
   // Ids of messages already shown. Pruned to the ids present in each reveal call.
   let revealedIds = new Set();
+  // The last delay Auto computed from a confident estimate, or null before the first one.
+  let lastConfidentDelay = null;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -88,7 +90,13 @@ function createChatTiming(options = {}) {
       return {delay: state.manualDelay, state: 'manual'};
     }
     if (typeof behindLive === 'number' && Number.isFinite(behindLive)) {
-      return {delay: Math.max(0, behindLive + state.fineTune), state: 'auto'};
+      lastConfidentDelay = Math.max(0, behindLive + state.fineTune);
+      return {delay: lastConfidentDelay, state: 'auto'};
+    }
+    // Losing confidence (e.g. a paused video stops the cache end) must never shorten the delay,
+    // so keep the last confident one. Manual applies only before any (v0.5.5 review r1 #7).
+    if (lastConfidentDelay !== null) {
+      return {delay: lastConfidentDelay, state: 'auto-uncertain'};
     }
     return {delay: state.manualDelay, state: 'auto-uncertain'};
   }

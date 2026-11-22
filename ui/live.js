@@ -98,8 +98,20 @@
       detach(); queue = []; seen.clear(); seenOrder.length = 0;
       credential = null; username = ''; retryInMs = 0;
     }
+    // A terminal failure delivers the events already queued as one final batch before the error state,
+    // so moderation queued behind the 200 ms batch timer still reaches the player (v0.5.5 review r1 #3).
     function terminal(why) {
-      reset(); phase = 'error'; reason = why; emit();
+      const pending = queue;
+      reset();
+      phase = 'error';
+      reason = why;
+      deliver(pending);
+      emit();
+    }
+    function deliver(events) {
+      if (!events.length) return;
+      lastFlushAt = now();
+      try { onBatch(events); } catch (_) { /* No untrusted callback text is logged. */ }
     }
     function remember(id) {
       if (!id || seen.has(id)) return;

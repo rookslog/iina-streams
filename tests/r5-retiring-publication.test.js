@@ -124,7 +124,8 @@ test('r5 #2 managed: no publication or quality deadline while retiring; the rest
     assert.deepEqual(postsSince(shim, mark), [], 'no publication while retiring');
     assert.deepEqual(deadlines(shim), [], 'no quality deadline is armed');
     assert.equal(loadfiles(shim), loads, 'no loadfile replaces the passed-through file');
-    assert.equal(controller.snapshot().busy, false, 'the abandoned change leaves the controls usable');
+    // v0.5.5 class L: with no current activation the controls are not published at all (above); the restored
+    // source below is a new activation, whose controls are usable.
 
     shim.emit('mpv.end-file'); // The foreign file ends as the stream replaces it.
     await loadOwn(); // The window's own source returns before the cleanup turn.
@@ -160,7 +161,6 @@ test('r5 #2 managed: a quality resolve that rejects while retiring leaves no err
     await settle();
     assert.deepEqual(postsSince(shim, mark), [], 'no publication while retiring');
     assert.equal(controller.snapshot().error, '', 'the rejection sets no error');
-    assert.equal(controller.snapshot().busy, false, 'the controls are usable');
 
     gate.reject = false;
     shim.emit('mpv.end-file');

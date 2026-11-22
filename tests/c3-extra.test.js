@@ -86,8 +86,9 @@ function sidebarPage() {
       view: {presentation: 'sidebar', fontSize: 14, spacing: 4, opacity: 0.6, x: 1, y: 0},
       messages,
     });
-    // A render that threw part-way is swallowed by the page's message wrapper; prove it finished.
-    assert.equal(elements.get('title').textContent, 'Synthetic stream');
+    // A render that threw part-way is swallowed by the page's message wrapper. The message list
+    // renders last, so its rows prove the whole render ran.
+    assert.equal(elements.get('messages').children.length, messages.length, 'the render reached the messages');
   }
 
   const $ = id => {
@@ -221,9 +222,10 @@ function playerFixture(t, {source = liveSource, settings = settingsStore({chatEn
   t.after(() => shim.emit('iina.window-will-close'));
   shim.sidebar.send('ready', {});
 
-  async function load() {
+  async function load(path = source.url) {
+    shim.mpv.set('path', path);
     await shim.mpv.runHook('on_load', () => {});
-    shim.emit('iina.file-loaded', source.url);
+    shim.emit('iina.file-loaded', path);
     shim.emit('iina.window-size-adjusted');
     await settle();
     shim.timers.advance(600);
@@ -325,6 +327,27 @@ test('menu: Beside Video waits for D1, and Go Live is disabled outside Twitch li
   assert.equal(liveChat.items.find(item => item.title === 'Beside Video').enabled, false);
   const vod = playerFixture(t, {source: vodSource});
   assert.equal(vod.shim.menu.items[1].enabled, false);
+});
+
+test('Go Live reload: the old file ending is part of the reload, not a stop', async t => {
+  const {shim, controller, load, state} = playerFixture(t);
+  await load(); // The playlist has no program date-time, so the target is unknown: reload.
+  await shim.sidebar.receive('go-live', {});
+  await settle();
+  const [[name, [replacement]]] = shim.mpv.commands;
+  assert.equal(name, 'loadfile');
+  // mpv ends the playing file when loadfile replaces it; the shim does not emit this by itself.
+  shim.emit('mpv.end-file');
+  assert.notEqual(controller.snapshot().phase, 'stopped', 'the replaced file ending is not a stop');
+  await load(replacement);
+  shim.timers.advance(3000);
+  await settle();
+  assert.equal(controller.snapshot().phase, 'playing');
+  assert.equal(state().phase, 'playing', 'the sidebar does not show Playback stopped');
+  assert.equal(shim.http.calls.at(-1).url, mediaURL('720p60'), 'the reloaded playlist is polled');
+  // A later end of the reloaded file is a real stop.
+  shim.emit('mpv.end-file');
+  assert.equal(controller.snapshot().phase, 'stopped');
 });
 
 test('Go Live does nothing for a VOD and the VOD never polls', async t => {

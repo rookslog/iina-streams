@@ -272,6 +272,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  let liveClockURL=null,liveClockRunning=false,liveStatusTimer=null,liveStatusKey='',lastClockCode='';
  // Live chat as received (sanitized, newest 150), and the timer for the next held message.
  let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
+ // Go Live's reload replaces the playing file, and mpv ends that file first. Playback.ended() would read that
+ // as a stop, since Playback does not know about this reload, so the player skips that one end-file.
+ let reloadReplacing=false;
  const listeners=[];
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
  const postOverlay=(name,data)=>overlay.postMessage(name,envelope(data));
@@ -738,6 +741,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     paused:!!mpv.getFlag('pause'),
     speed:Number(mpv.getNumber('speed'))||1
    };
+   reloadReplacing=true;
    replaceFile(result,context);
    trace('go-live',{action:'reload',quality:result.quality});
   }catch(error){
@@ -1268,6 +1272,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const marker=/#streams-generation=(\d+)$/.exec(decoded);
   const loadedGeneration=marker?Number(marker[1]):0;
   if(loadedGeneration!==activeGeneration)return;
+  reloadReplacing=false;
   if(restoration){
    if(!restoration.loaded){
     restoration.loaded=true;
@@ -1293,6 +1298,16 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(player.snapshot().live||chat.mode!=='off'||!chatPreferred||autoReplayAttempted)return;
   autoReplayAttempted=true;
   fetchReplay({auto:true});
+ }
+
+ function onEndFile(){
+  if(reloadReplacing){
+   reloadReplacing=false;
+   trace('end-file',{replaced:true});
+   return;
+  }
+  player.ended();
+  trace('end-file');
  }
 
  function onSeek(){
@@ -1427,10 +1442,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  registerLoadHook(onLoadHook);
  on('iina.window-loaded',onWindowLoaded);
  on('iina.file-loaded',onFileLoaded);
- on('mpv.end-file',()=>{
-  player.ended();
-  trace('end-file');
- });
+ on('mpv.end-file',onEndFile);
  on('mpv.seek',onSeek);
  on('mpv.pause.changed',onPauseChanged);
  on('iina.window-fs.changed',onFullscreenChanged);
@@ -1457,7 +1469,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   else if(source.kind==='twitch-live'&&chat.mode==='off')app.postMessage('auth-probe',{});
  }
 
- // Beside Video is D1's presentation (D-028), not built yet: listed, disabled until D1 adds it.
+ // Beside Video is D1's presentation (D-028), not built yet: listed and inert until D1 adds it. Its action is
+ // a no-op because a submenu's NSMenu keeps AppKit auto-enabling (IINA turns that off only for the top-level
+ // plugin menu, MenuController.swift), so enabled:false alone may not grey it out.
  function chatMenu(){
   const parent=menu.item('Chat',null);
   const children=[
@@ -1465,7 +1479,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    menu.item('Turn Chat Off',onChatOffRequest),
    menu.item('In Sidebar',()=>setView({presentation:'sidebar'})),
    menu.item('Over Video',()=>setView({presentation:'overlay'})),
-   menu.item('Beside Video',()=>setView({presentation:'beside'}),{enabled:false})
+   menu.item('Beside Video',()=>{},{enabled:false})
   ];
   for(const child of children)parent.addSubMenuItem(child);
   return parent;

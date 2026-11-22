@@ -9,6 +9,9 @@ const DEFAULT_MODE = 'auto';
 const MANUAL_DELAY_MAX_SECONDS = 120;
 const FINE_TUNE_LIMIT_SECONDS = 10;
 const STEP_SECONDS = 0.5;
+// While playing, Auto's reveal cutoff advances at most this many times as far as the playhead
+// (v0.5.5 review r3 #2), so a corrected offset catches up gradually and a discontinuous one cannot jump it.
+const AUTO_CATCH_UP_RATE = 1.5;
 
 function roundToStep(value) {
   const rounded = Math.round(value / STEP_SECONDS) * STEP_SECONDS;
@@ -45,7 +48,8 @@ function hasTimestamp(message) {
 
 /**
  * Create a chat timing policy. Settings are the plain object {mode, manualDelay, fineTune}.
- * Returns {settings, update, effective, autoClockMs, forgetMapping, reveal, calibrate}.
+ * Returns {settings, update, effective, autoClockMs, forgetMapping, revealCutoffMs, resyncCutoff, reveal,
+ * calibrate}.
  * @param {{mode?: string, manualDelay?: number, fineTune?: number}} [options]
  */
 function createChatTiming(options = {}) {
@@ -61,6 +65,12 @@ function createChatTiming(options = {}) {
   // The last confident offset from the raw mpv timeline to epoch seconds, or null before the first one
   // or after the file timeline changed (v0.5.5 review r2 #2).
   let lastConfidentOffset = null;
+  // Auto's held reveal cutoff and the playhead it was last sampled at, {cutoffMs, timePos}, or null until
+  // the next sample adopts its target (v0.5.5 review r3 #2).
+  let heldCutoff = null;
+  // True from a resync (and at the start) until a confident mapping is adopted outright: the fallback before
+  // it can hold a stale delay, such as the one from before a Go Live reload.
+  let awaitingMapping = true;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -134,6 +144,61 @@ function createChatTiming(options = {}) {
   }
 
   /**
+   * The chat send time, in epoch ms, up to which rows show now (v0.5.5 review r3 #2). Live and Manual reveal
+   * by wall clock less their delay. Auto's target is autoClockMs, or without a mapping the wall clock less
+   * effective().delay; its cutoff then
+   * - never advances while the playhead does not (paused, stalled or buffering);
+   * - while playing, advances at most AUTO_CATCH_UP_RATE times the playhead's advance since the last sample;
+   * - follows a lower target at once (rows already shown stay shown: see reveal);
+   * - after a resync, adopts the first confident mapping outright, forward or back, once the playhead
+   *   advances; the clamp applies from then on.
+   * Call it whether or not chat is on, so the cutoff is held across a pause. resyncCutoff makes the next
+   * sample adopt the target.
+   * @param {{nowMs: number, timePos: number|null, paused: boolean, offset: number|null, behindLive: number|null}} reading
+   * @returns {number}
+   */
+  function revealCutoffMs({nowMs, timePos, paused, offset, behindLive}) {
+    const mapped = autoClockMs({nowMs, timePos, offset});
+    const wallClockMs = nowMs - effective(behindLive).delay * 1000;
+    if (state.mode !== 'auto') {
+      return wallClockMs;
+    }
+    const target = mapped === null ? wallClockMs : mapped;
+    const confident = mapped !== null && isFiniteNumber(offset);
+    return holdCutoff(target, isFiniteNumber(timePos) ? timePos : null, !!paused, confident);
+  }
+
+  function holdCutoff(target, timePos, paused, confident) {
+    if (heldCutoff === null) {
+      heldCutoff = {cutoffMs: target, timePos};
+      if (confident) {
+        awaitingMapping = false;
+      }
+      return target;
+    }
+    let advance = 0;
+    if (!paused && timePos !== null && heldCutoff.timePos !== null) {
+      advance = Math.max(0, timePos - heldCutoff.timePos);
+    }
+    let cutoffMs;
+    if (awaitingMapping && confident && advance > 0) {
+      awaitingMapping = false;
+      cutoffMs = target;
+    } else {
+      const ceiling = heldCutoff.cutoffMs + AUTO_CATCH_UP_RATE * advance * 1000;
+      cutoffMs = Math.min(target, ceiling);
+    }
+    heldCutoff = {cutoffMs, timePos: timePos === null ? heldCutoff.timePos : timePos};
+    return cutoffMs;
+  }
+
+  /** A seek, Go Live, a reload, a new file or a mode change: the next cutoff sample adopts its target. */
+  function resyncCutoff() {
+    heldCutoff = null;
+    awaitingMapping = true;
+  }
+
+  /**
    * Choose the messages visible now. A message shown once stays shown while it is in the input.
    * @param {Array<{id: *, timestampMs?: number}>} messages in display order
    * @param {number} nowMs
@@ -170,7 +235,7 @@ function createChatTiming(options = {}) {
     return settings();
   }
 
-  return {settings, update, effective, autoClockMs, forgetMapping, reveal, calibrate};
+  return {settings, update, effective, autoClockMs, forgetMapping, revealCutoffMs, resyncCutoff, reveal, calibrate};
 }
 
 module.exports = {createChatTiming};

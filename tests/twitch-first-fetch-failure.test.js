@@ -146,6 +146,7 @@ test('control: a source change before the first request fails starts no work', a
   seek(f, 5000);
   f.shim.mpv.set('path', 'file:///synthetic/other-video.mp4').set('stream-open-filename', 'file:///synthetic/other-video.mp4');
   await f.shim.mpv.runHook('on_load', () => {});
+  await new Promise(done => setTimeout(done, 0)); // Review r3 #5: deactivation runs on a later turn.
   failNext(f);
   await pause();
   assert.deepEqual(f.requested(), [0]);

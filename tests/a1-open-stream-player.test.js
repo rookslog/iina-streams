@@ -103,6 +103,7 @@ test('A1.6 native load adopts Twitch and YouTube but leaves local and foreign fi
   assert.equal(managed.resolves.length, 1, 'fixture must first resolve the managed Twitch source');
   const foreignPath = 'https://www.twitch.tv/anotherchannel';
   await loadThroughMpv(managed, foreignPath);
+  await new Promise(done => setTimeout(done, 0)); // Review r3 #5: deactivation runs on a later turn.
   assert.equal(managed.controller.snapshot().phase, 'inactive');
   assert.equal(managed.resolves.length, 1, 'a different stream must not be adopted by an active window');
   assert.equal(managed.shim.mpv.props.get('stream-open-filename'), foreignPath);

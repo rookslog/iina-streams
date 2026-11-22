@@ -192,7 +192,8 @@ test('r1 #8: switching from an adopted VOD with replay to a local file does no e
     const offMain = shim.log.slice(mark).map(entry => entry.api + ':' + entry.args[0]);
     assert.deepEqual(offMain.filter(call => call.startsWith('event.off')), [], 'no event.off before a main-thread turn');
     assert.equal(offMain.includes('global.postMessage:auth-disconnect'), false, 'no chatOff before a main-thread turn');
-    assert.equal(continued, 0, 'the load is held for that turn');
+    // Review r3 #5 changed this: a file that passes through continues at once, on the hook.
+    assert.equal(continued, 1, 'the load continues at once; only the cleanup waits for the turn');
 
     shim.timers.advance(0);
     await settle();

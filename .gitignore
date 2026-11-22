@@ -22,3 +22,10 @@ qa/bin/
 evidence/native/*.png
 evidence/native/*-private.txt
 evidence/native/safari-*.jpg
+
+# Local briefings and screenshots shared with agents
+.ovis/
+# Preserved local release archives (never committed)
+releases/
+# Temporary agent worktrees
+.claude/worktrees/

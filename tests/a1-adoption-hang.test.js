@@ -157,3 +157,30 @@ test('QA trace: a file that is not adopted is traced as passed through', async (
   assert.equal(events[1].kind, null);
   assert.equal(events[2].by, 'pass-through');
 });
+
+test('a throw while reading the loading path passes the file through instead of holding it', async () => {
+  const shim = createIina({label: '', mpv: {path: vodURL}});
+  start(shim.iina, {variant: 'unified', qa: true}, {resolve: async () => assert.fail('no resolve')});
+  shim.iina.mpv.getString = () => { throw new Error('mpv unavailable'); };
+  let continued = 0;
+  await shim.mpv.runHook('on_load', () => continued++);
+  assert.equal(continued, 1);
+  assert.deepEqual(tracePhases(shim).map(e => e.phase), ['hook-entered', 'error', 'next-called']);
+});
+
+test('a file that is not adopted arms no timer', async t => {
+  const shim = createIina({label: '', mpv: {path: '/Users/x/movie.mkv'}});
+  start(shim.iina, {variant: 'unified'}, {resolve: async () => assert.fail('no resolve')});
+  const realSetTimeout = globalThis.setTimeout;
+  let armed = 0;
+  globalThis.setTimeout = (...args) => {
+    armed++;
+    return realSetTimeout(...args);
+  };
+  t.after(() => { globalThis.setTimeout = realSetTimeout; });
+  let continued = 0;
+  await shim.mpv.runHook('on_load', () => continued++);
+  globalThis.setTimeout = realSetTimeout;
+  assert.equal(continued, 1);
+  assert.equal(armed, 0);
+});

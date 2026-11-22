@@ -109,8 +109,18 @@ function waitForNativeStream(host,config,services){
  function passThrough(){
   if(controller)controller.passThrough();
  }
+ // This hook runs for every file in this window, and an async hook is never continued by IINA: any throw
+ // passes the file through.
  async function onLoad(next){
   const load=holdLoad(next,qaTrace,passThrough);
+  try{
+   await adoptOrPass(load);
+  }catch(error){
+   qaTrace('error',{error:publicError(error,'Adoption failed.')});
+   load.release('pass-through');
+  }
+ }
+ async function adoptOrPass(load){
   qaTrace('hook-entered',{adopted:!!adoptedLoadHook});
   if(adoptedLoadHook){
    load.arm();
@@ -126,15 +136,12 @@ function waitForNativeStream(host,config,services){
   load.arm();
   await mainThreadTurn();
   if(load.released)return;
-  // A window Streams does not own must never be left waiting: if adoption fails, the load goes on untouched.
   try{
    const lifecycle={phase:qaTrace};
    controller=run(host,config,services,{source,variant:config.variant},adoptLoadHook,lifecycle);
   }catch(error){
    adoptedLoadHook=null;
-   qaTrace('error',{error:publicError(error,'Adoption failed.')});
-   load.release('pass-through');
-   return;
+   throw error;
   }
   await adoptedLoadHook(load.continueFromHook);
  }

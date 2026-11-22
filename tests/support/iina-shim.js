@@ -15,6 +15,9 @@
 //   - utils.exec rejects a non-string-array args value (JavascriptAPIUtils.swift).
 //   - event.on validates the event name syntax (JavascriptAPIEvent.swift).
 //   - one-shot timers stay registered after they fire until they are cleared (src/timers.js).
+//   - mpv hooks (runHook): IINA continues a hook that is not an async function as soon as it returns, and
+//     calls hooks on mpv's event queue, so main-thread calls made on a hook's stack are collected
+//     (MPVController.swift MPVHookValue.call and handleEvent, JavascriptAPIMpv.swift addHook, Utility.swift).
 //
 // Shim POLICY, stricter than anything read in the IINA source (labelled "IINA contract:" in errors
 // only for brevity): menu.item rejects an `undefined` action (Swift special-cases only null);
@@ -24,8 +27,8 @@
 //
 // NOT verified against IINA source because the source was not available when this was written:
 // JavascriptMessageHub (listener replacement vs accumulation per name: this shim keeps the last
-// listener per name, which is what the previous per-test mocks did), the file/http/mpv/overlay
-// APIs, and JavascriptPluginMenuItem's exact property list. Those are marked `UNVERIFIED` below.
+// listener per name, which is what the previous per-test mocks did), the file/http/overlay
+// APIs, mpv's property getters, and JavascriptPluginMenuItem's exact property list. Those are marked `UNVERIFIED` below.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -598,7 +601,7 @@ function createIina(options = {}) {
     off(name, id) { record('event.off', name); eventControl.offs.push({name, id}); eventControl.listeners.get(name)?.delete(id); }
   };
 
-  // ---- mpv (UNVERIFIED against JavascriptAPIMpv.swift) ----
+  // ---- mpv: hooks follow IINA v1.5.1 source (see runHook); property getters are UNVERIFIED ----
   const mpvControl = {
     props: new Map(Object.entries(options.mpv || {})), sets: [], commands: [], hooks: new Map(),
     // Main-thread calls made on a hook's synchronous stack (see MAIN_THREAD_APIS): {hook, api}.

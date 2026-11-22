@@ -1,76 +1,49 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
 const path = require('node:path');
 const Sources = require('../src/source.js');
 const {TwitchAuth} = require('../src/auth.js');
+const {createIina} = require('./support/iina-shim.js');
 const scriptPath = path.join(__dirname, '../global.js');
-const script = fs.readFileSync(scriptPath, 'utf8');
 const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 
 function harness(overrides = {}) {
   const config = {identifier: 'local.iina.streams.candidate.unified', variant: 'unified', ...overrides};
-  const handlers = new Map(), items = [], opens = [], messages = [], wires = [], httpCalls = [], timers = [];
-  const files = new Map(), fileReads = [], fileWrites = [], keychainReads = [], keychainWrites = [], prompts = [], alerts = [];
-  let input = null, nextID = 0, auth, authOptions, nativeResult, response = {statusCode: 200, data: {ok: true}}, transportError = false, rejectHTTP = false;
+  const shim = createIina({role: 'global', identifier: config.identifier});
+  const wires = [], messages = [];
+  let auth, authOptions;
   class CapturedAuth extends TwitchAuth {
     constructor(options) { super(options); auth = this; authOptions = options; }
   }
-  const utils = {
-    prompt(title) { prompts.push(title); return input; },
-    ask(message) { alerts.push(message); return true; },
-    keychainRead(service, name) { keychainReads.push({service, name}); return false; },
-    keychainWrite(service, name, value) { keychainWrites.push({service, name, value}); return true; }
+  // The product speaks JSON strings to children; keep both the raw wire form and the parsed form.
+  const postMessage = shim.iina.global.postMessage;
+  shim.iina.global.postMessage = (target, name, data) => {
+    postMessage(target, name, data);
+    wires.push({target, name, data: plain(data)});
+    messages.push({target, name, data: typeof data === 'string' ? JSON.parse(data) : plain(data)});
   };
-  const request = method => async (url, options) => {
-    httpCalls.push({method, url, options: plain(options)});
-    if (transportError) throw new Error('Untrusted transport details');
-    if (rejectHTTP) throw response;
-    return response;
-  };
-  const iina = {
-    global: {
-      createPlayerInstance(options) {
-        opens.push(plain(options));
-        return nativeResult === undefined ? ++nextID : nativeResult;
-      },
-      onMessage(name, callback) { handlers.set(name, callback); },
-      postMessage(target, name, data) { wires.push({target, name, data: plain(data)}); messages.push({target, name, data: typeof data === 'string' ? JSON.parse(data) : plain(data)}); }
-    },
-    menu: {item: (title, callback) => ({title, callback}), addItem(item) { items.push(item); }},
-    utils,
-    file: {
-      exists(file) { fileReads.push({operation: 'exists', file}); return files.has(file); },
-      read(file) { fileReads.push({operation: 'read', file}); return files.get(file); },
-      write(file, value) { fileWrites.push({file, value}); files.set(file, value); }
-    },
-    http: {post: request('POST'), get: request('GET')}
-  };
-  const context = vm.createContext({
-    iina,
+  shim.runScript(scriptPath, {
     require(moduleName) {
       if (moduleName === './config.js') return config;
       if (moduleName === './src/source.js') return Sources;
       if (moduleName === './src/auth.js') return {TwitchAuth: CapturedAuth};
       if (moduleName === './src/timers.js') return require('../src/timers.js');
       throw new Error('Unexpected module ' + moduleName);
-    },
-    setTimeout(fn, delay) { const timer = {fn, delay, cancelled: false}; timers.push(timer); return timer; },
-    clearTimeout(timer) { timer.cancelled = true; }
+    }
   });
-  vm.runInContext(script, context, {filename: scriptPath, timeout: 1000});
   return {
-    config, handlers, items, opens, messages, wires, httpCalls, timers, files, fileReads, fileWrites,
-    keychainReads, keychainWrites, prompts, alerts, auth, authOptions,
-    open(value) { input = value; items[0].callback(); return opens.at(-1); },
-    setResponse(value) { response = value; rejectHTTP = false; },
-    rejectResponse(value) { response = value; rejectHTTP = true; },
-    failTransport() { transportError = true; },
-    setNativeResult(value) { nativeResult = value; },
+    shim, config, handlers: shim.global.listeners, items: shim.menu.items, opens: shim.global.opens, messages, wires,
+    httpCalls: shim.http.calls, timers: shim.timers.all, files: shim.file.files, fileReads: shim.file.reads, fileWrites: shim.file.writes,
+    keychainReads: shim.keychain.reads, keychainWrites: shim.keychain.writes, prompts: shim.utils.prompts, alerts: shim.utils.asks,
+    auth, authOptions,
+    open(value) { shim.utils.promptResult = value; shim.menu.items[0].action(); return shim.global.opens.at(-1); },
+    setResponse: value => shim.http.setResponse(value),
+    rejectResponse: value => shim.http.rejectResponse(value),
+    failTransport: () => shim.http.failTransport(),
+    setNativeResult(value) { shim.global.nextPlayerResult = value; },
     label(id = 1) { return id + '-' + config.identifier; },
-    flushMessages() { for (const timer of timers.slice()) if (timer.delay === 0 && !timer.cancelled) timer.fn(); }
+    flushMessages() { shim.timers.flush(0); }
   };
 }
 

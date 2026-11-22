@@ -4,10 +4,11 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
+const {createWebViewIina}=require('./support/iina-shim.js');
 const root=path.join(__dirname,'../ui');
 
 function runtime(){
- const handlers={},windowEvents={},messages=[],sockets=[],timers=new Map();
+ const page=createWebViewIina(),messages=page.posts,windowEvents={},sockets=[],timers=new Map();
  let clock=0,nextTimer=0;
  class Socket{
   constructor(url){this.url=url;this.readyState=0;this.sent=[];sockets.push(this);}
@@ -18,10 +19,7 @@ function runtime(){
  }
  const ctx={
   WebSocket:Socket,
-  iina:{
-   onMessage:(name,fn)=>handlers[name]=fn,
-   postMessage:(name,data)=>messages.push({name,data:JSON.parse(JSON.stringify(data))})
-  },
+  iina:page.iina,
   addEventListener:(name,fn)=>windowEvents[name]=fn,
   setTimeout(fn,ms){const id=++nextTimer;timers.set(id,{fn,due:clock+ms});return id;},
   clearTimeout(id){timers.delete(id);},
@@ -33,8 +31,8 @@ function runtime(){
   vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),context,{filename:name});
  }
  function send(name,data){
-  assert.equal(typeof handlers[name],'function');
-  handlers[name]({encoded:encodeURIComponent(JSON.stringify(data))});
+  assert.ok(page.listeners.has(name),'page registered no iina.onMessage listener for '+name);
+  page.receiveEnvelope(name,data);
  }
  function advance(ms){
   const target=clock+ms;

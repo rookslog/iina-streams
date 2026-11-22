@@ -290,3 +290,44 @@ Starts after A1b merges. D-028's native gate passed (spike §7).
 - the cluster's messages route to Go Live and chat off.
 
 **Native (lead):** the spike's §5 steps 3, 7 and 8 with the real column, plus a drag-resize of the column and the window.
+
+---
+
+## B5b — Twitch playback in JS, wired in with the helper as fallback (#36, step 2)
+
+**Design.**
+
+New `src/resolve.js`: `createResolver({resolveTwitch, http, helperResolve, log, now})` returns `resolve(source, quality)`, which has the same contract as today's `services.resolve`: `{ok, source, title, live, duration, quality, formats, mediaURL, headers?}` or `{ok:false, error:{code, message}}`.
+
+Routing:
+- **Twitch live or VOD:** call `resolveTwitch({kind, login|id}, {http, log})`.
+- **Definitive answers** (`OFFLINE`, `NOT_FOUND`, `RESTRICTED`): return `{ok:false}` with the same error codes and messages the helper uses for these cases (read them from `helpers/media.py`). **Don't** fall back.
+- **Anything else** (`NETWORK`, `MALFORMED`, a thrown error, a timeout): call `helperResolve(source, quality)` and return its result. Record `log('twitch-js-fallback', code)` with the code only.
+- **YouTube and local** go straight to `helperResolve`.
+
+**Formats and quality.** Variants map to the helper's ids and labels, so saved quality choices carry over.
+- An id is `<height>p` plus the rounded fps when fps ≥ 50 (Streamlink's Twitch names: `1080p60`, `720p60`, `480p`, `360p`, `160p`). `chunked` (the source) takes its id from its RESOLUTION and FRAME-RATE. `audio_only` has the label `Audio only`.
+- `formats` is `[AUTO, …]` ordered like `_public_formats`.
+- Selection matches `_choose`: for `auto720`, the highest variant at 720p or below, else the lowest. An explicit id that's missing gives `QUALITY_UNAVAILABLE`, as in the helper.
+
+**Title.** `resolveTwitch` gains an optional title lookup in the same GQL request: `user(login){broadcastSettings{title}}` for live, `video(id){title}` for a VOD. A missing title or a title error falls back to `"<id> — Twitch"` and never fails playback. Apply the helper's `_title` cleanup: strip URLs and control characters, cut to 240 characters.
+
+**Other fields.** `live` comes from the kind; `duration` is `null`; there are no `headers` (the JS path sends none).
+
+**Wiring.** In `main.js`, set `services.resolve = createResolver({…, helperResolve: services.resolve.bind(services)})`, using `iina.http` and the existing log.
+
+**Never log** URLs, tokens or signatures.
+
+**Tests** (fake `http` and `helperResolve`, with fixtures from `tests/fixtures/twitch-playback/`, adding a title response):
+- live and VOD success give the helper-shaped result, with ids `1080p60`, `720p60`, `480p` and `audio_only`;
+- `auto720` selection, and the explicit and missing-quality cases;
+- each definitive error, with no helper call;
+- `NETWORK` or `MALFORMED` → the helper is called once with the same arguments and its result is returned;
+- YouTube goes to the helper only;
+- the title: present, missing, and cleaned;
+- no log argument contains the fixture's fake signature or token;
+- `main.js` wiring, under the shim: `services.resolve` is the wrapper.
+
+**Owns:** new `src/resolve.js`, `src/twitch-playback.js` (title lookup only), `main.js` (the wiring line only), new `tests/resolve.test.js`, and fixtures. Not `src/io.js` (B2a holds it) or `src/player.js` (A1b holds it).
+
+**Native (lead):** a live channel and a VOD open with no Streamlink process (`pgrep streamlink` is empty during the resolve), and quality changes work.

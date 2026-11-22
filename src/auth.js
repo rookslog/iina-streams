@@ -1,5 +1,10 @@
 "use strict";
 const SCOPE='chat:read';
+// Sign out overwrites the saved grant with this marker. Writing '' does not erase it: macOS
+// SecItemUpdate with empty data reports success but keeps the old contents (probed 2026-11-22),
+// so an empty write left the refresh token behind and the next Sign in silently reused it.
+const SIGNED_OUT='{"signedOut":true}';
+const holdsTokens=v=>!!v&&typeof v==='object'&&(typeof v.access_token==='string'&&!!v.access_token||typeof v.refresh_token==='string'&&!!v.refresh_token);
 class TwitchAuth {
  constructor(options){this.o=options;this.generation=0;this.timer=null;this.secret=null;this.client='';this.state={phase:'off',message:'',userCode:'',verificationURI:''};}
  snapshot(){return Object.assign({},this.state);}
@@ -84,11 +89,11 @@ class TwitchAuth {
   let saved=this.secret,known=true;
   if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=JSON.parse(saved);}catch(_){saved=null;known=false;}
   const grant=saved&&typeof saved.clientID==='string'&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID)&&typeof saved.access_token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(saved.access_token)?{clientID:saved.clientID,token:saved.access_token}:null;
-  if(saved&&!grant)known=false;
+  if(saved&&!grant&&holdsTokens(saved))known=false;
   this.stop();const generation=this.generation;
   // Clear before awaiting the network; an older Forget must never erase a new
   // connection's persisted token when its revocation response arrives later.
-  let removed=true;try{removed=this.o.write('')!==false;}catch(_){removed=false;}
+  let removed=true;try{removed=this.o.write(SIGNED_OUT)!==false;}catch(_){removed=false;}
   let revoked=known&&!grant;
   if(grant)try{const r=await this.o.request('/revoke','POST',{client_id:grant.clientID,token:grant.token},{});revoked=!!r&&r.status===200;}catch(_){revoked=false;}
   const stale=generation!==this.generation;
@@ -99,4 +104,4 @@ class TwitchAuth {
   return{removed,revoked,stale};
  }
 }
-module.exports={TwitchAuth};
+module.exports={TwitchAuth,SIGNED_OUT};

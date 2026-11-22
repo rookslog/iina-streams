@@ -478,3 +478,12 @@ test('runScript executes a plugin entry script against the shim with injected re
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('keychain: an empty write over a saved secret succeeds but keeps it, as macOS does', () => {
+  const shim = createIina({identifier: 'local.iina.streams.test'});
+  assert.equal(shim.iina.utils.keychainWrite('svc', 'oauth', 'secret-grant'), true);
+  assert.equal(shim.iina.utils.keychainWrite('svc', 'oauth', ''), true);
+  assert.equal(shim.iina.utils.keychainRead('svc', 'oauth'), 'secret-grant');
+  assert.equal(shim.iina.utils.keychainWrite('svc', 'oauth', '{}'), true);
+  assert.equal(shim.iina.utils.keychainRead('svc', 'oauth'), '{}');
+});

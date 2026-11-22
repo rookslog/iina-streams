@@ -7,7 +7,7 @@
 ## The flow
 
 1. **Signed out (resting state).** One primary button, **Sign in with Twitch**, where chat would be. No Client ID field, scope text or caption.
-2. **Click.** Streams requests a device code. It copies the code, opens `twitch.tv/activate` in the browser, and shows the code large, with **Copy code** and **Cancel**. Transient status: "Waiting for Twitch…".
+2. **Click.** Streams requests a device code and shows it large, with **Approve on Twitch**. Nothing opens by itself (amended 2026-11-22, #42, after the user's native check: they prefer to click). The button opens `twitch.tv/activate` in the browser, whose page autofills the code, so the user presses Activate, then Authorize. The button also copies the code to the clipboard without saying so, in case autofill fails. Transient status: "Waiting for Twitch…".
 3. **Approved.** Chat connects automatically. The account appears as `@login` in the chat settings menu, with **Sign out** beside it.
 4. **Sign out** revokes the token and deletes the Keychain entry (today's "Forget"). It is distinct from chat **Off**, which only disconnects.
 5. **Failures**, each with one action:

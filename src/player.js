@@ -37,11 +37,6 @@ function viewSettings(value){
 
 const ACTIVATION_URL=/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/;
 
-// Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
-function shouldAutoOpen(data,armed){
- return !!armed&&!!data&&data.phase==='waiting'&&ACTIVATION_URL.test(data.verificationURI||'');
-}
-
 // A user-facing error message with any address removed, since media and chat URLs can be signed.
 function publicError(error,fallback){
  return String(error&&error.message||fallback).replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
@@ -62,7 +57,6 @@ function safeMessage(m){
 }
 
 function start(host,config,services){
- var autoOpen=false;
  const label=host.global.getLabel()||'';
  const identity=Sources.fromLabel(label);
  const qaIdentity=qaLocalIdentity();
@@ -239,7 +233,6 @@ function start(host,config,services){
  }
 
  function connectLive(data){
-  autoOpen=!!(data&&data.open===true);
   if(closed||!sourceActive)return;
   if(source.kind!=='twitch-live'){
    chat.error='Live chat is available for Twitch channels.';
@@ -257,6 +250,7 @@ function start(host,config,services){
   return{mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
  }
 
+ // Twitch opens only from the user's click on "Approve on Twitch"; the activation page fills in the code.
  function openActivation(){
   if(auth.phase!=='waiting')return;
   if(ACTIVATION_URL.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);
@@ -976,12 +970,6 @@ function start(host,config,services){
   auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});
   chat.state=data.phase;
   chat.error=data.message||'';
-  if(shouldAutoOpen(data,autoOpen)){
-   autoOpen=false;
-   host.utils.open(data.verificationURI);
-  }else if(data.phase!=='waiting'&&data.phase!=='authorizing'){
-   autoOpen=false;
-  }
   send();
  }
 
@@ -1086,4 +1074,4 @@ function start(host,config,services){
  };
 }
 
-module.exports={start,viewSettings,shouldAutoOpen,safeMessage};
+module.exports={start,viewSettings,safeMessage};

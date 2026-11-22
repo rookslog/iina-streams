@@ -285,7 +285,10 @@ test('the player publishes behindLive for the pill, independent of chat delay', 
 });
 
 test('Go Live seeks to cache-end minus 2 s when the target is over 1 s ahead', async t => {
-  const {shim, load, resolveCalls} = playerFixture(t);
+  // Lead (go-live-reach): a seek is used only when it reaches the edge, so the clock must be confident.
+  // 45 s behind, target 80 with time-pos 40: a 40 s gain leaves 5 s, which is within the 12 s reach.
+  const liveClock = {start() {}, stop() {}, behindLive: () => 45, goLiveTarget: () => 80};
+  const {shim, load, resolveCalls} = playerFixture(t, {liveClock});
   await load();
   await shim.sidebar.receive('go-live', {});
   assert.deepEqual(commands(shim), [['seek', ['80', 'absolute']]], 'seek without reloading');
@@ -391,4 +394,15 @@ test('playlist transport failures never leak the URL into player logs', async t 
   });
   assert.equal(captured.includes(url), false, 'no signed playlist URL in console, traces or diagnostic files');
   assert.equal(captured.includes(signature), false, 'no partial URL exposing the signature either');
+});
+
+test('Go Live reloads when a seek would stop short of the edge (lead, observed after a pause)', async t => {
+  // 30 s behind, target only 3 s ahead: the seek would leave 27 s, so Go Live reloads instead.
+  const liveClock = {start() {}, stop() {}, behindLive: () => 30, goLiveTarget: () => 43};
+  const {shim, load, resolveCalls} = playerFixture(t, {liveClock});
+  await load();
+  await shim.sidebar.receive('go-live', {});
+  await settle();
+  assert.equal(commands(shim).some(([name]) => name === 'seek'), false, 'no short seek');
+  assert.equal(resolveCalls.length, 2, 'the current quality is resolved again for the reload');
 });

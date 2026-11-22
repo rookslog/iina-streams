@@ -21,6 +21,9 @@ const GO_LIVE_MIN_LEAD_SECONDS=1;
 // Ctrl+Meta+l is IINA 1.5.1's Log Viewer (MainMenu.xib; tests/fixtures/iina-1.5.1/mainmenu-keys.txt),
 // and IINA doesn't reject that clash for plugin items, so Go Live uses G.
 const GO_LIVE_KEY='Ctrl+Meta+g';
+// A Go Live seek must leave the player at most this far behind live, else Go Live reloads. Twitch's
+// floor on this path is 6-8 s (spike #16), so 12 s allows one segment of slack above it.
+const GO_LIVE_REACH_SECONDS=12;
 
 const DEFAULT_VIEW={
  presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,
@@ -317,6 +320,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    position:Number(mpv.getNumber('time-pos'))||0,
    paused:!!mpv.getFlag('pause'),
    behindLive:behindLive(),
+   atLiveEdge:atLiveEdge(),
    chatTiming:Object.assign(chatTiming.settings(),currentTiming()),
    qa:!!config.qa
   });
@@ -337,7 +341,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function send(){
   if(closed)return;
   const s=snapshot();
-  liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming);
+  liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming,s.atLiveEdge);
   if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});
   if(sidebarReady&&sidebarVisible){
    try{
@@ -592,14 +596,28 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return typeof value==='number'&&Number.isFinite(value)?value:null;
  }
 
+ // At the live edge means Go Live cannot gain anything: the cache end is within LIVE_EDGE_GAP_SECONDS of
+ // the playhead. Twitch's floor on this path is 6-8 s behind live, so behindLive alone never reads as live.
+ // 8 s, not 4: mpv's steady buffer ahead on this path is 5.2-5.7 s (spike #16 section 1, plain URL), plus one
+ // 2 s segment of jitter. After a 20 s pause the gap is about 25 s, so that still reads as behind (lead review).
+ const LIVE_EDGE_GAP_SECONDS=8;
+
+ function atLiveEdge(){
+  if(behindLive()===null)return false;
+  const read=readLivePlayer();
+  if(typeof read.cacheEnd!=='number'||typeof read.timePos!=='number')return false;
+  if(!Number.isFinite(read.cacheEnd)||!Number.isFinite(read.timePos))return false;
+  return read.cacheEnd-read.timePos<=LIVE_EDGE_GAP_SECONDS;
+ }
+
  function currentTiming(){
   return chatTiming.effective(behindLive());
  }
 
  // What the sidebar shows of live timing, at the precision it shows it.
- function liveStatusKeyOf(behind,timing){
+ function liveStatusKeyOf(behind,timing,edge){
   const shown=behind===null?'none':String(Math.round(behind));
-  return shown+'|'+timing.mode+'|'+timing.state+'|'+Math.round(timing.delay*2)/2;
+  return shown+'|'+(edge?'edge':'gap')+'|'+timing.mode+'|'+timing.state+'|'+Math.round(timing.delay*2)/2;
  }
 
  function clearRevealTimer(){
@@ -708,7 +726,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   liveStatusTimer=null;
   if(closed||!liveClockRunning)return;
   const changed=revealLive();
-  if(changed||liveStatusKeyOf(behindLive(),currentTiming())!==liveStatusKey)send();
+  if(changed||liveStatusKeyOf(behindLive(),currentTiming(),atLiveEdge())!==liveStatusKey)send();
   liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
  }
 
@@ -718,8 +736,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed||!sourceActive||source.kind!=='twitch-live'||goLiveBusy)return;
   const target=liveClockRunning?liveClock.goLiveTarget():null;
   const position=mpv.getNumber('time-pos');
-  if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS){
+  // Seek only when it reaches the edge. Observed in IINA 1.5.1 (2026-11-22): after a pause, mpv's cache
+  // stops short of live, so cache-end - 2 landed 13 s short (-28 s to -15 s). A reload joins at the edge.
+  const behind=behindLive();
+  const reachesEdge=behind!==null&&behind-(target-position)<=GO_LIVE_REACH_SECONDS;
+  if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS&&reachesEdge){
    mpv.command('seek',[String(target),'absolute']);
+   mpv.set('pause',false);
    trace('go-live',{action:'seek'});
    return;
   }
@@ -740,7 +763,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const context={
     generation:++player.generation,
     position:0,
-    paused:!!mpv.getFlag('pause'),
+    paused:false,
     speed:Number(mpv.getNumber('speed'))||1
    };
    reloadReplacing=true;

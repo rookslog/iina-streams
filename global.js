@@ -294,24 +294,29 @@ function onAuthProbe(_,label){
  postChild(id,'auth-status',{saved});
 }
 
-function onAuthDisconnect(_,label){
+function onAuthDisconnect(data,label){
  // A label that was never in the audience is neither registered nor allowed to stop the broker (r2 #4).
  const managedID=targetID(label);
  const id=managedID!==null?managedID:adoptedLabel(label);
- if(id===null||!audience.delete(id))return;
- nextSession(id);
- if(!audience.size)auth.stop();
+ if(id===null)return;
+ // A retiring controller ends its own lifetime on a label that stays open. Forget clears the audience before
+ // its revoke returns, so retirement must advance the session itself (r3 #3). Only a known label advances.
+ const retiring=!!data&&data.retire===true&&sessions.has(id);
+ const wasMember=audience.delete(id);
+ if(retiring||wasMember)nextSession(id);
+ if(wasMember&&!audience.size)auth.stop();
 }
 
 function onPlayerClosed(_,label){
  const managedID=targetID(label);
  const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
- audience.delete(id);
+ // Only a departing audience member can warrant stopping the broker; an unrelated close must not (r3 #3).
+ const wasMember=audience.delete(id);
  if(typeof id==='number')managed.delete(id);
  else adopted.delete(id);
  sessions.delete(id);
- if(!audience.size)auth.stop();
+ if(wasMember&&!audience.size)auth.stop();
 }
 
 async function onAuthForget(_,label){

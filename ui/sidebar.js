@@ -156,6 +156,7 @@ function validClientID(v){
   renderChatStatus(s,chatOn);
   renderReplayControls(s);
   renderAppearance(s);
+  renderChatTiming(s);
   renderMessages(s,chatOn);
   positionMessages();
  }
@@ -169,6 +170,37 @@ function validClientID(v){
   $('title').textContent=s.title;
   const kind=s.live?'Live':s.source.kind==='twitch-live'?'Live':s.source.kind==='youtube'?'Video':'Recording';
   $('source').textContent=s.source.provider+' · '+kind;
+  renderLivePill(s);
+ }
+
+ // #51: Live (red) within 5 s of live, otherwise grey "−N s", which goes live on click. No pill while
+ // the estimate is uncertain, and none outside Twitch live.
+ const LIVE_EDGE_SECONDS=5;
+
+ function livePillState(s){
+  const behind=s.behindLive;
+  if(s.source.kind!=='twitch-live'||typeof behind!=='number'||!isFinite(behind))return null;
+  return behind<=LIVE_EDGE_SECONDS?'live':'behind';
+ }
+
+ function renderLivePill(s){
+  const pill=$('live-pill');
+  const pillState=livePillState(s);
+  pill.hidden=pillState===null;
+  if(pillState===null)return;
+  pill.setAttribute('data-state',pillState);
+  if(pillState==='live'){
+   pill.textContent='Live';
+   pill.title='';
+   pill.setAttribute('aria-label','Live');
+   pill.setAttribute('aria-disabled','true');
+  }else{
+   const seconds=Math.round(s.behindLive);
+   pill.textContent='\u2212'+seconds+'\u00a0s';
+   pill.title='Go Live';
+   pill.setAttribute('aria-label','Go Live, '+seconds+' seconds behind');
+   pill.setAttribute('aria-disabled','false');
+  }
  }
 
  function renderQuality(s){
@@ -260,6 +292,67 @@ function validClientID(v){
   $('placement').value=placementOf(s.view.x,s.view.y);
  }
 
+ // #2: the chat timing row. In Manual the stepper sets the delay; in Auto it fine-tunes the estimate.
+ // An uncertain Auto shows a hollow dot (manual delay in use), a confident one a filled dot.
+ // Rendering uses attributes and dataset only, which every sidebar test double provides.
+ const TIMING_MODES=['auto','manual','live'];
+ const TIMING_STEP=0.5;
+
+ function timingOf(s){
+  return s.chatTiming||{mode:'auto',manualDelay:0,fineTune:0,delay:0,state:'auto-uncertain'};
+ }
+
+ function formatSeconds(value,signed){
+  const rounded=Math.round(value*2)/2;
+  const sign=rounded<0?'\u2212':signed&&rounded>0?'+':'';
+  return sign+Math.abs(rounded)+'\u00a0s';
+ }
+
+ function renderChatTiming(s){
+  const timing=timingOf(s);
+  $('timing-settings').hidden=s.source.kind!=='twitch-live';
+  for(const mode of TIMING_MODES){
+   const button=$('timing-'+mode);
+   button.setAttribute('aria-checked',String(timing.mode===mode));
+  }
+  const auto=timing.mode==='auto';
+  const dot=$('timing-dot');
+  dot.hidden=!auto;
+  dot.setAttribute('data-state',timing.state==='auto-uncertain'?'uncertain':'synced');
+  dot.title=timing.state==='auto-uncertain'?'Not synced yet. Using the Manual delay':'Synced to the video';
+  $('timing-stepper').hidden=timing.mode==='live';
+  $('timing-value').textContent=auto?formatSeconds(timing.fineTune,true):formatSeconds(timing.manualDelay,false);
+  messages.dataset.calibrating=String(timing.mode==='manual'&&s.chat.mode==='live');
+ }
+
+ function stepTiming(direction){
+  const timing=timingOf(state||{});
+  if(timing.mode==='manual')post('chat-timing',{manualDelay:timing.manualDelay+direction*TIMING_STEP});
+  else if(timing.mode==='auto')post('chat-timing',{fineTune:timing.fineTune+direction*TIMING_STEP});
+ }
+
+ // #28: in Manual, ⌥-click the message that matches the video now. The row flashes; nothing is written.
+ function messageRowOf(target){
+  let node=target;
+  while(node&&node!==messages){
+   if(node.dataset&&node.dataset.id!==undefined)return node;
+   node=node.parentNode;
+  }
+  return null;
+ }
+
+ function onMessageClick(event){
+  if(!event.altKey||!state||state.chat.mode!=='live'||timingOf(state).mode!=='manual')return;
+  const row=messageRowOf(event.target);
+  if(!row||!row.dataset.id)return;
+  event.preventDefault();
+  post('chat-calibrate',{id:row.dataset.id});
+  row.dataset.calibrated='true';
+  setTimeout(()=>{
+   row.dataset.calibrated='false';
+  },700);
+ }
+
  function placementOf(x,y){
   if(x===1&&y===0)return 'tr';
   if(x===0&&y===0)return 'tl';
@@ -287,6 +380,7 @@ function validClientID(v){
  function messageRow(m,replay,view){
   const row=document.createElement('div');
   row.className='message'+(m.kind==='notice'?' notice':'');
+  if(!replay&&m.sentAt)row.dataset.id=m.id;
   if(replay){
    const time=document.createElement('button');
    time.className='time';
@@ -490,6 +584,13 @@ function validClientID(v){
   if(p)post('view',{x:p[0],y:p[1],editing:false});
  });
  $('reset').addEventListener('click',()=>post('view',{reset:true,editing:false}));
+ for(const mode of TIMING_MODES)$('timing-'+mode).addEventListener('click',()=>post('chat-timing',{mode}));
+ $('timing-less').addEventListener('click',()=>stepTiming(-1));
+ $('timing-more').addEventListener('click',()=>stepTiming(1));
+ $('live-pill').addEventListener('click',()=>{
+  if($('live-pill').dataset.state==='behind')post('go-live',{});
+ });
+ messages.addEventListener('click',onMessageClick);
 
  // ---- Scroll input ----
 

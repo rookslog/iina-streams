@@ -12,3 +12,29 @@
 .open-form input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}
 /* #34: chat emote images; size is also fixed by width/height attributes. */
 .emote{width:24px;height:24px;vertical-align:middle;margin:-3px 1px 0;object-fit:contain}
+/* #51: Live pill. Red at the live edge; grey and clickable (Go Live) when behind. */
+.live-pill{flex:none;min-height:22px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:650;
+ font-variant-numeric:tabular-nums;letter-spacing:.2px;border:0}
+.live-pill[data-state=live]{background:#d42a2a;color:#fff;cursor:default}
+.live-pill[data-state=live]:hover{background:#d42a2a}
+.live-pill[data-state=behind]{background:rgba(120,120,128,.24);color:var(--secondary)}
+.live-pill[data-state=behind]:hover{background:rgba(120,120,128,.36);color:inherit}
+/* #2: chat timing row: segmented mode control and a delay stepper. */
+.timing-setting{flex-wrap:wrap}
+.timing-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.segmented{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.segmented button{border:0;border-radius:0;min-height:24px;padding:2px 8px;font-size:11px;background:transparent}
+.segmented button+button{border-left:1px solid var(--line)}
+.segmented button[aria-checked=true]{background:var(--accent);color:#fff}
+.stepper{display:inline-flex;align-items:center;gap:2px}
+.stepper .step{min-width:24px;min-height:24px;padding:0;font-size:13px;line-height:1}
+.step-value{min-width:42px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums}
+.timing-dot{display:inline-block;width:7px;height:7px;margin-left:3px;border-radius:50%;vertical-align:middle;
+ border:1.5px solid var(--accent)}
+.timing-dot[data-state=synced]{background:var(--accent)}
+.timing-dot[data-state=uncertain]{background:transparent}
+/* #28: in Manual, ⌥-click calibrates to a message; the row flashes. */
+.messages[data-calibrating=true] .message[data-id]:hover{background:var(--hover);border-radius:4px}
+.message[data-calibrated=true]{background:color-mix(in srgb,var(--accent),transparent 75%);border-radius:4px;
+ transition:background 120ms ease}
+@media (prefers-color-scheme:dark){.segmented button[aria-checked=true]{color:#10131a}}

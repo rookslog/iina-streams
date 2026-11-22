@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src wss://irc-ws.chat.twitch.tv:443; img-src https://static-cdn.jtvnw.net"><title>Streams</title><link rel="stylesheet" href="sidebar.css"></head>
 <body>
- <header class="stream-header"><div class="identity"><h1 id="title">Streams</h1><div id="source" class="secondary"></div></div><button id="open" class="icon" title="Open another stream" aria-label="Open another stream" aria-expanded="false" aria-controls="open-form">＋</button><button id="hide" class="icon" title="Hide Streams" aria-label="Hide Streams">×</button></header>
+ <header class="stream-header"><div class="identity"><h1 id="title">Streams</h1><div id="source" class="secondary"></div></div>
+ <button id="live-pill" class="live-pill" type="button" hidden></button>
+ <button id="open" class="icon" title="Open another stream" aria-label="Open another stream" aria-expanded="false" aria-controls="open-form">＋</button><button id="hide" class="icon" title="Hide Streams" aria-label="Hide Streams">×</button></header>
  <form id="open-form" class="open-form" aria-label="Open another stream" hidden>
   <input id="open-input" type="text" placeholder="Channel or URL" aria-label="Channel or URL" spellcheck="false"
    autocomplete="off" autocapitalize="off">
@@ -20,6 +22,24 @@
    <label class="setting"><span>Text size <span id="font-size-val" class="secondary"></span></span><input id="font-size" type="range" min="12" max="24" step="1" aria-label="Chat text size"></label>
    <label class="setting"><span>Spacing <span id="spacing-val" class="secondary"></span></span><input id="spacing" type="range" min="2" max="10" step="1" aria-label="Message spacing"></label>
    <label class="setting"><span>Timestamps</span><select id="timestamps" aria-label="Message timestamps"><option value="off">Off</option><option value="min">12:34</option><option value="sec">12:34:56</option></select></label>
+   <div id="timing-settings" class="setting timing-setting" hidden>
+    <span>Timing <span id="timing-dot" class="timing-dot" hidden></span></span>
+    <div class="timing-controls">
+     <div class="segmented" role="radiogroup" aria-label="Chat timing">
+      <button id="timing-auto" type="button" role="radio" aria-checked="false"
+       title="Match chat to the video">Auto</button>
+      <button id="timing-manual" type="button" role="radio" aria-checked="false"
+       title="Fixed delay. ⌥-click a message to sync to it">Manual</button>
+      <button id="timing-live" type="button" role="radio" aria-checked="false"
+       title="No delay">Live</button>
+     </div>
+     <div id="timing-stepper" class="stepper">
+      <button id="timing-less" class="step" type="button" aria-label="Less delay" title="Less delay">−</button>
+      <output id="timing-value" class="step-value" aria-live="polite"></output>
+      <button id="timing-more" class="step" type="button" aria-label="More delay" title="More delay">+</button>
+     </div>
+    </div>
+   </div>
    <div id="overlay-settings"><label class="setting"><span>Glass opacity <span id="opacity-val" class="secondary"></span></span><input id="opacity" type="range" min="0" max="0.9" step="0.05" aria-label="Overlay background opacity"></label><label class="setting"><span>Snap corner</span><select id="placement"><option value="tr">Top right</option><option value="tl">Top left</option><option value="br">Bottom right</option><option value="bl">Bottom left</option><option value="custom">Custom</option></select></label></div>
    <div class="action-row"><button id="reset" class="text-button">Reset appearance &amp; position</button></div>
   </section>

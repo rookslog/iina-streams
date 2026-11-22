@@ -584,25 +584,40 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // posts can lose the oldest of them, because the overlay never sent them.
  function onLiveMessages(data){
   if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;
-  applyLiveRemovals(data.removed,data.clearedAll===true);
+  applyLiveRemovals(data.removed,data.clearedAll===true,data.removedUsers);
   mergeLiveMessages(data.messages.slice(-150));
   revealLive();
   send();
  }
 
- function applyLiveRemovals(removed,clearedAll){
+ function applyLiveRemovals(removed,clearedAll,removedUsers){
   if(clearedAll){
    liveInbox=[];
    messages=[];
    return;
   }
   const gone=new Set(Array.isArray(removed)?removed.filter(id=>typeof id==='string'&&id):[]);
+  for(const entry of liveInbox){
+   if(entry.id&&matchesRemovedUser(entry,removedUsers))gone.add(entry.id);
+  }
   if(gone.size===0)return;
   liveInbox=liveInbox.filter(entry=>!gone.has(entry.id));
   messages=messages.filter(message=>!gone.has(message.id));
  }
 
+ // A clear-user names a userId, a login, or both. An empty string never matches.
+ function matchesRemovedUser(entry,removedUsers){
+  if(!Array.isArray(removedUsers))return false;
+  return removedUsers.some(user=>{
+   if(!user||typeof user!=='object')return false;
+   const byId=!!user.userId&&user.userId===entry.userId;
+   const byLogin=!!user.login&&user.login===entry.login;
+   return byId||byLogin;
+  });
+ }
+
  // A message with no id (a notice) is keyed by its kind and text, so the overlay re-posting it does not repeat it.
+ // Two identical notices therefore collapse into one.
  function inboxKey(entry){
   return entry.id||entry.message.kind+'|'+entry.message.text;
  }
@@ -652,6 +667,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const message=safeMessage(raw);
   const entry={id:message.id,message};
   if(message.sentAt>0)entry.timestampMs=message.sentAt;
+  // Kept on the entry only, so clear-user can match a pending message. It never reaches sidebar or overlay state.
+  entry.userId=typeof raw.userId==='string'?raw.userId:'';
+  entry.login=typeof raw.login==='string'?raw.login.toLowerCase():'';
   return entry;
  }
 

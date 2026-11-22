@@ -18,7 +18,10 @@
   - **Calibrate (#28):** in Manual, ⌥-click a message to set the delay to its age.
   - **Pausing keeps chat:** delayed messages wait in a buffer (up to 3000) instead of dropping out of a 150-message window. A pause no longer empties chat, and resuming continues in order. Moderation (deleted messages, cleared users) removes waiting messages too. Observed natively.
 - **Live pill and Go Live (#51):** the sidebar header shows a red Live pill when the playhead is within 8 s of the cache end (Twitch's floor on this path is 6–8 s behind live), or `−N s` behind. Clicking it, **Plugin › Go Live** (⌃⌘G) jumps to the edge and resumes playback: it seeks when that reaches within 12 s of live, and otherwise reloads at the edge (after a pause, mpv's cache stops short). Observed natively on a live channel. Chat items moved into a **Chat** submenu.
-- **Release review fixes (four rounds of independent review; see `docs/reviews/2026-11-22-v0.5.5-release-review.md`):**
+- **Fixed at the root after six review rounds** (see the review record's Recurrence triage, and `docs/design/V055-CLASS-REPAIR-2026-11-22.md`):
+  - **A window that switches to another file stops acting for its stream at once, and never resumes.** Loading that stream again in the same window starts it fresh. Late quality changes, Go Live reloads, timers and sign-in steps from the old load can no longer touch the new one. Replay chat from before the switch does not carry over.
+  - **Auto chat timing follows the video's actual progress.** Chat never moves ahead while the video is paused or stalled, never faster than 1.5x the video, and catches up the same way however often the player checks.
+- **Release review fixes (rounds 1–5; see `docs/reviews/2026-11-22-v0.5.5-release-review.md`):**
   - **Windows IINA opened itself sign in to chat (#56).** Observed natively. Streams no longer creates IINA's first window during startup, and those windows get the same session checks as Streams' own.
   - **One owner adopts IINA's windows (D-031).** Only the stable plugin adopts by default. Beta and dev builds adopt only in QA mode or with `adoptNativeWindows: true` in their `settings.json`.
   - **A reused window starts fresh.** When IINA loads something else into a window, its Streams controller retires. Its sidebar stops acting, and its late chat batches and sign-out replies are ignored.
@@ -31,6 +34,7 @@
   - **Partial VOD chat pages** no longer refetch in a loop.
   - **A seek no longer resets Auto chat timing** (r4 #2). After a reload, the new timing is adopted once two estimates agree.
   - **A window that loads another file stops acting for the old stream at once** (r4 #3).
+  - **A retiring window publishes nothing stale, and one that returns to its stream before cleanup can still sign in, with quality controls that don't stay busy** (r5 #1 #2). **Auto no longer jumps to new timing while the playhead is stalled** (r5 #3).
 - **Groundwork, not yet wired:**
   - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).
 - Docs: README rewritten for first-time visitors (#38); spikes on live latency, Go Live and the DVR window (#16/#31/#51) and on side chat (#47/#52); D-028, side chat docked beside the video with an mpv margin.

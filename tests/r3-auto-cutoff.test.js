@@ -11,6 +11,8 @@
 // - resyncs only on Go Live's reload, a quality reload, a source change or a mode change; since r4 #2 a seek
 //   is not a resync, and a resync adopts a mapping only once two confident samples agree (r4-auto-seek).
 // The mapping is sampled whether or not chat is on. Live and Manual keep their wall-clock delays.
+// Since v0.5.5 class A (tests/class-a-properties.test.js), movement within 0.2 s counts as no progress, and a
+// corroborated mapping is adopted once 1 s of progress has followed the corroborating sample.
 //
 // The player runs under the shared shim with the real live clock and estimator. Playlists and the demuxer
 // cache are synthetic; no test contacts Twitch.
@@ -132,13 +134,16 @@ function reloadedFrom30sBehind() {
 const offsetAt = (nowMs, timePos, behind) => nowMs / 1000 - behind - timePos;
 
 // r4 #2 edit: adoption needs a second agreeing confident sample.
-test('r3 #2: after a resync, a confident mapping while playing is adopted on its second agreeing sample', () => {
-  const timing = reloadedFrom30sBehind();
-  sample(timing, {nowMs: NOW + 20_000, timePos: 20, offset: offsetAt(NOW + 20_000, 20, 8), behindLive: 8});
-  const nowMs = NOW + 21_000;
-  const cutoff = sample(timing, {nowMs, timePos: 21, offset: offsetAt(nowMs, 21, 8), behindLive: 8});
-  assert.equal(nowMs - cutoff, 8000, 'the lag is the estimate, 8 s, at once');
-});
+// v0.5.5 class A edit: and then 1 s of progress (REBASE_PROGRESS_SECONDS), so it lands one sample later.
+test('r3 #2: after a resync, a confident mapping while playing is adopted 1 s after its second agreeing sample',
+  () => {
+    const timing = reloadedFrom30sBehind();
+    sample(timing, {nowMs: NOW + 20_000, timePos: 20, offset: offsetAt(NOW + 20_000, 20, 8), behindLive: 8});
+    sample(timing, {nowMs: NOW + 21_000, timePos: 21, offset: offsetAt(NOW + 21_000, 21, 8), behindLive: 8});
+    const nowMs = NOW + 22_000;
+    const cutoff = sample(timing, {nowMs, timePos: 22, offset: offsetAt(nowMs, 22, 8), behindLive: 8});
+    assert.equal(nowMs - cutoff, 8000, 'the lag is the estimate, 8 s, at once');
+  });
 
 test('r3 #2: a first confident mapping that arrives while paused waits for the playhead, then is adopted',
   () => {
@@ -162,7 +167,8 @@ test('r3 #2: once a mapping was adopted, a +30 s discontinuity while playing is 
   const timing = reloadedFrom30sBehind();
   let nowMs = NOW + 20_000;
   const offset = offsetAt(nowMs, 20, 8);
-  sample(timing, {nowMs: nowMs - 1000, timePos: 19, offset, behindLive: 8}); // r4 #2 edit: the first agreeing sample.
+  sample(timing, {nowMs: nowMs - 2000, timePos: 18, offset, behindLive: 8}); // r4 #2 edit: the first agreeing sample.
+  sample(timing, {nowMs: nowMs - 1000, timePos: 19, offset, behindLive: 8}); // Class A edit: then 1 s of progress.
   const adopted = sample(timing, {nowMs, timePos: 20, offset, behindLive: 8});
   assert.equal(nowMs - adopted, 8000, 'precondition: the first mapping was adopted');
   nowMs += 2000;
@@ -455,7 +461,10 @@ test('r3 #2: after a quality reload, the first confident mapping is adopted at o
     assert.ok(Math.abs(w.state().behindLive - 8) <= 1, `precondition: ~8 s behind (${w.state().behindLive})`);
     // This fixture moves the playhead 2 s per poll, so the first confident sample can fall on a status tick
     // with no playhead advance since the last one. Adoption waits for an advancing sample: one more poll.
+    // Each poll's new estimate lands on a tick with no playhead advance, so the agreeing estimate of that poll
+    // only corroborates; the next poll's advancing tick adopts (v0.5.5 review r5 #3): a second poll.
     const before = w.shim.mpv.props.get('time-pos');
+    await w.poll();
     await w.poll();
     assert.ok(w.shim.mpv.props.get('time-pos') > before, 'precondition: the playhead advanced');
     const nowMs = w.shim.timers.now;

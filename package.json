@@ -5,6 +5,7 @@
   "description": "Twitch and YouTube streaming plugin for IINA with draggable glassy chat overlay, read-only Twitch chat, and automatic VOD replay.",
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "test:explore": "CLASS_L_K=4 CLASS_L_RANDOM=5000 node --test tests/class-l-explorer.test.js",
     "test:py": "python3 -B -m unittest discover -s tests -p 'test_*.py'",
     "test:all": "npm run check:version && npm test && npm run test:py",
     "check:version": "python3 -B scripts/check_version.py",

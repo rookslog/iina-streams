@@ -389,15 +389,32 @@ function validClientID(v){
   showOpenField();
  }
 
- $('open').addEventListener('click',toggleOpenField);
- openForm.addEventListener('submit',submitOpenField);
- openInput.addEventListener('input',()=>openInput.removeAttribute('aria-invalid'));
- openInput.addEventListener('keydown',event=>{
-  if(event.key!=='Escape')return;
+ // Escape hides the field wherever focus is. After Return hides the field, focus leaves it, and showing it
+ // again for an error may not bring focus back, so a handler on the field alone can miss the key.
+ function onOpenFieldEscape(event){
+  if(event.key!=='Escape'||openForm.hidden)return false;
   event.preventDefault();
   hideOpenField();
   $('open').focus();
+  return true;
+ }
+
+ // Focus moving elsewhere in the sidebar hides the field. Focus leaving the page (another app, the video)
+ // keeps it, so a URL can be copied from elsewhere and pasted; + (shown as ×) still closes it.
+ function onOpenFieldFocusOut(event){
+  if(openForm.hidden||openForm.contains(event.relatedTarget))return;
+  if(!event.relatedTarget&&!document.hasFocus())return;
+  hideOpenField();
+ }
+
+ $('open').addEventListener('click',toggleOpenField);
+ // Pressing + while the field has focus must not blur it first: blur would hide it and the click reopen it.
+ $('open').addEventListener('mousedown',event=>{
+  if(!openForm.hidden)event.preventDefault();
  });
+ openForm.addEventListener('submit',submitOpenField);
+ openForm.addEventListener('focusout',onOpenFieldFocusOut);
+ openInput.addEventListener('input',()=>openInput.removeAttribute('aria-invalid'));
 
  const chatAvailable=()=>!!(state&&state.chat&&state.chat.available);
  const twitchLive=()=>!!(state&&state.source&&state.source.kind==='twitch-live');
@@ -444,6 +461,7 @@ function validClientID(v){
   if(!popover.hidden&&!popover.contains(e.target)&&e.target!==$('appearance-toggle'))setPopoverOpen(false);
  });
  document.addEventListener('keydown',e=>{
+  if(onOpenFieldEscape(e))return;
   if(e.key==='Escape'&&!$('appearance').hidden)setPopoverOpen(false);
  });
 

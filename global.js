@@ -49,6 +49,7 @@ function postChild(id,name,data){
  let wire;
  try{
   wire=JSON.stringify(data);
+ // Unserializable data cannot reach the child; dropping the message is safe.
  }catch(_){
   return;
  }
@@ -91,7 +92,7 @@ function gLog(step,extra){
   globalDiag.push(Object.assign({step,t:Date.now()},extra||{}));
   if(globalDiag.length>60)globalDiag.shift();
   file.write('@data/beta-global.json',JSON.stringify(globalDiag));
- }catch(_){}
+ }catch(_){/* diagnostics are best effort; a failed write must never break the caller */}
 }
 
 // The saved Twitch login (a JSON string). Prefer the keychainRead spelling; fall back to keyChainRead.
@@ -118,6 +119,7 @@ async function request(path,method,form,headers){
 
 const auth=new TwitchAuth({
  request,
+ diagnostic:code=>gLog('auth-diagnostic',{code}),
  read:readSavedLogin,
  write:value=>typeof utils.keychainWrite==='function'?
   utils.keychainWrite('twitch-readonly','oauth',value):utils.keyChainWrite('twitch-readonly','oauth',value),
@@ -221,13 +223,13 @@ async function onAuthConnect(data,label){
  let clientID=String(data&&data.clientID||'').trim();
  try{
   if(!clientID&&file.exists(CLIENT_FILE))clientID=JSON.parse(file.read(CLIENT_FILE)).clientID||'';
- }catch(_){}
+ }catch(_){gLog('auth-diagnostic',{code:'client-file-unreadable'});}
  if(!clientID){
   try{
    const raw=readSavedLogin();
    const saved=typeof raw==='string'&&raw?JSON.parse(raw):null;
    if(saved&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID||''))clientID=saved.clientID;
-  }catch(_){}
+  }catch(_){gLog('auth-diagnostic',{code:'saved-login-unreadable'});}
  }
  // Order: the ID just entered, the user's own saved app, the saved login's app, then the built-in app (#8).
  // Only a user's own ID is saved, so a later change to the built-in ID reaches everyone who never chose one.
@@ -252,7 +254,7 @@ function onAuthProbe(_,label){
   const parsed=typeof raw==='string'&&raw?JSON.parse(raw):null;
   const hasToken=parsed&&typeof parsed.access_token==='string'&&parsed.access_token;
   saved=!!(hasToken&&typeof parsed.clientID==='string'&&parsed.clientID);
- }catch(_){}
+ }catch(_){gLog('auth-diagnostic',{code:'saved-login-unreadable'});}
  gLog('auth-probe-reply',{id,saved});
  postChild(id,'auth-status',{saved});
 }

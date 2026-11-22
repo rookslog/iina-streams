@@ -184,6 +184,8 @@ function onOpenWindowSubmit(data){
 // A player's sidebar field submits {input}; an older sidebar sends no input and gets the window.
 function onPlayerOpen(data,label){
  const input=data&&data.input;
+ // #56: record which label reached global and whether it is a managed player. No user text is traced.
+ qaTrace('player-open',{sender:label,id:targetID(label),hasInput:input!==undefined});
  if(input===undefined){
   showOpenWindow();
   return;
@@ -197,10 +199,15 @@ function onPlayerOpen(data,label){
 function postOpenError(label){
  const id=targetID(label);
  if(id!==null){
+  qaTrace('open-error',{route:'managed',id});
   postChild(id,'open-error',{});
   return;
  }
- if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label))return;
+ if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label)){
+  qaTrace('open-error',{route:'dropped',sender:label});
+  return;
+ }
+ qaTrace('open-error',{route:'label',sender:label});
  timers.setTimeout(()=>app.postMessage(label,'open-error','{}'),0);
 }
 
@@ -294,6 +301,20 @@ app.onMessage('auth-probe',onAuthProbe);
 app.onMessage('auth-disconnect',onAuthDisconnect);
 app.onMessage('player-closed',onPlayerClosed);
 app.onMessage('auth-forget',onAuthForget);
+
+if(config.qa){
+ // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label
+ // (JavascriptAPIGlobal.swift L105-111 in IINA 1.5.1)? QA restarts IINA, so every core loaded this plugin
+ // at creation (PlayerCore.swift L74-81) and L108's force-unwrap is safe here. Not for release builds.
+ let probes=0;
+ function sendLabelProbe(){
+  probes+=1;
+  for(let n=0;n<6;n+=1)app.postMessage(String(n),'qa-label-probe',JSON.stringify({label:String(n),probe:probes}));
+  qaTrace('label-probe-sent',{probe:probes});
+  if(probes<12)timers.setTimeout(sendLabelProbe,5000);
+ }
+ timers.setTimeout(sendLabelProbe,5000);
+}
 
 if(config.qa){
  app.onMessage('qa-ping',(_,label)=>{

@@ -162,7 +162,7 @@ test('overlay live chat continues after sidebar hides, and display changes reuse
   assert.equal(f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-stop').length,stopped);
   f.controller.setView({presentation:'sidebar'});
   f.shim.overlay.send('live-messages',{session,messages:[{id:'msg-after-switch',author:'Tester',text:'kept streaming'}]});
-  assert.equal(f.controller.snapshot().messages[0].id,'msg-after-switch');
+  assert.equal(f.controller.snapshot().messages.at(-1).id,'msg-after-switch');
   f.controller.setView({presentation:'overlay'});f.controller.showSidebar();
   assert.equal(f.posts.filter(([surface,name])=>surface==='overlay'&&name==='live-config').length,1);
   f.controller.chatOff();

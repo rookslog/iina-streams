@@ -363,3 +363,93 @@ Routing:
 - The session-change reset.
 
 **Owns:** `ui/overlay-live.js`, `ui/live-history.js` (only if the reducer must report removed ids), `src/player.js` (`onLiveMessages` and the inbox only), and new `tests/c3b-*.test.js`.
+
+---
+
+## A2 — Adopted windows reach global through a mailbox (#56), per D-029
+
+**Why.**
+- **Root cause.** A window IINA opened itself, and Streams adopted (#35), can't message global: `JavascriptAPIGlobalChild.postMessage` calls `parentAPI?…`, and only `createPlayerInstance` sets `parentAPI` (IINA v1.5.1 `JavascriptAPIGlobal.swift` L82–87, L129–131). Every child→global message is a silent no-op: `open`, `auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget` and `player-closed`. Observed natively: global's `player-open` trace stayed empty (#56 comment, 09:51).
+- **The reverse works.** Global's `postMessage(<bare-number label>, …)` reached the adopted window. Observed natively: the QA probe in `qa-label-probe.json` read `"0"` at 09:59. Source: L105–111, and `PlayerCore.swift` L67–81 for the labels.
+- **Global can safely post to any bare label.** Every IINA core has this plugin's instance whenever global runs: cores load plugins at creation (`PlayerCore.swift` L74–81), and enabling a plugin reloads it into every core (`JavascriptPlugin.swift` L54–64 → `reloadPluginForAll`). So L108's force-unwrap can't fail.
+- **The child can't name itself.** `getLabel()` returns `userLabel`, which only `createPlayerInstance` sets (L71–73, L125–127). An adopted child's label must come from global.
+
+**Design.**
+- **Detection:** a player is adopted when `iina.global.getLabel()` is empty. `src/player.js:100` already relies on this.
+- **New module `src/adopted-bridge.js`.** `createBridge({global, file, parse, now, random})` returns a `global`-shaped object: `{getLabel, postMessage, onMessage}`. `main.js` passes it to `start()` **only for adopted players**, through a host whose `global` is the bridge. `src/player.js` is unchanged.
+  - `onMessage(name, cb)` registers with the native child API and keeps a local copy, so the bridge can deliver locally.
+  - **`postMessage('open', {input})`:** if `parse(input)` (the same `Sources.parse` global uses) is null, or the input is blank, deliver `open-error` locally on the next turn and write nothing. If it's valid, file an `open` request with the input.
+  - **Every other name** (`auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget`, `player-closed`): file a request. Data is copied only for `auth-connect`, which carries `{}`-shaped options and no secrets. `auth-*` payloads must not contain tokens; tests assert this.
+  - **Request file:** `@data/bridge-<now>-<random>.json`, flat in `@data` (IINA's `file.write` doesn't create directories, and the file API has no mkdir: `JavascriptAPIFile.swift`, `write` uses `String.write(toFile:)`). It contains `{v:1, nonce, label|null, name, data}`. There is one file per request, never a shared read-modify-write.
+  - **Label handshake:** until the child knows its label, requests carry `label:null`, and the bridge keeps them pending in memory while listening for `bridge-hello {nonce, label}`. When a hello carries one of its pending nonces, it adopts that label, re-files the pending requests with it, and sends all later requests with it. The label is kept for the child's lifetime. Pending requests older than 30 s are dropped.
+- **Global, `global.js`:** every 2000 ms, `file.list('@data/')` and take only names matching `^bridge-[0-9]{13}-[A-Za-z0-9]{8,32}\.json$`. For each, oldest first by the time in the name: read it, delete it, then validate (`v`, a string `name` from the allow-list, a 1–9 digit `label` or null, a nonce of 8–64 `[A-Za-z0-9]`, and an age under 30 s, else drop).
+  - **`label` null:** post `bridge-hello {nonce, label:String(n)}` to labels `"0"`…`"31"`, and drop the request. When the child receives a hello carrying its nonce, it re-files every pending request (same nonce) with its label.
+  - **`label` known:** dispatch to the same handlers the native path uses, with `sender = label`.
+    - `targetID` stays managed-only.
+    - A parallel `adopted` set, plus `sessions` keyed by label string, gets the same fences: `postChild` for an adopted label uses `app.postMessage(label, name, wire)`. `auth-ready` goes only to a label in `audience` for the current session, as for managed players.
+    - `open` → `openInput(input)`. `postOpenError` is not needed, because the child already validated.
+  - **Staleness:** `player-closed` removes the label from `adopted`, `audience` and `sessions`. IINA reuses idle cores, so a later `auth-connect` from the same label starts a new session (`nextSession`). An adopted label with no request for 30 min is dropped from `audience`.
+  - **Polling cost:** one `file.list('@data/')` every 2 s, and reads only for matching names. This is the one timer global starts at load. It amends the rule pinned by `tests/global.test.js` ("global loading performs no … timer work"): an adopted child has no other channel to global (D-029 amendment).
+- **Security:**
+  - Tokens and device codes travel only global→child in memory (`postMessage`), never through `@data/bridge`.
+  - A request file holds only the message name, the nonce, the label, and for `open` the user's typed input, which is deleted on read.
+  - Never log input text, tokens or signed URLs.
+
+**Tests.**
+- **Bridge (pure):**
+  - adopted detection;
+  - invalid and blank `open` deliver a local `open-error` and write no file;
+  - valid `open` writes one request;
+  - each other name writes one request per call, as distinct files;
+  - `bridge-hello` with a matching nonce sets the label, and a foreign nonce is ignored;
+  - later requests carry the label;
+  - no request file ever contains a token-shaped string, even when called with an `auth-ready`-like payload;
+  - `onMessage` passes through to the native API.
+- **Global (shim):**
+  - a label-null request triggers hellos to 0–31 and is then dropped; the same nonce re-filed with a label is processed;
+  - a label-known `auth-connect` adds the label to `audience` and posts `auth-state` by **string** label;
+  - `auth-ready` reaches only a label that connected in the current session;
+  - `player-closed` clears the label;
+  - an `open` request opens a managed player;
+  - malformed, too-old or unknown-name requests are dropped and their files deleted;
+  - files are processed oldest first and deleted after reading;
+  - global's load schedules exactly one timer (the 2 s poll), with no reads while no `bridge-*` file exists; non-matching `@data` files are never read or deleted;
+  - managed players are unchanged (the existing tests stay green).
+- **`main.js`:** an adopted start gets the bridge as `host.global`, and a managed start gets the native `iina.global`.
+
+**Owns:** `src/adopted-bridge.js` (new), `global.js`, `main.js`, new `tests/a2-*.test.js`. Not `src/player.js`.
+
+**Native (lead):**
+- in an adopted window, invalid input turns the + field red at once;
+- valid input opens a managed window;
+- with a saved login, turning chat on connects live chat;
+- sign-in from an adopted window shows the device code in that window;
+- closing the window, then opening another adopted window, works.
+
+---
+
+## B6b — Offline channel offers its recent broadcasts (#32), per D-030
+
+**Why.** Typing a channel that isn't live gives a dead end today. `src/resolve.js` maps `OFFLINE` to the helper's generic `UNAVAILABLE`. Real-source check (lead, 10:10, signed out, public web Client-ID as in `src/twitch-playback.js`): GQL `user(login){videos(first:N, type:ARCHIVE, sort:TIME){edges{node{id title createdAt lengthSeconds}}}}` returned 5 archives for a live channel, and `user: null` for an unknown login. No sign-in is needed, so this works in managed and adopted windows alike, and needs no global round trip.
+
+**Design.**
+- **New `src/twitch-vods.js`:** `recentArchives({login}, {http, log, limit = 10})` makes one GQL POST with a plain-object body `{query}`, as for the title lookup (`iina.http` casts data to `[String:Any]`). It returns `{ok:true, vods:[{id, title, createdAt, lengthSeconds, url}]}`, where `url` is `https://www.twitch.tv/videos/<id>` and must round-trip through `Sources.parse` to kind `twitch-vod`. Failures:
+  - `{ok:false, code:'NOT_FOUND'}` when the user is null;
+  - `NETWORK` on a transport failure or non-2xx;
+  - `MALFORMED` on an unexpected shape.
+
+  No thumbnails in v1: the current broadcast's preview host isn't the CDN that the CSP allows. Never log URLs, and never log the query's login together with anything identifying the user.
+- **`src/resolve.js`:** a definitive `OFFLINE` keeps the helper-compatible `{ok:false, error:{code:'UNAVAILABLE', …}}` and adds `error.reason:'offline'`. `NOT_FOUND` and `RESTRICTED` are unchanged.
+- **`src/player.js`:** when a `twitch-live` load fails with `reason:'offline'`, call `recentArchives({login: source.id})` once per load and send `offlineVods: {state:'loading'|'ready'|'none'|'error', items}` in the sidebar state. A source change or close cancels it, and a stale result is ignored.
+- **`ui/sidebar.*`:** in that error state, replace the error line with a list of up to 10 rows: title (one line, ellipsized), short date, and length as `h:mm:ss`. Show a spinner while loading. Keep the plain error line for `none` or `error`. Clicking a row posts the existing `open {input: url}`, the same path as the + field, so it opens a managed window. Signifiers, not prose: no "Recent broadcasts" heading beyond a single short label.
+
+**Tests.**
+- **`twitch-vods`:** request shape (POST, a plain-object body, string headers, the Client-ID); the mapping; `limit`; user null → `NOT_FOUND`; non-2xx → `NETWORK`; a bad shape → `MALFORMED`; the URL round-trips through `Sources.parse`; no log argument contains a URL.
+- **resolve:** `OFFLINE` → `UNAVAILABLE` with `reason:'offline'`, and still no helper call.
+- **player (shim):**
+  - an offline live load fetches once and publishes `loading` then `ready`;
+  - a stale result after a source change is ignored;
+  - VOD and YouTube sources never fetch.
+- **sidebar:** rows render as text only (no `innerHTML` with titles); a click posts `open` with the VOD URL; and the `none` and `error` states.
+
+**Owns:** new `src/twitch-vods.js`, `src/resolve.js` (the reason field), `src/player.js` (the offline branch), `ui/sidebar.*` (the list), and new `tests/b6b-*.test.js`. It waits until `src/player.js` is free: after C3b, D1 and A2.

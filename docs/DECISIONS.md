@@ -83,3 +83,23 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Overrides:** the "pick A" recommendation in `docs/design/overhaul-2026-11-22/README.md`. That README's assumption, that launch users will change an app-wide preference, is the one this decision rejects.
 
 2026-11-22 D-028 UPDATE (native, 08:35): the gate passed. In IINA 1.5.1, `video-margin-ratio-right` 0.3 set from the plugin's player instance shrank the picture to the left 70%, letterboxed, with no reload. `core.window.frame` widening also held. Spike §7 has the steps, including the ones not run. #47 code may proceed.
+
+2026-11-22 D-029 CHOSEN (lead, unattended run under `.kickoff.json`; reversible; for the operator to confirm in #49): windows IINA opened itself (adopted, #35) reach global through a **request mailbox** of one file per request in `@data/bridge/`, which global polls. Replies use IINA's native global→bare-label `postMessage`.
+- **Why:** an adopted child's `postMessage` to global is a no-op in IINA 1.5.1, because `parentAPI` is set only by `createPlayerInstance` (`JavascriptAPIGlobal.swift` L82–87, L129–131). Observed natively in #56. Global→child by bare label works: observed, QA probe at 09:59.
+- **Why not reopen adopted streams in a managed window:** it replaces the user's window and doubles the resolve.
+- **Why not have the child read the Keychain itself:** that puts credential handling in every player.
+- **Tokens never touch disk.** The mailbox carries only names, nonces, labels and typed open input (deleted on read). Credentials go global→child in memory.
+- **What would flip it:** if a future IINA sets `parentAPI` for every core, or exposes the core label to plugins, drop the mailbox, or drop the handshake.
+- Design: `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md` §A2.
+
+2026-11-22 D-030 CHOSEN (lead, unattended run; reversible; for the operator to confirm in #49): an offline channel's recent broadcasts (#32) come from Twitch's **public GQL** (`user.videos`, type ARCHIVE), signed out, called from the player. They do not come from the Helix client (B6 step 1), which needs the user's token from global.
+- **Why:** a real-source check (10:10) returned archives with no sign-in. That works for signed-out users and in adopted windows (#56), and needs no global round trip. The GQL path and its Client-ID are already used for playback (`src/twitch-playback.js`).
+- **Cost:** GQL is Twitch's private API; the schema can change without notice. The playback path already carries that risk, and a failure degrades to today's offline error.
+- **The Helix client stays for #30** (Following), which needs the `user:read:follows` scope and the operator's approval.
+- **What would flip it:** GQL rejecting the public Client-ID for this query, or an operator preference for documented APIs only.
+- Design: `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md` §B6b.
+
+2026-11-22 D-029 AMENDMENT (lead, 10:20, from Codex's A2 test pass, verified in IINA v1.5.1 `JavascriptAPIFile.swift`): `file.write` doesn't create parent directories, and the file API has no mkdir. So the mailbox is flat files `@data/bridge-<time>-<random>.json`, not a `bridge/` directory. Global polls `file.list('@data/')` every **2 s**. That is the one timer it starts at load, which amends the earlier rule that loading global does no timer work (`tests/global.test.js`). An adopted child has no other channel: its `postMessage` is a no-op, global gets no player events, and preferences have no change signal.
+- **Cost:** one directory listing every 2 s while Streams is enabled. No reads unless a `bridge-*` file exists.
+- **What would flip it:** a measured energy cost the operator objects to (then poll only after a user opens an adopted Twitch window? Global can't see that). Or a host change from the D-029 flip list.
+

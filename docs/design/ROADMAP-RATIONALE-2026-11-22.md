@@ -1,5 +1,7 @@
 # Roadmap rationale (2026-11-22)
 
+> **Superseded from 0.5.6 onward** by [USER-JOURNEYS-2026-11-22.md](USER-JOURNEYS-2026-11-22.md) (D-026, 2026-11-22). The sections on 0.5.4 and 0.5.5 still apply.
+
 > Detail behind the issues and milestones. The live plan is the one-screen index in [../ROADMAP.md](../ROADMAP.md) and the GitHub milestones. This file records why each slice exists and its evidence; it is not updated as work moves.
 
 **Status: PROPOSED 2026-11-22, awaiting the user's approval (D-024).** It replaces the 2026-11-15 roadmap, which is in git history. Shipped work is recorded in [CHANGELOG.md](../../CHANGELOG.md), and how a build reaches IINA is in [RELEASE.md](../RELEASE.md). Each release lists its gate by evidence level: **native** = observed in installed IINA, **real-source** = real Twitch/YouTube data through the real code, **unit** = mocks/synthetic. A unit pass never closes a native gate.

@@ -60,3 +60,15 @@ Update this append-only log when actual decisions are made, with evidence and ro
 
 2026-11-22 D-022/#7 UPDATE (observed native bug, fixed in 85998a5): Sign out cleared the Keychain grant by writing `''`. macOS `SecItemUpdate` keeps an item's contents when given empty data, though it reports success, so the refresh token survived and the next Sign in refreshed silently. Sign out now writes a non-empty signed-out marker. Test doubles now model the host behaviour.
 
+2026-11-22 D-026 CHOSEN (user-approved): plan the releases around user journeys toward a public launch. The plan is in `docs/design/USER-JOURNEYS-2026-11-22.md`.
+- **Releases:**
+  - 0.5.5: chat on your timeline (unchanged).
+  - 0.5.6: find what to watch (#30, #32, #35, #34).
+  - 0.6.0: **public launch on Reddit**, with the UI overhaul (#20, #1, #18), out of the box (#36, spike #37) and the launch kit (#38).
+  - 0.7.0: talk back (#3, #29).
+  - 0.8.0: more platforms and accounts (#6, #19, spikes #39 and #40).
+- **Timeline (user):** 0.6.0 tonight; 0.8.0 within a few days to a week.
+- **Changes from D-024:** chat sending moves from 0.6.0 to 0.7.0; the overlay and panel work moves from 0.5.6 to 0.6.0, so the overhaul covers every screen at once; emotes split, with official ones in 0.5.6 (#34) and third-party ones in 0.7.0 (#29).
+- **Supersedes:** `ROADMAP-RATIONALE-2026-11-22.md` from 0.5.6 onward.
+- **Rust helpers:** the user asked about rewriting the helpers in Rust to save memory and CPU. That was deferred to measurement in spike #37. A 2026-11-22 snapshot during live playback found no Streams helper processes, with IINA at 102 MB and 15% CPU, so a compiled helper saves nothing in steady state.
+

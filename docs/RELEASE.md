@@ -7,10 +7,17 @@ How a change gets from a commit to your IINA, then to a release. The 0.2.0-era v
 | Identity | Plugin ID | Version shown in IINA | How it reaches IINA | Use it for |
 | --- | --- | --- | --- | --- |
 | Stable | `local.iina.streams` | `0.5.4` | GitHub Release asset (IINA › Settings › Plugins › Install from GitHub), or a release `.iinaplgz` | Everyday watching |
-| Beta | `local.iina.streams.beta` | `0.5.5-beta+g<sha>` | A packaged `.iinaplgz`: CI artifact for any pushed commit, or `npm run build:beta` | A frozen candidate you want to live with for a while |
-| Dev | `local.iina.streams.dev` | `0.5.5-dev+g<sha>` | A symlink into a staged, tested build (`npm run dev:deploy`) | Day-to-day iteration without reinstalling |
+| Beta | `local.iina.streams.beta` | `0.5.5-beta+g<sha>` | A packaged `.iinaplgz`: CI artifact for any pushed commit, or `npm run build:beta` | **The operator's daily copy:** the `beta` branch at tested checkpoints, including a release candidate before it ships |
+| Dev | `local.iina.streams.dev` | `0.5.5-dev+g<sha>` | A symlink into a staged, tested build (`npm run dev:deploy`) | **The lead's test copy:** iteration and QA runs. Enabled only while the lead is testing in IINA |
 
 IINA 1.5.1 keys plugin preferences, data (`plugins/.data/<id>`) and Keychain entries (service `<id> - twitch-readonly`, per `JavascriptAPIUtils.keychainRead`) by identifier. Each identity therefore keeps its own settings and **needs its own Twitch setup once**: re-enter the Twitch Client ID and approve a device-code sign-in. Enable only one Streams identity at a time. Two enabled identities give two *Open Stream…* items and two Streams sidebar tabs in ordinary players.
+
+## Who runs which copy (2026-11-22)
+
+- **You watch with Streams Beta.** The lead refreshes it (`npm run install-beta` from `beta`) only at a checkpoint, after a merge into `beta` passes every suite, and only while IINA is not running. A refresh never changes code under an open window. It takes effect the next time you open IINA. The previous Beta folder is kept under `~/Library/Application Support/iina-streams-dev/` for rollback.
+- **The lead tests with Streams Dev.** `dev:deploy` and `qa:deploy` swap Dev's files, so never watch with Dev. A deploy under a running IINA can leave a new window running a mix of old and new files.
+- **IINA is one app, and plugin switches are global.** A native test needs Dev on and Beta off, then IINA reopened. So a test happens only when you hand IINA over, and afterwards you switch back. Two enabled copies give two Open Stream items and two Streams sidebar tabs.
+- **A release candidate is a `beta`-branch build, not a separate identity.** If you're going to live with it, it belongs in Beta.
 
 ## Daily loop (Dev)
 

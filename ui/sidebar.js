@@ -152,12 +152,13 @@ function validClientID(v){
   renderPlaybackStatus(s);
   const chatOn=s.chat.mode!=='off';
   renderChatControls(s,chatOn);
+  renderCollapseToggle(s,chatOn);
   renderAuth(s,chatOn);
   renderChatStatus(s,chatOn);
   renderReplayControls(s);
   renderAppearance(s);
   renderChatTiming(s);
-  renderMessages(s,chatOn);
+  renderMessages(s);
   positionMessages();
  }
 
@@ -241,6 +242,23 @@ function validClientID(v){
   $('resume').hidden=!s.chat.available||chatOn;
  }
 
+ // D1c: hiding chat over or beside the video is a view state the player owns; a missing field means shown.
+ function collapsedOf(s){
+  return!!s&&s.collapsed===true;
+ }
+
+ function renderCollapseToggle(s,chatOn){
+  const onVideo=s.view.presentation==='overlay'||s.view.presentation==='beside';
+  const collapsed=collapsedOf(s);
+  const label=collapsed?'Show Chat':'Hide Chat';
+  $('chat-collapse').hidden=!chatOn||!onVideo;
+  $('chat-collapse').setAttribute('aria-label',label);
+  $('chat-collapse').setAttribute('title',label);
+  $('chat-collapse-hide-icon').hidden=collapsed;
+  $('chat-collapse-show-icon').hidden=!collapsed;
+  $('chat-collapse-unread').hidden=s.unread!==true;
+ }
+
  function renderAuth(s,chatOn){
   const twitch=s.source.kind==='twitch-live';
   const ap=s.auth.phase;
@@ -256,9 +274,8 @@ function validClientID(v){
   $('account-label').textContent=s.auth.login?'Signed in as '+s.auth.login:'';
  }
 
+ // State is shown by signifiers, with no prose status line (D1c text cleanup). Errors go to #chat-error.
  function renderChatStatus(s,chatOn){
-  const replay=s.chat.mode==='replay';
-  let status='';
   const busyStep=chatOn?BUSY[s.chat.state]||'':'';
   $('chat-busy').hidden=!busyStep;
   $('chat-busy').title=busyStep;
@@ -266,9 +283,6 @@ function validClientID(v){
   const ytNote=!chatOn&&s.live&&s.source.kind==='youtube'?
    'YouTube live chat isn’t available yet. Replay loads after the stream ends.':'';
   $('chat-switch').title=ytNote||'Toggle chat on or off';
-  if(!busyStep&&replay)status=s.chat.sourceName+' · '+s.chat.count.toLocaleString()+' messages';
-  $('chat-status').textContent=status;
-  $('chat-status').hidden=!status;
   $('chat-error').textContent=s.chat.error||'';
   $('chat-error').hidden=!s.chat.error;
  }
@@ -360,9 +374,7 @@ function validClientID(v){
   return 'custom';
  }
 
- function renderMessages(s,chatOn){
-  const overlayEmpty=s.chat.state!=='connected'&&!(s.messages&&s.messages.length);
-  $('overlay-note').hidden=!chatOn||s.view.presentation!=='overlay'||overlayEmpty;
+ function renderMessages(s){
   // A list that was hidden reads scrollTop 0, so its position is only re-read while it stays visible (#23).
   const wasVisible=messagesVisible();
   messages.hidden=s.view.presentation==='overlay';
@@ -449,10 +461,11 @@ function validClientID(v){
  // ---- Controls ----
 
  const CLICK_MESSAGES=[
-  ['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],
+  ['hide','hide'],['refresh','refresh'],['import','import'],
   ['fetch','fetch-replay'],['resume','replay-resume'],['first','first-message'],['forget','forget-auth']
  ];
  for(const [id,event] of CLICK_MESSAGES)$(id).addEventListener('click',()=>post(event));
+ $('chat-collapse').addEventListener('click',()=>post('chat-collapse',{collapsed:!collapsedOf(state)}));
 
  // ---- Open another stream (#50): an inline field, never a modal prompt ----
 

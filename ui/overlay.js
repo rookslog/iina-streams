@@ -7,6 +7,9 @@
  const columnTools=document.getElementById('column-tools');
  const goLiveButton=document.getElementById('go-live');
  const hideChatButton=document.getElementById('hide-chat');
+ const hideChatIcon=document.getElementById('hide-chat-icon');
+ const showChatIcon=document.getElementById('show-chat-icon');
+ const unreadDot=document.getElementById('chat-unread');
  let state=null,drag=null,resize=null,following=true,signature='';
  // A drag of the docked column's left edge: {x, width} at mousedown. The width posts on mouseup.
  let columnDrag=null;
@@ -71,6 +74,11 @@
   return!!s&&s.layout==='column';
  }
 
+ // D1c: hiding chat is a view state the player owns. A missing field (an older player) means shown.
+ function collapsedOf(s){
+  return!!s&&s.collapsed===true;
+ }
+
  function columnWidth(){
   const width=Number(state&&state.view&&state.view.columnWidth)||COLUMN_DEFAULT;
   return Math.max(COLUMN_MIN,Math.min(COLUMN_MAX,innerWidth,width));
@@ -81,11 +89,25 @@
   panel.style.width=width+'px';
   panel.style.height=innerHeight+'px';
   panel.style.left=Math.max(0,innerWidth-width)+'px';
+  panel.style.right='';
   panel.style.top='0px';
+ }
+
+ // A collapsed column shrinks to its tool cluster at the top-right corner, so only the cluster takes clicks.
+ function positionCollapsedColumn(){
+  panel.style.width='';
+  panel.style.height='';
+  panel.style.left='';
+  panel.style.right='0px';
+  panel.style.top='';
  }
 
  function position(){
   if(!state)return;
+  if(columnLayout(state)&&collapsedOf(state)){
+   positionCollapsedColumn();
+   return;
+  }
   if(columnLayout(state)){
    positionColumn();
    if(following)messages.scrollTop=messages.scrollHeight;
@@ -97,6 +119,7 @@
   const g=geometry(sz.w,sz.h);
   panel.style.left=Math.round((Number(state.view.x)||0)*g.maxX)+'px';
   panel.style.top=Math.round((Number(state.view.y)||0)*g.maxY)+'px';
+  panel.style.right='';
   if(following)messages.scrollTop=messages.scrollHeight;
  }
 
@@ -167,13 +190,34 @@
 
  function renderColumn(s){
   const column=columnLayout(s);
+  const collapsed=column&&collapsedOf(s);
   document.body.setAttribute('data-layout',column?'column':'float');
-  columnHandle.hidden=!column;
+  panel.setAttribute('data-collapsed',String(collapsed));
+  columnHandle.hidden=!column||collapsed;
   columnTools.hidden=!column;
+  messages.hidden=collapsed;
   goLiveButton.hidden=!s.canGoLive;
+  renderCollapseButton(s);
   columnHandle.setAttribute('aria-valuenow',String(columnWidth()));
   columnHandle.setAttribute('aria-valuemin',String(COLUMN_MIN));
   columnHandle.setAttribute('aria-valuemax',String(COLUMN_MAX));
+ }
+
+ // The one button hides and shows chat; its icon and name say which. The dot marks messages that arrived while hidden.
+ function renderCollapseButton(s){
+  const collapsed=collapsedOf(s);
+  const label=collapsed?'Show Chat':'Hide Chat';
+  hideChatButton.setAttribute('aria-label',label);
+  hideChatButton.setAttribute('title',label);
+  hideChatIcon.hidden=collapsed;
+  showChatIcon.hidden=!collapsed;
+  unreadDot.hidden=s.unread!==true;
+ }
+
+ function panelHidden(s){
+  if(!chatOnVideo(s))return true;
+  if(!columnLayout(s)&&collapsedOf(s))return true;
+  return!messages.children.length&&(!s.chat||s.chat.mode==='off');
  }
 
  function render(s){
@@ -185,7 +229,7 @@
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
   renderMessages(s);
   markClickable();
-  panel.hidden=!chatOnVideo(s)||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
+  panel.hidden=panelHidden(s);
   position();
  }
 
@@ -246,7 +290,7 @@
  });
 
  goLiveButton.addEventListener('click',()=>post('go-live',{}));
- hideChatButton.addEventListener('click',()=>post('chat-off',{}));
+ hideChatButton.addEventListener('click',()=>post('chat-collapse',{collapsed:!collapsedOf(state)}));
 
  window.addEventListener('mousemove',e=>{
   if(columnDrag&&state){
@@ -343,7 +387,8 @@
    action:a.name,
    messageIds:(state.messages||[]).map(m=>m.id),
    renderedMessages:Array.from(messages.children).map(e=>nodeText(e).slice(0,2100)),
-   visible:!panel.hidden,
+   visible:!panel.hidden&&!messages.hidden,
+   collapsed:collapsedOf(state),
    messages:messages.children.length,
    x:panel.offsetLeft,y:panel.offsetTop,
    width:panel.offsetWidth,height:panel.offsetHeight,

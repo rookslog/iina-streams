@@ -7,7 +7,11 @@
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
- const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
+ const on=(name,fn)=>iina.onMessage(name,data=>{
+  try{
+   fn(JSON.parse(decodeURIComponent(data.encoded)));
+  }catch(_){}
+ });
  on('hello',()=>post('overlay-ready',{ready:true}));
 
  function markClickable(){
@@ -17,7 +21,8 @@
 
  function authorColor(name,supplied){
   if(supplied&&/^#[0-9a-f]{6}$/i.test(supplied))return supplied;
-  let h=0;const s=String(name||'');
+  let h=0;
+  const s=String(name||'');
   for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;
   return FALLBACK_COLORS[Math.abs(h)%FALLBACK_COLORS.length];
  }

@@ -19,7 +19,8 @@
     "dev:status": "python3 -B scripts/dev.py status",
     "dev:rollback": "python3 -B scripts/dev.py rollback",
     "link-dev": "npm run dev:link",
-    "unlink-dev": "npm run dev:unlink"
+    "unlink-dev": "npm run dev:unlink",
+    "sync:helpers": "python3 scripts/build.py --sync-embedded"
   },
   "license": "MIT"
 }

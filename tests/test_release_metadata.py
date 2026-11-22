@@ -29,6 +29,16 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(len(CHECK.problems(dict(self.info, ghVersion=True), self.package)), 1)
 
 
+    def test_checked_in_embedded_helpers_match_helpers_sources(self):
+        # A source install (IINA's main.zip fallback) runs this checked-in copy, not a rebuilt one.
+        # Release review 2026-11-22 found 'acquire' stale. Fix: python3 scripts/build.py --sync-embedded
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('build_module', ROOT / 'scripts' / 'build.py')
+        build_module = importlib.util.module_from_spec(spec); spec.loader.exec_module(build_module)
+        checked_in = (ROOT / 'src' / 'embedded-helpers.js').read_text()
+        self.assertEqual(checked_in, build_module.embedded_helpers_js(),
+                         'src/embedded-helpers.js is stale: run python3 scripts/build.py --sync-embedded')
+
     def test_no_npm_script_deletes_the_installed_stable_plugin(self):
         # #21: stable deployment goes through a Release with a backup, never rm -rf.
         for name, command in self.package['scripts'].items():

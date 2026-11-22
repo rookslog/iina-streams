@@ -46,6 +46,25 @@ VARIANTS = {
 }
 
 
+def embedded_helpers_js():
+    """The src/embedded-helpers.js text for the current helpers/*.py. Builds and the checked-in copy must match it."""
+    helper_paths = sorted(
+        SOURCE.joinpath('helpers').glob('*.py'),
+        key=lambda p: (HELPER_ORDER.get(p.stem, len(HELPER_ORDER)), p.name),
+    )
+    embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in helper_paths}
+    return '"use strict";\nmodule.exports=' + json.dumps(embedded, ensure_ascii=True, separators=(',', ':')) + ';\n'
+
+
+def sync_embedded():
+    """Rewrite the checked-in src/embedded-helpers.js. A source install (IINA's main.zip fallback) runs this copy."""
+    target = SOURCE / 'src' / 'embedded-helpers.js'
+    text = embedded_helpers_js()
+    changed = target.read_text() != text
+    target.write_text(text)
+    return changed
+
+
 def build(output, beta=False, dev=False):
     """Build one variant. `dev` is the linked development identity; `beta` the packaged beta."""
     if beta and dev:
@@ -71,12 +90,6 @@ def build(output, beta=False, dev=False):
         p for entry in PLUGIN_ENTRIES for p in ([SOURCE / entry] if (SOURCE / entry).is_file() else (SOURCE / entry).rglob('*'))
         if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'
     )
-    helper_paths = sorted(
-        SOURCE.joinpath('helpers').glob('*.py'),
-        key=lambda p: (HELPER_ORDER.get(p.stem, len(HELPER_ORDER)), p.name),
-    )
-    embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in helper_paths}
-
     bundle = output / f'{stem}.iinaplugin'
     archive = output / (f'iina-{stem}-{version}-{ref}.iinaplgz' if isolated else f'iina-streams-{version}.iinaplgz')
 
@@ -101,9 +114,7 @@ def build(output, beta=False, dev=False):
             (temp / 'config.js').write_text(
                 '"use strict";\nmodule.exports=' + json.dumps(runtime, separators=(',', ':')) + ';\n'
             )
-        (temp / 'src' / 'embedded-helpers.js').write_text(
-            '"use strict";\nmodule.exports=' + json.dumps(embedded, ensure_ascii=True, separators=(',', ':')) + ';\n'
-        )
+        (temp / 'src' / 'embedded-helpers.js').write_text(embedded_helpers_js())
         if bundle.exists():
             shutil.rmtree(bundle)
         temp.rename(bundle)
@@ -145,7 +156,11 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--beta', action='store_true', help='Build isolated Streams Beta package')
     group.add_argument('--dev', action='store_true', help='Build isolated Streams Dev bundle (for the linked dev workflow)')
+    group.add_argument('--sync-embedded', action='store_true', help='Rewrite the checked-in src/embedded-helpers.js from helpers/*.py')
     args = parser.parse_args()
+    if args.sync_embedded:
+        print('src/embedded-helpers.js ' + ('updated' if sync_embedded() else 'already current'))
+        return
     print(json.dumps(build(args.output, beta=args.beta, dev=args.dev), indent=2))
 
 

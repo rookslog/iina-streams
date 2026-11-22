@@ -49,10 +49,11 @@ Policy D-020 as corrected by D-021: the source version is the *next* release (no
 
 1. On `beta`: CI is green, the native acceptance pass is done (`.agents/skills/streams-native-acceptance/SKILL.md`), and the user has approved promotion.
 2. Confirm `version` in `Info.json` and `package.json` is the release, `ghVersion` is one above `main`'s, and the `CHANGELOG.md` entry is written. For 0.5.4 this is already done on `beta` (0.5.4 / ghVersion 3; `main` is 0.5.3 / ghVersion 2).
-3. Open a PR from `beta` to `main` and get an independent review. Merge it.
-4. Tag the merge commit `vX.Y.Z` and push **main and the tag together** (`git push origin main vX.Y.Z`). The update check reads `main` while the install reads the latest Release, so main's new `ghVersion` should not be live without its Release.
-5. Confirm the Release has the `.iinaplgz`, then install or update through IINA and smoke-test it.
-6. On `beta`, set the next target version (for example 0.5.5) so beta and dev builds stop stamping the released number.
+3. Run `python3 scripts/build.py --sync-embedded`. CI fails if `src/embedded-helpers.js` is stale. Then get an independent review of `main...beta`, with its record in `docs/reviews/`.
+4. Merge `beta` into `main` locally, and tag the merge commit `vX.Y.Z`. **Push the tag first, not `main`:** `git push origin vX.Y.Z`. The tag's CI builds the stable `.iinaplgz` and publishes the Release.
+5. Wait until the Release shows the `.iinaplgz` asset. **Only then** push `main` (`git push origin main`). IINA's update check reads `main/Info.json` `ghVersion`. If `main` moves first, a 0.5.3 user can be updated from `main`'s source zip before the package exists, and then strands at the new `ghVersion`. That was the 2026-11-22 review's blocker; pushing `main` and the tag together does not prevent it, because the tag's CI takes minutes.
+6. Install or update through IINA and smoke-test it.
+7. On `beta`, set the next target version (for example 0.5.5) so beta and dev builds stop stamping the released number.
 
 **State on 2026-11-22:** no GitHub Release has been published. The `v0.5.3` tag CI run failed in the Python suite, so the release job never ran, and GitHub installs currently receive `main`'s source zip.
 

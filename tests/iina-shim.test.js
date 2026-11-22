@@ -400,6 +400,30 @@ test('mpv: typed getters with IINA defaults, recorded set/command, validated com
   await assert.rejects(shim.mpv.runHook('on_unload'), /no mpv hook registered/);
 });
 
+// IINA v1.5.1 MPVController.swift, MPVHookValue.call: next() follows any callback whose constructor is not
+// AsyncFunction; an async callback holds the load until it calls next itself.
+test('mpv hooks: IINA continues a plain hook itself, and only an async hook holds the load', async () => {
+  const shim = createIina();
+  let continued = 0;
+  shim.iina.mpv.addHook('on_load', 20, () => {});
+  await shim.mpv.runHook('on_load', () => continued++);
+  assert.equal(continued, 1, 'a plain function is continued by IINA when it returns');
+  let release;
+  shim.iina.mpv.addHook('on_load', 20, async next => { await new Promise(r => { release = r; }); next(); });
+  continued = 0;
+  const pending = shim.mpv.runHook('on_load', () => continued++);
+  await Promise.resolve();
+  assert.equal(continued, 0, 'an async function holds the load');
+  release();
+  await pending;
+  assert.equal(continued, 1);
+  shim.iina.mpv.addHook('on_load', 20, () => shim.iina.sidebar.loadFile('ui/sidebar.html'));
+  await shim.mpv.runHook('on_load', () => {});
+  assert.deepEqual(shim.mpv.offMainCalls, [{hook: 'on_load', api: 'sidebar.loadFile'}]);
+  shim.iina.sidebar.show();
+  assert.equal(shim.mpv.offMainCalls.length, 1, 'calls outside a hook stack are on the main thread');
+});
+
 test('core.window: plugin assignment is applied but throws in strict mode (native proxy does not return true)', () => {
   const shim = createIina({window: {frame: {x: 1, y: 2, width: 3, height: 4}}});
   assert.equal(shim.iina.core.window.loaded, true);

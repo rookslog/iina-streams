@@ -35,20 +35,40 @@ function sidebarPage() {
   const page = createWebViewIina();
   const elements = new Map();
   const inputs = [];
+  const focusState = {pageFocused: true};
   const document = {
     ...eventTarget(),
     activeElement: null,
     hidden: false,
     getElementById: id => elements.get(id) || null,
-    createElement: tag => makeElement(tag)
+    createElement: tag => makeElement(tag),
+    hasFocus: () => focusState.pageFocused
   };
+
+  // Browser focus rules the open field depends on: focusing an element fires focusout on the previous one,
+  // and hiding an ancestor of the focused element removes focus (focus fixup), with no relatedTarget.
+  function moveFocus(next) {
+    const previous = document.activeElement;
+    if (previous === next) return;
+    document.activeElement = next;
+    if (previous) dispatch(previous, 'focusout', {relatedTarget: next});
+  }
   const window = eventTarget();
 
   function makeElement(tag, attributes = {}) {
+    let hidden = Object.hasOwn(attributes, 'hidden');
     return {
       ...eventTarget(),
       tagName: tag.toUpperCase(),
-      hidden: Object.hasOwn(attributes, 'hidden'),
+      get hidden() { return hidden; },
+      set hidden(value) {
+        hidden = !!value;
+        if (hidden && document.activeElement && this.contains(document.activeElement)) moveFocus(null);
+      },
+      contains(node) {
+        for (let current = node; current; current = current.parentElement) if (current === this) return true;
+        return false;
+      },
       disabled: Object.hasOwn(attributes, 'disabled'),
       value: '',
       children: [],
@@ -72,10 +92,10 @@ function sidebarPage() {
         this.children.push(child);
       },
       focus() {
-        if (isVisible(this)) document.activeElement = this;
+        if (isVisible(this)) moveFocus(this);
       },
       blur() {
-        if (document.activeElement === this) document.activeElement = null;
+        if (document.activeElement === this) moveFocus(null);
       }
     };
   }
@@ -137,7 +157,23 @@ function sidebarPage() {
     document, window, iina: page.iina, requestAnimationFrame: () => 0, cancelAnimationFrame() {}
   }, {filename: 'sidebar.js'});
 
-  return {page, document, inputs, press, clickOpen: () => dispatch(elements.get('open'), 'click')};
+  // A key goes to the focused element, or to the body when nothing has focus.
+  function pressFocused(key) {
+    return dispatch(document.activeElement || document.body, 'keydown', {key});
+  }
+
+  // A pointer press on a button. WebKit on macOS does not focus a clicked button, so unless mousedown is
+  // prevented, focus leaves the focused element for the body (relatedTarget null).
+  function pointerClick(element) {
+    if (!dispatch(element, 'mousedown')) moveFocus(null);
+    dispatch(element, 'click');
+  }
+
+  return {
+    page, document, inputs, press, pressFocused, pointerClick, focusState, moveFocus,
+    element: id => elements.get(id),
+    clickOpen: () => dispatch(elements.get('open'), 'click')
+  };
 }
 
 test('A1.4 sidebar plus reveals a focused field with Return, Escape, and inline errors', () => {
@@ -170,4 +206,63 @@ test('A1.4 sidebar plus reveals a focused field with Return, Escape, and inline 
   clickOpen();
   assert.equal(isVisible(field), false, 'a second plus click should hide the field');
   assert.equal(page.posts.length, submittedPosts, 'toggling the field must not post a message');
+});
+
+// Observed natively (2026-11-22): invalid text, Return, then Escape left the field open. Which link fails in
+// IINA's WKWebView is INFERRED, not observed: after Return hides the field, focus leaves it, and if showing it
+// for open-error does not bring focus back, Escape reaches the body, not the field. Staged here by hand.
+test('A1.4 Escape hides the field after an inline error even when focus did not return to it', () => {
+  const {page, document, press, pressFocused, clickOpen} = sidebarPage();
+  clickOpen();
+  const field = document.activeElement;
+  field.value = 'not a stream';
+  press(field, 'Enter');
+  assert.equal(isVisible(field), false, 'Return hides the field while global parses');
+  assert.equal(document.activeElement, null, 'hiding the field removed its focus');
+  page.receiveEnvelope('open-error', {});
+  assert.equal(isVisible(field), true);
+  assert.equal(field.getAttribute('aria-invalid'), 'true');
+  document.activeElement = null;
+  const posts = page.posts.length;
+  pressFocused('Escape');
+  assert.equal(isVisible(field), false, 'Escape must hide the field wherever focus is');
+  assert.equal(page.posts.length, posts, 'Escape must not post');
+});
+
+test('A1.4 the open field hides when focus moves elsewhere in the sidebar, not when the page loses focus', () => {
+  const {document, focusState, moveFocus, element, clickOpen} = sidebarPage();
+  clickOpen();
+  const field = document.activeElement;
+  field.value = 'xqc';
+  moveFocus(element('quality'));
+  assert.equal(isVisible(field), false, 'focus moving to another control hides the field');
+
+  clickOpen();
+  assert.equal(isVisible(field), true);
+  focusState.pageFocused = false;
+  moveFocus(null);
+  assert.equal(isVisible(field), true, 'switching apps to copy a URL keeps the field');
+});
+
+test('A1.4 pressing + while the field has focus closes it rather than reopening it', () => {
+  const {document, pointerClick, element} = sidebarPage();
+  pointerClick(element('open'));
+  const field = document.activeElement;
+  assert.equal(field?.tagName, 'INPUT');
+  assert.equal(element('open').getAttribute('aria-expanded'), 'true');
+  pointerClick(element('open'));
+  assert.equal(isVisible(field), false);
+  assert.equal(element('open').getAttribute('aria-expanded'), 'false');
+});
+
+test('A1.4 an inline error after Return shows the field again with its text and focus', () => {
+  const {page, document, press, clickOpen} = sidebarPage();
+  clickOpen();
+  const field = document.activeElement;
+  field.value = 'not a stream';
+  press(field, 'Enter');
+  page.receiveEnvelope('open-error', {});
+  assert.equal(isVisible(field), true, 'focusout from the submit must not hide the re-shown field');
+  assert.equal(document.activeElement, field);
+  assert.equal(field.value, 'not a stream');
 });

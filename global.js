@@ -4,6 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
+const {listen}=require('./src/listeners.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
@@ -200,8 +201,8 @@ function showOpenWindow(){
   return;
  }
  openWindow.loadFile(OPEN_PAGE);
- openWindow.onMessage('open-stream',onOpenWindowSubmit);
- openWindow.onMessage('open-cancel',()=>openWindow.close());
+ listen(openWindow,'standaloneWindow','open-stream',onOpenWindowSubmit);
+ listen(openWindow,'standaloneWindow','open-cancel',()=>openWindow.close());
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(380,84);
  openWindow.open();
@@ -339,12 +340,12 @@ menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+
 // global (MenuController.swift L619, PlayerCore.swift L40-46, JavascriptPlugin.swift L166-168,
 // JavascriptPluginInstance.swift L175-182). v0.5.5 review r1 #5.
 if(typeof menu.forceUpdate==='function')timers.setTimeout(()=>menu.forceUpdate(),0);
-app.onMessage('open',onPlayerOpen);
-app.onMessage('auth-connect',onAuthConnect);
-app.onMessage('auth-probe',onAuthProbe);
-app.onMessage('auth-disconnect',onAuthDisconnect);
-app.onMessage('player-closed',onPlayerClosed);
-app.onMessage('auth-forget',onAuthForget);
+listen(app,'global','open',onPlayerOpen);
+listen(app,'global','auth-connect',onAuthConnect);
+listen(app,'global','auth-probe',onAuthProbe);
+listen(app,'global','auth-disconnect',onAuthDisconnect);
+listen(app,'global','player-closed',onPlayerClosed);
+listen(app,'global','auth-forget',onAuthForget);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label
@@ -361,14 +362,14 @@ if(config.qa){
 }
 
 if(config.qa){
- app.onMessage('qa-ping',(_,label)=>{
+ listen(app,'global','qa-ping',(_,label)=>{
   const id=targetID(label);
   qaTrace('ping',{id,sender:label});
   setTimeout(()=>{
    if(id!==null)app.postMessage(id,'qa-pong','number-string-deferred');
   },0);
  });
- app.onMessage('qa-open',data=>openStream(data&&data.url));
+ listen(app,'global','qa-open',data=>openStream(data&&data.url));
  // QA builds from `npm run qa:deploy` set config.qa to true (no startup source): only open a
  // startup player when a source is configured (#33).
  const q=config.qa;

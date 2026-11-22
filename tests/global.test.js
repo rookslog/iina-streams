@@ -29,6 +29,7 @@ function harness(overrides = {}) {
       if (moduleName === './src/source.js') return Sources;
       if (moduleName === './src/auth.js') return {TwitchAuth: CapturedAuth};
       if (moduleName === './src/timers.js') return require('../src/timers.js');
+      if (moduleName === './src/listeners.js') return require('../src/listeners.js');
       if (moduleName === './src/twitch-app.js') return {clientID: overrides.builtInClientID || ''};
       throw new Error('Unexpected module ' + moduleName);
     }

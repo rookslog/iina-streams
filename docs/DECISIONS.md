@@ -124,7 +124,7 @@ Update this append-only log when actual decisions are made, with evidence and ro
 
 2026-11-22 D-033 CHOSEN (operator, 16:30, on the lead's recommendation after v0.5.5 clearance 1): 0.5.5 ships without two behaviours that 0.5.4 never had.
 - **Adoption is off by default.** Windows IINA opens itself (browser handoff, Open URL, drag, `iina`) play as plain IINA, as in 0.5.4. Adoption (#35) runs only in QA builds or with `adoptNativeWindows: true`. It returns by default in 0.5.6, its milestone. Amends D-031 for 0.5.5: stable no longer adopts by default.
-- **A window that switches away stays inactive.** Loading its stream again in the same window does not bring Streams back, as in 0.5.4. Reopen through Open Stream instead.
+- **A window whose player loads a different file stays inactive.** This means another file loaded into that IINA window, not switching focus to other apps, which is unaffected. Loading the stream again in the same window does not bring Streams back, as in 0.5.4. Reopen through Open Stream instead.
 - **Why:** clearance 1 found two Important class-L findings (authority across async boundaries) in exactly these paths: a late quality change replacing a different adopted stream, and the old activation's helpers running on after a fast reopen. Under D-032 rule 4, a class that survives clearance goes to the operator. Descoping returns both paths to 0.5.4's known behaviour, instead of adding state to the release.
 - **Kept and fixed in 0.5.5:** every on_load hook continues exactly once by construction, and the resolver stops at loss (class L pass 2).
 - **What would flip it:** if switching both off had touched as much code as repairing them. 0.5.6 restores both, with the explorer extended to adopted windows and the resolver.

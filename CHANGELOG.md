@@ -1,6 +1,8 @@
 # Changelog
 
 ## 0.5.4-beta (unreleased, 2026-11-22) — development workflow and CI
+- Sign in no longer needs a Twitch Client ID. Streams ships the public Client ID of its own Twitch app, a Public client with no secret. An ID the user entered or saved still takes precedence, and only a user's own ID is saved (#8, D-025).
+- Sign out now erases the saved login. Clearing it with an empty Keychain write left the old login in place, because macOS keeps an item's contents when it is updated with empty data. The next Sign in then silently refreshed the old login (#7).
 - Repo cleanup (#12): removed the unshipped `plugin-dev/` 0.2.0 plugin and its 12 tests, the candidate builder/manager scripts with their tests (8 of them could never run), `verify.sh`, `export-review.py` and `releases/`. Renamed `tests_candidate/` → `tests/`. Moved 85 candidate-era docs and the old README to `docs/archive/`. New user-facing README. AGENTS.md and the project skills now point to current paths.
 - Live chat timestamps show Twitch's send time (`tmi-sent-ts`) instead of the panel's render time, which also made older messages jump to the current minute (#10). Normalized messages gain `sentAt`.
 - Removed `npm run install-local`, which deleted the installed stable plugin without a backup (#21).

@@ -44,3 +44,19 @@ Update this append-only log when actual decisions are made, with evidence and ro
 2026-11-22 D-022 UPDATE (observed native failure): on first native use, Plugin › Reload All Plugins crashed IINA 1.5.1. Crash report `~/Library/Logs/DiagnosticReports/IINA-2026-11-22-005118.ips` shows an `EXC_BREAKPOINT` on the main thread in `JavascriptAPISidebarView.loadFile`, called from a plugin JS event handler re-emitted by `AppDelegate.reloadAllPlugins`. The calling plugin is unconfirmed: Streams Beta and the built-in OpenSubtitles plugin both call `sidebar.loadFile`. A nil weak force-unwrapped reference (`player!` or `pluginInstance`) is inferred from source and unproven. The dev loop's reload step is now **quit and relaunch IINA**; `dev.py` hints, RELEASE.md and ROADMAP are updated to match.
 
 2026-11-22 D-024 UPDATE (user-approved): tracking moved to GitHub. Milestones 0.5.4, 0.5.5, 0.5.6 and 0.6.0 hold the release slices. Issues #6–#18 were filed from the roadmap, with parents #6 (account and sign-in), #2 (chat timing) and #1 (overlay), and area/type labels. `docs/ROADMAP.md` is now a one-screen index with an intake rule. The detailed plan moved to `docs/design/ROADMAP-RATIONALE-2026-11-22.md`.
+
+2026-11-22 D-025 CHOSEN (user-approved, issue #8, pulled into 0.5.4): Streams ships a built-in Twitch Client ID, the maintainer's "IINA Streams" application, in `src/twitch-app.js`.
+- **Why it is safe to publish:** the application is the Public client type. Twitch's device-code flow uses no client secret for public clients, and they refresh without one (Twitch "Getting OAuth Access Tokens" docs), so the ID names the app and cannot act as it.
+- **Rate limits:** Twitch publishes no per-app limit for its authorization endpoints. A staff forum reply says apps need to worry only if they misbehave, and each user token has its own request pool.
+- **Resolution order, in `global.js` auth-connect:**
+  1. the ID just entered in setup;
+  2. the user's own saved ID (`@data/twitch-client.json`);
+  3. the saved login's ID;
+  4. the built-in ID;
+  5. otherwise, setup.
+- **Not saved as the user's own:** the built-in ID is never written to that file, so a future change to the built-in ID reaches every user who never chose their own.
+- **Fallback:** the setup sheet stays reachable through "Use a different Client ID" when Twitch rejects the built-in app.
+- **Amends:** `docs/design/TWITCH-SIGN-IN-2026-11-22.md` "Client ID sources", which had put the built-in ID first.
+
+2026-11-22 D-022/#7 UPDATE (observed native bug, fixed in 85998a5): Sign out cleared the Keychain grant by writing `''`. macOS `SecItemUpdate` keeps an item's contents when given empty data, though it reports success, so the refresh token survived and the next Sign in refreshed silently. Sign out now writes a non-empty signed-out marker. Test doubles now model the host behaviour.
+

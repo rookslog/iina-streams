@@ -1,6 +1,6 @@
 # Twitch sign-in and first-run onboarding — design (2026-11-22)
 
-**Status:** chosen by the lead at the user's direction ("whatever you think should be ideal"). Not yet built or natively tested.
+**Status:** built and natively accepted (#7, closed 2026-11-22). The built-in Client ID shipped in 0.5.4 (#8, D-025). That amended the source order below.
 
 **User feedback, 2026-11-22.** Onboarding is "very frustrating". Re-adding credentials should be one button, with a route to the page where the Client ID lives and instructions there. "Forget Twitch login" is weird: it should be **Sign in / Sign out**. Text such as "read-only mode" helps nobody.
 
@@ -23,7 +23,14 @@
 
 ## Client ID sources, in order
 
-Built-in ID (injected at build time; publishing one is a separate user decision), then the stored per-identity `@data/twitch-client.json`, then the Keychain grant's `clientID`, then step 6.
+Amended by D-025, 2026-11-22. The order is:
+1. the ID just entered in setup;
+2. the user's own stored ID (`@data/twitch-client.json`);
+3. the Keychain grant's `clientID`;
+4. the built-in ID (`src/twitch-app.js`, the maintainer's Public app);
+5. otherwise, step 6.
+
+The built-in ID is never saved as the user's own. A user's choice outranks the built-in ID, so "Use a different Client ID" keeps working.
 
 ## Copy rules
 

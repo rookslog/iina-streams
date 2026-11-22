@@ -163,3 +163,21 @@ test('window: only samples from the last 30 seconds count', () => {
   addSamples(estimator, [recentOffset], {start: 39.5, rawStart: 128.5});
   assert.equal(estimator.offset(), recentOffset);
 });
+
+test('agreement: exactly half the window near the median is uncertain; more than half is confident', () => {
+  // Lead-added (C1 review): with these clusters the median sits inside the middle cluster,
+  // so only the more-than-half rule decides. Spread samples are 5 s from the median.
+  const half = newEstimator();
+  const halfOffsets = [
+    ...Array(4).fill(OFFSET - 5), ...Array(9).fill(OFFSET), ...Array(5).fill(OFFSET + 5),
+  ];
+  addSamples(half, halfOffsets);
+  assert.equal(half.offset(), null);
+
+  const majority = newEstimator();
+  const majorityOffsets = [
+    ...Array(4).fill(OFFSET - 5), ...Array(10).fill(OFFSET), ...Array(4).fill(OFFSET + 5),
+  ];
+  addSamples(majority, majorityOffsets);
+  assert.equal(majority.offset(), OFFSET);
+});

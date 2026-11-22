@@ -169,7 +169,11 @@ function createLiveClock({
     if (lastGoodSampleMs === null || now() - lastGoodSampleMs > staleMs) {
       return null;
     }
-    return estimator.behindLive({now: now() / 1000, rawTimePos: lastTimePos});
+    // Read the playhead now: the last sample's time-pos is up to intervalMs old, which made the
+    // estimate drift upward between samples (C3 review). Fall back to it if the read fails.
+    const current = readPlayer();
+    const timePos = current && isFiniteNumber(current.timePos) ? current.timePos : lastTimePos;
+    return estimator.behindLive({now: now() / 1000, rawTimePos: timePos});
   }
 
   /** @returns {number|null} player time to seek to for "go live", or null if unknown */

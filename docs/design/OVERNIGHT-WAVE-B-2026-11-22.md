@@ -432,6 +432,8 @@ Routing:
 
 ## B6b — Offline channel offers its recent broadcasts (#32), per D-030
 
+> **Superseded in part by B6c (2026-11-22 12:36).** Natively, IINA closes the player window when an offline load fails, so the sidebar list below was unreachable. The list now lives in the Open Stream window: the player posts `source-offline {login}`, and global fetches and shows the list (`global.js` `onSourceOffline`, `ui/open.*`). `src/twitch-vods.js` and the resolver's `reason:'offline'` are unchanged.
+
 **Why.** Typing a channel that isn't live gives a dead end today. `src/resolve.js` maps `OFFLINE` to the helper's generic `UNAVAILABLE`. Real-source check (lead, 10:10, signed out, public web Client-ID as in `src/twitch-playback.js`): GQL `user(login){videos(first:N, type:ARCHIVE, sort:TIME){edges{node{id title createdAt lengthSeconds}}}}` returned 5 archives for a live channel, and `user: null` for an unknown login. No sign-in is needed, so this works in managed and adopted windows alike, and needs no global round trip.
 
 **Design.**

@@ -70,3 +70,10 @@ The implementer chooses J and P, states the reason for each, and records them as
 
 - **The falsifiers' reach.** The explorer is exhaustive only up to K, over its alphabet, in the shim, so it is a bounded check of the real code, not a proof. The property tests sample traces; they don't enumerate them.
 - **IINA itself is outside both.** A native run is still the top of the evidence hierarchy (`AGENTS.md`).
+
+## Amendments after clearance 1 (D-033, 16:30)
+
+- **L2 in 0.5.5:** loss is final for the window. An own-source load after a loss passes through and the window stays inactive, as in 0.5.4. The "new activation in the same window" path is deferred to 0.5.6, with the explorer extended to cover it, adopted windows and the resolver.
+- **L4:** made structural in class L pass 2 (one continuation guaranteed per hook, including a close between promise jobs).
+- **A7:** capped advance (A1) before A4 is intended. "No uncapped motion until A4" is the reading, because A6 requires convergence without corroboration.
+- **Class A's oracle** skips about 42% of A5 instants and allows 900 ms of slack. Clearance 1 found strict counterexamples it doesn't enforce. For 0.5.6: tighten first, then fix.

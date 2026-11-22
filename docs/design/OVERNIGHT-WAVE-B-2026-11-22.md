@@ -299,6 +299,38 @@ Starts after A1b merges. D-028's native gate passed (spike §7).
 
 ---
 
+### D1c — Hiding chat never turns it off (operator feedback, 2026-11-22 15:10)
+
+**Observed failure:** in beside mode the column's hide button posts `chat-off` (`ui/overlay.js`), and the player clears the chat preference and stops chat. Hiding the Streams sidebar while live chat is in it does the same. Bringing chat back then means the Chat menu, Turn Chat On, a reconnect, and the loss of what arrived meanwhile. The operator: "that's not the kind of behavior that is expected." The lead had recorded "Hide Chat turns chat off" as a native pass. Hide and off were conflated in the design, not in the code.
+
+**Rule:** hiding is a view state. Only Turn Chat Off stops chat. While hidden, chat stays connected, keeps timing (Auto keeps sampling), and keeps buffering, so showing it again shows what arrived in the meantime.
+
+| Arrangement | Signifier and restore | Video while hidden | Cost |
+|---|---|---|---|
+| **A. Collapse to the cluster** (chosen) | The tool cluster stays at the column's top-right corner; its button flips to Show Chat, with a dot when messages arrive | Fills the window (mpv right margin 0) | No new control. The button that hid chat brings it back in the same place |
+| B. Edge tab | A slim tab on the right edge, mid-height | Fills the window | Adds a control, which covers a strip of video |
+| C. Collapse into IINA's sidebar | IINA's own control-bar plugins button shows and hides it | The sidebar covers the right of the video | Uses IINA's only plugin-usable bar button, but changes presentation |
+
+**Per gesture:**
+- **Signifier:** the cluster button's icon (collapse or show), plus the dot.
+- **Action and feedback:** the column slides away and the video widens; the reverse restores it, with the messages that arrived.
+- **Input capture:** only the cluster's own hit area, already present.
+- **Fallback:** the Chat menu gains Hide Chat / Show Chat with a key binding, checked against IINA's default bindings (the earlier Cmd-Shift-S collision), and the sidebar gets the same toggle.
+- **Recovery:** the same button, the menu, or the key.
+- **Fullscreen and narrow windows:** the cluster sits below the title-bar offset, as in D1b.
+- **Persistence:** hidden is per window and not saved, so a newly opened stream shows chat.
+
+**Native acceptance proof (Streams Dev):** with a live stream in beside mode:
+1. Hide. The video fills the window, and the QA trace shows no `live-stop` or `auth-disconnect`.
+2. Wait for messages. The dot appears.
+3. Show. The column returns with those messages, at their timing.
+4. Repeat with the menu, the key, and sidebar mode.
+
+**Uncertainty:** whether IINA tells plugins when its own sidebar is closed with its button. No such event was found in the 1.5.1 API survey (SPIKE-47-52 §2), so closing IINA's sidebar may hide chat without the plugin knowing. That is harmless under this rule, since nothing is turned off.
+
+**Order:** implemented on `beta` after the v0.5.5 class L repair merges there, because both change `src/player.js`.
+
+
 ## B5b — Twitch playback in JS, wired in with the helper as fallback (#36, step 2)
 
 **Design.**

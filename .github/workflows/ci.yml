@@ -51,7 +51,7 @@ jobs:
         run: npm run test:py
 
   release:
-    needs: test
+    needs: [test, python-min-version]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
     permissions:

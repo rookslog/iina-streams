@@ -1,0 +1,27 @@
+# IINA v1.5.1 MainMenu.xib key equivalents (raw modifiers + key, then title); extracted 2026-11-22
+Alt+Meta+1	Normal Size (Retina)
+Alt+Meta+Shift+O	Open URL in New Window…
+Alt+Meta+h	Hide Others
+Alt+Meta+o	Open in New Window…
+Ctrl+Meta+l	Log Viewer
+Meta+,	Preferences…
+Meta+?	IINA Help
+Meta+Shift+F	Video Filters…
+Meta+Shift+G	Audio Filters…
+Meta+Shift+H	Playback History
+Meta+Shift+O	Open URL…
+Meta+Shift+S	Take a Screenshot
+Meta+Z	Redo
+Meta+a	Select All
+Meta+c	Copy
+Meta+h	Hide IINA
+Meta+i	Inspector
+Meta+j	Jump to…
+Meta+m	Minimize
+Meta+n	New Window
+Meta+o	Open…
+Meta+q	Quit IINA
+Meta+v	Paste
+Meta+w	Close
+Meta+x	Cut
+Meta+z	Undo

@@ -368,6 +368,8 @@ Routing:
 
 ## A2 — Adopted windows reach global through a mailbox (#56), per D-029
 
+> **SUPERSEDED 2026-11-22 10:45 (D-029 SUPERSEDED in `docs/DECISIONS.md`).** The root cause below is wrong. Adopted children do get a link to global; only a core created during global's own load lacks it, and our synchronous `menu.forceUpdate()` causes that. The fix is in the v0.5.5 release review r1 #5. Kept for the record.
+
 **Why.**
 - **Root cause.** A window IINA opened itself, and Streams adopted (#35), can't message global: `JavascriptAPIGlobalChild.postMessage` calls `parentAPI?…`, and only `createPlayerInstance` sets `parentAPI` (IINA v1.5.1 `JavascriptAPIGlobal.swift` L82–87, L129–131). Every child→global message is a silent no-op: `open`, `auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget` and `player-closed`. Observed natively: global's `player-open` trace stayed empty (#56 comment, 09:51).
 - **The reverse works.** Global's `postMessage(<bare-number label>, …)` reached the adopted window. Observed natively: the QA probe in `qa-label-probe.json` read `"0"` at 09:59. Source: L105–111, and `PlayerCore.swift` L67–81 for the labels.

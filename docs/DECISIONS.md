@@ -103,3 +103,8 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Cost:** one directory listing every 2 s while Streams is enabled. No reads unless a `bridge-*` file exists.
 - **What would flip it:** a measured energy cost the operator objects to (then poll only after a user opens an adopted Twitch window? Global can't see that). Or a host change from the D-029 flip list.
 
+2026-11-22 D-029 SUPERSEDED (lead, 10:45, from v0.5.5 release review r1 finding 5, verified in IINA v1.5.1 source): the mailbox isn't needed. Every child plugin instance gets `parentAPI = plugin.globalInstance` at init (`JavascriptPluginInstance.swift` L175–182). An adopted window can't reach global only when its core was created while global's own initializer ran. Our synchronous `menu.forceUpdate()` at load did that (`updatePluginMenu` → `PlayerCore.active` → `first` creates core "0": `MenuController.swift` L619, `PlayerCore.swift` L40–46, `JavascriptPlugin.swift` L166–168). The lead's earlier root cause ("`parentAPI` is set only by `createPlayerInstance`") read only `JavascriptAPIGlobal.swift` and was wrong.
+- **Replacement:** defer `forceUpdate` to the next turn, and let global route adopted senders (bare-number labels) with label-keyed session and audience fences. Replies go through `postMessage(<string label>)`, observed natively. There is no poll and no mailbox file.
+- **Residual case:** a core created before global loads (another variant's synchronous `forceUpdate`, or enabling the plugin while windows are open) can't reach global until it's reopened.
+- The §A2 design and the A2 tests (branch `fix/a2-adopted-bridge`) are abandoned. The fix is on `release/0.5.5` (r1 #5).
+

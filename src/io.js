@@ -37,17 +37,47 @@ function create(host){
  function cancelHelpers(kinds){let count=0;for(const item of active.values())if(!kinds||kinds.includes(item.name)){try{host.file.write(item.marker,'cancel');count++;}catch(_){/* a helper whose marker cannot be written is simply not counted as cancelled */}}return count;}
  // Any failure means the path was not deleted; false tells the caller so.
  function deleteDataPath(path){try{const base=dataPath('').replace(/\/+$/,'')+'/';if(typeof path!=='string'||!path.startsWith(base)||!/^(?:replay|download)-[A-Za-z0-9_-]+$/.test(path.slice(base.length)))return false;if(host.file.exists(path))host.file.delete(path);return true;}catch(_){return false;}}
+ // Settings kept in memory for this session, or null. They are held when settings.json was unreadable and
+ // no copy of it could be kept: settings.json is then the only copy, so it is never overwritten
+ // (v0.5.5 review r1 #11).
+ let heldSettings=null;
+ // Keeps a copy of unreadable settings text. True only when the copy reads back with the exact text.
  function keepCorruptSettings(text){
-  try{host.file.write('@data/settings.json.corrupt-'+Date.now(),text);}catch(_){/* the backup is best effort; defaults still apply */}
-  host.console.log('Streams: settings.json was unreadable; kept a copy and used defaults');
+  const path='@data/settings.json.corrupt-'+Date.now();
+  let kept=false;
+  try{
+   host.file.write(path,text);
+   kept=host.file.exists(path)&&host.file.read(path)===text;
+  }catch(_){/* kept stays false, so the caller holds settings in memory and leaves settings.json alone */}
+  if(kept)host.console.log('Streams: settings.json was unreadable; kept a copy and used defaults');
+  else host.console.log('Streams: settings-backup-failed; settings.json was unreadable and is left as is');
+  return kept;
  }
  function readSettings(){
+  if(heldSettings!==null)return Object.assign({},heldSettings);
   if(!host.file.exists('@data/settings.json'))return{};
-  let text;
-  try{text=host.file.read('@data/settings.json');}catch(_){/* an unreadable file is treated like a missing one */return{};}
-  try{return JSON.parse(text);}catch(_){keepCorruptSettings(text);return{};}
+  let text=null;
+  try{text=host.file.read('@data/settings.json');}catch(_){/* text stays null and is handled as unreadable below */}
+  // The file exists but gave no text, so no copy can be kept: hold settings rather than overwrite it.
+  if(typeof text!=='string'){
+   heldSettings={};
+   host.console.log('Streams: settings-backup-failed; settings.json could not be read and is left as is');
+   return{};
+  }
+  try{
+   return JSON.parse(text);
+  }catch(_){
+   if(!keepCorruptSettings(text))heldSettings={};
+   return{};
+  }
  }
- function saveSettings(value){host.file.write('@data/settings.json',JSON.stringify(value));}
+ function saveSettings(value){
+  if(heldSettings!==null){
+   heldSettings=Object.assign({},value);
+   return;
+  }
+  host.file.write('@data/settings.json',JSON.stringify(value));
+ }
  return{runHelper,cancelHelpers,deleteDataPath,activeHelpers:()=>Array.from(active.values()).map(x=>x.name),dataPath,readSettings,saveSettings,readFile:path=>host.file.read(path),resolve:(source,quality)=>runHelper('media',['resolve','--url',source.url,'--quality',quality])};
 }
 module.exports={create};

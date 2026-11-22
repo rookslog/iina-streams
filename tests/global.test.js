@@ -57,17 +57,21 @@ function harness(overrides = {}) {
 test('production global loading registers its menu but performs no open, network, secret read, or timer work', () => {
   const r = harness();
   assert.equal(r.items.length, 1);
-  for (const events of [r.opens, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites, r.prompts, r.timers, r.messages]) assert.equal(events.length, 0);
+  for (const events of [r.opens, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites, r.prompts, r.messages]) assert.equal(events.length, 0);
+  // v0.5.5 review r1 #5: the one timer is the deferred 0 ms menu refresh (a synchronous refresh orphans core "0").
+  assert.deepEqual(r.timers.map(timer => timer.delay), [0]);
   assert.equal(r.auth.snapshot().phase, 'off');
 });
 
 test('global auth timers release fired native entries and stop cancels pending work', async () => {
   const r = harness(); let invoked = 0;
-  r.auth.schedule(() => { invoked++; assert.equal(r.timers[0].cancelled, true); }, 5000, r.auth.generation);
-  await r.timers[0].fn();
+  // v0.5.5 review r1 #5: loading global leaves one timer (the deferred menu refresh); auth timers follow it.
+  const base = r.timers.length;
+  r.auth.schedule(() => { invoked++; assert.equal(r.timers[base].cancelled, true); }, 5000, r.auth.generation);
+  await r.timers[base].fn();
   assert.equal(invoked, 1);
   r.auth.schedule(() => invoked++, 5000, r.auth.generation);
-  const queued = r.timers[1];
+  const queued = r.timers[base + 1];
   r.auth.stop();
   assert.equal(queued.cancelled, true);
   await queued.fn();
@@ -118,14 +122,17 @@ test('native internal string labels route authorization only to numeric opted-in
   assert.equal(r.httpCalls.length, 0);
 });
 
-test('unrelated, malformed, numeric and uncreated labels are rejected before touching credentials', async () => {
+test('unrelated, malformed, non-string and uncreated labels are rejected before touching credentials', async () => {
   const r = harness(); r.open('example');
   for (const label of [null, undefined, 1, {}, '1-other-plugin', '01-' + r.config.identifier, r.label(2), r.label() + '-extra', '0-' + r.config.identifier]) {
     await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, label);
     r.handlers.get('auth-disconnect')({}, label);
     r.handlers.get('player-closed')({}, label);
   }
-  for (const events of [r.messages, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites, r.timers]) assert.equal(events.length, 0);
+  for (const events of [r.messages, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites]) assert.equal(events.length, 0);
+  // v0.5.5 review r1 #5: the one timer is the deferred menu refresh from loading; bare-number string labels
+  // are adopted senders now and are covered in tests/r1-adopted-global.test.js.
+  assert.equal(r.timers.length, 1);
   await r.handlers.get('auth-connect')({}, r.label());
   r.flushMessages();
   assert.ok(r.messages.some(event => event.target === 1 && event.name === 'auth-state'));

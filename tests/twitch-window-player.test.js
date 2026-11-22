@@ -3,24 +3,16 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const Sources=require('../src/source.js');
 const {start}=require('../src/player.js');
+const {createIina}=require('./support/iina-shim.js');
 const pause=()=>new Promise(done=>setTimeout(done,12));
 function harness(settings={}) {
  const src=Sources.parse('https://www.twitch.tv/videos/2930971003');
- const hooks={},events={},side={},calls=[],deleted=[],cancelled=[],saved=[];
+ const calls=[],deleted=[],cancelled=[],saved=[];
  const pending={acquire:[],replay:[]};
  const files=new Map();
- let position=0,asked=0;
- const host={
-  global:{getLabel:()=>Sources.label(src,'unified'),onMessage(){},postMessage(){}},
-  mpv:{addHook:(n,p,f)=>hooks[n]=f,getString:n=>n==='path'?src.url:'',getNumber:n=>n==='time-pos'?position:n==='speed'?1:0,getFlag:()=>false,set(){},command(){}},
-  core:{window:{loaded:true,frame:{width:640,height:360}}},
-  sidebar:{loadFile(){},onMessage:(n,fn)=>side[n]=fn,postMessage(){},show(){},hide(){}},
-  overlay:{loadFile(){},onMessage(){},postMessage(){},show(){},hide(){},setClickable(){},setOpacity(){}},
-  event:{on:(n,fn)=>{events[n]=fn;return n;},off:n=>delete events[n]},
-  menu:{addItem(){},item:(name,fn)=>({name,fn})},
-  utils:{chooseFile:async()=>false,ask:()=>{asked++;return false;}},
-  file:{write(){},exists:()=>false}
- };
+ const shim=createIina({label:Sources.label(src,'unified'),mpv:{path:src.url,'time-pos':0,speed:1},window:{frame:{width:640,height:360}}});
+ shim.utils.askResult=false;
+ const host=shim.iina;
  const services={
   readSettings:()=>settings,saveSettings:x=>saved.push(x),dataPath:x=>'/data/'+x,
   readFile:x=>files.get(x),cancelHelpers:x=>cancelled.push(x),deleteDataPath:x=>deleted.push(x),
@@ -28,12 +20,12 @@ function harness(settings={}) {
   runHelper:(name,args)=>{calls.push({name,args});return new Promise(resolve=>pending[name].push({resolve,args}));}
  };
  const player=start(host,{variant:'unified'},services);
- return{src,hooks,events,side,calls,deleted,cancelled,saved,pending,files,player,askCount:()=>asked,
-  position:()=>position,
-  async open(){await hooks.on_load(()=>{});events['iina.file-loaded'](src.url);},
-  seek:t=>{position=t;if(events['mpv.seek'])events['mpv.seek']();},
-  advance:t=>{position=t;if(events['mpv.time-pos.changed'])events['mpv.time-pos.changed']();},
-  close(){events['iina.window-will-close']();}
+ return{src,shim,calls,deleted,cancelled,saved,pending,files,player,askCount:()=>shim.utils.asks.length,
+  position:()=>shim.mpv.props.get('time-pos'),
+  async open(){await shim.mpv.runHook('on_load',()=>{});shim.emit('iina.file-loaded',src.url);},
+  seek:t=>{shim.mpv.set('time-pos',t);shim.emit('mpv.seek');},
+  advance:t=>{shim.mpv.set('time-pos',t);shim.emit('mpv.time-pos.changed');},
+  close(){shim.emit('iina.window-will-close');}
  };
 }
 function resolveAcquisition(f,o={}){
@@ -69,7 +61,7 @@ test('opening the 9-hour VOD fetches a playback window without a full chat downl
  assert.equal(f.player.snapshot().chat.mode,'replay');
  assert.equal(f.player.snapshot().messages[0].text,'Chat message');
  assert.ok(f.deleted.includes(x.path));
- f.events['iina.file-loaded'](f.src.url);
+ f.shim.emit('iina.file-loaded',f.src.url);
  assert.equal(f.calls.filter(c=>c.name==='acquire').length,1,'quality reload must not refetch');
  f.close();
 });
@@ -110,7 +102,7 @@ test('seeking while the first window is loading skips stale import and queues th
 test('Chat Off cancels active download, fences late callbacks, and disables further fetching',async()=>{
  const f=harness();await f.open();
  const item=f.pending.acquire.shift(),path=item.args[item.args.indexOf('--output')+1];
- f.side['chat-off']();f.seek(500);
+ f.shim.sidebar.send('chat-off');f.seek(500);
  item.resolve({ok:true,path:path+'/replay.jsonl',window:{requested:0,start:0,end:70,hasMore:true}});
  await pause();
  assert.equal(f.player.snapshot().chat.mode,'off');
@@ -124,7 +116,7 @@ test('Chat Off cancels active download, fences late callbacks, and disables furt
 test('Chat Off during an import cleans the late normalized output',async()=>{
  const f=harness();await f.open();resolveAcquisition(f);await pause();
  const item=f.pending.replay.shift(),path=item.args[item.args.indexOf('--output')+1];
- f.side['chat-off']();item.resolve({ok:true,indexPath:path+'/index.json'});
+ f.shim.sidebar.send('chat-off');item.resolve({ok:true,indexPath:path+'/index.json'});
  await pause();
  assert.ok(f.deleted.includes(path));
  assert.equal(f.player.snapshot().chat.mode,'off');
@@ -133,14 +125,14 @@ test('Chat Off during an import cleans the late normalized output',async()=>{
 test('persisted Off prevents automatic fetching; manual retry still works and keeps video playing',async()=>{
  const f=harness({chatEnabled:false});await f.open();
  assert.equal(f.pending.acquire.length,0);
- f.side['fetch-replay']();assert.equal(f.pending.acquire.length,1);
+ f.shim.sidebar.send('fetch-replay');assert.equal(f.pending.acquire.length,1);
  assert.equal(f.saved.at(-1).chatEnabled,true);
  f.pending.acquire.shift().resolve({ok:false,error:{message:'Chat restricted or unavailable'}});
  await pause();
  assert.equal(f.player.snapshot().chat.state,'unavailable');
  assert.match(f.player.snapshot().chat.error,/restricted/);
  assert.ok(['playing','loading'].includes(f.player.snapshot().phase));
- f.side['fetch-replay']();assert.equal(f.pending.acquire.length,1);
+ f.shim.sidebar.send('fetch-replay');assert.equal(f.pending.acquire.length,1);
  f.pending.acquire.shift().resolve({ok:false,error:{message:'still unavailable'}});
  await pause();f.close();
 });
@@ -183,7 +175,7 @@ test('manual imported archive is never silently replaced by network windows',asy
 });
 test('chat offset changes load a window at the shifted video time',async()=>{
  const f=harness();await f.open();await finish(f,{end:90,time:0});
- f.side.offset(20000);await pause();
+ f.shim.sidebar.send('offset',20000);await pause();
  assert.equal(f.pending.acquire.length,1);
  assert.equal(Number(f.pending.acquire[0].args.at(-1)),20000);
  await finish(f,{start:19992,end:20080,time:20000});

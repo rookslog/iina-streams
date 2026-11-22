@@ -3,23 +3,14 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const Sources=require('../src/source.js');
 const {start}=require('../src/player.js');
+const {createIina}=require('./support/iina-shim.js');
 
 function fixture(settings={}) {
  const source=Sources.parse('https://www.twitch.tv/videos/2922164492');
- const hooks={},events={},side={},menus=[],deleted=[],cancelled=[],calls=[];
- const host={
-  global:{getLabel:()=>Sources.label(source,'unified'),onMessage(){},postMessage(){}},
-  mpv:{addHook:(name,priority,fn)=>hooks[name]=fn,
-   getString:key=>key==='path'?source.url:'',getNumber:()=>0,getFlag:()=>false,
-   set(){},command(){}},
-  core:{window:{loaded:true,frame:{width:640,height:360}}},
-  sidebar:{loadFile(){},onMessage:(name,fn)=>side[name]=fn,postMessage(){},show(){},hide(){}},
-  overlay:{loadFile(){},onMessage(){},postMessage(){},show(){},hide(){},setClickable(){},setOpacity(){}},
-  event:{on:(name,fn)=>{events[name]=fn;return name;},off(){}},
-  menu:{addItem:x=>menus.push(x),item:(name,fn)=>({name,fn})},
-  utils:{chooseFile:async()=>false,ask:()=>false},
-  file:{write(){},exists(){return false;}}
- };
+ const deleted=[],cancelled=[],calls=[];
+ const shim=createIina({label:Sources.label(source,'unified'),mpv:{path:source.url},window:{frame:{width:640,height:360}}});
+ shim.utils.askResult=false;
+ const host=shim.iina;
  let acquire,finishImport;
  const data=new Map();
  const services={
@@ -36,7 +27,7 @@ function fixture(settings={}) {
   }
  };
  const controller=start(host,{variant:'unified'},services);
- return{source,hooks,events,side,menus,deleted,cancelled,calls,data,services,controller,
+ return{source,shim,deleted,cancelled,calls,data,services,controller,
   resolveAcquisition:response=>acquire(response),resolveImport:()=>finishImport()};
 }
 
@@ -44,8 +35,8 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,10));
 
 test('opening a public Twitch VOD automatically acquires its original chat and displays replay',async()=>{
  const f=fixture();
- await f.hooks.on_load(()=>{});
- f.events['iina.file-loaded'](f.source.url);
+ await f.shim.mpv.runHook('on_load',()=>{});
+ f.shim.emit('iina.file-loaded',f.source.url);
  assert.equal(f.calls.length,1);
  assert.equal(f.calls[0].name,'acquire');
  assert.deepEqual(f.calls[0].args.slice(0,3),['--url',f.source.url,'--output']);
@@ -66,15 +57,15 @@ test('opening a public Twitch VOD automatically acquires its original chat and d
  assert.equal(f.controller.snapshot().chat.count,1);
  assert.equal(f.controller.snapshot().messages[0].text,'Hi from replay');
  assert.ok(f.deleted.includes(download));
- f.events['iina.file-loaded'](f.source.url);
+ f.shim.emit('iina.file-loaded',f.source.url);
  assert.equal(f.calls.filter(c=>c.name==='acquire').length,1,'quality reload never redownloads');
- f.events['iina.window-will-close']();
+ f.shim.emit('iina.window-will-close');
 });
 
 test('explicit Off during automatic acquisition cancels and fences late result',async()=>{
  const f=fixture();
- await f.hooks.on_load(()=>{});
- f.events['iina.file-loaded'](f.source.url);
+ await f.shim.mpv.runHook('on_load',()=>{});
+ f.shim.emit('iina.file-loaded',f.source.url);
  const path=f.calls[0].args[3];
  f.controller.chatOff();
  f.resolveAcquisition({ok:true,path:path+'/replay.jsonl'});
@@ -83,16 +74,16 @@ test('explicit Off during automatic acquisition cancels and fences late result',
  assert.equal(f.calls.length,1,'no archive is imported after Off');
  assert.ok(f.deleted.includes(path));
  assert.ok(f.cancelled.some(x=>x.includes('acquire')));
- f.events['iina.window-will-close']();
+ f.shim.emit('iina.window-will-close');
 });
 
 test('persisted Off disables automatic retrieval, but manual Fetch remains possible',async()=>{
  const f=fixture({chatEnabled:false});
- await f.hooks.on_load(()=>{});
- f.events['iina.file-loaded'](f.source.url);
+ await f.shim.mpv.runHook('on_load',()=>{});
+ f.shim.emit('iina.file-loaded',f.source.url);
  assert.equal(f.calls.length,0);
- assert.ok(f.menus.some(m=>m.name==='Import Chat Archive…'));
- f.side['fetch-replay']();
+ assert.ok(f.shim.menu.items.some(m=>m.title==='Import Chat Archive…'));
+ f.shim.sidebar.send('fetch-replay');
  assert.equal(f.calls.length,1);
  assert.equal(f.controller.snapshot().chat.state,'fetching');
  const path=f.calls[0].args[3];
@@ -100,5 +91,5 @@ test('persisted Off disables automatic retrieval, but manual Fetch remains possi
  await wait();
  assert.equal(f.controller.snapshot().chat.state,'unavailable');
  assert.match(f.controller.snapshot().chat.error,/No VOD chat/);
- f.events['iina.window-will-close']();
+ f.shim.emit('iina.window-will-close');
 });

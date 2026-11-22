@@ -7,16 +7,40 @@ const path = require('node:path');
 const vm = require('node:vm');
 const {createRequire} = require('node:module');
 const Sources = require('../src/source.js');
+const {createIina} = require('./support/iina-shim.js');
 const playerPath = path.join(__dirname, '../src/player.js');
 const plain = value => JSON.parse(JSON.stringify(value));
 
 function fixture({retainFiredTimers = false} = {}) {
-  let clock = 0, timerID = 0, listenerID = 0;
-  const timers = new Map(), events = new Map(), messages = new Map();
-  const hooks = new Map(), calls = [], helperCalls = [], deletes = [];
+  const calls = [], helperCalls = [], deletes = [];
   const source = Sources.parse('https://www.twitch.tv/videos/123456');
-  const native = {path: source.url, position: 83.25, paused: true, speed: 1.5,
-    frame: {x: 11, y: 22, width: 1000, height: 620}, fullscreen: false, visibleSidebar: null};
+  // Legacy ordered call list, built from the shim's ordered observer.
+  const observe = (api, args) => {
+    if (api === 'mpv.set') calls.push(['set', args[0], args[1]]);
+    else if (api === 'mpv.command') calls.push(['command', args[0], args[1]]);
+    else if (api === 'core.window.set') calls.push(['window', args[0], args[1]]);
+    else if (api === 'sidebar.show') { native.visibleSidebar = 'streams'; calls.push(['sidebar', 'show']); }
+    else if (api === 'sidebar.hide') native.visibleSidebar = null;
+  };
+  const shim = createIina({label: Sources.label(source, 'unified'), onCall: observe, timerOptions: {retainFired: retainFiredTimers},
+    mpv: {path: source.url, 'stream-open-filename': source.url, 'time-pos': 83.25, pause: true, speed: 1.5},
+    window: {frame: {x: 11, y: 22, width: 1000, height: 620}, fullscreen: false}});
+  const timers = shim.timers;
+  // Test-facing native state, backed by the shim's mpv properties and window.
+  const native = {
+    get path() { return shim.mpv.props.get('path'); },
+    set path(value) { shim.mpv.set('path', value).set('stream-open-filename', value); },
+    get position() { return shim.mpv.props.get('time-pos'); },
+    get paused() { return shim.mpv.props.get('pause'); },
+    get speed() { return shim.mpv.props.get('speed'); },
+    get frame() { return shim.core.native.frame; },
+    set frame(value) { shim.core.native.frame = plain(value); },
+    get fullscreen() { return shim.core.native.fullscreen; },
+    visibleSidebar: null
+  };
+  // Loading a file through mpv `loadfile` changes the current path.
+  shim.mpv.onCommand = (name, args) => { if (name === 'loadfile') native.path = args[0]; };
+  const messages = {get: name => (...args) => shim.sidebar.send(name, ...args)};
   const formats = [{id: '720p60', label: '720p60'}, {id: '360p30', label: '360p'}];
   const result = quality => ({ok: true, quality: quality === 'auto720' ? '720p60' : quality,
     title: 'Synthetic recording', live: false, duration: 100, formats,
@@ -24,48 +48,11 @@ function fixture({retainFiredTimers = false} = {}) {
   let resolve = async (_source, quality) => result(quality);
   const script = {exports: {}};
   const context = vm.createContext({module: script, require: createRequire(playerPath),
-    Date: class extends Date { static now() { return clock; } },
-    setTimeout(fn, delay) { const id = ++timerID; timers.set(id, {fn, due: clock + delay}); return id; },
-    clearTimeout(id) { timers.delete(id); }});
+    Date: timers.Date, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout});
   vm.runInContext(fs.readFileSync(playerPath, 'utf8'), context, {filename: playerPath});
-  function emit(name, data) {
-    for (const fn of [...(events.get(name)?.values() || [])]) fn(data);
-  }
-  function advance(ms) {
-    const target = clock + ms;
-    for (;;) {
-      const next = [...timers].filter(([, value]) => !value.fired && value.due <= target).sort((a, b) => a[1].due - b[1].due)[0];
-      if (!next) break;
-      if (retainFiredTimers) next[1].fired = true; else timers.delete(next[0]);
-      clock = next[1].due; next[1].fn();
-    }
-    clock = target;
-  }
-  const window = new Proxy({loaded: true}, {
-    get(target, key) { return key in native ? native[key] : target[key]; },
-    // IINA's native window proxy applies setters but does not return true.
-    set(_target, key, value) { native[key] = plain(value); calls.push(['window', key, plain(value)]); return false; }
-  });
-  const host = {
-    global: {getLabel: () => Sources.label(source, 'unified'), onMessage() {}, postMessage() {}},
-    mpv: {
-      addHook(name, _priority, fn) { hooks.set(name, fn); },
-      getString(name) { return name === 'path' || name === 'stream-open-filename' ? native.path : ''; },
-      getNumber(name) { return name === 'time-pos' ? native.position : name === 'speed' ? native.speed : 0; },
-      getFlag(name) { return name === 'pause' ? native.paused : false; },
-      set(name, value) { calls.push(['set', name, value]); if (name === 'pause') native.paused = value; if (name === 'speed') native.speed = value; },
-      command(name, args) { calls.push(['command', name, plain(args)]); if (name === 'loadfile') native.path = args[0]; }
-    },
-    core: {window},
-    sidebar: {loadFile() {}, onMessage(name, fn) { messages.set(name, fn); }, postMessage() {}, show() { native.visibleSidebar = 'streams'; calls.push(['sidebar', 'show']); }, hide() { native.visibleSidebar = null; }},
-    overlay: {loadFile() {}, onMessage() {}, postMessage() {}, show() {}, hide() {}, setClickable() {}, setOpacity() {}},
-    event: {
-      on(name, fn) { if (!events.has(name)) events.set(name, new Map()); const id = ++listenerID; events.get(name).set(id, fn); return id; },
-      off(name, id) { events.get(name)?.delete(id); }
-    },
-    menu: {item: (name, fn) => ({name, fn}), addItem() {}},
-    utils: {ask: () => true, chooseFile: async () => null}
-  };
+  const emit = (name, data) => shim.emit(name, data);
+  const advance = ms => timers.advance(ms);
+  const host = shim.iina;
   const index = {version: 1, sourceId: source.id, title: 'Synthetic archive', count: 1,
     timeline: {availableStart: 40}, chunks: [{file: 'chunk-000000.json', start: 40, end: 40, count: 1}]};
   const services = {
@@ -77,10 +64,10 @@ function fixture({retainFiredTimers = false} = {}) {
     deleteDataPath: file => { deletes.push(file); return true; }
   };
   const controller = script.exports.start(host, {variant: 'unified'}, services);
-  async function load() { let next = 0; await hooks.get('on_load')(() => next++); assert.equal(next, 1); }
+  async function load() { let next = 0; await shim.mpv.runHook('on_load', () => next++); assert.equal(next, 1); }
   async function initial() { await load(); emit('iina.file-loaded', source.url); emit('iina.window-size-adjusted'); advance(600); calls.length = 0; }
   return {controller, source, native, calls, messages, emit, advance, load, initial, result,
-    setResolver(fn) { resolve = fn; }, helperCalls, deletes, retainedTimers: timers};
+    setResolver(fn) { resolve = fn; }, helperCalls, deletes, retainedTimers: {get size() { return timers.all.filter(t => !t.cancelled).length; }}, shim};
 }
 
 test('native retained timer entries are removed after initial and quality restoration', async () => {

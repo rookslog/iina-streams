@@ -6,10 +6,11 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
+const {createWebViewIina}=require('./support/iina-shim.js');
 const root=path.join(__dirname,'../ui');
 
 function setup(){
- const callbacks={},posts=[],frames=new Map(),allFrames=new Map(),scrollEvents=[];
+ const page=createWebViewIina(),posts=page.posts,frames=new Map(),allFrames=new Map(),scrollEvents=[];
  const windowEvents={},documentEvents={},elements={};let nextFrame=0,top=0,now=1000,viewportHeight=200;
  function element(id=''){
   return{id,hidden:false,disabled:false,value:'',children:[],dataset:{},events:{},attributes:{},_text:'',
@@ -32,12 +33,12 @@ function setup(){
  const requestAnimationFrame=fn=>{const id=++nextFrame;frames.set(id,fn);allFrames.set(id,fn);return id;};
  const cancelAnimationFrame=id=>frames.delete(id);
  const window={addEventListener:(name,fn)=>windowEvents[name]=fn,requestAnimationFrame,cancelAnimationFrame};
- const iina={onMessage:(name,fn)=>callbacks[name]=fn,postMessage:(name,data)=>posts.push({name,data})};
+ const iina=page.iina;
  vm.runInNewContext(fs.readFileSync(path.join(root,'sidebar.js'),'utf8'),
   {document,window,iina,requestAnimationFrame,cancelAnimationFrame,Date:{now:()=>now}},{filename:'candidate-sidebar.js'});
  return{elements,frames,allFrames,posts,windowEvents,documentEvents,
-  state(value){callbacks.state({encoded:encodeURIComponent(JSON.stringify(value))});},
-  inspect(){callbacks['qa-action']({encoded:encodeURIComponent(JSON.stringify({name:'inspect'}))});return posts.at(-1).data;},
+  state(value){page.receiveEnvelope('state',value);},
+  inspect(){page.receiveEnvelope('qa-action',{name:'inspect'});return posts.at(-1).data;},
   scroll(){elements.messages.events.scroll?.({target:elements.messages});},
   flushScroll(){for(const fn of scrollEvents.splice(0))fn();},
   flushFrames(){for(const [id,fn] of [...frames]){frames.delete(id);fn();}},

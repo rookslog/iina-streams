@@ -1,6 +1,6 @@
 # IINA Streams — Unified and Focus
 
-> **Current state (November 22, 2026):** the last tagged release is **v0.5.3**; `beta` targets **0.5.4** with commit-stamped builds (`0.5.4-beta+g<sha>`, `0.5.4-dev+g<sha>`). For development, testing and releasing, read [docs/RELEASE.md](docs/RELEASE.md); for what comes next, [docs/ROADMAP.md](docs/ROADMAP.md). Twitch VOD chat loads in bounded windows around playback ([report](docs/TWITCH-VOD-ON-DEMAND-2026-11-17.md)). **Everything below this note describes the November 8 candidate portfolio and is historical**; a rewrite is scheduled in the 0.5.4 roadmap.
+> **Current state (November 22, 2026):** the last tagged release is **v0.5.3**; `beta` targets **0.5.4** with commit-stamped builds (`0.5.4-beta+g<sha>`, `0.5.4-dev+g<sha>`). For development, testing and releasing, read [docs/RELEASE.md](docs/RELEASE.md); for what comes next, [docs/ROADMAP.md](docs/ROADMAP.md) (milestones and issues). Twitch VOD chat loads in bounded windows around playback ([report](docs/TWITCH-VOD-ON-DEMAND-2026-11-17.md)). **Everything below this note describes the November 8 candidate portfolio and is historical**; a rewrite is scheduled in the 0.5.4 roadmap.
 
 **Two isolated native candidates, version 0.5.0.** Unified keeps playback and chat together; Focus uses a quieter Playback/Chat inspector with overlay-oriented defaults. Both share the same playback, authorization, replay, and overlay engine. Chat starts Off, and stable promotion remains a separate user decision.
 

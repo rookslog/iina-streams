@@ -11,4 +11,5 @@ Start by checking current Git status, exact IINA plugin identities, and the user
 - Prefer a distinct development-plugin identity/worktree over reinstalling the same archive for a CSS or JS change. Preserve rollback and verify IINA reloading before asserting hot reload.
 - On UI work use `.agents/skills/streams-interaction-design/SKILL.md`; on native testing `.agents/skills/streams-native-acceptance/SKILL.md`; on auth/replay `.agents/skills/streams-auth-replay/SKILL.md`. They supplement, not override, Apple's HIG or the operator's feedback.
 - Keep the skill roster narrow. Do not simultaneously invoke the complete Matt Pocock, Superpowers, P Stack, and Addy Osmani workflow routers.
+- Multi-round review follows `docs/REVIEW.md` (D-032): severity gate, a step-back at round 3 or on any recurring class, class repair against written invariants, and the Known classes list in every reviewer brief.
 - Each completed slice needs reproducible observed behavior, tests where appropriate, preserved source SHA, and an honest record of what was **not** tested.

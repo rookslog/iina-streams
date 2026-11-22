@@ -70,7 +70,7 @@ Policy D-020 as corrected by D-021: the source version is the *next* release (no
 
 1. On `beta`: CI is green, the native acceptance pass is done (`.agents/skills/streams-native-acceptance/SKILL.md`), and the user has approved promotion.
 2. Confirm `version` in `Info.json` and `package.json` is the release, `ghVersion` is one above `main`'s (bump it in the release commit), and the `CHANGELOG.md` entry is written.
-3. Run `python3 scripts/build.py --sync-embedded`. CI fails if `src/embedded-helpers.js` is stale. Then get an independent review of `main...beta`, with its record in `docs/reviews/`.
+3. Run `python3 scripts/build.py --sync-embedded`. CI fails if `src/embedded-helpers.js` is stale. Then get an independent review of `main...beta`, run under `docs/REVIEW.md`, with its record in `docs/reviews/`.
 4. Merge `beta` into `main` locally, and tag the merge commit `vX.Y.Z`. With the tag on HEAD and a clean tree, run `npm test`, `npm run test:py` and `npm run build`: the tag's CI runs them on a tagged checkout, which an untagged `beta` never is (the v0.5.4 tag CI failed on exactly that). **Push the tag first, not `main`:** `git push origin vX.Y.Z`. The tag's CI builds the stable `.iinaplgz` and publishes the Release.
 5. Wait until the Release shows the `.iinaplgz` asset. **Only then** push `main` (`git push origin main`). IINA's update check reads `main/Info.json` `ghVersion`. If `main` moves first, a 0.5.3 user can be updated from `main`'s source zip before the package exists, and then strands at the new `ghVersion`. That was the 2026-11-22 review's blocker; pushing `main` and the tag together does not prevent it, because the tag's CI takes minutes.
 6. Install or update through IINA and smoke-test it.

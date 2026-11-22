@@ -113,3 +113,11 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Cost:** a beta tester who installs only beta doesn't get adoption unless they set the flag. There's no UI for it yet.
 - **What would flip it:** a shared claim mechanism, such as an mpv property every variant can set and read, or making beta the only adopter while it's installed.
 
+
+2026-11-22 D-032 CHOSEN (operator, 14:54, approving the lead's proposal after the v0.5.5 recurrence triage): multi-round review follows `docs/REVIEW.md`.
+- **The rule:** a severity gate (Important blocks; Medium that is not a regression, and Pre-existing findings, become issues); a step-back at round 3, or at the first finding in a class an earlier round found; each recurring class repaired against written invariants with a falsifier first; at most two seeded clearance reviews; each class then kept as a Known class with a structural test.
+- **Why:** v0.5.5 took six review rounds. The one-off findings each closed in a round, but two classes, controller authority and Auto timing, recurred in every round. From round 4 on, each new finding was in code the previous fix had added (`docs/reviews/2026-11-22-v0.5.5-release-review.md`, Recurrence triage).
+- **Sources:** the operator's chatgpt-cli round-3 stop rule (PR #57), Anthropic's 2026-10-15 post on how the Claude Code team does code review, and the reviewer agent definition.
+- **Not found:** the operator recalled a "two rounds, then until no P1" rule; it was not found in local docs. The severity gate stands in for it until the source turns up.
+- **Cost:** a step-back spends a design pass before any fix.
+- **What would flip it:** rounds-to-SHIP not falling over the next two releases, or a class repair that its clearance review breaks.

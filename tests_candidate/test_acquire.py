@@ -68,7 +68,7 @@ class AcquisitionTests(unittest.TestCase):
             for flag in ['--ignore-config', '--no-plugin-dirs', '--no-cache-dir', '--no-remote-components',
                          '--no-cookies', '--no-cookies-from-browser', '--no-playlist', '--skip-download']:
                 self.assertIn(flag, command)
-            self.assertEqual(command[0], '/opt/homebrew/bin/yt-dlp')
+            self.assertEqual(command[0], acquire.YTDLP)  # resolved from PATH at import; host-dependent
             self.assertEqual(command[-1], URL)
             self.assertLessEqual(kwargs['timeout'], 120)
             self.assertNotIn('--cookies', command)

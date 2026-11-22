@@ -96,8 +96,9 @@ class CurrentBuilderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             original=Path.glob
             def patched(reverse):
-                def enumerate_(path,pattern):
-                    rows=list(original(path,pattern))
+                def enumerate_(path,pattern,*args,**kwargs):
+                    # Python 3.13's rglob delegates to glob with keyword arguments.
+                    rows=list(original(path,pattern,*args,**kwargs))
                     if path==ROOT/'helpers' and pattern=='*.py':
                         rows.sort(key=lambda p:p.name,reverse=reverse)
                     return iter(rows)

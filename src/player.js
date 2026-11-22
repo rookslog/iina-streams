@@ -409,7 +409,7 @@ function start(host,config,services){
 
  function cancelAuthBinding(){
   if(authBindTimer!==null){
-   clearTimeout(authBindTimer);
+   timers.clearTimeout(authBindTimer);
    authBindTimer=null;
   }
   pendingAuth=null;
@@ -1044,8 +1044,8 @@ function start(host,config,services){
 
  // IINA creates the child while the parent's createPlayerInstance call is on
  // stack. Bind from a later child turn and retain callbacks in the controller.
- const bindingTimer=setTimeout(()=>{
-  clearTimeout(bindingTimer); // IINA retains fired one-shot timer entries.
+ // The wrapped timer clears IINA's retained native entry when it fires.
+ const bindingTimer=timers.setTimeout(()=>{
   if(authBindTimer!==bindingTimer)return;
   authBindTimer=null;
   bindAuthListeners();

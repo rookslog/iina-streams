@@ -100,11 +100,21 @@ function waitForNativeStream(host,config,services){
   if(adoptedLoadHook)return adoptedLoadHook(next);
   const source=adoptableSource(loadingPath(host.mpv));
   if(!source){
-   if(typeof next==='function')next();
+   continueLoad(next);
    return undefined;
   }
-  run(host,config,services,{source,variant:config.variant},adoptLoadHook);
+  // A window Streams does not own must never be left waiting: if adoption fails, the load goes on untouched.
+  try{
+   run(host,config,services,{source,variant:config.variant},adoptLoadHook);
+  }catch(_){
+   adoptedLoadHook=null;
+   continueLoad(next);
+   return undefined;
+  }
   return adoptedLoadHook(next);
+ }
+ function continueLoad(next){
+  if(typeof next==='function')next();
  }
  host.mpv.addHook('on_load',20,onLoad);
 }

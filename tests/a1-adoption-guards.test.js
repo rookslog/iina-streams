@@ -41,6 +41,17 @@ test('A1 guard: bare words and scheme-less paths are local files, not Twitch cha
   }
 });
 
+test('A1 guard: if adoption throws, the native load continues untouched', async () => {
+  const filePath = 'https://www.twitch.tv/xqc';
+  const shim = createIina({label: '', mpv: {path: filePath, 'stream-open-filename': filePath}});
+  const services = {readSettings() { throw new Error('settings unavailable'); }, resolve: async () => assert.fail()};
+  assert.equal(start(shim.iina, {variant: 'unified'}, services), null);
+  let continued = 0;
+  await shim.mpv.runHook('on_load', () => continued++);
+  assert.equal(continued, 1);
+  assert.equal(shim.mpv.props.get('stream-open-filename'), filePath);
+});
+
 test('A1 guard: an adopted window forwards open-error from global to its sidebar field', async () => {
   const {shim} = unlabeledWindow(twitchURL);
   await shim.mpv.runHook('on_load', () => {});

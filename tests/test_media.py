@@ -7,6 +7,7 @@ import copy
 import io
 import os
 import pathlib
+import shutil
 import signal
 import subprocess
 import sys
@@ -448,7 +449,10 @@ class LargeMetadataTests(unittest.TestCase):
             "http_headers": lambda f: f.update(http_headers={"User-Agent": "Other/2"}),
             "error": lambda f: f.update(error="Video unavailable"),
         }
-        flags = {"entries": lambda f: f.update(entries=[{"id": "jNQXAC9IVRw"}])}
+        # `entries` on a video-typed info (a playlist itself is expanded before printing, see ytdlp_double);
+        # `playlist_id` is how a video derived from a playlist, such as a one-entry playlist's child, shows.
+        flags = {"entries": lambda f: f.update(entries=[{"id": "jNQXAC9IVRw"}]),
+                 "playlist_id": lambda f: f.update(playlist_id="PLfixture")}
         formats = {
             "format_id": lambda f: None, "url": lambda f: None, "protocol": lambda f: None, "vcodec": lambda f: None,
             "height": lambda f: None, "acodec": on_136(acodec="mp4a.40.2"), "audio_ext": only_audio_ext,
@@ -474,9 +478,32 @@ class LargeMetadataTests(unittest.TestCase):
                     self.assertNotEqual(outcome(withheld, trimmed=False), expected, "the case must depend on the field")
                     self.assertEqual(outcome(fixture, trimmed=True), expected)
 
-    def test_a_playlist_is_rejected_and_only_a_flag_of_it_reaches_the_output(self):
+    def test_a_video_derived_from_a_one_entry_playlist_is_rejected(self):
+        # #54 second re-review: with --no-playlist yt-dlp still expands a one-entry playlist and prints the
+        # child, which has no `entries`; only its `playlist_id` says where it came from.
+        child = youtube_metadata()
+        playlist = {"_type": "playlist", "id": "PLfixture", "title": "p", "entries": [child]}
+        printed = ytdlp_output(["yt-dlp"] + media.YOUTUBE_OUTPUT, playlist).decode().split("\n")
+        self.assertEqual(printed[2:], ["0", "1"], "the double prints the child: no entries, a playlist_id")
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, playlist))
+        self.assertEqual(error.exception.code, "INVALID_METADATA")
+        accepted = media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, child))
+        self.assertEqual(accepted["quality"], "136", "the standalone control is accepted")
+
+    def test_a_large_playlist_is_rejected_within_the_output_bound(self):
+        # Each entry is printed as a block of its own (inferred, see ytdlp_double): the output stays small per
+        # entry and the line count no longer matches, so it is rejected as unexpected output.
+        playlist = {"_type": "playlist", "id": "PLfixture",
+                    "entries": [dict(youtube_metadata(), description="d" * 2000) for _ in range(50)]}
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, playlist))
+        self.assertEqual(error.exception.code, "INVALID_METADATA")
+        self.assertNotIn(b"dddd", ytdlp_double.output(["yt-dlp"] + media.YOUTUBE_OUTPUT, playlist))
+
+    def test_a_video_info_with_entries_is_rejected_without_printing_them(self):
         # #54: the full dump rejected any info dict that had `entries`. The trimmed output must too, without
-        # carrying the entries themselves (a 5000 entry playlist would put them all back over the cap).
+        # carrying the entries themselves (5000 of them would put them all back over the cap).
         fixture = youtube_metadata()
         fixture["entries"] = [{"id": "e%04d" % number, "title": "t" * 2000} for number in range(5000)]
         self.assertGreater(len(json.dumps(fixture)), media.MAX_METADATA_BYTES, "precondition: entries alone exceed the cap")
@@ -503,13 +530,100 @@ class LargeMetadataTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "UNAVAILABLE")
 
     def test_unexpected_output_shapes_are_sanitized_metadata_errors(self):
-        for payload in ["", "{}", '{"id":"jNQXAC9IVRw"}\n[]\n[]', '["not","an","object"]\n[]\n0',
-                        "not-json https://private.example/?t=secret\n[]\n0", '{"id":"jNQXAC9IVRw"}\nNA\n0',
-                        '{"id":"jNQXAC9IVRw"}\nNA', '{"id":"jNQXAC9IVRw"}\n[]\n2', '{"id":"jNQXAC9IVRw"}\n[]\nNA']:
+        for payload in ["", "{}", '{"id":"jNQXAC9IVRw"}\n[]\n[]\n0', '["not","an","object"]\n[]\n0\n0',
+                        "not-json https://private.example/?t=secret\n[]\n0\n0", '{"id":"jNQXAC9IVRw"}\nNA\n0\n0',
+                        '{"id":"jNQXAC9IVRw"}\nNA', '{"id":"jNQXAC9IVRw"}\n[]\n0', '{"id":"jNQXAC9IVRw"}\n[]\n0\n0\n0',
+                        '{"id":"jNQXAC9IVRw"}\n[]\n2\n0', '{"id":"jNQXAC9IVRw"}\n[]\n0\n2',
+                        '{"id":"jNQXAC9IVRw"}\n[]\n0\nNA', '{"id":"jNQXAC9IVRw"}\n[]\nNA\n0']:
             with self.subTest(payload=payload[:40]), self.assertRaises(media.MediaError) as error:
                 media.resolve(self.URL, runner=lambda *args, **kwargs: payload)
             self.assertEqual(error.exception.code, "INVALID_METADATA")
             self.assertNotIn("secret", str(error.exception))
+
+
+def real_ytdlp():
+    """A yt-dlp executable that runs, or None. STREAMS_TEST_YTDLP overrides; otherwise the one IINA ships, then PATH."""
+    candidates = [os.environ.get("STREAMS_TEST_YTDLP"), "/Applications/IINA.app/Contents/MacOS/youtube-dl",
+                  shutil.which("yt-dlp"), media.YTDLP]
+    for candidate in candidates:  # not run at import: starting yt-dlp takes seconds
+        if not candidate or not os.access(candidate, os.X_OK):
+            continue
+        try:
+            version = subprocess.run([candidate, "--version"], capture_output=True, text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if version.returncode == 0 and version.stdout.strip():
+            return candidate
+    return None
+
+
+class RealYtDlpTests(unittest.TestCase):
+    """The helper's real command, run by a real yt-dlp over a local info file: no network, no double (#54).
+
+    `--load-info-json` makes yt-dlp process an info as if it had just extracted it, so a playlist info goes
+    through its own playlist expansion. `--no-clean-info-json` keeps `entries` (the default clean-up drops it).
+    The proxy points at a closed local port, so an accidental request fails instead of leaving the machine.
+    """
+    URL = "https://youtu.be/jNQXAC9IVRw"
+
+    @classmethod
+    def setUpClass(cls):
+        # One yt-dlp start takes several seconds, so each info is run once and the tests share the output.
+        cls.ytdlp = real_ytdlp()
+        if not cls.ytdlp:
+            raise unittest.SkipTest("no runnable yt-dlp (set STREAMS_TEST_YTDLP to one)")
+        cls.standalone, cls.playlist = cls.infos()
+        cls.standalone_output = cls.real_output(cls.standalone)
+        cls.playlist_output = cls.real_output(cls.playlist)
+
+    @classmethod
+    def real_output(cls, info):
+        captured = []
+
+        def capture(command, **kwargs):
+            captured.append(command)
+            return ytdlp_output(command, youtube_metadata())
+        media.resolve(cls.URL, runner=capture)
+        command = [cls.ytdlp] + captured[0][1:-1]  # the helper's own arguments, minus yt-dlp and the URL
+        with tempfile.TemporaryDirectory() as scratch:
+            path = os.path.join(scratch, "info.json")
+            with open(path, "w") as handle:
+                json.dump(info, handle)
+            command += ["--proxy", "http://127.0.0.1:9", "--no-clean-info-json", "--load-info-json", path]
+            run = subprocess.run(command, capture_output=True, timeout=120, cwd=scratch,
+                                 env={"PATH": os.environ.get("PATH", ""), "HOME": scratch})
+        assert run.returncode == 0, run.stderr.decode("utf-8", "replace")[-500:]
+        return run.stdout
+
+    @staticmethod
+    def infos():
+        child = youtube_metadata()
+        child.pop("description")
+        return child, {"_type": "playlist", "id": "PLfixture", "title": "p", "extractor_key": "YoutubeTab",
+                       "extractor": "youtube:tab", "entries": [copy.deepcopy(child)]}
+
+    def test_the_playlist_flag_is_1_for_a_one_entry_playlist_child_and_0_for_a_standalone_video(self):
+        control = self.standalone_output.decode().strip().split("\n")
+        child = self.playlist_output.decode().strip().split("\n")
+        self.assertEqual(control[2:], ["0", "0"], "standalone: no entries, no playlist_id")
+        self.assertEqual(child[2:], ["0", "1"], "child of a one-entry playlist: no entries, a playlist_id")
+
+    def test_the_double_prints_what_yt_dlp_prints(self):
+        command = ["yt-dlp"] + media.YOUTUBE_OUTPUT
+        for name, info, printed in (("standalone", self.standalone, self.standalone_output),
+                                    ("playlist", self.playlist, self.playlist_output)):
+            with self.subTest(info=name):
+                real = printed.decode().strip().split("\n")
+                double = ytdlp_double.output(command, info).decode().strip().split("\n")
+                self.assertEqual(real[2:], double[2:], "the flag lines")
+                self.assertEqual(json.loads(real[0]).get("id"), json.loads(double[0]).get("id"))
+
+    def test_the_helper_rejects_the_playlist_child_and_accepts_the_standalone_video(self):
+        accepted = media.resolve(self.URL, runner=lambda command, **kwargs: self.standalone_output)
+        self.assertEqual(accepted["quality"], "136")
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: self.playlist_output)
+        self.assertEqual(error.exception.code, "INVALID_METADATA")
 
 
 class ProcessTests(unittest.TestCase):

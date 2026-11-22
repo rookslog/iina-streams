@@ -247,7 +247,8 @@ test('a Twitch request timeout invokes the helper once', {timeout: 1000}, async 
 
   const pending = resolve(LIVE, '720p60');
   await new Promise(setImmediate);
-  assert.deepEqual(calls.map(([method]) => method), ['POST', 'GET']);
+  // Token and title are separate POSTs: IINA drops array bodies (JavascriptAPIHttp.swift L72, L103).
+  assert.deepEqual(calls.map(([method]) => method), ['POST', 'POST', 'GET']);
   t.mock.timers.tick(1999);
   await new Promise(setImmediate);
   assert.deepEqual(helperCalls, []);
@@ -327,7 +328,7 @@ test('main.js gives the player the resolver wrapper under the IINA shim', async 
   assert.equal(typeof playerResolve, 'function');
   assert.notEqual(playerResolve, helperResolve, 'player must receive the wrapper, not the old resolver');
   assert.equal((await playerResolve(LIVE, '480p')).mediaURL, mediaURL('480p'));
-  assert.deepEqual(transport.calls.map(([method]) => method), ['POST', 'GET']);
+  assert.deepEqual(transport.calls.map(([method]) => method), ['POST', 'POST', 'GET']);
   assert.deepEqual(helperCalls, []);
   assert.deepEqual(await playerResolve(YOUTUBE, 'auto720'), HELPER_FAILURE);
   assert.deepEqual(helperCalls, [[YOUTUBE, 'auto720']]);

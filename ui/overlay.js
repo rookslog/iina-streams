@@ -22,13 +22,13 @@
   return FALLBACK_COLORS[Math.abs(h)%FALLBACK_COLORS.length];
  }
 
- function formatTime(value,replay){
+ function formatTime(value,replay,seconds){
   if(replay){
    const s=Math.max(0,Math.floor(value||0));
    return(s>=3600?Math.floor(s/3600)+':':'')+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   }
   const d=value?new Date(value):new Date();
-  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+(seconds?':'+String(d.getSeconds()).padStart(2,'0'):'');
  }
 
  function clampedSize(){
@@ -69,7 +69,7 @@
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
   const list=s.view.presentation==='overlay'?(s.messages||[]):[];
   const replay=s.chat&&s.chat.mode==='replay';
-  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+'|r='+!!replay;
+  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+'|r='+!!replay;
   if(sig!==signature){
    signature=sig;
    const prevTop=messages.scrollTop;
@@ -80,7 +80,7 @@
     if(s.view.timestamps){
      const ts=document.createElement('span');
      ts.className='msg-time';
-     ts.textContent=formatTime(replay?m.time:(m.sentAt||m.time),replay);
+     ts.textContent=formatTime(replay?m.time:(m.sentAt||m.time),replay,s.view.timestampSeconds);
      row.appendChild(ts);
     }
     const author=document.createElement('span');

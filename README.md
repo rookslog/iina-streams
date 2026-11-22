@@ -12,7 +12,7 @@ Watch Twitch and YouTube in [IINA](https://iina.io) with chat beside or over the
 
 - IINA 1.5.1 on macOS.
 - [Streamlink](https://streamlink.github.io) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), for example `brew install streamlink yt-dlp`.
-- Twitch chat needs a Twitch sign-in: click **Sign in with Twitch** and approve on Twitch. Streams ships its own Twitch app ID. You can use your own app instead, through **Use a different Client ID**.
+- Twitch chat needs a Twitch sign-in: click **Sign in with Twitch** and approve on Twitch. Streams ships its own Twitch app ID. You can use your own app instead, through **Use a different Client ID**. What Streams stores and connects to: [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Install
 

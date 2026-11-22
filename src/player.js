@@ -1502,14 +1502,19 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  async function importArchive(path,options){
   if(!active())return false;
   const preserve=!!(options&&options.preserve&&act.chat.mode==='replay');
-  const consumed=options&&options.consumed||'';
+  let consumed=options&&options.consumed||'';
+  // Deletes the consumed download once, on every outcome: fulfilled, abandoned (late) and rejected.
+  const freeConsumed=()=>{
+   if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   consumed='';
+  };
   const selectionGeneration=act.chatGeneration;
   if(!path){
    path=await act.wait(host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']}));
    if(!act.continues())return false;
   }
   if(!path||selectionGeneration!==act.chatGeneration){
-   if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   freeConsumed();
    return false;
   }
   if(!preserve){
@@ -1527,11 +1532,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const helper=services.runHelper('replay',['import','--input',path,'--output',output]);
    const abandon=value=>{
     late(value);
-    if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+    freeConsumed();
    };
    const result=await act.wait(helper,abandon);
    if(!act.continues(result,abandon))return false;
-   if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   freeConsumed();
    outputOwned=owns(result);
    if(act.chatGeneration!==myGeneration)return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The archive could not be imported.');
@@ -1573,6 +1578,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    send();
    return false;
   }finally{
+   // A rejected helper reaches here through the catch, also when the activation ended between promise jobs.
+   freeConsumed();
    if(outputOwned&&output!==act.replayPath&&services.deleteDataPath)services.deleteDataPath(output);
   }
  }

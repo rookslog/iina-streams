@@ -2,9 +2,13 @@
 import importlib.util
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ytdlp_double  # tests/ytdlp_double.py, shared with the media and acquire tests
 
 HELPERS = Path(__file__).resolve().parents[1] / 'helpers'
 
@@ -39,10 +43,10 @@ class PublicationTests(unittest.TestCase):
             url = 'https://www.youtube.com/watch?v=' + identifier
 
             def fake(command, **kwargs):
-                if '--dump-single-json' in command:
-                    return json.dumps({'id':identifier,'is_live':False,'live_status':'was_live',
+                if '-O' in command:
+                    return ytdlp_double.output(command, {'id':identifier,'is_live':False,'live_status':'was_live',
                         'subtitles':{'live_chat':[{'ext':'json','protocol':'youtube_live_chat_replay',
-                        'video_id':identifier,'url':url}]}}).encode()
+                        'video_id':identifier,'url':url}]}})
                 (kwargs['watch_dir'] / 'archive.live_chat.json').write_text(
                     '{"replayChatItemAction":{"videoOffsetTimeMsec":"0","actions":[{}]}}\n')
                 return b''

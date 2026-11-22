@@ -3,6 +3,7 @@
 import json
 import importlib.util
 import contextlib
+import copy
 import io
 import os
 import pathlib
@@ -13,6 +14,9 @@ import tempfile
 import time
 import unittest
 from unittest import mock
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import ytdlp_double  # tests/ytdlp_double.py, shared with the acquire and runner tests
 
 
 HELPER = pathlib.Path(__file__).resolve().parents[1] / "helpers" / "media.py"
@@ -92,11 +96,21 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(error.exception.code, "UNSUPPORTED_SOURCE")
 
 
+def ytdlp_output(command, info):
+    """yt-dlp's stdout for `command` (see ytdlp_double.py), refused like media.run_command if over the cap."""
+    printed = ytdlp_double.output(command, info)
+    if len(printed) > media.MAX_METADATA_BYTES:
+        raise media.MediaError("OUTPUT_LIMIT")
+    return printed
+
+
 class MetadataTests(unittest.TestCase):
     def resolve_fixture(self, source, fixture, quality="auto720"):
         self.commands = []
         def runner(command, **kwargs):
             self.commands.append(command)
+            if os.path.basename(command[0]) == "yt-dlp":
+                return ytdlp_output(command, fixture)
             return json.dumps(fixture).encode("utf-8")
         return media.resolve(source, quality, runner=runner)
 
@@ -128,7 +142,7 @@ class MetadataTests(unittest.TestCase):
         self.assertFalse(result["live"])
         self.assertEqual(result["quality"], "1080p60")
 
-    def test_observed_twitch_vod_distribution_is_allowed_without_general_cloudfront_access(self):
+    def test_first_observed_twitch_vod_distribution_is_allowed(self):
         fixture = twitch_metadata()
         fixture["streams"]["720p60"]["url"] = "https://d2vi6trrdongqn.cloudfront.net/fixture/720p60/index-dvr.m3u8"
         try:
@@ -137,6 +151,60 @@ class MetadataTests(unittest.TestCase):
             self.fail("the observed public Twitch VOD distribution was rejected: " + error.code)
         self.assertEqual(result["mediaURL"], "https://d2vi6trrdongqn.cloudfront.net/fixture/720p60/index-dvr.m3u8")
         self.assertFalse(result["live"])
+
+    # Playlist paths below are modelled on one VOD observed on 2026-11-22 (Streamlink 8.6.3, VOD 2935383720):
+    # /<hash>_<channel>_<broadcast id>_<timestamp>/<quality>/index-muted-<token>.m3u8 on d1m7jfoe9zdc1j.cloudfront.net.
+    # The other Twitch tenant (d2vi6trrdongqn) and its index-dvr.m3u8 name are from the earlier test above.
+    VOD_PLAYLIST = "/0123456789abcdef0123_hutchmf_2935383720_1700000000/720p60/index-muted-AB12CD34EF.m3u8"
+    VOD_SOURCE = "https://www.twitch.tv/videos/2935383720"
+
+    def resolve_vod_stream(self, url, source=VOD_SOURCE):
+        fixture = twitch_metadata()
+        fixture["streams"]["720p60"]["url"] = url
+        return self.resolve_fixture(source, fixture)
+
+    def test_twitch_vod_playlists_on_either_known_cloudfront_tenant_are_allowed(self):
+        for host in ("d2vi6trrdongqn.cloudfront.net", "d1m7jfoe9zdc1j.cloudfront.net"):
+            url = "https://" + host + self.VOD_PLAYLIST + "?sig=private-fixture"
+            with self.subTest(host=host):
+                self.assertEqual(self.resolve_vod_stream(url)["mediaURL"], url)
+
+    def test_cloudfront_vod_rule_admits_only_vod_playlists_on_tenant_shaped_hosts(self):
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        refused = [
+            "https://arbitrary.cloudfront.net" + self.VOD_PLAYLIST,           # not a distribution-id host
+            "https://x" + host + self.VOD_PLAYLIST,                             # one character too long
+            "https://" + host + ".evil.example" + self.VOD_PLAYLIST,           # suffix trick
+            "https://evil-" + host + self.VOD_PLAYLIST,                         # prefix trick
+            "https://sub." + host + self.VOD_PLAYLIST,                          # subdomain of a tenant
+            "https://d1m7jfoe9zdc1j.example.net" + self.VOD_PLAYLIST,          # tenant shape, not CloudFront
+            "https://media.example" + self.VOD_PLAYLIST,                        # not CloudFront at all
+            "https://" + host + "/payload.js",                                  # not an HLS playlist path
+            "https://" + host + "/a/b/c/index-dvr.m3u8",                        # wrong depth
+            "https://" + host + "/a/b/index.m3u8",                              # not index-<name>.m3u8
+            "https://" + host + "/a/b/index-dvr.m3u8/extra",                    # playlist must be the last segment
+            "http://" + host + self.VOD_PLAYLIST,
+            "https://user:pass@" + host + self.VOD_PLAYLIST,
+            "https://" + host + ":8443" + self.VOD_PLAYLIST,
+            "https://" + host + self.VOD_PLAYLIST + "#fragment",
+        ]
+        for url in refused:
+            with self.subTest(url=url), self.assertRaises(media.MediaError) as error:
+                self.resolve_vod_stream(url)
+            self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
+
+    def test_cloudfront_is_never_allowed_for_live_channels_or_for_youtube(self):
+        url = "https://d1m7jfoe9zdc1j.cloudfront.net" + self.VOD_PLAYLIST
+        with self.assertRaises(media.MediaError) as error:
+            self.resolve_vod_stream(url, source="https://www.twitch.tv/hutchmf")
+        self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
+        fixture = youtube_metadata()
+        for item in fixture["formats"]:
+            if item["format_id"] in ("136", "18"):
+                item["url"] = url
+        with self.assertRaises(media.MediaError) as error:
+            self.resolve_fixture("https://youtu.be/jNQXAC9IVRw", fixture)
+        self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
 
     def test_auto_prefers_h264_and_uses_lowest_resolution_when_no_720_format_exists(self):
         fixture = youtube_metadata()
@@ -159,8 +227,9 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual({f["id"] for f in result["formats"]}, {"auto720", "18", "136", "137", "399"})
         cmd = self.commands[0]
         self.assertEqual(cmd[0], "/opt/homebrew/bin/yt-dlp")
-        for flag in ["--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--simulate", "--dump-single-json", "--no-playlist", "--no-remote-components"]:
+        for flag in ["--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--simulate", "--no-playlist", "--no-remote-components"]:
             self.assertIn(flag, cmd)
+        self.assertNotIn("--dump-single-json", cmd, "the full dump can exceed the size limit")
         self.assertNotIn("--cookies", cmd)
         self.assertNotIn("--cookies-from-browser", cmd)
 
@@ -261,6 +330,118 @@ class MetadataTests(unittest.TestCase):
                 media.resolve("https://www.twitch.tv/hutchmf", runner=lambda *args, **kwargs: payload)
             self.assertNotIn("secret", str(error.exception))
             self.assertNotIn("private.example", str(error.exception))
+
+
+class LargeMetadataTests(unittest.TestCase):
+    """YouTube videos whose full yt-dlp dump exceeds 8 MiB must still resolve (#46)."""
+    URL = "https://youtu.be/jNQXAC9IVRw"
+
+    def large_fixture(self):
+        fixture = youtube_metadata()
+        # Spike #37: automatic_captions was 11.15 MB of an 11.7 MB dump. Two language entries stand in for it.
+        caption = {"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?" + "x" * 4096, "name": "n" * 1024}
+        fixture["automatic_captions"] = {"en": [dict(caption) for _ in range(1200)],
+                                         "fr": [dict(caption) for _ in range(1200)]}
+        fixture["description"] = "d" * 100000
+        fixture["storyboards"] = [{"fragments": [{"url": "https://i.ytimg.com/sb/" + "y" * 200}] * 500}]
+        return fixture
+
+    def run_resolve(self, fixture, quality="auto720"):
+        commands = []
+
+        def runner(command, **kwargs):
+            commands.append(command)
+            return ytdlp_output(command, fixture)
+        return media.resolve(self.URL, quality, runner=runner), commands
+
+    def test_the_fixture_is_over_the_limit_when_dumped_whole(self):
+        dump = json.dumps(self.large_fixture()).encode("utf-8")
+        self.assertGreater(len(dump), media.MAX_METADATA_BYTES, "precondition: this is the failing case")
+        with self.assertRaises(media.MediaError) as error:
+            ytdlp_output(["yt-dlp", "--dump-single-json"], self.large_fixture())
+        self.assertEqual(error.exception.code, "OUTPUT_LIMIT", "the old command fails on it")
+
+    def test_large_metadata_resolves_with_the_same_result_as_a_small_dump(self):
+        large, commands = self.run_resolve(self.large_fixture())
+        small, _ = self.run_resolve(youtube_metadata())
+        self.assertEqual(large, small)
+        self.assertEqual(large["quality"], "136")
+        self.assertIn("itag=140", large["audioURL"])
+        self.assertEqual(large["headers"], {"User-Agent": "Fixture/1.0"}, "top-level http_headers still reach the result")
+        template_text = " ".join(arg for arg in commands[0] if arg.startswith("%"))
+        for unread in ("automatic_captions", "subtitles", "description", "storyboards"):
+            self.assertNotIn(unread, template_text)
+
+    def test_trimmed_output_matches_the_full_dump_for_every_field_the_resolver_reads(self):
+        # For each field: set up a fixture where the field decides the outcome, then check (a) the outcome
+        # differs when the field is withheld, so the case proves something, and (b) the trimmed pipeline
+        # reproduces the outcome the full dump gives.
+        source = media.parse_source(self.URL)
+
+        def outcome(fixture, trimmed):
+            try:
+                if trimmed:
+                    return self.run_resolve(copy.deepcopy(fixture))[0]
+                return media._youtube(source, copy.deepcopy(fixture), "auto720")
+            except media.MediaError as error:
+                return error.code
+
+        def tie_audio(f):
+            # Two non-AAC audio formats that differ only in the field under test (251 gets it).
+            for item in f["formats"]:
+                if item["format_id"] in ("140", "251"):
+                    item.update(acodec="opus", abr=160, language_preference=0)
+            return f["formats"][5]
+
+        def only_audio_ext(f):
+            f["formats"] = [x for x in f["formats"] if x["format_id"] != "251"]
+            f["formats"][4].update(acodec="", audio_ext="m4a")
+
+        def on_136(**change):
+            return lambda f: f["formats"][1].update(change)
+
+        def on_251(**change):
+            return lambda f: tie_audio(f).update(change)
+
+        top = {
+            "id": lambda f: None, "title": lambda f: f.update(title="Other title"), "duration": lambda f: f.update(duration=123),
+            "is_live": lambda f: f.update(is_live=True), "live_status": lambda f: f.update(live_status="is_upcoming"),
+            "availability": lambda f: f.update(availability="private"), "has_drm": lambda f: f.update(has_drm=True),
+            "_has_drm": lambda f: f.update(_has_drm=True), "_type": lambda f: f.update(_type="playlist"),
+            "extractor_key": lambda f: f.update(extractor_key="Vimeo"),
+            "http_headers": lambda f: f.update(http_headers={"User-Agent": "Other/2"}),
+        }
+        formats = {
+            "format_id": lambda f: None, "url": lambda f: None, "protocol": lambda f: None, "vcodec": lambda f: None,
+            "height": lambda f: None, "acodec": on_136(acodec="mp4a.40.2"), "audio_ext": only_audio_ext,
+            "fps": on_136(fps=60), "has_drm": on_136(has_drm=True), "http_headers": on_136(http_headers={"User-Agent": "Fmt/3"}),
+            "abr": lambda f: tie_audio(f).update(abr=999), "language_preference": on_251(language_preference=5),
+            "quality": on_251(quality=5), "source_preference": on_251(source_preference=5), "asr": on_251(asr=48000),
+        }
+        self.assertEqual(set(top), set(media.YOUTUBE_VIDEO_FIELDS))
+        self.assertEqual(set(formats), set(media.YOUTUBE_FORMAT_FIELDS))
+        for scope, cases in (("video", top), ("format", formats)):
+            for field, setup in cases.items():
+                fixture = youtube_metadata()
+                setup(fixture)
+                withheld = copy.deepcopy(fixture)
+                if scope == "video":
+                    withheld.pop(field, None)
+                else:
+                    for item in withheld["formats"]:
+                        item.pop(field, None)
+                with self.subTest(scope=scope, field=field):
+                    expected = outcome(fixture, trimmed=False)
+                    self.assertNotEqual(outcome(withheld, trimmed=False), expected, "the case must depend on the field")
+                    self.assertEqual(outcome(fixture, trimmed=True), expected)
+
+    def test_unexpected_output_shapes_are_sanitized_metadata_errors(self):
+        for payload in ["", "{}", '{"id":"jNQXAC9IVRw"}\n[]\n[]', '["not","an","object"]\n[]',
+                        "not-json https://private.example/?t=secret\n[]", '{"id":"jNQXAC9IVRw"}\nNA']:
+            with self.subTest(payload=payload[:40]), self.assertRaises(media.MediaError) as error:
+                media.resolve(self.URL, runner=lambda *args, **kwargs: payload)
+            self.assertEqual(error.exception.code, "INVALID_METADATA")
+            self.assertNotIn("secret", str(error.exception))
 
 
 class ProcessTests(unittest.TestCase):
@@ -378,8 +559,11 @@ class AdditionalSafetyTests(unittest.TestCase):
         fixture = youtube_metadata()
         fixture["formats"] = [dict(fixture["formats"][0], format_id=str(i)) for i in range(513)]
         with self.assertRaises(media.MediaError) as error:
-            media.resolve("https://youtu.be/jNQXAC9IVRw", runner=lambda *args: json.dumps(fixture))
+            media.resolve("https://youtu.be/jNQXAC9IVRw", runner=lambda command, **kwargs: ytdlp_output(command, fixture))
         self.assertEqual(error.exception.code, "OUTPUT_LIMIT")
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve("https://youtu.be/jNQXAC9IVRw", runner=lambda *args: b"x" * (media.MAX_METADATA_BYTES + 1))
+        self.assertEqual(error.exception.code, "OUTPUT_LIMIT", "the size guard still applies to the trimmed output")
 
 
 class MediaCLITests(unittest.TestCase):

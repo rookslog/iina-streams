@@ -37,11 +37,6 @@ function viewSettings(value){
 
 const ACTIVATION_URL=/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/;
 
-// Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
-function shouldAutoOpen(data,armed){
- return !!armed&&!!data&&data.phase==='waiting'&&ACTIVATION_URL.test(data.verificationURI||'');
-}
-
 // A user-facing error message with any address removed, since media and chat URLs can be signed.
 function publicError(error,fallback){
  return String(error&&error.message||fallback).replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
@@ -62,7 +57,6 @@ function safeMessage(m){
 }
 
 function start(host,config,services){
- var autoOpen=false;
  const label=host.global.getLabel()||'';
  const identity=Sources.fromLabel(label);
  const qaIdentity=qaLocalIdentity();
@@ -202,10 +196,18 @@ function start(host,config,services){
   trace('sidebar-document-visibility',{visible:data.visible});
  }
 
+ // Saves one change into the latest persisted settings. Other fields, and anything another window saved
+ // since this one started, survive; the whole file is replaced on every save.
+ function saveSetting(change){
+  if(!services.saveSettings)return;
+  const latest=services.readSettings?services.readSettings():{};
+  services.saveSettings(Object.assign({},latest,change));
+ }
+
  // Remember whether the user wants chat, so the next player opens with it on or off.
  function setChatPreferred(enabled){
   chatPreferred=enabled;
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:enabled});
+  saveSetting({chatEnabled:enabled});
  }
 
  function onReplayResume(){
@@ -239,7 +241,6 @@ function start(host,config,services){
  }
 
  function connectLive(data){
-  autoOpen=!!(data&&data.open===true);
   if(closed||!sourceActive)return;
   if(source.kind!=='twitch-live'){
    chat.error='Live chat is available for Twitch channels.';
@@ -257,13 +258,16 @@ function start(host,config,services){
   return{mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
  }
 
+ // Twitch opens only from the user's click on "Approve on Twitch"; the activation page fills in the code.
  function openActivation(){
   if(auth.phase!=='waiting')return;
   if(ACTIVATION_URL.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);
  }
 
+ // Sign out. The broker revokes the grant it holds, so this window must not post auth-disconnect first:
+ // with one window connected that would make the broker discard the grant before revoking it.
  function forgetAuth(){
-  chatOff();
+  chatOff({releaseAuth:false});
   app.postMessage('auth-forget',{});
  }
 
@@ -375,7 +379,7 @@ function start(host,config,services){
   const editing=change.editing===undefined?view.editing:!!change.editing;
   view=viewSettings(change.reset?{}:Object.assign({},view,change));
   view.editing=editing&&view.presentation==='overlay';
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false})});
+  saveSetting({view:Object.assign({},view,{editing:false})});
   if(overlayNeeded()){
    ensureOverlay();
   }else{
@@ -414,7 +418,9 @@ function start(host,config,services){
   pendingAuth=null;
  }
 
- function chatOff(){
+ // Turns chat off. Unless told otherwise it also tells the broker this window no longer needs the login,
+ // which releases the in-memory grant but never revokes or clears a saved one.
+ function chatOff(options){
   chatGeneration++;
   pendingAuth=null;
   stopReplay();
@@ -424,7 +430,7 @@ function start(host,config,services){
     services.cancelHelpers(['replay','acquire']);
    }catch(_){}
   }
-  app.postMessage('auth-disconnect',{});
+  if(!options||options.releaseAuth!==false)app.postMessage('auth-disconnect',{});
   messages=[];
   chat.mode='off';
   chat.state='off';
@@ -600,7 +606,7 @@ function start(host,config,services){
   }
   const generation=chatGeneration;
   const downloadPath=uniqueDataPath('download');
-  let owned=false;
+  let owned=false,seekWasQueued=false;
   twitchFetchBusy=true;
   twitchFetchAt=at;
   twitchNextAttempt=Date.now()+2500;
@@ -630,7 +636,11 @@ function start(host,config,services){
   }catch(error){
    if(!closed&&sourceActive&&generation===chatGeneration){
     twitchNextAttempt=Date.now()+30000;
-    if(!preserve){
+    // A seek that arrived while this request ran asks for a different position. Stay in "fetching" so the
+    // finally block below requests it; this failed position is not retried. Off, close and a source change
+    // end up in the generation and sourceActive checks above, so they never reach this branch.
+    seekWasQueued=!preserve&&twitchQueuedAt!==null&&chatPreferred;
+    if(!preserve&&!seekWasQueued){
      chat.state='unavailable';
      chat.available=false;
     }
@@ -644,7 +654,8 @@ function start(host,config,services){
    const pending=twitchQueuedAt;
    twitchQueuedAt=null;
    if(pending!==null&&!closed&&sourceActive&&chatPreferred&&(chat.mode==='replay'||chat.state==='fetching')){
-    const outside=!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
+    // With no chat on screen, a failed first fetch has no window to cover the queued position.
+    const outside=seekWasQueued||!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
     if(outside)fetchTwitchWindow({auto:true,at:pending});
    }
   }
@@ -972,12 +983,6 @@ function start(host,config,services){
   auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});
   chat.state=data.phase;
   chat.error=data.message||'';
-  if(shouldAutoOpen(data,autoOpen)){
-   autoOpen=false;
-   host.utils.open(data.verificationURI);
-  }else if(data.phase!=='waiting'&&data.phase!=='authorizing'){
-   autoOpen=false;
-  }
   send();
  }
 
@@ -1082,4 +1087,4 @@ function start(host,config,services){
  };
 }
 
-module.exports={start,viewSettings,shouldAutoOpen,safeMessage};
+module.exports={start,viewSettings,safeMessage};

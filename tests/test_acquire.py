@@ -18,6 +18,9 @@ HELPER = Path(__file__).resolve().parents[1] / 'helpers' / 'acquire.py'
 SPEC = importlib.util.spec_from_file_location('candidate_acquire', HELPER)
 acquire = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(acquire)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ytdlp_double  # tests/ytdlp_double.py, shared with the media and runner tests
+
 ID = '92h_kU8O58M'
 URL = 'https://www.youtube.com/watch?v=' + ID
 
@@ -27,6 +30,14 @@ def metadata():
             'live_status': 'was_live', 'availability': 'public',
             'subtitles': {'live_chat': [{'ext': 'json', 'protocol': 'youtube_live_chat_replay',
                                          'video_id': ID, 'url': URL}]}}
+
+
+def preflight_output(command, info):
+    """yt-dlp's stdout for `command` (see ytdlp_double.py), refused like acquire.run_command if over the cap."""
+    printed = ytdlp_double.output(command, info)
+    if len(printed) > acquire.MAX_METADATA_BYTES:
+        raise acquire.AcquireError('OUTPUT_LIMIT')
+    return printed
 
 
 def archive():
@@ -48,8 +59,8 @@ class AcquisitionTests(unittest.TestCase):
 
     def runner(self, command, **kwargs):
         self.commands.append((command, kwargs))
-        if '--dump-single-json' in command:
-            return json.dumps(metadata()).encode()
+        if '-O' in command:
+            return preflight_output(command, metadata())
         template = Path(command[command.index('--output') + 1])
         template.with_name('archive.live_chat.json').write_bytes(archive())
         return b''
@@ -98,6 +109,7 @@ class AcquisitionTests(unittest.TestCase):
                  ('LIVE_NOT_REPLAY', {'live_status': 'is_upcoming'}), ('LIVE_NOT_REPLAY', {'live_status': 'post_live'}),
                  ('ACCESS_REQUIRED', {'availability': 'private'}), ('ACCESS_REQUIRED', {'availability': 'subscriber_only'}),
                  ('INVALID_METADATA', {'id': 'aaaaaaaaaaa'}), ('INVALID_METADATA', {'_type': 'playlist'}),
+                 ('LIVE_NOT_REPLAY', {'is_upcoming': True}), ('INVALID_METADATA', {'extractor_key': 'Vimeo'}),
                  ('NO_REPLAY', {'subtitles': {}}),
                  ('NO_REPLAY', {'subtitles': {'live_chat': [{'ext': 'json', 'protocol': 'youtube_live_chat'}]}})]
         for code, changes in cases:
@@ -107,7 +119,7 @@ class AcquisitionTests(unittest.TestCase):
                     self.commands.append(command)
                     value = metadata()
                     value.update(changes)
-                    return json.dumps(value).encode()
+                    return preflight_output(command, value)
                 with self.assertRaises(acquire.AcquireError) as error:
                     acquire.acquire(URL, str(self.output), runner=preflight)
                 self.assertEqual(error.exception.code, code)
@@ -117,14 +129,48 @@ class AcquisitionTests(unittest.TestCase):
     def test_installed_ytdlp_watch_parameters_keep_the_same_public_video_identity(self):
         # Observed installed 2026.08.19 metadata; not credentials or caller-supplied parameters.
         def observed(command, **kwargs):
-            if '--dump-single-json' in command:
+            if '-O' in command:
                 value = metadata()
                 value['subtitles']['live_chat'][0]['url'] = URL + '&bpctr=9999999999&has_verified=1'
-                return json.dumps(value).encode()
+                return preflight_output(command, value)
             return self.runner(command, **kwargs)
         result = acquire.acquire(URL, str(self.output), runner=observed)
         self.assertTrue(result['ok'])
         self.assertEqual(self.commands[-1][0][-1], URL)
+
+    def test_large_video_metadata_does_not_hit_the_output_limit(self):
+        # Spike #37: automatic_captions was 11.15 MB of an 11.7 MB dump. The preflight must not ask for it.
+        caption = {'ext': 'vtt', 'url': 'https://www.youtube.com/api/timedtext?' + 'x' * 4096, 'name': 'n' * 1024}
+        big = metadata()
+        big['automatic_captions'] = {'en': [dict(caption) for _ in range(1200)], 'fr': [dict(caption) for _ in range(1200)]}
+        self.assertGreater(len(json.dumps(big).encode()), acquire.MAX_METADATA_BYTES, 'precondition: over the limit when dumped whole')
+        def runner(command, **kwargs):
+            self.commands.append((command, kwargs))
+            if '-O' in command or '--dump-single-json' in command:
+                return preflight_output(command, big)
+            Path(command[command.index('--output') + 1]).with_name('archive.live_chat.json').write_bytes(archive())
+            return b''
+        result = acquire.acquire(URL, str(self.output), runner=runner)
+        self.assertTrue(result['ok'])
+        preflight = self.commands[0][0]
+        self.assertNotIn('--dump-single-json', preflight)
+        self.assertNotIn('automatic_captions', ' '.join(preflight))
+
+    def test_preflight_output_shape_and_size_are_validated(self):
+        good = ytdlp_double.output(['yt-dlp'] + acquire.PREFLIGHT_OUTPUT, metadata()).decode()
+        self.assertEqual(len(good.split('\n')), 2)
+        acquire.validate_metadata(good, ID, URL)
+        for payload in ['', '{}', good + '\n{}', '["not","an","object"]\nNA', 'not-json\nNA']:
+            with self.subTest(payload=payload[:30]), self.assertRaises(acquire.AcquireError) as error:
+                acquire.validate_metadata(payload, ID, URL)
+            self.assertEqual(error.exception.code, 'INVALID_METADATA')
+        with self.assertRaises(acquire.AcquireError) as error:
+            acquire.validate_metadata(b'x' * (acquire.MAX_METADATA_BYTES + 1), ID, URL)
+        self.assertEqual(error.exception.code, 'OUTPUT_LIMIT', 'the size guard stays')
+        first = good.split('\n')[0]
+        with self.assertRaises(acquire.AcquireError) as error:
+            acquire.validate_metadata(first + '\nNA', ID, URL)
+        self.assertEqual(error.exception.code, 'NO_REPLAY', 'a video with no live chat track prints NA')
 
     def test_metadata_cannot_supply_a_download_address_or_different_video(self):
         for changes in [{'url': 'http://127.0.0.1/private'}, {'video_id': 'aaaaaaaaaaa'},
@@ -132,7 +178,7 @@ class AcquisitionTests(unittest.TestCase):
             def bad(command, **kwargs):
                 value = metadata()
                 value['subtitles']['live_chat'][0].update(changes)
-                return json.dumps(value).encode()
+                return preflight_output(command, value)
             with self.subTest(changes=changes), self.assertRaises(acquire.AcquireError) as error:
                 acquire.acquire(URL, str(self.output), runner=bad)
             self.assertEqual(error.exception.code, 'INVALID_METADATA')
@@ -140,8 +186,8 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_failed_download_removes_staging_and_never_publishes_partial_artifact(self):
         def failed(command, **kwargs):
-            if '--dump-single-json' in command:
-                return json.dumps(metadata()).encode()
+            if '-O' in command:
+                return preflight_output(command, metadata())
             stage = Path(command[command.index('--output') + 1]).parent
             (stage / 'archive.live_chat.json.part').write_bytes(archive())
             raise acquire.AcquireError('TIMEOUT')
@@ -168,8 +214,8 @@ class AcquisitionTests(unittest.TestCase):
         for mode in cases:
             with self.subTest(mode=mode):
                 def bad(command, **kwargs):
-                    if '--dump-single-json' in command:
-                        return json.dumps(metadata()).encode()
+                    if '-O' in command:
+                        return preflight_output(command, metadata())
                     stage = Path(command[command.index('--output') + 1]).parent
                     target = stage / 'archive.live_chat.json'
                     if mode == 'part':
@@ -189,8 +235,8 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_raw_size_and_json_line_budget_are_enforced(self):
         def oversized(command, **kwargs):
-            if '--dump-single-json' in command:
-                return json.dumps(metadata()).encode()
+            if '-O' in command:
+                return preflight_output(command, metadata())
             target = Path(command[command.index('--output') + 1]).with_name('archive.live_chat.json')
             target.write_bytes(archive() * 5)
             return b''

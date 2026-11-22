@@ -29,9 +29,35 @@ TWITCH_QUALITY = re.compile(r"([1-9][0-9]{1,3})p([1-9][0-9]{0,2})?\Z")
 RESERVED_TWITCH = {"videos", "directory", "search", "settings", "subscriptions", "following", "downloads",
                   "login", "signup", "products", "p", "popout", "clips"}
 AUTO = {"id": "auto720", "label": "Auto · 720p preferred"}
-# Exact Twitch-owned distribution observed from Streamlink's public hutchmf VOD
-# 2923174759 on 2026-11-08. Deliberately do not allow arbitrary CloudFront tenants.
-TWITCH_VOD_DISTRIBUTIONS = {"d2vi6trrdongqn.cloudfront.net"}
+# Twitch serves VOD playlists from CloudFront distributions, and more than one exists: d2vi6trrdongqn
+# (observed 2026-11-08, VOD 2923174759) and d1m7jfoe9zdc1j (observed 2026-11-22, VOD 2935383720, all eight
+# streams). The list of Twitch's distributions is not published, so a VOD playlist is admitted by shape:
+#   host    exactly one CloudFront distribution id, d<13 lowercase letters or digits>.cloudfront.net;
+#           no subdomains, no suffix or prefix tricks;
+#   path    /<segment>/<segment>/index-<name>.m3u8 (observed: /<hash>_<channel>_<id>_<timestamp>/<quality>/
+#           index-muted-<token>.m3u8, and index-dvr.m3u8), so only an HLS playlist, nothing else;
+#   source  only for a twitch-vod source, never for a live channel or YouTube;
+#   plus the checks every media URL gets: https, no credentials, port 443, no fragment.
+# What this admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording
+# whose address came from Streamlink. The path is not a security boundary (anyone can create a distribution
+# with that path); the boundary is that Streamlink's Twitch plugin supplied the address, and the narrowing
+# above keeps surprises small. Closing it fully needs an explicit list of Twitch's distributions.
+TWITCH_VOD_HOST = re.compile(r"d[0-9a-z]{13}\.cloudfront\.net\Z")
+TWITCH_VOD_PATH = re.compile(r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/index-[A-Za-z0-9-]+\.m3u8\Z")
+
+# yt-dlp's --dump-single-json can exceed MAX_METADATA_BYTES: one 45 minute video returned 11.7 MB, 11.15 MB
+# of it automatic_captions (spike #37, yt-dlp 2026.08.19). The helper asks yt-dlp for only the fields it reads,
+# as two -O (--print) templates, so the output is one JSON line per template (a missing value prints NA):
+#   line 1  the video's own fields, an object without the keys yt-dlp does not have;
+#   line 2  the formats, a list of objects with only the format fields below.
+# A nested selector for both returned NA in the spike, hence two flat templates. Every field here is read by
+# _youtube; add a field here when _youtube starts reading it.
+YOUTUBE_VIDEO_FIELDS = ("id", "_type", "title", "extractor_key", "live_status", "is_live", "duration",
+                        "availability", "has_drm", "_has_drm", "http_headers")
+YOUTUBE_FORMAT_FIELDS = ("format_id", "url", "protocol", "vcodec", "acodec", "audio_ext", "height", "fps", "abr",
+                         "language_preference", "quality", "source_preference", "asr", "has_drm", "http_headers")
+YOUTUBE_OUTPUT = ["-O", "%(.{" + ",".join(YOUTUBE_VIDEO_FIELDS) + "})j",
+                  "-O", "%(formats.:.{" + ",".join(YOUTUBE_FORMAT_FIELDS) + "})j"]
 
 
 ERROR_MESSAGES = {
@@ -245,7 +271,7 @@ def parse_source(value):
     raise MediaError("UNSUPPORTED_SOURCE")
 
 
-def _media_url(value, provider):
+def _media_url(value, provider, *, vod=False):
     if not isinstance(value, str) or not value or len(value) > MAX_URL_BYTES or re.search(r"[\x00-\x20\x7f\\]", value):
         raise MediaError("UNSAFE_MEDIA_URL")
     try:
@@ -253,7 +279,7 @@ def _media_url(value, provider):
         host = parsed.hostname or ""
         suffixes = ("ttvnw.net", "twitch.tv", "twitchcdn.net") if provider == "Twitch" else ("googlevideo.com",)
         allowed = any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
-        if provider == "Twitch" and host in TWITCH_VOD_DISTRIBUTIONS:
+        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and TWITCH_VOD_PATH.fullmatch(parsed.path):
             allowed = True
         if (parsed.scheme != "https" or parsed.username is not None or parsed.password is not None or
                 parsed.port not in (None, 443) or parsed.fragment or not re.fullmatch(r"[a-zA-Z0-9.-]+", host) or not allowed):
@@ -346,9 +372,10 @@ def _twitch(source, metadata, quality):
     selected = _choose(options, quality)
     stream = selected["raw"]
     details = metadata.get("metadata") if isinstance(metadata.get("metadata"), dict) else {}
+    media_url = _media_url(stream.get("url"), "Twitch", vod=source["kind"] == "twitch-vod")
     return {"ok": True, "source": source, "title": _title(details.get("title"), source["id"] + " — Twitch"),
             "live": source["kind"] == "twitch-live", "duration": None, "quality": selected["id"],
-            "formats": _public_formats(options), "mediaURL": _media_url(stream.get("url"), "Twitch"),
+            "formats": _public_formats(options), "mediaURL": media_url,
             "headers": _headers("Twitch", stream.get("headers"))}
 
 
@@ -413,6 +440,20 @@ def _youtube(source, metadata, quality):
     return result
 
 
+def _youtube_metadata(payload):
+    """Rebuild the metadata dict _youtube reads from the two -O lines of YOUTUBE_OUTPUT."""
+    text = payload.decode("utf-8") if isinstance(payload, bytes) else payload
+    lines = text.strip().split("\n")
+    if len(lines) != 2:
+        raise MediaError("INVALID_METADATA")
+    metadata = json.loads(lines[0])
+    if not isinstance(metadata, dict):
+        raise MediaError("INVALID_METADATA")
+    if lines[1].strip() != "NA":
+        metadata["formats"] = json.loads(lines[1])
+    return metadata
+
+
 def resolve(url, quality="auto720", *, runner=None):
     source = parse_source(url)
     if not isinstance(quality, str) or not FORMAT_ID.fullmatch(quality):
@@ -423,14 +464,14 @@ def resolve(url, quality="auto720", *, runner=None):
                    "--http-timeout", "12", "--json", source["url"]]
     else:
         command = [YTDLP, "--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--no-playlist", "--simulate",
-                   "--dump-single-json", "--no-warnings", "--no-progress", "--no-check-formats", "--socket-timeout", "12",
+                   "--no-warnings", "--no-progress", "--no-check-formats", "--socket-timeout", "12",
                    "--retries", "1", "--extractor-retries", "1", "--no-remote-components",
-                   "--js-runtimes", "node:/opt/homebrew/bin/node", source["url"]]
+                   "--js-runtimes", "node:/opt/homebrew/bin/node"] + YOUTUBE_OUTPUT + [source["url"]]
     payload = (runner or run_command)(command)
     if not isinstance(payload, (bytes, str)) or len(payload) > MAX_METADATA_BYTES:
         raise MediaError("OUTPUT_LIMIT")
     try:
-        metadata = json.loads(payload)
+        metadata = json.loads(payload) if source["provider"] == "Twitch" else _youtube_metadata(payload)
     except (ValueError, UnicodeError, RecursionError):
         raise MediaError("INVALID_METADATA") from None
     if not isinstance(metadata, dict):

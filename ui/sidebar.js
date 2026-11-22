@@ -349,30 +349,30 @@ function validClientID(v){
 
  const chatAvailable=()=>!!(state&&state.chat&&state.chat.available);
  const twitchLive=()=>!!(state&&state.source&&state.source.kind==='twitch-live');
- // The chat switch never arms auto-open; only an explicit Sign in, Continue, Enter or Try again does.
- // tests/sign-in-auto-open.test.js pins this listener to one line.
+ // Nothing here opens Twitch by itself: only the "Approve on Twitch" button does (authorize-open).
  $('chat-toggle').addEventListener('change',()=>{if(!$('chat-toggle').checked)post('chat-off');else if(chatAvailable())post('replay-resume');else if(twitchLive())post('connect',{clientID:''});});
 
  $('authorize-open').addEventListener('click',copyCodeAndOpen);
  $('quality').addEventListener('change',()=>post('change-quality',$('quality').value));
  $('offset').addEventListener('change',()=>post('offset',Number($('offset').value)));
- $('connect').addEventListener('click',()=>post('connect',{clientID:'',open:true}));
+ $('connect').addEventListener('click',()=>post('connect',{clientID:''}));
  $('authorize').addEventListener('click',()=>{
-  if(validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim(),open:true});
+  if(validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim()});
  });
  $('client-id').addEventListener('input',()=>{
   $('authorize').disabled=!validClientID($('client-id').value);
  });
  $('client-id').addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim(),open:true});
+  if(e.key==='Enter'&&validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim()});
  });
  $('open-console').addEventListener('click',()=>post('open-twitch-console'));
- $('retry').addEventListener('click',()=>post('connect',{clientID:'',open:true}));
+ $('retry').addEventListener('click',()=>post('connect',{clientID:''}));
  $('use-other-id').addEventListener('click',()=>{
   setupOpen=true;
   if(state)render(state);
  });
 
+ // "Approve on Twitch": open the activation page. The code is also copied, silently, in case autofill fails.
  function copyCodeAndOpen(){
   const code=state&&state.auth&&state.auth.userCode;
   if(code&&navigator.clipboard&&navigator.clipboard.writeText){

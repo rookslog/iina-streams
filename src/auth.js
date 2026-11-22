@@ -6,11 +6,13 @@ const SCOPE='chat:read';
 const SIGNED_OUT='{"signedOut":true}';
 const holdsTokens=v=>!!v&&typeof v==='object'&&(typeof v.access_token==='string'&&!!v.access_token||typeof v.refresh_token==='string'&&!!v.refresh_token);
 class TwitchAuth {
- constructor(options){this.o=options;this.generation=0;this.timer=null;this.secret=null;this.client='';this.state={phase:'off',message:'',userCode:'',verificationURI:''};}
+ constructor(options){this.o=options;this.generation=0;this.timer=null;this.secret=null;this.sessionOnly=false;this.lostSessionGrant=false;this.client='';this.state={phase:'off',message:'',userCode:'',verificationURI:''};}
  snapshot(){return Object.assign({},this.state);}
  publish(phase,message,extra){this.state=Object.assign({phase,message:message||'',userCode:'',verificationURI:''},extra||{});this.o.onState(this.snapshot());}
  clearTimer(){if(this.timer!==null){this.o.clearTimer(this.timer);this.timer=null;}}
- stop(){this.generation++;this.clearTimer();this.secret=null;this.publish('off');if(this.o.onStop)this.o.onStop();}
+ // A grant whose Keychain save failed lives only in memory. If stop() drops it, Twitch still holds that
+ // unrevoked grant and nothing here can send the revocation; forget() reports that instead of success.
+ stop(){this.generation++;this.clearTimer();if(this.secret&&this.sessionOnly)this.lostSessionGrant=true;this.secret=null;this.publish('off');if(this.o.onStop)this.o.onStop();}
  fail(message){this.clearTimer();this.secret=null;this.publish('error',message);if(this.o.onStop)this.o.onStop();}
  schedule(fn,ms,generation){this.clearTimer();this.timer=this.o.setTimer(async()=>{this.timer=null;if(generation===this.generation)await fn();},ms);}
  async connect(clientID){
@@ -20,7 +22,7 @@ class TwitchAuth {
   try{
    let stored=null;try{stored=this.o.read();if(typeof stored==='string'&&stored)stored=JSON.parse(stored);}catch(_){}
    if(stored&&stored.clientID===this.client&&typeof stored.access_token==='string'){
-    this.secret=stored;
+    this.secret=stored;this.sessionOnly=false;
     if(await this.validate(generation,false))return true;
     if(generation!==this.generation)return false;
     if(stored.refresh_token&&await this.refresh(generation))return true;
@@ -61,6 +63,7 @@ class TwitchAuth {
   const data=res&&res.data||{};
   if(!res||res.status!==200||data.client_id!==this.client||!/^[a-z0-9_]{3,25}$/.test(data.login||'')||!Array.isArray(data.scopes)||data.scopes.length!==1||data.scopes[0]!==SCOPE||!(data.expires_in>0))return false;
   let saved=true;if(persist)try{saved=this.o.write(JSON.stringify(this.secret))!==false;}catch(_){saved=false;}
+  if(persist)this.sessionOnly=!saved;
   this.publish('ready',saved?'':'Connected for this session; Keychain storage failed.',{login:data.login});
   this.o.onReady({token,login:data.login,clientID:this.client});
   const refreshBeforeExpiry=!!this.secret.refresh_token&&data.expires_in<=3660;
@@ -90,7 +93,8 @@ class TwitchAuth {
   if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=JSON.parse(saved);}catch(_){saved=null;known=false;}
   const grant=saved&&typeof saved.clientID==='string'&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID)&&typeof saved.access_token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(saved.access_token)?{clientID:saved.clientID,token:saved.access_token}:null;
   if(saved&&!grant&&holdsTokens(saved))known=false;
-  this.stop();const generation=this.generation;
+  if(this.lostSessionGrant&&!grant)known=false;
+  this.stop();this.lostSessionGrant=false;const generation=this.generation;
   // Clear before awaiting the network; an older Forget must never erase a new
   // connection's persisted token when its revocation response arrives later.
   let removed=true;try{removed=this.o.write(SIGNED_OUT)!==false;}catch(_){removed=false;}

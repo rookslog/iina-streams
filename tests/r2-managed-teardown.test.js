@@ -67,7 +67,8 @@ test('r2 #6: a managed replay window replaced by local media runs no event.off o
   await settle(); // Microtasks only: no timer has run.
   assert.equal(shim.event.offs.length, offsBefore, 'no event.off on the hook stack');
   assert.equal(controller.snapshot().chat.mode, 'replay', 'deactivation waits for the main-thread turn');
-  assert.equal(continued, 0, 'the load is held until then, as in the adopted path');
+  // Review r3 #5 changed this: the foreign file continues at once, on the hook.
+  assert.equal(continued, 1, 'the load continues at once; only deactivation waits for the turn');
 
   shim.timers.advance(0);
   await hook;

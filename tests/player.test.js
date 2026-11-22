@@ -42,7 +42,9 @@ test('QA configuration cannot attach to an unrelated blank player',()=>{
 });
 test('an unrelated file deactivates all quality work and fences an outstanding resolution',async()=>{
  const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));let count=0;
- const c=start(r.h,{variant:'unified'},{resolve:async()=>{count++;return resolution;},readSettings:()=>({chatEnabled:false})});await r.shim.mpv.runHook('on_load',()=>{});await finishLoad(r,'https://www.twitch.tv/videos/123456');r.setPath('/Users/example/movie.mp4');await r.shim.mpv.runHook('on_load',()=>{});assert.equal(await c.changeQuality('auto720'),false);assert.equal(count,1);assert.equal(r.shim.mpv.commands.length,0);
+ const c=start(r.h,{variant:'unified'},{resolve:async()=>{count++;return resolution;},readSettings:()=>({chatEnabled:false})});await r.shim.mpv.runHook('on_load',()=>{});await finishLoad(r,'https://www.twitch.tv/videos/123456');r.setPath('/Users/example/movie.mp4');await r.shim.mpv.runHook('on_load',()=>{});
+ await new Promise(resolve=>setTimeout(resolve,0)); // Review r3 #5: deactivation runs on a later turn.
+ assert.equal(await c.changeQuality('auto720'),false);assert.equal(count,1);assert.equal(r.shim.mpv.commands.length,0);
 });
 test('old native file-loaded events cannot confirm a newer quality generation',async()=>{
  const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));const c=start(r.h,{variant:'unified'},{resolve:async(s,q)=>({...resolution,quality:q==='auto720'?'720p60':resolution.quality}),readSettings:()=>({chatEnabled:false})});await r.shim.mpv.runHook('on_load',()=>{});await finishLoad(r,'https://www.twitch.tv/videos/123456');

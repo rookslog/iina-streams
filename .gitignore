@@ -29,3 +29,5 @@ evidence/native/safari-*.jpg
 releases/
 # Temporary agent worktrees
 .claude/worktrees/
+# Personal Claude Code settings (never shared)
+.claude/settings.local.json

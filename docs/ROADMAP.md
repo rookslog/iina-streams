@@ -9,7 +9,7 @@ One line per release. Each item lives in a GitHub issue, and each release is a [
 | [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | An overlay you can shape | resize and drag #1 · host probe and pointer tests #18 · panel design review #20 |
 | [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | Participate | send chat #3 · Auto sync if #16 passes |
 
-**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, multi-provider #19, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, emotes #29, followed channels #30, offline-channel VOD picker #32, URL interception.
+**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, multi-provider #19, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, emotes #29, followed channels #30, offline-channel VOD picker #32, QA mode restore or retire #33, URL interception.
 
 ## How items get here
 

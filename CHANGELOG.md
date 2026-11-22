@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.5.6-beta (unreleased) — find what to watch
-- **An offline channel offers its recent broadcasts (#32, D-030).** When a Twitch channel isn't live, the sidebar replaces the error with up to 10 of its recent broadcasts: title, date and length. Clicking one opens it with replay chat. They come from Twitch's public GQL, so no sign-in is needed. Not yet observed natively.
+- **Groundwork: an offline channel's recent broadcasts (#32, D-030).** The player looks up a Twitch channel's 10 most recent broadcasts (title, date, length) from public GQL, with no sign-in, and the sidebar can list them. **Not reachable yet:** when an offline channel's load fails, IINA closes the window (observed natively), so the list never shows. Next step: show the list in Open Stream instead.
 
 ## 0.5.5-beta (unreleased) — chat on your timeline
 - **Open Stream without a modal (#50).** ⌃⌘O opens a small Open Stream window, and **＋** in the sidebar shows an inline field. Invalid input is marked in place. The old blocking prompt, which crashed IINA about 5 s after it opened, is gone.

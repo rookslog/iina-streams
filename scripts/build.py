@@ -65,10 +65,16 @@ def sync_embedded():
     return changed
 
 
-def build(output, beta=False, dev=False):
-    """Build one variant. `dev` is the linked development identity; `beta` the packaged beta."""
+def build(output, beta=False, dev=False, qa=False):
+    """Build one variant. `dev` is the linked development identity; `beta` the packaged beta.
+
+    `qa` adds the native QA harness and enables config.qa. It is only allowed on the dev variant,
+    so no beta or stable archive can ever carry the harness.
+    """
     if beta and dev:
         raise ValueError('Choose one variant: beta or dev.')
+    if qa and not dev:
+        raise ValueError('QA mode is only available on dev builds.')
     variant = 'dev' if dev else 'beta' if beta else 'release'
     id_suffix, name_suffix, tag, stem = VARIANTS[variant]
     isolated = variant != 'release'
@@ -108,12 +114,15 @@ def build(output, beta=False, dev=False):
             isolated_info.pop('ghRepo', None)
             isolated_info.pop('ghVersion', None)
             (temp / 'Info.json').write_text(json.dumps(isolated_info, indent=2) + '\n')
-            runtime = {'identifier': identifier, 'variant': 'unified', 'beta': True, 'qa': False}
+            runtime = {'identifier': identifier, 'variant': 'unified', 'beta': True, 'qa': bool(qa)}
             if variant == 'dev':
                 runtime['dev'] = True
             (temp / 'config.js').write_text(
                 '"use strict";\nmodule.exports=' + json.dumps(runtime, separators=(',', ':')) + ';\n'
             )
+        if qa:
+            # main.js requires ./qa-harness.js from the bundle root.
+            (temp / 'qa-harness.js').write_bytes((SOURCE / 'qa' / 'qa-harness.js').read_bytes())
         (temp / 'src' / 'embedded-helpers.js').write_text(embedded_helpers_js())
         if bundle.exists():
             shutil.rmtree(bundle)
@@ -142,6 +151,7 @@ def build(output, beta=False, dev=False):
         'name': name,
         'identifier': identifier,
         'variant': variant,
+        'qa': bool(qa),
         'version': build_version,
         'archive': archive.name,
         'sha256': digest(archive.read_bytes()),
@@ -156,12 +166,15 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--beta', action='store_true', help='Build isolated Streams Beta package')
     group.add_argument('--dev', action='store_true', help='Build isolated Streams Dev bundle (for the linked dev workflow)')
+    parser.add_argument('--qa', action='store_true', help='With --dev: package the native QA harness and enable config.qa')
     group.add_argument('--sync-embedded', action='store_true', help='Rewrite the checked-in src/embedded-helpers.js from helpers/*.py')
     args = parser.parse_args()
+    if args.qa and not args.dev:
+        parser.error('--qa requires --dev; beta and stable builds never carry the QA harness')
     if args.sync_embedded:
         print('src/embedded-helpers.js ' + ('updated' if sync_embedded() else 'already current'))
         return
-    print(json.dumps(build(args.output, beta=args.beta, dev=args.dev), indent=2))
+    print(json.dumps(build(args.output, beta=args.beta, dev=args.dev, qa=args.qa), indent=2))
 
 
 if __name__ == '__main__':

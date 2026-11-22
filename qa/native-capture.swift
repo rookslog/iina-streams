@@ -4,7 +4,7 @@ import CoreGraphics
 let a=Array(CommandLine.arguments.dropFirst())
 guard a.count==3,let pid=Int32(a[0]),let app=NSRunningApplication(processIdentifier:pid),app.bundleURL?.path=="/Applications/IINA.app" else{exit(2)}
 let path=URL(fileURLWithPath:a[2]).standardizedFileURL.path
-guard path.hasPrefix("/Users/rookslog/development/iina-streams-candidates/evidence/native/"),path.hasSuffix(".png"),!FileManager.default.fileExists(atPath:path) else{exit(3)}
+guard path.contains("/evidence/native/"),path.hasSuffix(".png"),!FileManager.default.fileExists(atPath:path) else{exit(3)}
 _ = app.activate(options:[.activateAllWindows])
 var previous:CGRect?,stable=0,selected:[String:Any]?
 for _ in 0..<40 {

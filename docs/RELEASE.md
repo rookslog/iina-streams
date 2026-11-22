@@ -35,6 +35,27 @@ The stage lives at `~/Library/Application Support/iina-streams-dev/{current,prev
 
 **Do not use Plugin › Reload All Plugins.** On 2026-11-22 it crashed IINA 1.5.1 (observed: crash report `IINA-2026-11-22-005118.ips`, an `EXC_BREAKPOINT` trap in IINA's `JavascriptAPISidebarView.loadFile`, called from a plugin event handler that `reloadAllPlugins` re-emitted). Which plugin made the call is unconfirmed: Streams Beta and the built-in OpenSubtitles plugin both load a sidebar on window-loaded. The likely cause is a weak, force-unwrapped reference in that function, but that is inferred from source. Relaunching IINA is the reload path. macOS's "Reopen" after a crash does not restore stream windows, which the plugin creates itself.
 
+## QA mode (Dev only)
+
+QA mode lets an agent drive Streams Dev without clicking: it can open a stream, click sidebar controls, read the player and chat state, and wait for a condition. It exists only in dev builds made with `--qa`. `scripts/build.py` refuses `--qa` for beta and stable, so those archives never carry `qa-harness.js` and always write `"qa":false` (tests: `tests/test_build_current.py`, `tests/test_qa_workflow.py`).
+
+```sh
+npm run qa:deploy          # same as dev:deploy --qa: runs the suites, stages a dev build with the harness
+                           # quit and reopen IINA (not Reload All Plugins), Streams Dev enabled
+python3 -B qa/control.py open https://www.twitch.tv/<channel>
+python3 -B qa/control.py wait 'controller.phase=playing' --timeout 60
+python3 -B qa/control.py click refresh                       # a sidebar element id
+python3 -B qa/control.py state                               # redacted JSON
+```
+
+A later plain `npm run dev:deploy` replaces the stage with a build that has no harness; `npm run dev:status` shows `qa` for the staged build.
+
+- **Transport.** `control.py` writes `qa-request.json` in the dev plugin's data folder, `~/Library/Application Support/com.colliderli.iina/plugins/.data/local.iina.streams.dev/`, and the harness answers in `qa-response.json`. Both belong to the dev identity; `control.py` does not touch the stable or beta data folders.
+- **Redaction.** Every response carries state with credential-named fields dropped (`token`, `secret`, `userCode`, `deviceCode`, `keychain`...) and credential-shaped values replaced (`Bearer ...`, `oauth:...`, signed-URL parameters, long opaque strings). `control.py` drops credential-named fields again before printing or saving. This is a filter, not a guarantee: do not put a secret in a field name or value the filter would not recognize.
+- **Commands.** `open <url>`, `click <id>`, `state`, `wait <path><op><value>` (`=`, `!=`, `>`, `>=`, `<`, `<=`; dotted path into the state, e.g. `native.height>0`). Any other harness command (`snapshot`, `pause`, `seek`, `quality`, `ui`...) is sent with `--data '<json>'`. `click` reaches the sidebar only: the overlay's QA hook reports state but has no click action.
+- **One QA player at a time.** Pass `--target-source <id>` when more than one Streams window is open; without it, the first player to poll answers.
+- **Not part of QA mode.** The other `qa/*.py` and `*.swift` scripts (`native-*`, `measure-resources.py`...) predate it; they now read the dev data folder but have not been re-run against it.
+
 ## Branches and CI
 
 - **`main` = released code only.** IINA's GitHub install downloads the latest Release's `.iinaplgz` and falls back to `main`'s source zip when no Release exists. Its update check compares `main/Info.json` `ghVersion` with the installed one (`JavascriptPlugin.create(fromGitURL:)`, `checkNewVersion`). Moving `main` is therefore a release.

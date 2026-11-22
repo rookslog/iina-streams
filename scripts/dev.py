@@ -78,7 +78,7 @@ def _owned_stage(stage):
     return all(p.name in {'current', 'previous', '.DS_Store'} or p.name.startswith('.incoming-') for p in stage.iterdir())
 
 
-def deploy(stage=DEFAULT_STAGE, tests=run_tests):
+def deploy(stage=DEFAULT_STAGE, tests=run_tests, qa=False):
     stage = Path(stage)
     if not _owned_stage(stage):
         raise DevError(f'{stage} holds files this tool did not create; nothing was changed.')
@@ -89,7 +89,7 @@ def deploy(stage=DEFAULT_STAGE, tests=run_tests):
     for stale in stage.glob('.incoming-*'):  # left by an interrupted deploy
         shutil.rmtree(stale, ignore_errors=True)
     with tempfile.TemporaryDirectory(prefix='streams-dev-build-') as temp:
-        manifest = builder.build(temp, dev=True)
+        manifest = builder.build(temp, dev=True, qa=True) if qa else builder.build(temp, dev=True)
         incoming = stage / f'.incoming-{os.getpid()}'
         if incoming.exists():
             shutil.rmtree(incoming)
@@ -178,7 +178,7 @@ def status(plugins=DEFAULT_PLUGINS, stage=DEFAULT_STAGE, read_prefs=True):
     return {
         'link': linked,
         'enabled': _enabled_pref() if read_prefs else 'not read',
-        'staged': staged and {k: staged.get(k) for k in ('version', 'branch', 'sourceCommit', 'sourceDirty', 'testsRan', 'stagedAt', 'worktree')},
+        'staged': staged and {k: staged.get(k) for k in ('version', 'branch', 'sourceCommit', 'sourceDirty', 'testsRan', 'stagedAt', 'worktree', 'qa')},
         'thisWorktreeHead': head,
         'stagedMatchesHead': bool(staged and head and staged.get('sourceCommit') == head and not staged.get('sourceDirty')),
         'previousStaged': bool(_read_build(Path(stage) / 'previous')),
@@ -194,13 +194,18 @@ def main(argv=None):
     parser.add_argument('command', choices=['deploy', 'link', 'unlink', 'status', 'rollback'])
     parser.add_argument('--plugins-dir', default=str(DEFAULT_PLUGINS))
     parser.add_argument('--stage-dir', default=str(DEFAULT_STAGE))
+    parser.add_argument('--qa', action='store_true',
+                        help='deploy only: package the native QA harness (dev identity only; drive it with qa/control.py).')
     parser.add_argument('--skip-tests', action='store_true', help='Stage without running the suites (marked testsRan=false).')
     args = parser.parse_args(argv)
     custom_plugins = Path(args.plugins_dir) != DEFAULT_PLUGINS
+    if args.qa and args.command != 'deploy':
+        parser.error('--qa applies to deploy only')
     try:
         if args.command == 'deploy':
-            record = deploy(args.stage_dir, tests=None if args.skip_tests else run_tests)
-            print(f"Staged {record['version']} from {record['branch']} (tests {'passed' if record['testsRan'] else 'SKIPPED'}).")
+            record = deploy(args.stage_dir, tests=None if args.skip_tests else run_tests, qa=args.qa)
+            print(f"Staged {record['version']} from {record['branch']} (tests {'passed' if record['testsRan'] else 'SKIPPED'}"
+                  f"{', QA harness included' if record.get('qa') else ''}).")
             print(RELOAD_HINT)
         elif args.command == 'rollback':
             record = rollback(args.stage_dir)

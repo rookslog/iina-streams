@@ -3,6 +3,8 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -31,6 +33,7 @@ class CurrentBuilderTests(unittest.TestCase):
                 names=zip.namelist()
                 self.assertEqual(len(names),len(set(names)))
                 self.assertNotIn('qa-harness.js',names)
+                self.assertFalse(any(Path(name).name == 'qa-harness.js' for name in names))
                 self.assertFalse(any(name.startswith('../') or name.startswith('/') for name in names))
                 info=json.loads(zip.read('Info.json'))
                 self.assertEqual(info['identifier'],manifest['identifier'])
@@ -71,6 +74,35 @@ class CurrentBuilderTests(unittest.TestCase):
                 self.assertEqual(info['identifier'],'local.iina.streams')
                 self.assertFalse(any(n.endswith('settings.json') or n.startswith('.data/') for n in zip.namelist()))
                 self.assertNotIn('qa-harness.js',zip.namelist())
+                self.assertFalse(any(Path(name).name == 'qa-harness.js' for name in zip.namelist()))
+                self.assertRegex(zip.read('config.js').decode(), r'["\']?qa["\']?\s*:\s*false\b')
+
+    def test_dev_build_packages_qa_only_when_opted_in(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plain = BUILD.build(root / 'plain', dev=True)
+            with zipfile.ZipFile(root / 'plain' / plain['archive']) as package:
+                self.assertIn('"qa":false', package.read('config.js').decode())
+                self.assertFalse(any(Path(name).name == 'qa-harness.js' for name in package.namelist()))
+
+            output = root / 'with-qa'
+            result = subprocess.run(
+                [sys.executable, '-B', str(ROOT / 'scripts/build.py'), '--dev', '--qa', '--output', str(output)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, 'The build CLI must accept --qa with --dev')
+            manifest = json.loads((output / 'build-manifest.json').read_text())
+            with zipfile.ZipFile(output / manifest['archive']) as package:
+                info = json.loads(package.read('Info.json'))
+                self.assertEqual(info['identifier'], 'local.iina.streams.dev')
+                config = package.read('config.js').decode()
+                runtime = json.loads(config.split('module.exports', 1)[1].partition('=')[2].strip().removesuffix(';'))
+                qa = runtime.get('qa')
+                self.assertTrue(qa is True or isinstance(qa, dict), 'The archive must enable config.qa')
+                self.assertIn('qa-harness.js', package.namelist(), 'main.js requires the harness at the bundle root')
 
     def test_beta_commit_identifiers_change_without_release_version_bump(self):
         with tempfile.TemporaryDirectory() as temp:

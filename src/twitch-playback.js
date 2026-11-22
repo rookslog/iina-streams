@@ -6,7 +6,7 @@
 //   resolveTwitch({kind: 'live', login} | {kind: 'vod', id}, {http, log, setTimeout, clearTimeout, includeTitle})
 //     -> {live, variants: [{name, resolution, bandwidth, fps, url}]}   (plus `title` when includeTitle is true)
 //
-// includeTitle is opt-in. It sends the token operation and a title query as one GraphQL batch (one POST).
+// includeTitle is opt-in. It sends a second, parallel POST with a plain-object title query (IINA drops array bodies).
 // A missing title, a title error or an odd title value falls back to "<login or id> — Twitch"; it never fails playback.
 //
 // `http` is iina.http-shaped. IINA casts `params` and `headers` with `as? [String: String]`, so one
@@ -213,21 +213,35 @@ function readTitle(item, request) {
   return cleanTitle(payload.video && payload.video.title);
 }
 
-async function fetchAccessToken(request, deps) {
-  const tokenOperation = tokenRequestBody(request);
-  const body = deps.includeTitle ? [tokenOperation, titleOperation(request)] : tokenOperation;
+// IINA's http API only reads `data` as a plain object (JavascriptAPIHttp.swift, `options?["data"] as? [String: Any]`),
+// so each GraphQL operation is its own POST; a batch array would be sent as `{}`.
+function postGraphQL(body, deps) {
   const options = {headers: tokenRequestHeaders(), data: body};
-  const response = await withTimeout(() => deps.http.post(GQL_URL, options), deps.timers);
-  if (!deps.includeTitle) {
-    return {token: readAccessToken(response, request.kind), title: ''};
+  return withTimeout(() => deps.http.post(GQL_URL, options), deps.timers);
+}
+
+// Resolves to the cleaned title, or '' on any error, timeout or odd shape. It never rejects.
+async function fetchTitle(request, deps) {
+  try {
+    const response = await postGraphQL(titleOperation(request), deps);
+    return readTitle(bodyOf(response), request);
+  } catch (_) {
+    return '';
   }
-  const items = bodyOf(response);
-  if (!Array.isArray(items)) {
-    throw new TwitchPlaybackError('MALFORMED');
+}
+
+async function fetchAccessToken(request, deps) {
+  // Start the title POST alongside the token POST; only the token can fail playback.
+  const tokenPost = postGraphQL(tokenRequestBody(request), deps);
+  const titlePost = deps.includeTitle ? fetchTitle(request, deps) : Promise.resolve('');
+  let token;
+  try {
+    token = readAccessToken(await tokenPost, request.kind);
+  } catch (failure) {
+    await titlePost;
+    throw failure;
   }
-  // The token is required; the title never is, so a bad title item is read as an empty one.
-  const token = readAccessToken({data: items[0]}, request.kind);
-  return {token, title: readTitle(items[1], request)};
+  return {token, title: await titlePost};
 }
 
 // ---- usher ----

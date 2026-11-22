@@ -52,15 +52,17 @@ function titleArgument(operation, request) {
 }
 
 function assertTitleLookup(calls, request) {
-  assert.deepEqual(calls.map(({method}) => method), ['POST', 'GET'], 'title lookup adds no HTTP round trip');
-  const [{url, operations}] = calls;
-  assert.equal(url, GQL_URL);
+  // Changed for the host contract: the title is its own POST (IINA drops array bodies), so POST, POST, GET.
+  assert.deepEqual(calls.map(({method}) => method), ['POST', 'POST', 'GET'], 'title lookup is one extra parallel POST');
+  const posts = calls.filter(({method}) => method === 'POST');
+  assert.ok(posts.every(({url}) => url === GQL_URL));
   const id = request.kind === 'live' ? request.login : request.id;
   const tokenField = request.kind === 'live' ? /\bstreamPlaybackAccessToken\b/ : /\bvideoPlaybackAccessToken\b/;
+  const operations = posts.flatMap(({operations: sent}) => sent);
   assert.ok(operations.some(({operationName, query}) => operationName === 'PlaybackAccessToken'
-    || tokenField.test(query)), 'the POST must still request a playback token');
+    || tokenField.test(query)), 'a POST must still request a playback token');
   assert.ok(operations.some(operation => titleArgument(operation, request) === id),
-    'the token POST must also look up the title for the requested login or video id');
+    'a POST must look up the title for the requested login or video id');
 }
 
 for (const [request, response, expected] of [

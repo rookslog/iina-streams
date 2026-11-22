@@ -28,6 +28,21 @@ class DevWorkflowTests(unittest.TestCase):
     def deploy(self, tests=None):
         return DEV.deploy(self.stage, tests=tests)
 
+    def test_live_warning_only_when_iina_runs_with_dev_enabled(self):
+        self.assertIsNotNone(DEV.live_warning(running=lambda: True, enabled=lambda: 'enabled'))
+        self.assertIsNone(DEV.live_warning(running=lambda: True, enabled=lambda: 'disabled'))
+        self.assertIsNone(DEV.live_warning(running=lambda: False, enabled=lambda: 'enabled'))
+        self.assertIsNone(DEV.live_warning(running=lambda: True, enabled=lambda: 'unknown'))
+
+    def test_deploy_to_a_custom_stage_never_reads_iina(self):
+        original = DEV.live_warning
+        def fail():
+            raise AssertionError('read real IINA state')
+        DEV.live_warning = fail
+        self.addCleanup(setattr, DEV, 'live_warning', original)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(DEV.main(['deploy', '--skip-tests', '--stage-dir', str(self.stage)]), 0)
+
     def test_deploy_stages_dev_identity_with_provenance(self):
         record = self.deploy()
         current = self.stage / 'current'

@@ -167,6 +167,24 @@ def _enabled_pref():
     return {'1': 'enabled', '0': 'disabled'}.get(out.stdout.strip(), 'unset (IINA treats as disabled)')
 
 
+LIVE_WARNING = ('Warning: IINA is running with Streams Dev enabled. Open windows keep the old build, and a window '
+                'opened now may load a mix of old and new files. Quit IINA (Cmd-Q) and reopen it before using Streams Dev. '
+                'Watch with Streams Beta, not Dev (docs/RELEASE.md, "Who runs which copy").')
+
+
+def _iina_running():
+    try:
+        out = subprocess.run(['pgrep', '-x', 'IINA'], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return out.returncode == 0
+
+
+def live_warning(running=_iina_running, enabled=_enabled_pref):
+    """The warning to print after a deploy, or None. Reads only; never touches IINA."""
+    return LIVE_WARNING if running() and enabled() == 'enabled' else None
+
+
 def status(plugins=DEFAULT_PLUGINS, stage=DEFAULT_STAGE, read_prefs=True):
     dest, target = Path(plugins) / LINK_NAME, Path(stage) / 'current'
     staged = _read_build(target)
@@ -207,6 +225,10 @@ def main(argv=None):
             print(f"Staged {record['version']} from {record['branch']} (tests {'passed' if record['testsRan'] else 'SKIPPED'}"
                   f"{', QA harness included' if record.get('qa') else ''}).")
             print(RELOAD_HINT)
+            if Path(args.stage_dir) == DEFAULT_STAGE:
+                warning = live_warning()
+                if warning:
+                    print(warning, file=sys.stderr)
         elif args.command == 'rollback':
             record = rollback(args.stage_dir)
             print(f"Restored {record and record.get('version')}. " + RELOAD_HINT)

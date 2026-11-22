@@ -594,7 +594,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    return;
   }
   setChatPreferred(true);
-  chatOff();
+  chatOff({restart:true});
   chat=authorizingLiveChat();
   requestAuth(String(data&&data.clientID||''));
   send();
@@ -646,8 +646,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return view.presentation==='overlay'||view.presentation==='beside';
  }
 
+ // A fetch or import in progress has mode 'off' until the chat arrives.
+ function chatPending(){
+  return chat.mode==='off'&&(chat.state==='fetching'||chat.state==='importing');
+ }
+
  function overlayNeeded(){
-  return chat.mode==='live'||chatOnVideo()&&chat.mode!=='off';
+  return chat.mode==='live'||chatOnVideo()&&chat.mode!=='off'||view.presentation==='beside'&&chatPending();
  }
 
  function stopLiveTransport(){
@@ -1125,7 +1130,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // since each one ends chat or changes the view and then sends state before the player closes.
 
  function besideWanted(){
-  return!closed&&sourceActive&&windowLoaded&&view.presentation==='beside'&&chat.mode!=='off';
+  return!closed&&sourceActive&&windowLoaded&&view.presentation==='beside'&&(chat.mode!=='off'||chatPending());
  }
 
  function syncBeside(){
@@ -1151,6 +1156,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   besideColumnWidth=null;
   setBesideMargin(0);
   restoreWindow();
+  if(!overlayNeeded())hideOverlay();
   trace('beside-leave');
  }
 
@@ -1274,6 +1280,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   chat.state='off';
   chat.error='';
   view.editing=false;
+  // A restart (connect, replay or import) turns chat off and straight back on. Beside keeps its margin,
+  // column and window width through it: the caller sends the state it restarts into.
+  if(options&&options.restart&&besideActive){
+   trace('chat-restart');
+   return;
+  }
   hideOverlay();
   send();
   trace('chat-off');
@@ -1281,7 +1293,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function resumeReplay(){
   if(!replay||closed||!sourceActive)return;
-  chatOff();
+  chatOff({restart:true});
   chat.mode='replay';
   chat.state='ready';
   timeObserver=event.on('mpv.time-pos.changed',()=>tick(false));
@@ -1355,7 +1367,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(!path)path=await host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']});
   if(!path||closed||selectionGeneration!==chatGeneration)return false;
   if(!preserve){
-   chatOff();
+   chatOff({restart:true});
    chat.state='importing';
    chat.error='';
    send();
@@ -1434,7 +1446,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
   const preserve=chat.mode==='replay'&&!!replay;
   if(!preserve){
-   chatOff();
+   chatOff({restart:true});
    chat.state='fetching';
    chat.error='';
    send();
@@ -1504,7 +1516,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed||!sourceActive)return;
   if(source.kind==='twitch-vod')return fetchTwitchWindow(options||{});
   if(source.kind!=='youtube')return;
-  chatOff();
+  chatOff({restart:true});
   const myGeneration=chatGeneration;
   chat.state='fetching';
   send();

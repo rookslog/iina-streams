@@ -275,7 +275,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  });
  // liveClockURL is the resolved playlist for the load in progress; file-loaded consumes it.
  let liveClockURL=null,liveClockRunning=false,liveStatusTimer=null,liveStatusKey='',lastClockCode='';
- // Live chat as received (sanitized, newest 150), and the timer for the next held message.
+ // Live chat buffer (C3b): an id-keyed union, in arrival order, of the chat received this session. Pending
+ // messages (not yet due) are capped at LIVE_PENDING_CAP and revealed ones at LIVE_REVEALED_CAP. The timer
+ // is for the next held message.
  let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
  // Go Live's reload replaces the playing file, and mpv ends that file first. Playback.ended() would read that
  // as a stop, since Playback does not know about this reload, so the player skips that one end-file.
@@ -516,6 +518,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const credential=liveCredential;
   liveCredential=null;
   liveStarted=true;
+  resetLiveBuffer();
+  send();
   postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:++liveRun});
  }
 
@@ -572,11 +576,87 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   send();
  }
 
+ const LIVE_PENDING_CAP=3000;
+ const LIVE_REVEALED_CAP=150;
+
+ // The overlay posts its newest 150 messages plus the ids that moderation removed in that batch. Messages that
+ // only fell out of the overlay's window are kept. Accepted limit: a burst of more than 150 messages between two
+ // posts can lose the oldest of them, because the overlay never sent them.
  function onLiveMessages(data){
   if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;
-  liveInbox=data.messages.slice(-150).map(inboxEntry);
+  applyLiveRemovals(data.removed,data.clearedAll===true,data.removedUsers);
+  mergeLiveMessages(data.messages.slice(-150));
   revealLive();
   send();
+ }
+
+ function applyLiveRemovals(removed,clearedAll,removedUsers){
+  if(clearedAll){
+   liveInbox=[];
+   messages=[];
+   return;
+  }
+  const gone=new Set(Array.isArray(removed)?removed.filter(id=>typeof id==='string'&&id):[]);
+  for(const entry of liveInbox){
+   if(entry.id&&matchesRemovedUser(entry,removedUsers))gone.add(entry.id);
+  }
+  if(gone.size===0)return;
+  liveInbox=liveInbox.filter(entry=>!gone.has(entry.id));
+  messages=messages.filter(message=>!gone.has(message.id));
+ }
+
+ // A clear-user names a userId, a login, or both. An empty string never matches.
+ function matchesRemovedUser(entry,removedUsers){
+  if(!Array.isArray(removedUsers))return false;
+  return removedUsers.some(user=>{
+   if(!user||typeof user!=='object')return false;
+   const byId=!!user.userId&&user.userId===entry.userId;
+   const byLogin=!!user.login&&user.login===entry.login;
+   return byId||byLogin;
+  });
+ }
+
+ // A message with no id (a notice) is keyed by its kind and text, so the overlay re-posting it does not repeat it.
+ // Two identical notices therefore collapse into one.
+ function inboxKey(entry){
+  return entry.id||entry.message.kind+'|'+entry.message.text;
+ }
+
+ function mergeLiveMessages(rows){
+  const known=new Set(liveInbox.map(inboxKey));
+  for(const raw of rows){
+   const entry=inboxEntry(raw);
+   const key=inboxKey(entry);
+   if(known.has(key))continue;
+   known.add(key);
+   liveInbox.push(entry);
+  }
+  capPending();
+ }
+
+ // Drops the oldest pending entries past the cap. Pending means not shown yet.
+ function capPending(){
+  const shown=new Set(messages);
+  const pending=liveInbox.filter(entry=>!shown.has(entry.message));
+  const excess=pending.length-LIVE_PENDING_CAP;
+  if(excess<=0)return;
+  const dropped=new Set(pending.slice(0,excess));
+  liveInbox=liveInbox.filter(entry=>!dropped.has(entry));
+ }
+
+ // Keeps only the newest LIVE_REVEALED_CAP revealed entries in the buffer.
+ function trimRevealed(visible){
+  const excess=visible.length-LIVE_REVEALED_CAP;
+  if(excess<=0)return visible;
+  const dropped=new Set(visible.slice(0,excess));
+  liveInbox=liveInbox.filter(entry=>!dropped.has(entry));
+  return visible.slice(excess);
+ }
+
+ function resetLiveBuffer(){
+  clearRevealTimer();
+  liveInbox=[];
+  messages=[];
  }
 
  // ---- Live chat timing (#2, #28) ----
@@ -587,6 +667,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const message=safeMessage(raw);
   const entry={id:message.id,message};
   if(message.sentAt>0)entry.timestampMs=message.sentAt;
+  // Kept on the entry only, so clear-user can match a pending message. It never reaches sidebar or overlay state.
+  entry.userId=typeof raw.userId==='string'?raw.userId:'';
+  entry.login=typeof raw.login==='string'?raw.login.toLowerCase():'';
   return entry;
  }
 
@@ -635,7 +718,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
   const now=Date.now();
   const result=chatTiming.reveal(liveInbox,now,currentTiming().delay);
-  const next=result.visible.map(entry=>entry.message);
+  const next=trimRevealed(result.visible).map(entry=>entry.message);
   const changed=next.length!==messages.length||next.some((message,i)=>message!==messages[i]);
   messages=next;
   chat.count=messages.length;
@@ -836,9 +919,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    }catch(_){}
   }
   if(!options||options.releaseAuth!==false)app.postMessage('auth-disconnect',{});
-  clearRevealTimer();
-  liveInbox=[];
-  messages=[];
+  resetLiveBuffer();
   chat.mode='off';
   chat.state='off';
   chat.error='';

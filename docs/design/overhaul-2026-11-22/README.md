@@ -138,6 +138,20 @@ From IINA's GitHub source at tag `v1.5.1`. "Read" means I read the passage. Unle
 10. **Both:** ⌃⌘L, ⌃⌘C and ⌃⌘B are free in practice.
 11. **A:** Streams can tell whether Edge-to-Edge is off by some indirect signal, such as mpv `osd-width` against `core.window.frame` while the sidebar shows. If not, the layout button's dot and popover are the only guidance.
 
+## Operator feedback, 2026-11-22 16:12 (native, Streams Dev, VOD in fullscreen with the Streams sidebar open)
+
+- **Prose status is a smell.** "Twitch chat near playback · 104 messages" (`chat-status`) and "Hide inspector" (`hide-for-overlay`) read as random text. Both directions already remove them. The rule (minimize UI text: signifiers for state, text only for names, values, actions and errors) should be applied to today's sidebar, not deferred to the overhaul.
+- **Controls follow the chat.** When chat is over or beside the video, the IINA sidebar holds a few controls and a lot of empty space. The operator's direction:
+  - The options move onto the chat panel itself.
+  - The plugin side panel is used, and collapses, only when chat has been placed in the side panel.
+  - The IINA sidebar is not a place to keep controls while chat lives elsewhere.
+- **Relation to A and B.**
+  - B's on-video cluster is the closest match, but B keeps a settings form in the sidebar.
+  - A puts the toolbar in the column, which assumes chat is in the sidebar.
+  - The operator's version is a single toolbar that travels with the chat surface: the column header when beside or over, the sidebar header when chat is in the sidebar.
+  - This supersedes "where controls live" in both directions. The remaining A-versus-B questions are the side-chat mechanism and Open Stream's shape.
+- **Already decided with it:** hiding chat is a view state, never "chat off" (D1c, `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md`).
+
 ## Decision ledger (streams-interaction-design)
 
 | User task | Observed failure | Alternatives | Proposed | Native proof needed | Remaining uncertainty |

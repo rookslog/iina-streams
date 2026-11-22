@@ -8,7 +8,7 @@ const {createIina} = require('./support/iina-shim.js');
 
 const twitchURL = 'https://www.twitch.tv/videos/2930971003';
 const youtubeURL = 'https://www.youtube.com/watch?v=Yd9q1Y7Ou7g';
-const config = {variant: 'unified'};
+const config = {identifier: 'local.iina.streams', variant: 'unified'};
 const resolution = {
   ok: true,
   title: 'Public recording',

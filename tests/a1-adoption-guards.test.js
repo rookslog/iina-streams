@@ -25,7 +25,7 @@ function unlabeledWindow(filePath) {
       return {ok: true, title: 'T', live: false, quality: '720p', formats: [], mediaURL};
     }
   };
-  const controller = start(shim.iina, {variant: 'unified'}, services);
+  const controller = start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'}, services);
   return {shim, resolves, controller};
 }
 
@@ -45,7 +45,7 @@ test('A1 guard: if adoption throws, the native load continues untouched', async 
   const filePath = 'https://www.twitch.tv/xqc';
   const shim = createIina({label: '', mpv: {path: filePath, 'stream-open-filename': filePath}});
   const services = {readSettings() { throw new Error('settings unavailable'); }, resolve: async () => assert.fail()};
-  assert.equal(start(shim.iina, {variant: 'unified'}, services), null);
+  assert.equal(start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'}, services), null);
   let continued = 0;
   await shim.mpv.runHook('on_load', () => continued++);
   assert.equal(continued, 1);

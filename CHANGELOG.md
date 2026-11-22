@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.4-beta (unreleased, 2026-11-22) — development workflow and CI
+- Linked **Streams Dev** identity (`local.iina.streams.dev`, version `0.5.4-dev+g<sha>`): `npm run dev:deploy` runs both suites and stages a tested build outside the worktree; `npm run dev:link` creates one `.iinaplugin-dev` symlink; `dev:status`, `dev:rollback`, `dev:unlink`. Reload is IINA's Plugin › Reload All Plugins. Not yet exercised in native IINA.
+- Removed `scripts/link-dev.sh`/`unlink-dev.sh` (targeted the deleted `candidate-plugin/`; unlink disabled the stable plugin's preference). `npm run link-dev`/`unlink-dev` now alias the new commands.
+- CI runs on every branch and PR: version-metadata check, both suites, and a commit-stamped beta artifact; only `v*` tags build stable and publish the GitHub Release. Fixed two host-dependent Python tests (yt-dlp path; Python 3.13 `rglob`).
+- Rewrote docs/RELEASE.md (old version archived) and docs/ROADMAP.md (proposed); DECISIONS D-022–D-024.
+
 ## 0.5.4-beta (unreleased, 2026-11-17) — on-demand VOD chat, regression correction
 - Reproduced the initial full-history downloader failure on Twitch VOD 2930971003, page 50: requested 290 s, final comment at 290 s, hasNextPage true; error was misclassified as malformed archive.
 - Fetch bounded windows near the current mpv timestamp instead of full-history all-or-nothing archives; request additional windows during playback, distant seeks and chat offset changes.

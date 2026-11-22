@@ -193,6 +193,40 @@ class MetadataTests(unittest.TestCase):
                 self.resolve_vod_stream(url)
             self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
 
+    def test_cloudfront_vod_path_refuses_dot_segments_and_their_encoded_forms(self):
+        # #55: the path rule let "." and ".." through as segments, so /../ walked out of the playlist directory.
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        playlist = "index-muted-AB12CD34EF.m3u8"
+        refused = [
+            "/../720p60/" + playlist,
+            "/./720p60/" + playlist,
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/../" + playlist,
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/./" + playlist,
+            "/../../" + playlist,
+            "/%2e%2e/720p60/" + playlist,                 # percent-encoded ".."
+            "/%2E%2E/720p60/" + playlist,
+            "/.%2e/720p60/" + playlist,                   # half encoded
+            "/%2e/720p60/" + playlist,                    # encoded "."
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/%2e%2e/" + playlist,
+            "/%252e%252e/720p60/" + playlist,             # double encoded
+            "/..%2f720p60/" + playlist,                   # encoded slash after a dot pair
+        ]
+        for path in refused:
+            url = "https://" + host + path
+            with self.subTest(path=path):
+                try:
+                    self.resolve_vod_stream(url)
+                    code = "accepted"
+                except media.MediaError as error:
+                    code = error.code
+                self.assertEqual(code, "UNSAFE_MEDIA_URL")
+
+    def test_cloudfront_vod_path_still_admits_dots_inside_a_segment(self):
+        # Only the whole-segment forms "." and ".." are refused; a dot inside a name is fine.
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        url = "https://" + host + "/a.b_hutchmf.2935383720/720p60.v2/index-muted-AB12CD34.m3u8"
+        self.assertEqual(self.resolve_vod_stream(url)["mediaURL"], url)
+
     def test_cloudfront_is_never_allowed_for_live_channels_or_for_youtube(self):
         url = "https://d1m7jfoe9zdc1j.cloudfront.net" + self.VOD_PLAYLIST
         with self.assertRaises(media.MediaError) as error:

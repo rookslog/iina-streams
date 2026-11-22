@@ -38,12 +38,26 @@ AUTO = {"id": "auto720", "label": "Auto · 720p preferred"}
 #           index-muted-<token>.m3u8, and index-dvr.m3u8), so only an HLS playlist, nothing else;
 #   source  only for a twitch-vod source, never for a live channel or YouTube;
 #   plus the checks every media URL gets: https, no credentials, port 443, no fragment.
-# What this admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording
-# whose address came from Streamlink. The path is not a security boundary (anyone can create a distribution
-# with that path); the boundary is that Streamlink's Twitch plugin supplied the address, and the narrowing
-# above keeps surprises small. Closing it fully needs an explicit list of Twitch's distributions.
+# TRUST BOUNDARY. This does not prove that a distribution belongs to Twitch, and it is not meant to. What this
+# admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording whose address
+# came from Streamlink. The boundary is Twitch's usher response: Streamlink's Twitch plugin asks Twitch's usher
+# endpoint for the playlist and returns the destination Twitch names, and this helper trusts that destination.
+# The path shape and host shape only narrow what a wrong answer could be; anyone can create a distribution with
+# this path. A list of Twitch's tenants is deliberately not used: Twitch has more than one, it does not publish
+# them, and a two-tenant list refused real VODs on other tenants (#45). Closing the boundary fully would need
+# Twitch's own list of distributions.
+# Dot segments are refused (#55): "." and ".." parse as path segments and would let /../ leave the playlist
+# directory. Percent-encoded forms (%2e, %2E, %252e, %2f) are refused because "%" is not in the segment
+# characters at all; the encoded-form cases in tests/test_media.py pin that.
 TWITCH_VOD_HOST = re.compile(r"d[0-9a-z]{13}\.cloudfront\.net\Z")
 TWITCH_VOD_PATH = re.compile(r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/index-[A-Za-z0-9-]+\.m3u8\Z")
+
+
+def _twitch_vod_path(path):
+    if not TWITCH_VOD_PATH.fullmatch(path):
+        return False
+    return not any(segment in (".", "..") for segment in path.split("/"))
+
 
 # yt-dlp's --dump-single-json can exceed MAX_METADATA_BYTES: one 45 minute video returned 11.7 MB, 11.15 MB
 # of it automatic_captions (spike #37, yt-dlp 2026.08.19). The helper asks yt-dlp for only the fields it reads,
@@ -284,7 +298,7 @@ def _media_url(value, provider, *, vod=False):
         host = parsed.hostname or ""
         suffixes = ("ttvnw.net", "twitch.tv", "twitchcdn.net") if provider == "Twitch" else ("googlevideo.com",)
         allowed = any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
-        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and TWITCH_VOD_PATH.fullmatch(parsed.path):
+        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and _twitch_vod_path(parsed.path):
             allowed = True
         if (parsed.scheme != "https" or parsed.username is not None or parsed.password is not None or
                 parsed.port not in (None, 443) or parsed.fragment or not re.fullmatch(r"[a-zA-Z0-9.-]+", host) or not allowed):

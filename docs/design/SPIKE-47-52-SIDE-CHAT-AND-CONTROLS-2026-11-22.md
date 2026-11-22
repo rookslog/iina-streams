@@ -356,3 +356,17 @@ Record, per step: pass/fail, a screenshot path, and the measured picture x-exten
 
 - `qa/spikes/spike-47-plain-mpv.sh`, `qa/spikes/spike-47-libmpv.sh`, `qa/spikes/spike-47-libmpv-margin.c`,
   `qa/spikes/spike-47-bbox.py`. Outputs (PNGs, test video) were written to a scratch directory and are not committed.
+
+## 7. Native results (lead, IINA 1.5.1, 2026-11-22 08:35)
+
+Run through **Plugin › Developer Tool › Streams Dev** (the player instance), on a local 1280×720 test video (`ffmpeg testsrc2`) opened with `iina-cli`. Streams Dev was beta `632c722` plus the QA build. Observed by screenshot:
+
+| Step | Result |
+|---|---|
+| 1. `iina.core.window.frame` read, then set to `{x:60,y:100,…}` | Read `{"y":356,"x":535,"width":640,"height":360}`. The window moved as set. **Frame setter observed.** |
+| 2. `iina.mpv.set('video-margin-ratio-right', 0.3)` | `getNumber` gave `0.300000011920929`. The picture shrank to the left 70% of the window (measured 0.70 of the width from the screenshot), letterboxed, with no reload. **Margins observed working in IINA's own renderer.** |
+| 5. Widen to `width/0.7` | Read back `{"y":100,"x":60,"width":914,"height":360}`. The picture returned to full size; the extra width is the black band. A drag-resize wasn't tried. |
+| 6. `loadfile <same path> replace` | Afterwards the margin read 0.3 and the frame was unchanged. **Inconclusive:** the video clock kept counting (1:44 → 1:56), so whether a reload happened (or IINA resumed the position) isn't established. |
+| 10. Margin back to 0 | The picture re-centred, pillarboxed in the wider window. |
+
+Not run: 3 and 4 (overlay column and hover), 7 (fullscreen), 8 (native sidebar with Edge-to-Edge), 9 (PiP), and whether the margin leaks into the next file.

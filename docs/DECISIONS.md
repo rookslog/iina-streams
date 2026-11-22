@@ -81,3 +81,5 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Gate:** before any #47 code merges, the native test in that spike's §5, step 2, must show the picture shrinking in IINA. If it doesn't, this flips to Direction A, with a first-run hint about Edge-to-Edge.
 - **#52:** IINA 1.5.1 has no plugin API for OSC buttons. Go Live and Show/Hide Chat become menu items with key bindings, plus a small control cluster in the overlay.
 - **Overrides:** the "pick A" recommendation in `docs/design/overhaul-2026-11-22/README.md`. That README's assumption, that launch users will change an app-wide preference, is the one this decision rejects.
+
+2026-11-22 D-028 UPDATE (native, 08:35): the gate passed. In IINA 1.5.1, `video-margin-ratio-right` 0.3 set from the plugin's player instance shrank the picture to the left 70%, letterboxed, with no reload. `core.window.frame` widening also held. Spike §7 has the steps, including the ones not run. #47 code may proceed.

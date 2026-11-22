@@ -262,8 +262,10 @@ function start(host,config,services){
   if(ACTIVATION_URL.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);
  }
 
+ // Sign out. The broker revokes the grant it holds, so this window must not post auth-disconnect first:
+ // with one window connected that would make the broker discard the grant before revoking it.
  function forgetAuth(){
-  chatOff();
+  chatOff({releaseAuth:false});
   app.postMessage('auth-forget',{});
  }
 
@@ -414,7 +416,9 @@ function start(host,config,services){
   pendingAuth=null;
  }
 
- function chatOff(){
+ // Turns chat off. Unless told otherwise it also tells the broker this window no longer needs the login,
+ // which releases the in-memory grant but never revokes or clears a saved one.
+ function chatOff(options){
   chatGeneration++;
   pendingAuth=null;
   stopReplay();
@@ -424,7 +428,7 @@ function start(host,config,services){
     services.cancelHelpers(['replay','acquire']);
    }catch(_){}
   }
-  app.postMessage('auth-disconnect',{});
+  if(!options||options.releaseAuth!==false)app.postMessage('auth-disconnect',{});
   messages=[];
   chat.mode='off';
   chat.state='off';

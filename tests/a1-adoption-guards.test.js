@@ -18,7 +18,8 @@ function unlabeledWindow(filePath) {
   const shim = createIina({label: '', mpv, rejectModalDialogs: true});
   const resolves = [];
   const services = {
-    readSettings: () => ({chatEnabled: false}),
+    // v0.5.5 descope: adoption runs only when opted in (or in QA).
+    readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}),
     resolve: async source => {
       resolves.push(source);
       const mediaURL = 'https://media.example.invalid/x';
@@ -44,7 +45,15 @@ test('A1 guard: bare words and scheme-less paths are local files, not Twitch cha
 test('A1 guard: if adoption throws, the native load continues untouched', async () => {
   const filePath = 'https://www.twitch.tv/xqc';
   const shim = createIina({label: '', mpv: {path: filePath, 'stream-open-filename': filePath}});
-  const services = {readSettings() { throw new Error('settings unavailable'); }, resolve: async () => assert.fail()};
+  // v0.5.5 descope: the core reads the opt-in once at start; every later settings read (the controller's) throws.
+  let reads = 0;
+  const services = {
+    readSettings() {
+      if (reads++ === 0) return {adoptNativeWindows: true};
+      throw new Error('settings unavailable');
+    },
+    resolve: async () => assert.fail()
+  };
   assert.equal(start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'}, services), null);
   let continued = 0;
   await shim.mpv.runHook('on_load', () => continued++);

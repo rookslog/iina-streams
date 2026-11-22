@@ -97,7 +97,9 @@ function managedWindow(t) {
   return {shim, controller, resolves, gate, loadOwn, loadForeign};
 }
 
-test('r5 #2 managed: no publication or quality deadline while retiring; the restored source plays, not busy',
+// D-033 (v0.5.5): a loss is final. The tails of the two managed tests changed from "the restored source plays"
+// to "the own source passes through; after cleanup the window is inactive, not busy, with no quality error".
+test('r5 #2 managed: no publication or quality deadline while retiring; the own source returning stays inactive',
   async t => {
     const {shim, controller, resolves, gate, loadOwn, loadForeign} = managedWindow(t);
     shim.timers.advance(0); // The startup bind turn.
@@ -124,21 +126,22 @@ test('r5 #2 managed: no publication or quality deadline while retiring; the rest
     assert.deepEqual(postsSince(shim, mark), [], 'no publication while retiring');
     assert.deepEqual(deadlines(shim), [], 'no quality deadline is armed');
     assert.equal(loadfiles(shim), loads, 'no loadfile replaces the passed-through file');
-    // v0.5.5 class L: with no current activation the controls are not published at all (above); the restored
-    // source below is a new activation, whose controls are usable.
+    // v0.5.5 class L: with no current activation the controls are not published at all (above).
 
     shim.emit('mpv.end-file'); // The foreign file ends as the stream replaces it.
-    await loadOwn(); // The window's own source returns before the cleanup turn.
+    await loadOwn(); // The window's own source returns before the cleanup turn, and passes through.
+    assert.equal(resolves.length, 2, 'the own source is not resolved again');
     shim.timers.fire(cleanup);
     await settle();
     const snapshot = controller.snapshot();
-    assert.equal(snapshot.phase, 'playing', 'the restored source reaches playing');
+    assert.equal(snapshot.phase, 'inactive', 'the window stays inactive');
     assert.equal(snapshot.busy, false, 'the controls are not busy');
     shim.timers.advance(QUALITY_DEADLINE_MS + 1000);
-    assert.equal(controller.snapshot().error, '', 'no "Quality change did not finish"');
+    assert.doesNotMatch(controller.snapshot().error, /Quality/, 'no "Quality change did not finish"');
     assert.equal(controller.snapshot().busy, false, 'still not busy');
-    provesPublication(shim);
-    assert.equal(decoded(sidebarStates(shim).at(-1)).busy, false, 'the sidebar shows usable controls');
+    const last = decoded(sidebarStates(shim).at(-1));
+    assert.equal(last.phase, 'inactive', 'the sidebar shows the inactive state');
+    assert.equal(last.busy, false, 'with no busy controls');
   });
 
 test('r5 #2 managed: a quality resolve that rejects while retiring leaves no error and no busy controls',
@@ -164,11 +167,12 @@ test('r5 #2 managed: a quality resolve that rejects while retiring leaves no err
 
     gate.reject = false;
     shim.emit('mpv.end-file');
-    await loadOwn();
+    await loadOwn(); // Passes through.
     shim.timers.fire(cleanup);
     await settle();
-    assert.equal(controller.snapshot().phase, 'playing', 'the restored source reaches playing');
-    assert.equal(controller.snapshot().error, '', 'with no stale error');
+    assert.equal(controller.snapshot().phase, 'inactive', 'the window stays inactive');
+    assert.equal(controller.snapshot().busy, false, 'with no busy controls');
+    assert.doesNotMatch(controller.snapshot().error, /Quality|could not/, 'and no stale rejection error');
   });
 
 // ---------------------------------------------------------------------------------------------
@@ -182,7 +186,9 @@ function nativeCore() {
   shim.runScript(playerPath, {globals: {module, Date: shim.timers.Date}, require: requireFromPlayer});
   const resolves = [];
   const gate = {held: false};
-  const services = {readSettings: () => ({chatEnabled: false}), saveSettings() {}, resolve: resolver(resolves, gate)};
+  const services = {
+    readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}), saveSettings() {}, resolve: resolver(resolves, gate)
+  };
   assert.equal(module.exports.start(shim.iina, {identifier: STABLE, variant: 'unified'}, services), null);
   function startHook(path) {
     shim.mpv.set('path', path);

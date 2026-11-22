@@ -39,7 +39,7 @@ function nativeCore(options = {}) {
   shim.runScript(playerPath, {globals: {module, Date: shim.timers.Date}, require: requireFromPlayer});
   const resolves = [];
   const services = Object.assign({
-    readSettings: () => ({chatEnabled: false}),
+    readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}),
     async resolve(source) {
       resolves.push(source.url);
       return options.resolve ? options.resolve(source, resolves.length) : resolvedFor(source);
@@ -158,7 +158,7 @@ test('r1 #8: switching from an adopted VOD with replay to a local file does no e
   async () => {
     const files = new Map();
     const services = {
-      readSettings: () => ({chatEnabled: true}),
+      readSettings: () => ({chatEnabled: true, adoptNativeWindows: true}),
       dataPath: name => '/data/' + name,
       readFile: path => files.get(path),
       deleteDataPath: () => true,

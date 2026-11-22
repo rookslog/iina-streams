@@ -64,7 +64,7 @@ function start(host,config,services){
    chatPreferred=true;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
    chatOff();chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
    requestAuth(String(data&&data.clientID||''));send();
-  });
+  });sidebar.onMessage('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
   sidebar.onMessage('authorize-open',()=>{if(auth.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);});
   sidebar.onMessage('forget-auth',()=>{chatOff();app.postMessage('auth-forget',{});});
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));

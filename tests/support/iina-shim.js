@@ -212,7 +212,19 @@ function createIina(options = {}) {
   const log = []; // ordered record of every API call: {api, args}
   const posts = []; // ordered record of every outgoing message: {surface, target?, name, data}
   // `options.onCall(api, args)` observes every call in order (e.g. to build a legacy call list).
-  const record = (api, ...args) => { log.push({api, args}); if (options.onCall) options.onCall(api, args); };
+  // IINA calls an mpv hook on mpv's event queue, not the main thread (MPVController.swift readEvents ->
+  // handleEvent -> MPVHookValue.call). While a hook's synchronous part runs, `hookStack` collects the calls
+  // that need the main thread there: sidebar.loadFile and menu.forceUpdate run through
+  // Utility.executeOnMainThread, which is DispatchQueue.main.sync off the main thread, and sidebar.show/hide
+  // touch the window with no main-thread hop (JavascriptAPISidebarView.swift, JavascriptAPIMenu.swift,
+  // Utility.swift, IINA v1.5.1). Overlay calls use DispatchQueue.main.async and are not collected.
+  const MAIN_THREAD_APIS = new Set(['sidebar.loadFile', 'sidebar.show', 'sidebar.hide', 'menu.forceUpdate']);
+  let hookStack = null;
+  const record = (api, ...args) => {
+    log.push({api, args});
+    if (hookStack && MAIN_THREAD_APIS.has(api)) hookStack.calls.push({hook: hookStack.name, api});
+    if (options.onCall) options.onCall(api, args);
+  };
 
   // ---- hub (listener registry shared by sidebar/overlay/global views) ----
   function createHub(label) {
@@ -589,10 +601,30 @@ function createIina(options = {}) {
   // ---- mpv (UNVERIFIED against JavascriptAPIMpv.swift) ----
   const mpvControl = {
     props: new Map(Object.entries(options.mpv || {})), sets: [], commands: [], hooks: new Map(),
+    // Main-thread calls made on a hook's synchronous stack (see MAIN_THREAD_APIS): {hook, api}.
+    offMainCalls: [],
     onCommand: null, // (name, args) => void: let a test mirror a command's effect into props
     set(name, value) { mpvControl.props.set(name, value); return mpvControl; },
-    // Run a registered hook the way IINA does: the hook holds playback until it calls `next`.
-    async runHook(name, next = () => {}) { const fn = mpvControl.hooks.get(name); assert.ok(fn, 'no mpv hook registered for ' + name); return fn(next); }
+    // Run a registered hook the way IINA v1.5.1 does (MPVController.swift, MPVHookValue.call): call the
+    // callback synchronously with `next`; then, unless callback.constructor.name is "AsyncFunction", IINA
+    // calls `next` itself as soon as the callback returns. Only an async function holds the load until it
+    // calls `next`. The returned promise settles when the callback's own result does.
+    runHook(name, next = () => {}) {
+      const fn = mpvControl.hooks.get(name);
+      if (!fn) return Promise.reject(new assert.AssertionError({message: 'no mpv hook registered for ' + name}));
+      let result, error = null;
+      hookStack = {name, calls: mpvControl.offMainCalls};
+      try {
+        result = fn(next);
+      } catch (thrown) {
+        error = thrown;
+      } finally {
+        hookStack = null;
+      }
+      if (fn.constructor.name !== 'AsyncFunction') next();
+      if (error) return Promise.reject(error);
+      return Promise.resolve(result);
+    }
   };
   const mpvApi = {
     getString(name) { const v = mpvControl.props.get(name); return typeof v === 'string' ? v : null; },

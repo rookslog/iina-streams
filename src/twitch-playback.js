@@ -25,7 +25,13 @@ const REQUEST_TIMEOUT_MS = 2000;
 
 const LOGIN_PATTERN = /^[A-Za-z0-9_]{1,25}$/;
 const VOD_ID_PATTERN = /^\d{1,20}$/;
-const MEDIA_URL_PATTERN = /^https:\/\/\S+$/;
+const MAX_URL_LENGTH = 16384;
+const UNSAFE_URL_CHARACTERS = /[\x00-\x20\x7f\\]/;
+const URL_PARTS = /^https:\/\/([^/?#]*)([^?#]*)(?:\?[^#]*)?(#.*)?$/i;
+const HOST_CHARACTERS = /^[a-zA-Z0-9.-]+$/;
+const TWITCH_SUFFIXES = ['ttvnw.net', 'twitch.tv', 'twitchcdn.net'];
+const TWITCH_VOD_HOST = /^d[0-9a-z]{13}\.cloudfront\.net$/;
+const TWITCH_VOD_PATH = /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/index-[A-Za-z0-9-]+\.m3u8$/;
 
 const MAX_TITLE_LENGTH = 240;
 
@@ -37,6 +43,7 @@ const MESSAGES = {
   RESTRICTED: 'Twitch will not play this without an account or in this region.',
   NETWORK: 'Could not reach Twitch.',
   MALFORMED: 'Twitch sent a reply that could not be understood.',
+  UNSAFE_MEDIA_URL: 'Twitch sent a media address that is not safe to open.',
 };
 
 class TwitchPlaybackError extends Error {
@@ -293,10 +300,40 @@ function numberOrNull(text) {
   return text && Number.isFinite(value) ? value : null;
 }
 
-function variantFrom(attributes, url) {
+// Port of helpers/media.py _media_url and _twitch_vod_path. The URL is parsed by hand, not with URL(),
+// because URL() normalizes dot segments and the default port, and the VOD path rule must see the raw path.
+function isTwitchVodPath(path) {
+  return TWITCH_VOD_PATH.test(path) && !path.split('/').some(segment => segment === '.' || segment === '..');
+}
+
+function isSafeMediaUrl(value, kind) {
+  if (typeof value !== 'string' || !value || value.length > MAX_URL_LENGTH || UNSAFE_URL_CHARACTERS.test(value)) {
+    return false;
+  }
+  const parts = URL_PARTS.exec(value);
+  if (!parts || parts[3] || parts[1].includes('@')) {
+    return false;
+  }
+  const authority = parts[1];
+  const colon = authority.indexOf(':');
+  const host = (colon === -1 ? authority : authority.slice(0, colon)).toLowerCase();
+  const port = colon === -1 ? '' : authority.slice(colon + 1);
+  if (!/^\d*$/.test(port) || (port !== '' && Number(port) !== 443) || !HOST_CHARACTERS.test(host)) {
+    return false;
+  }
+  if (TWITCH_SUFFIXES.some(suffix => host === suffix || host.endsWith(`.${suffix}`))) {
+    return true;
+  }
+  return kind === 'vod' && TWITCH_VOD_HOST.test(host) && isTwitchVodPath(parts[2]);
+}
+
+function variantFrom(attributes, url, kind) {
   const name = attributes['STABLE-VARIANT-ID'];
-  if (!name || !MEDIA_URL_PATTERN.test(url || '')) {
+  if (!name || typeof url !== 'string' || !url) {
     return null;
+  }
+  if (!isSafeMediaUrl(url, kind)) {
+    throw new TwitchPlaybackError('UNSAFE_MEDIA_URL');
   }
   return {
     name,
@@ -307,7 +344,7 @@ function variantFrom(attributes, url) {
   };
 }
 
-function parseMaster(text) {
+function parseMaster(text, kind) {
   if (typeof text !== 'string' || !text.startsWith('#EXTM3U')) {
     throw new TwitchPlaybackError('MALFORMED');
   }
@@ -318,7 +355,7 @@ function parseMaster(text) {
     if (!line.startsWith('#EXT-X-STREAM-INF:')) {
       continue;
     }
-    const variant = variantFrom(parseAttributes(line.slice('#EXT-X-STREAM-INF:'.length)), lines[index + 1]);
+    const variant = variantFrom(parseAttributes(line.slice('#EXT-X-STREAM-INF:'.length)), lines[index + 1], kind);
     if (!variant) {
       throw new TwitchPlaybackError('MALFORMED');
     }
@@ -356,7 +393,7 @@ async function resolveTwitch(request, deps = {}) {
 
   let variants;
   try {
-    variants = parseMaster(await fetchMaster(request, token, resolved));
+    variants = parseMaster(await fetchMaster(request, token, resolved), request.kind);
   } catch (failure) {
     const error = mapFailure(failure, 'usher', request.kind);
     logLine('usher failed', {kind: request.kind, code: error.code, status: failure && failure.statusCode});

@@ -6,9 +6,9 @@ How a change gets from a commit to your IINA, then to a release. The 0.2.0-era v
 
 | Identity | Plugin ID | Version shown in IINA | How it reaches IINA | Use it for |
 | --- | --- | --- | --- | --- |
-| Stable | `local.iina.streams` | `0.5.3` | GitHub Release asset (IINA › Settings › Plugins › Install from GitHub), or a release `.iinaplgz` | Everyday watching |
-| Beta | `local.iina.streams.beta` | `0.5.4-beta+g<sha>` | A packaged `.iinaplgz`: CI artifact for any pushed commit, or `npm run build:beta` | A frozen candidate you want to live with for a while |
-| Dev | `local.iina.streams.dev` | `0.5.4-dev+g<sha>` | A symlink into a staged, tested build (`npm run dev:deploy`) | Day-to-day iteration without reinstalling |
+| Stable | `local.iina.streams` | `0.5.4` | GitHub Release asset (IINA › Settings › Plugins › Install from GitHub), or a release `.iinaplgz` | Everyday watching |
+| Beta | `local.iina.streams.beta` | `0.5.5-beta+g<sha>` | A packaged `.iinaplgz`: CI artifact for any pushed commit, or `npm run build:beta` | A frozen candidate you want to live with for a while |
+| Dev | `local.iina.streams.dev` | `0.5.5-dev+g<sha>` | A symlink into a staged, tested build (`npm run dev:deploy`) | Day-to-day iteration without reinstalling |
 
 IINA 1.5.1 keys plugin preferences, data (`plugins/.data/<id>`) and Keychain entries (service `<id> - twitch-readonly`, per `JavascriptAPIUtils.keychainRead`) by identifier. Each identity therefore keeps its own settings and **needs its own Twitch setup once**: re-enter the Twitch Client ID and approve a device-code sign-in. Enable only one Streams identity at a time. Two enabled identities give two *Open Stream…* items and two Streams sidebar tabs in ordinary players.
 
@@ -76,7 +76,7 @@ Policy D-020 as corrected by D-021: the source version is the *next* release (no
 6. Install or update through IINA and smoke-test it.
 7. On `beta`, set the next target version (for example 0.5.5) so beta and dev builds stop stamping the released number.
 
-**State on 2026-11-22:** no GitHub Release has been published. The `v0.5.3` tag CI run failed in the Python suite, so the release job never ran, and GitHub installs currently receive `main`'s source zip.
+**State on 2026-11-22:** [v0.5.4](https://github.com/rookslog/iina-streams/releases/tag/v0.5.4) is the first published GitHub Release, with its `.iinaplgz` asset; `main` was pushed after the asset existed. (The earlier `v0.5.3` tag CI run failed in the Python suite and never released.)
 
 ## Rollback
 

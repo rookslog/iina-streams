@@ -8,7 +8,8 @@
 // - never advances while the playhead does not advance (paused, stalled or buffering);
 // - while playing, advances at most 1.5x the playhead's advance since the last sample;
 // - may move backward at once (rows already shown stay shown);
-// - resyncs to its target only on a seek, Go Live, a quality reload, a source change or a mode change.
+// - resyncs only on Go Live's reload, a quality reload, a source change or a mode change; since r4 #2 a seek
+//   is not a resync, and a resync adopts a mapping only once two confident samples agree (r4-auto-seek).
 // The mapping is sampled whether or not chat is on. Live and Manual keep their wall-clock delays.
 //
 // The player runs under the shared shim with the real live clock and estimator. Playlists and the demuxer
@@ -97,20 +98,22 @@ test('r3 #2: repeated samples at one playhead never grant the catch-up twice', (
   for (let i = 0; i < 5; i++) assert.equal(sample(timing, {nowMs: NOW + 1000, timePos: 101, offset: 9030}), first);
 });
 
-test('r3 #2: a resync adopts the target, and Live and Manual reveal by wall clock', () => {
+// r4 #2 edit: a resync no longer adopts the target at a still playhead; it keeps the cutoff.
+test('r3 #2: a resync keeps the cutoff at a still playhead, and Live and Manual reveal by wall clock', () => {
   const timing = createChatTiming({manualDelay: 4});
   const start = sample(timing, {nowMs: NOW, timePos: 100, offset: 9000});
   assert.equal(sample(timing, {nowMs: NOW, timePos: 100, offset: 9030}), start);
   timing.resyncCutoff();
-  assert.equal(sample(timing, {nowMs: NOW + 40_000, timePos: 100, offset: 9030}), (100 + 9030) * 1000);
+  assert.equal(sample(timing, {nowMs: NOW + 40_000, timePos: 100, offset: 9030}), start);
   timing.update({mode: 'manual'});
   assert.equal(sample(timing, {nowMs: NOW, timePos: 100, paused: true}), NOW - 4000);
   timing.update({mode: 'live'});
   assert.equal(sample(timing, {nowMs: NOW, timePos: 100, paused: true}), NOW);
 });
 
-// After a resync, the first confident mapping is adopted outright while the playhead advances; the clamp
-// applies from then on (lead amendment to r3 #2). Before it, the fallback keeps r1 #7's retained delay.
+// After a resync, a confident mapping is adopted outright once two consecutive confident samples agree while
+// the playhead advances (r4 #2; it was the first one, lead amendment to r3 #2); the clamp applies until then
+// and from then on. Before it, the fallback keeps r1 #7's retained delay.
 
 // A Go Live reload from 30 s behind: the fallback holds the old 30 s delay until the estimate returns.
 function reloadedFrom30sBehind() {
@@ -128,10 +131,12 @@ function reloadedFrom30sBehind() {
 
 const offsetAt = (nowMs, timePos, behind) => nowMs / 1000 - behind - timePos;
 
-test('r3 #2: after a resync, the first confident mapping while playing is adopted within one sample', () => {
+// r4 #2 edit: adoption needs a second agreeing confident sample.
+test('r3 #2: after a resync, a confident mapping while playing is adopted on its second agreeing sample', () => {
   const timing = reloadedFrom30sBehind();
-  const nowMs = NOW + 20_000;
-  const cutoff = sample(timing, {nowMs, timePos: 20, offset: offsetAt(nowMs, 20, 8), behindLive: 8});
+  sample(timing, {nowMs: NOW + 20_000, timePos: 20, offset: offsetAt(NOW + 20_000, 20, 8), behindLive: 8});
+  const nowMs = NOW + 21_000;
+  const cutoff = sample(timing, {nowMs, timePos: 21, offset: offsetAt(nowMs, 21, 8), behindLive: 8});
   assert.equal(nowMs - cutoff, 8000, 'the lag is the estimate, 8 s, at once');
 });
 
@@ -157,6 +162,7 @@ test('r3 #2: once a mapping was adopted, a +30 s discontinuity while playing is 
   const timing = reloadedFrom30sBehind();
   let nowMs = NOW + 20_000;
   const offset = offsetAt(nowMs, 20, 8);
+  sample(timing, {nowMs: nowMs - 1000, timePos: 19, offset, behindLive: 8}); // r4 #2 edit: the first agreeing sample.
   const adopted = sample(timing, {nowMs, timePos: 20, offset, behindLive: 8});
   assert.equal(nowMs - adopted, 8000, 'precondition: the first mapping was adopted');
   nowMs += 2000;

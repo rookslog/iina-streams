@@ -91,7 +91,11 @@ test('close cancels setup and guards a native timer delivered after cancellation
 test('source deactivation cancels setup and cannot deliver queued authentication',async()=>{
  const f=setup();try{
   const late=f.shim.timers.all[0];f.shim.sidebar.send('connect',{clientID:''});f.setPath('/synthetic/unrelated.mp4');
-  await f.shim.mpv.runHook('on_load',()=>{});
+  const hook=f.shim.mpv.runHook('on_load',()=>{});
+  // v0.5.5 review r2 #6: deactivation runs on a main-thread turn. Fire only that turn: `late`, the pending
+  // binding timer, must stay undelivered until after deactivation.
+  f.shim.timers.fire(f.shim.timers.all.at(-1));
+  await hook;
   assert.equal(f.shim.timers.pending().length,0);late.fn();
   assert.deepEqual(Object.keys(f.callbacks),[]);
   assert.equal(f.posts.filter(([name])=>name==='auth-connect').length,0);

@@ -26,6 +26,16 @@ const GO_LIVE_KEY='Ctrl+Meta+g';
 const GO_LIVE_REACH_SECONDS=12;
 // A Go Live reload that has not loaded by then is over: busy clears and Go Live can be used again.
 const GO_LIVE_TIMEOUT_MS=15000;
+// Review r2 #5: the live transport session fences every overlay status and batch. A native core runs one
+// controller per adopted source in this one JS context, so sessions come from this counter, never from
+// zero per controller: a later controller can never reuse an earlier controller's session.
+let liveSessions=0;
+
+function nextLiveSession(){
+ liveSessions++;
+ return liveSessions;
+}
+
 const INACTIVE_MESSAGE='Streams controls are inactive for this file. Open a new stream from the Plugins menu.';
 
 const DEFAULT_VIEW={
@@ -154,6 +164,24 @@ function waitForNativeStream(host,config,services){
  const hookTimers=createTimers((fn,ms)=>setTimeout(fn,ms),id=>clearTimeout(id));
  let current=null;
  let loadSequence=0;
+ // Review r2 #4: retiring a controller is not closing the window. While a stream adopted since the last
+ // close has been retired and no controller is current (a passed-through file plays), this listener tells
+ // global when the window closes. It exists only then, and is added and removed on main-thread turns.
+ let closeNotice=null;
+ function watchClose(){
+  if(closeNotice===null)closeNotice=host.event.on('iina.window-will-close',onRetiredWindowClose);
+ }
+ function unwatchClose(){
+  if(closeNotice===null)return;
+  const id=closeNotice;
+  closeNotice=null;
+  host.event.off('iina.window-will-close',id);
+ }
+ function onRetiredWindowClose(){
+  unwatchClose();
+  if(current)return;
+  host.global.postMessage('player-closed',{});
+ }
  function dropCurrentLoad(){
   if(current)current.controller.passThrough();
  }
@@ -204,6 +232,8 @@ function waitForNativeStream(host,config,services){
   adopted.controller=run(host,config,services,identity,hook=>{
    adopted.loadHook=hook;
   },lifecycle);
+  // Only once the new controller exists: if run throws, the core still reports the close.
+  unwatchClose();
   return adopted;
  }
  // Closes the old controller's timers, listeners, helpers and chat, and removes its menu items; the next
@@ -212,9 +242,12 @@ function waitForNativeStream(host,config,services){
   const old=current;
   current=null;
   if(old){
+   // A closed controller already told global; a retired one leaves the close to the core.
+   const open=!old.controller.isClosed();
    try{
     old.controller.retire();
    }catch(_){}
+   if(open)watchClose();
   }
   try{
    if(host.menu&&typeof host.menu.removeAllItems==='function')host.menu.removeAllItems();
@@ -332,13 +365,15 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // messages (not yet due) are capped at LIVE_PENDING_CAP and revealed ones at LIVE_REVEALED_CAP. The timer
  // is for the next held message.
  let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
- // Review r1 #9: a Go Live reload is one replacement transaction, {generation, stage, timer}. Stage 'issued':
- // loadfile is sent and the replaced file may still end, which is not a stop. Stage 'loading': the
- // replacement's on_load ran, so an end-file now is the replacement failing. goLiveBusy holds from the
- // click until file-loaded of that generation, that failure, or GO_LIVE_TIMEOUT_MS.
+ // Review r1 #9 and r2 #3: a Go Live reload is one replacement transaction, {generation, timer, endSeen}.
+ // goLiveBusy holds from the click until file-loaded of that generation or GO_LIVE_TIMEOUT_MS. An end-file
+ // never ends it: IINA v1.5.1 delivers end-file on the main thread with no file id or reason, after mpv's
+ // queue may already have run the replacement's on_load hook (MPVController.swift L1112-1125, L1241-1247),
+ // so the replaced file's end cannot be told from the replacement's. endSeen records that one arrived; a
+ // timeout after one is a stop.
  let replacement=null;
  // The last Go Live generation issued. Its file-loaded is authoritative even after the transaction ended,
- // because a late old-file end-file or the timeout may have closed it first.
+ // because the timeout may have closed it first.
  let goLiveGeneration=null;
  const listeners=[];
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
@@ -412,29 +447,47 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // ---- Sidebar messages ----
 
+ // Review r2 #4: a retired or closed controller's sidebar and overlay can stay rendered, with their
+ // listeners, until something loads those views again. Every action they send is dropped from then on, so
+ // a retired sidebar's Sign Out or Connect cannot act on the login another window shares.
+ function whileOpen(handler){
+  return data=>{
+   if(closed)return undefined;
+   return handler(data);
+  };
+ }
+
+ function onSidebar(name,handler){
+  sidebar.onMessage(name,whileOpen(handler));
+ }
+
+ function onOverlay(name,handler){
+  overlay.onMessage(name,whileOpen(handler));
+ }
+
  function connectMessages(){
-  sidebar.onMessage('ready',onSidebarReady);
-  sidebar.onMessage('change-quality',q=>changeQuality(String(q)));
-  sidebar.onMessage('refresh',()=>refresh());
-  sidebar.onMessage('hide',hideSidebar);
-  sidebar.onMessage('surface-visibility',onSurfaceVisibility);
-  sidebar.onMessage('open',onSidebarOpen);
-  sidebar.onMessage('import',()=>importArchive());
-  sidebar.onMessage('replay-resume',onReplayResume);
-  sidebar.onMessage('chat-off',onChatOffRequest);
-  sidebar.onMessage('fetch-replay',fetchReplay);
-  sidebar.onMessage('view',setView);
-  sidebar.onMessage('offset',setOffset);
-  sidebar.onMessage('seek-chat',seekChat);
-  sidebar.onMessage('first-message',seekFirstMessage);
-  sidebar.onMessage('connect',connectLive);
-  sidebar.onMessage('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
-  sidebar.onMessage('authorize-open',openActivation);
-  sidebar.onMessage('forget-auth',forgetAuth);
-  sidebar.onMessage('chat-timing',setChatTiming);
-  sidebar.onMessage('chat-calibrate',calibrateChat);
-  sidebar.onMessage('go-live',goLive);
-  if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
+  onSidebar('ready',onSidebarReady);
+  onSidebar('change-quality',q=>changeQuality(String(q)));
+  onSidebar('refresh',()=>refresh());
+  onSidebar('hide',hideSidebar);
+  onSidebar('surface-visibility',onSurfaceVisibility);
+  onSidebar('open',onSidebarOpen);
+  onSidebar('import',()=>importArchive());
+  onSidebar('replay-resume',onReplayResume);
+  onSidebar('chat-off',onChatOffRequest);
+  onSidebar('fetch-replay',fetchReplay);
+  onSidebar('view',setView);
+  onSidebar('offset',setOffset);
+  onSidebar('seek-chat',seekChat);
+  onSidebar('first-message',seekFirstMessage);
+  onSidebar('connect',connectLive);
+  onSidebar('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
+  onSidebar('authorize-open',openActivation);
+  onSidebar('forget-auth',forgetAuth);
+  onSidebar('chat-timing',setChatTiming);
+  onSidebar('chat-calibrate',calibrateChat);
+  onSidebar('go-live',goLive);
+  if(config.qa)onSidebar('qa-result',data=>trace('ui-result',data));
  }
 
  // The sidebar's inline field sends {input}; global parses it and opens the stream (#50).
@@ -565,7 +618,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function stopLiveTransport(){
-  liveRun++;
+  liveRun=nextLiveSession();
   liveCredential=null;
   liveStarted=false;
   if(overlayReady)postOverlay('live-stop',{});
@@ -576,9 +629,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const credential=liveCredential;
   liveCredential=null;
   liveStarted=true;
+  liveRun=nextLiveSession();
   resetLiveBuffer();
   send();
-  postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:++liveRun});
+  postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:liveRun});
  }
 
  function ensureOverlay(){
@@ -604,13 +658,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function onOverlayLoaded(){
   diagLog('plugin-overlay-loaded',{overlayLoaded});
   if(closed||!overlayLoaded)return;
-  overlay.onMessage('overlay-ready',onOverlayReady);
-  overlay.onMessage('live-state',onLiveState);
-  overlay.onMessage('live-messages',onLiveMessages);
-  overlay.onMessage('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));
-  overlay.onMessage('position',p=>setView({x:p&&p.x,y:p&&p.y}));
-  overlay.onMessage('position-done',()=>setView({editing:false}));
-  if(config.qa)overlay.onMessage('qa-result',d=>trace('overlay-ui-result',d));
+  onOverlay('overlay-ready',onOverlayReady);
+  onOverlay('live-state',onLiveState);
+  onOverlay('live-messages',onLiveMessages);
+  onOverlay('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));
+  onOverlay('position',p=>setView({x:p&&p.x,y:p&&p.y}));
+  onOverlay('position-done',()=>setView({editing:false}));
+  if(config.qa)onOverlay('qa-result',d=>trace('overlay-ui-result',d));
   postOverlay('hello',{});
  }
 
@@ -755,6 +809,41 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return chatTiming.effective(behindLive());
  }
 
+ // The estimator's offset from the raw mpv timeline to wall-clock time, while the clock is confident (its
+ // behindLive is null when the estimate is unsure or the last sample is stale); otherwise null.
+ function confidentOffset(){
+  if(behindLive()===null)return null;
+  const value=estimator.offset();
+  return typeof value==='number'&&Number.isFinite(value)?value:null;
+ }
+
+ function livePlayhead(){
+  const value=mpv.getNumber('time-pos');
+  return typeof value==='number'&&Number.isFinite(value)?value:null;
+ }
+
+ // Review r2 #2: in Auto, a message is due when the video reaches its send time: the clock is the mapped
+ // playhead (chatTiming.autoClockMs), so held chat waits while the video is paused or stalled. Manual, Live,
+ // and Auto before any confident estimate reveal by wall clock less the effective delay.
+ function revealClock(now){
+  const mapped=chatTiming.autoClockMs({nowMs:now,timePos:livePlayhead(),offset:confidentOffset()});
+  if(mapped!==null)return{atMs:mapped,delay:0,mapped:true};
+  return{atMs:now,delay:currentTiming().delay,mapped:false};
+ }
+
+ // Wall-clock ms until the reveal clock reaches dueMs, or null to wait for the next status tick, seek or
+ // pause change. A mapped clock does not move while paused, and moves at the playback speed otherwise; the
+ // floor keeps a stalled playhead from re-arming a 0 ms timer.
+ const MAPPED_REVEAL_MIN_WAIT_MS=100;
+
+ function revealWait(clock,dueMs){
+  const gap=Math.max(0,dueMs-clock.atMs);
+  if(!clock.mapped)return gap;
+  if(mpv.getFlag('pause'))return null;
+  const speed=Number(mpv.getNumber('speed'))||1;
+  return Math.max(MAPPED_REVEAL_MIN_WAIT_MS,gap/speed);
+ }
+
  // What the sidebar shows of live timing, at the precision it shows it.
  function liveStatusKeyOf(behind,timing,edge){
   const shown=behind===null?'none':String(Math.round(behind));
@@ -774,17 +863,18 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    clearRevealTimer();
    return false;
   }
-  const now=Date.now();
-  const result=chatTiming.reveal(liveInbox,now,currentTiming().delay);
+  const clock=revealClock(Date.now());
+  const result=chatTiming.reveal(liveInbox,clock.atMs,clock.delay);
   const next=trimRevealed(result.visible).map(entry=>entry.message);
   const changed=next.length!==messages.length||next.some((message,i)=>message!==messages[i]);
   messages=next;
   chat.count=messages.length;
   if(result.nextDueMs!==revealDueMs){
    clearRevealTimer();
-   if(result.nextDueMs!==null){
+   const wait=result.nextDueMs===null?null:revealWait(clock,result.nextDueMs);
+   if(wait!==null){
     revealDueMs=result.nextDueMs;
-    revealTimer=timers.setTimeout(onRevealDue,Math.max(0,result.nextDueMs-now));
+    revealTimer=timers.setTimeout(onRevealDue,wait);
    }
   }
   return changed;
@@ -855,9 +945,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
  }
 
+ // Every stop ends the file timeline the estimator's offset maps (a reload, a new file, or the end).
  function stopLiveClock(){
   liveClock.stop();
   liveClockRunning=false;
+  chatTiming.forgetMapping();
   if(liveStatusTimer!==null)timers.clearTimeout(liveStatusTimer);
   liveStatusTimer=null;
  }
@@ -926,7 +1018,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   endReplacement();
   goLiveBusy=true;
   goLiveGeneration=generation;
-  replacement={generation,stage:'issued',timer:timers.setTimeout(onReplacementTimeout,GO_LIVE_TIMEOUT_MS)};
+  replacement={generation,timer:timers.setTimeout(onReplacementTimeout,GO_LIVE_TIMEOUT_MS),endSeen:false};
  }
 
  function endReplacement(){
@@ -937,11 +1029,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function onReplacementTimeout(){
   if(!replacement)return;
+  const endSeen=replacement.endSeen;
   replacement.timer=null;
   endReplacement();
   trace('go-live',{action:'timeout'});
   if(!closed&&sourceActive){
    loadError='The stream could not be reloaded.';
+   // No replacement loaded, and a file ended: whichever it was, nothing is playing now.
+   if(endSeen)player.ended();
    send();
   }
  }
@@ -1418,8 +1513,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const parsed=Sources.parse(current);
    if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url)){
     // Adopted windows never reach this: their core hook retires the controller on a main-thread turn
-    // (waitForNativeStream). A window Streams opened still deactivates here, on mpv's hook queue.
-    deactivateForForeignFile();
+    // (waitForNativeStream). Review r2 #6: a window Streams opened deactivates on a main-thread turn too,
+    // never on mpv's hook queue, and holds the load until then. A close or a later load meanwhile owns
+    // what happens next.
+    await mainThreadTurn();
+    if(!closed&&mine===generation)deactivateForForeignFile();
     finish();
     return;
    }
@@ -1435,7 +1533,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     result=staged.result;
     context=staged.context;
     staged=null;
-    if(replacement&&replacement.generation===context.generation)replacement.stage='loading';
    }else if(source.kind==='local-test'){
     result={
      ok:true,title:config.qa.title||'Native replay test',live:false,duration:600,quality:'local',formats:[],
@@ -1521,27 +1618,28 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   fetchReplay({auto:true});
  }
 
+ // During a Go Live replacement an end-file is unattributed (see `replacement`): it is not a stop and does
+ // not end the transaction.
  function onEndFile(){
-  if(replacement&&replacement.stage==='issued'){
+  if(replacement){
+   replacement.endSeen=true;
    trace('end-file',{replaced:true});
    return;
-  }
-  if(replacement){
-   endReplacement();
-   loadError='The stream could not be reloaded.';
-   trace('go-live',{action:'failed'});
   }
   player.ended();
   trace('end-file');
  }
 
+ // A seek or a pause change moves or stops Auto's mapped reveal clock.
  function onSeek(){
   tick(true);
   maybeRefreshTwitch(true);
+  if(revealLive())send();
  }
 
  function onPauseChanged(){
   tick(true);
+  revealLive();
   send();
  }
 
@@ -1763,6 +1861,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   passThrough,
   ownsLoad,
   retire,
+  isClosed:()=>closed,
   _authCallbacks:authCallbacks
  };
 }

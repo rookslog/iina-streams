@@ -65,8 +65,16 @@ function fixture({retainFiredTimers = false} = {}) {
   };
   const controller = script.exports.start(host, {variant: 'unified'}, services);
   async function load() { let next = 0; await shim.mpv.runHook('on_load', () => next++); assert.equal(next, 1); }
+  // v0.5.5 review r2 #6: a foreign file deactivates on a main-thread turn and holds the load until then.
+  async function loadForeign() {
+    let next = 0;
+    const hook = shim.mpv.runHook('on_load', () => next++);
+    timers.advance(0);
+    await hook;
+    assert.equal(next, 1);
+  }
   async function initial() { await load(); emit('iina.file-loaded', source.url); emit('iina.window-size-adjusted'); advance(600); calls.length = 0; }
-  return {controller, source, native, calls, messages, emit, advance, load, initial, result,
+  return {controller, source, native, calls, messages, emit, advance, load, loadForeign, initial, result,
     setResolver(fn) { resolve = fn; }, helperCalls, deletes, retainedTimers: {get size() { return timers.all.filter(t => !t.cancelled).length; }}, shim};
 }
 
@@ -191,7 +199,7 @@ test('source deactivation fences a queued native restoration callback', async ()
   const r = fixture(); await r.initial();
   await r.controller.changeQuality('360p30'); await r.load();
   r.emit('iina.file-loaded', r.native.path); r.emit('iina.window-size-adjusted');
-  r.native.path = '/Users/example/unrelated.mp4'; await r.load(); r.calls.length = 0; r.advance(30000);
+  r.native.path = '/Users/example/unrelated.mp4'; await r.loadForeign(); r.calls.length = 0; r.advance(30000);
   assert.equal(r.controller.snapshot().phase, 'inactive'); assert.deepEqual(r.calls, []);
   r.emit('iina.window-will-close');
 });
@@ -229,7 +237,7 @@ for (const disposition of ['inactive', 'closed', 'off']) {
     assert.equal(await r.controller.importArchive('/archives/synthetic.json'), true);
     if (disposition === 'closed') r.emit('iina.window-will-close');
     else if (disposition === 'off') r.controller.chatOff();
-    else { r.native.path = '/Users/example/unrelated.mp4'; await r.load(); }
+    else { r.native.path = '/Users/example/unrelated.mp4'; await r.loadForeign(); }
     r.calls.length = 0; r.messages.get('first-message')();
     assert.deepEqual(r.calls, [], 'a stale sidebar action must not issue mpv seek after leaving its source');
     if (disposition !== 'closed') r.emit('iina.window-will-close');
@@ -240,7 +248,7 @@ for (const disposition of ['inactive', 'closed']) {
   test('queued sidebar actions cannot change timeline or start quality work after ' + disposition, async () => {
     const r = fixture(); await r.initial();
     if (disposition === 'closed') r.emit('iina.window-will-close');
-    else { r.native.path = '/Users/example/unrelated.mp4'; await r.load(); }
+    else { r.native.path = '/Users/example/unrelated.mp4'; await r.loadForeign(); }
     let resolutions = 0; r.setResolver(async () => { resolutions++; return r.result('360p30'); });
     const originalOffset = r.controller.snapshot().chat.offset;
     r.calls.length = 0;

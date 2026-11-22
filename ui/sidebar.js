@@ -306,6 +306,7 @@ function validClientID(v){
   author.textContent=m.author;
   const text=document.createElement('span');
   // The follow tests run this script alone, without chat-content.js; the page always loads it.
+  // If chat-content.js failed to load, chat still shows as plain text (also what tests/sidebar-follow's bare harness hits).
   if(typeof StreamsChatContent==='undefined')text.textContent=m.text;
   else text.replaceChildren(...StreamsChatContent.renderSegments(segmentsFor(m),{document}));
   row.append(author,text);

@@ -10,7 +10,8 @@
 //   no-op seek moves nothing; backward is free.
 // - A timeline change (reload, new file, mode change) resyncs into "awaiting". The prior cutoff is kept.
 //   A mapping is adopted outright only when two consecutive confident samples agree within 1 s while the
-//   playhead advances; until then the clamp applies.
+//   playhead advances; until then the clamp applies. Since v0.5.5 class A (tests/class-a-properties.test.js),
+//   adoption waits for 1 s of progress after the corroborating sample.
 //
 // chat-timing runs directly; the player runs under the shared shim with the real live clock and estimator.
 // Playlists and the demuxer cache are synthetic; no test contacts Twitch.
@@ -82,6 +83,9 @@ test('r4 #2: a backward seek moves the cutoff back at once', () => {
 test('r4 #2: a forward seek while paused moves nothing until play, then the jump counts', () => {
   const timing = playingAt100();
   const held = (100 + 9000) * 1000;
+  // v0.5.5 class A edit: the player samples on the pause change (onPauseChanged) before any seek while paused,
+  // and the policy counts movement up to a pause as playback.
+  assert.equal(sample(timing, {nowMs: NOW + 500, timePos: 100, offset: 9000, paused: true}), held, 'paused');
   assert.equal(sample(timing, {nowMs: NOW + 1000, timePos: 160, offset: 9000, paused: true}), held,
     'paused at the new position: held');
   assert.equal(sample(timing, {nowMs: NOW + 5000, timePos: 160, offset: 9000, paused: true}), held, 'still held');
@@ -127,9 +131,11 @@ test('r4 #2: after a reload, two agreeing confident samples while playing adopt 
   const {timing, prior} = reloaded();
   const offset = 9130; // 30 s ahead of the prior cutoff: a Go Live landing.
   assert.equal(sample(timing, {nowMs: NOW + 1000, timePos: 0, offset, behindLive: 8}), prior);
-  const adopted = sample(timing, {nowMs: NOW + 2000, timePos: 1.5, offset: offset + 0.5, behindLive: 8});
-  assert.equal(adopted, (1.5 + offset + 0.5) * 1000, 'within 1 s of each other: adopted outright');
-  const next = sample(timing, {nowMs: NOW + 3000, timePos: 2.5, offset: offset + 30, behindLive: -22});
+  sample(timing, {nowMs: NOW + 2000, timePos: 1.5, offset: offset + 0.5, behindLive: 8});
+  // v0.5.5 class A edit: adoption also needs 1 s of progress after the corroborating sample.
+  const adopted = sample(timing, {nowMs: NOW + 3000, timePos: 2.5, offset: offset + 0.5, behindLive: 8});
+  assert.equal(adopted, (2.5 + offset + 0.5) * 1000, 'within 1 s of each other: adopted outright');
+  const next = sample(timing, {nowMs: NOW + 4000, timePos: 3.5, offset: offset + 30, behindLive: -22});
   assert.equal(next, adopted + 1500, 'adoption ends the await: a later +30 s jump is clamped');
 });
 
@@ -149,7 +155,9 @@ test('r4 #2: samples that disagree by more than 1 s keep the clamp until two agr
   const a = sample(timing, {nowMs: NOW + 2000, timePos: 1, offset: 9131.5, behindLive: 8});
   assert.equal(a, prior + 1500, '1.5 s apart: clamped');
   const b = sample(timing, {nowMs: NOW + 3000, timePos: 2, offset: 9131.5, behindLive: 8});
-  assert.equal(b, (2 + 9131.5) * 1000, 'the next agreeing sample adopts');
+  assert.equal(b, prior + 3000, 'the next agreeing sample corroborates (v0.5.5 class A edit)');
+  const c = sample(timing, {nowMs: NOW + 4000, timePos: 3, offset: 9131.5, behindLive: 8});
+  assert.equal(c, (3 + 9131.5) * 1000, 'and 1 s of progress later it adopts');
 });
 
 // The estimator updates on each 2 s playlist poll, and the player samples on each 1 s status tick, so two
@@ -171,9 +179,11 @@ test('r4 #2: two distinct estimator updates that agree adopt, and a reread betwe
     const offset = 9130;
     sample(timing, {nowMs: NOW + 1000, timePos: 0, offset, behindLive: 8, estimateId: 7});
     sample(timing, {nowMs: NOW + 2000, timePos: 1, offset, behindLive: 8, estimateId: 7});
-    const adopted = sample(timing, {nowMs: NOW + 3000, timePos: 2, offset: offset + 0.5, behindLive: 8, estimateId: 8});
-    assert.equal(adopted, (2 + offset + 0.5) * 1000, 'update 8 agrees with update 7: adopted outright');
-    assert.ok(adopted > prior + 3000, 'precondition: past what the clamp allowed');
+    sample(timing, {nowMs: NOW + 3000, timePos: 2, offset: offset + 0.5, behindLive: 8, estimateId: 8});
+    // v0.5.5 class A edit: adoption also needs 1 s of progress after the corroborating sample.
+    const adopted = sample(timing, {nowMs: NOW + 4000, timePos: 3, offset: offset + 0.5, behindLive: 8, estimateId: 8});
+    assert.equal(adopted, (3 + offset + 0.5) * 1000, 'update 8 agrees with update 7: adopted outright');
+    assert.ok(adopted > prior + 4500, 'precondition: past what the clamp allowed');
   });
 
 test('r4 #2: two distinct estimator updates more than 1 s apart do not adopt', () => {

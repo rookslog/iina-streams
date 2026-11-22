@@ -136,6 +136,8 @@ body{
 /* D1 (#47, #52): chat docked beside the video. The player's mpv margin keeps the picture left of the column, so
    the column is opaque and follows the system appearance, like the native sidebar. */
 body[data-layout="column"]{
+ /* IINA's title bar slides over the top of the window while the pointer is there. */
+ --title-bar-height:28px;
  --column-bg:#f4f5f7;
  --column-fg:rgba(22,24,29,.95);
  --column-line:rgba(0,0,0,.12);
@@ -228,6 +230,7 @@ body[data-layout="column"] #drag-pill,body[data-layout="column"] #resize-handle{
  outline-offset:0;
  opacity:1;
 }
+body[data-layout="column"] #column-tools{margin-top:var(--title-bar-height)}
 #column-tools .fill{fill:currentColor}
 #column-tools .line{fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
 @media(prefers-contrast:more){

@@ -28,11 +28,14 @@ function countAgreeing(values, center) {
 
 /**
  * Create an estimator of the offset between the raw mpv timeline and live wall-clock time.
- * Returns {addSample, offset, behindLive, videoWallClock, reset}.
+ * Returns {addSample, offset, behindLive, videoWallClock, reset, updates}.
  * @param {{windowSeconds: number, minSamples: number}} options
  */
 function createEstimator({windowSeconds, minSamples}) {
   let samples = [];
+  // How many samples were added since creation. Never reset, so equal counts mean the same estimate
+  // (v0.5.5 review r4 #2).
+  let updateCount = 0;
 
   function reset() {
     samples = [];
@@ -56,7 +59,13 @@ function createEstimator({windowSeconds, minSamples}) {
       reset();
     }
     samples.push({now, rawCacheEnd, offset: newestSegmentEnd - rawCacheEnd});
+    updateCount += 1;
     dropExpired(now);
+  }
+
+  /** @returns {number} the identity of the current estimate: the count of samples added so far */
+  function updates() {
+    return updateCount;
   }
 
   function offset() {
@@ -88,7 +97,7 @@ function createEstimator({windowSeconds, minSamples}) {
     return now - wallClock;
   }
 
-  return {addSample, offset, behindLive, videoWallClock, reset};
+  return {addSample, offset, behindLive, videoWallClock, reset, updates};
 }
 
 /**

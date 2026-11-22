@@ -12,6 +12,9 @@ const STEP_SECONDS = 0.5;
 // While playing, Auto's reveal cutoff advances at most this many times as far as the playhead
 // (v0.5.5 review r3 #2), so a corrected offset catches up gradually and a discontinuous one cannot jump it.
 const AUTO_CATCH_UP_RATE = 1.5;
+// After a timeline change, two consecutive confident offsets within this many seconds of each other are
+// adopted outright (v0.5.5 review r4 #2).
+const MAPPING_AGREEMENT_SECONDS = 1;
 
 function roundToStep(value) {
   const rounded = Math.round(value / STEP_SECONDS) * STEP_SECONDS;
@@ -65,12 +68,15 @@ function createChatTiming(options = {}) {
   // The last confident offset from the raw mpv timeline to epoch seconds, or null before the first one
   // or after the file timeline changed (v0.5.5 review r2 #2).
   let lastConfidentOffset = null;
-  // Auto's held reveal cutoff and the playhead it was last sampled at, {cutoffMs, timePos}, or null until
-  // the next sample adopts its target (v0.5.5 review r3 #2).
+  // The reveal cutoff last returned and the playhead it was sampled at, {cutoffMs, timePos}, or null before
+  // the first sample. Every mode records it, so Auto starts from the cutoff in use. timePos is null after a
+  // resync: the next sample re-anchors it (v0.5.5 review r3 #2, r4 #2).
   let heldCutoff = null;
-  // True from a resync (and at the start) until a confident mapping is adopted outright: the fallback before
-  // it can hold a stale delay, such as the one from before a Go Live reload.
+  // True from a resync (and at the start) until a mapping is corroborated: the fallback before it can hold
+  // a stale delay, such as the one from before a Go Live reload.
   let awaitingMapping = true;
+  // While awaiting, the last confident sample, {offset, timePos, estimateId}, which the next one must agree with.
+  let candidate = null;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -144,58 +150,129 @@ function createChatTiming(options = {}) {
   }
 
   /**
-   * The chat send time, in epoch ms, up to which rows show now (v0.5.5 review r3 #2). Live and Manual reveal
-   * by wall clock less their delay. Auto's target is autoClockMs, or without a mapping the wall clock less
-   * effective().delay; its cutoff then
+   * The chat send time, in epoch ms, up to which rows show now (v0.5.5 review r3 #2, r4 #2). Live and Manual
+   * reveal by wall clock less their delay. Auto's target is autoClockMs, or without a mapping the wall clock
+   * less effective().delay; its cutoff then
    * - never advances while the playhead does not (paused, stalled or buffering);
-   * - while playing, advances at most AUTO_CATCH_UP_RATE times the playhead's advance since the last sample;
+   * - while playing, advances at most AUTO_CATCH_UP_RATE times the playhead's advance since the last sample.
+   *   A seek's jump counts as advance, so within one file the cutoff follows a seek: the playhead-to-chat
+   *   offset does not change across it. A jump made while paused counts once playing resumes;
    * - follows a lower target at once (rows already shown stay shown: see reveal);
-   * - after a resync, adopts the first confident mapping outright, forward or back, once the playhead
-   *   advances; the clamp applies from then on.
-   * Call it whether or not chat is on, so the cutoff is held across a pause. resyncCutoff makes the next
-   * sample adopt the target.
-   * @param {{nowMs: number, timePos: number|null, paused: boolean, offset: number|null, behindLive: number|null}} reading
+   * - after a resync, keeps its value and adopts a mapping outright only once two consecutive confident
+   *   samples from distinct estimator updates agree within MAPPING_AGREEMENT_SECONDS while the playhead
+   *   advances; the clamp applies until then, and from then on. A confident sample from the candidate's own
+   *   update (estimateId) neither confirms nor breaks the run. Without an estimateId every sample is distinct.
+   *   A sample that is not confident always breaks it.
+   * Call it whether or not chat is on, so the cutoff is held across a pause.
+   * @param {{nowMs: number, timePos: number|null, paused: boolean, offset: number|null, behindLive: number|null,
+   *   estimateId?: number}} reading estimateId identifies the estimator update the offset comes from
    * @returns {number}
    */
-  function revealCutoffMs({nowMs, timePos, paused, offset, behindLive}) {
+  function revealCutoffMs({nowMs, timePos, paused, offset, behindLive, estimateId}) {
     const mapped = autoClockMs({nowMs, timePos, offset});
     const wallClockMs = nowMs - effective(behindLive).delay * 1000;
+    const playhead = isFiniteNumber(timePos) ? timePos : null;
     if (state.mode !== 'auto') {
+      heldCutoff = {cutoffMs: wallClockMs, timePos: playhead};
       return wallClockMs;
     }
     const target = mapped === null ? wallClockMs : mapped;
-    const confident = mapped !== null && isFiniteNumber(offset);
-    return holdCutoff(target, isFiniteNumber(timePos) ? timePos : null, !!paused, confident);
+    const confidentOffset = mapped !== null && isFiniteNumber(offset) ? offset : null;
+    const estimate = {offset: confidentOffset, id: isFiniteNumber(estimateId) ? estimateId : null};
+    return holdCutoff(target, playhead, !!paused, estimate);
   }
 
-  function holdCutoff(target, timePos, paused, confident) {
+  function holdCutoff(target, timePos, paused, estimate) {
+    const confidentOffset = estimate.offset;
+    // The very first sample has no cutoff to hold, so it takes its target; a confident one is the mapping.
+    // A resync never clears the cutoff, so this runs once per timing.
     if (heldCutoff === null) {
       heldCutoff = {cutoffMs: target, timePos};
-      if (confident) {
+      if (confidentOffset !== null) {
         awaitingMapping = false;
       }
+      noteCandidate(timePos, estimate);
       return target;
     }
-    let advance = 0;
-    if (!paused && timePos !== null && heldCutoff.timePos !== null) {
-      advance = Math.max(0, timePos - heldCutoff.timePos);
-    }
+    const advance = playheadAdvance(timePos, paused);
     let cutoffMs;
-    if (awaitingMapping && confident && advance > 0) {
+    if (awaitingMapping && corroborates(timePos, paused, estimate)) {
       awaitingMapping = false;
+      candidate = null;
       cutoffMs = target;
     } else {
       const ceiling = heldCutoff.cutoffMs + AUTO_CATCH_UP_RATE * advance * 1000;
       cutoffMs = Math.min(target, ceiling);
+      noteCandidate(timePos, estimate);
     }
-    heldCutoff = {cutoffMs, timePos: timePos === null ? heldCutoff.timePos : timePos};
+    heldCutoff = {cutoffMs, timePos: nextAnchor(timePos, paused)};
     return cutoffMs;
   }
 
-  /** A seek, Go Live, a reload, a new file or a mode change: the next cutoff sample adopts its target. */
+  // Seconds the playhead advanced since the anchor, or 0 while paused or without a playhead.
+  function playheadAdvance(timePos, paused) {
+    if (paused || timePos === null || heldCutoff.timePos === null) {
+      return 0;
+    }
+    return Math.max(0, timePos - heldCutoff.timePos);
+  }
+
+  // While paused the anchor only moves back, so a jump made while paused counts once playing resumes, and a
+  // backward one does not hold the cutoff until the playhead passes the old anchor again.
+  function nextAnchor(timePos, paused) {
+    if (timePos === null) {
+      return heldCutoff.timePos;
+    }
+    if (paused && heldCutoff.timePos !== null) {
+      return Math.min(heldCutoff.timePos, timePos);
+    }
+    return timePos;
+  }
+
+  // Whether this sample and the candidate are both confident, come from distinct estimator updates, agree
+  // on the offset, and the playhead advanced between them while playing.
+  function corroborates(timePos, paused, estimate) {
+    if (paused || estimate.offset === null || timePos === null || candidate === null) {
+      return false;
+    }
+    if (sameUpdate(estimate)) {
+      return false;
+    }
+    const advanced = timePos > candidate.timePos;
+    return advanced && Math.abs(estimate.offset - candidate.offset) <= MAPPING_AGREEMENT_SECONDS;
+  }
+
+  // A confident sample that rereads the candidate's estimator update (v0.5.5 review r4 #2).
+  function sameUpdate(estimate) {
+    if (candidate === null || estimate.offset === null || estimate.id === null) {
+      return false;
+    }
+    return estimate.id === candidate.estimateId;
+  }
+
+  // While awaiting, a confident sample from a new update becomes the candidate; a reread of the candidate's
+  // update leaves it; a sample that is not confident breaks the run.
+  function noteCandidate(timePos, estimate) {
+    if (!awaitingMapping || sameUpdate(estimate)) {
+      return;
+    }
+    if (estimate.offset === null || timePos === null) {
+      candidate = null;
+      return;
+    }
+    candidate = {offset: estimate.offset, timePos, estimateId: estimate.id};
+  }
+
+  /**
+   * A timeline change (a reload, a new file or a mode change; never a seek): the cutoff keeps its value, the
+   * next sample re-anchors the playhead, and a mapping is awaited (v0.5.5 review r4 #2).
+   */
   function resyncCutoff() {
-    heldCutoff = null;
     awaitingMapping = true;
+    candidate = null;
+    if (heldCutoff !== null) {
+      heldCutoff = {cutoffMs: heldCutoff.cutoffMs, timePos: null};
+    }
   }
 
   /**

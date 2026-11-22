@@ -8,6 +8,7 @@
 - **VOD chat acquisition is pinned by recorded Twitch fixtures and property tests (#17).** An empty page that claims more follow is retried once, then the window ends with a diagnostic.
 - **Swallowed errors surfaced (#24, part 1):** an unreadable Keychain item, client file or saved login is logged as a code, never its text. A corrupt `settings.json` is kept as `settings.json.corrupt-<time>` before the defaults apply.
 - **Twitch opens without Streamlink (#36):** live channels and VODs resolve in plugin JS (GQL access token, then usher), with the title fetched in parallel. Observed: a live channel resolved in 349 ms in IINA. Network or parse failures fall back to the Python helper; offline, not-found and restricted answers don't.
+- **Official Twitch emotes in live chat (#34):** images from Twitch's CDN (`static-cdn.jtvnw.net`, the only image source the CSP allows), in the sidebar and the overlay. Observed natively in the overlay. Badges aren't rendered yet.
 - **Groundwork, not yet wired:**
   - a live-latency estimator (`src/live-latency.js`) from the #16/#31 spike;
   - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).

@@ -128,7 +128,7 @@ class MetadataTests(unittest.TestCase):
         self.assertFalse(result["live"])
         self.assertEqual(result["quality"], "1080p60")
 
-    def test_observed_twitch_vod_distribution_is_allowed_without_general_cloudfront_access(self):
+    def test_first_observed_twitch_vod_distribution_is_allowed(self):
         fixture = twitch_metadata()
         fixture["streams"]["720p60"]["url"] = "https://d2vi6trrdongqn.cloudfront.net/fixture/720p60/index-dvr.m3u8"
         try:
@@ -137,6 +137,60 @@ class MetadataTests(unittest.TestCase):
             self.fail("the observed public Twitch VOD distribution was rejected: " + error.code)
         self.assertEqual(result["mediaURL"], "https://d2vi6trrdongqn.cloudfront.net/fixture/720p60/index-dvr.m3u8")
         self.assertFalse(result["live"])
+
+    # Playlist paths below are modelled on one VOD observed on 2026-11-22 (Streamlink 8.6.3, VOD 2935383720):
+    # /<hash>_<channel>_<broadcast id>_<timestamp>/<quality>/index-muted-<token>.m3u8 on d1m7jfoe9zdc1j.cloudfront.net.
+    # The other Twitch tenant (d2vi6trrdongqn) and its index-dvr.m3u8 name are from the earlier test above.
+    VOD_PLAYLIST = "/0123456789abcdef0123_hutchmf_2935383720_1700000000/720p60/index-muted-AB12CD34EF.m3u8"
+    VOD_SOURCE = "https://www.twitch.tv/videos/2935383720"
+
+    def resolve_vod_stream(self, url, source=VOD_SOURCE):
+        fixture = twitch_metadata()
+        fixture["streams"]["720p60"]["url"] = url
+        return self.resolve_fixture(source, fixture)
+
+    def test_twitch_vod_playlists_on_either_known_cloudfront_tenant_are_allowed(self):
+        for host in ("d2vi6trrdongqn.cloudfront.net", "d1m7jfoe9zdc1j.cloudfront.net"):
+            url = "https://" + host + self.VOD_PLAYLIST + "?sig=private-fixture"
+            with self.subTest(host=host):
+                self.assertEqual(self.resolve_vod_stream(url)["mediaURL"], url)
+
+    def test_cloudfront_vod_rule_admits_only_vod_playlists_on_tenant_shaped_hosts(self):
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        refused = [
+            "https://arbitrary.cloudfront.net" + self.VOD_PLAYLIST,           # not a distribution-id host
+            "https://x" + host + self.VOD_PLAYLIST,                             # one character too long
+            "https://" + host + ".evil.example" + self.VOD_PLAYLIST,           # suffix trick
+            "https://evil-" + host + self.VOD_PLAYLIST,                         # prefix trick
+            "https://sub." + host + self.VOD_PLAYLIST,                          # subdomain of a tenant
+            "https://d1m7jfoe9zdc1j.example.net" + self.VOD_PLAYLIST,          # tenant shape, not CloudFront
+            "https://media.example" + self.VOD_PLAYLIST,                        # not CloudFront at all
+            "https://" + host + "/payload.js",                                  # not an HLS playlist path
+            "https://" + host + "/a/b/c/index-dvr.m3u8",                        # wrong depth
+            "https://" + host + "/a/b/index.m3u8",                              # not index-<name>.m3u8
+            "https://" + host + "/a/b/index-dvr.m3u8/extra",                    # playlist must be the last segment
+            "http://" + host + self.VOD_PLAYLIST,
+            "https://user:pass@" + host + self.VOD_PLAYLIST,
+            "https://" + host + ":8443" + self.VOD_PLAYLIST,
+            "https://" + host + self.VOD_PLAYLIST + "#fragment",
+        ]
+        for url in refused:
+            with self.subTest(url=url), self.assertRaises(media.MediaError) as error:
+                self.resolve_vod_stream(url)
+            self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
+
+    def test_cloudfront_is_never_allowed_for_live_channels_or_for_youtube(self):
+        url = "https://d1m7jfoe9zdc1j.cloudfront.net" + self.VOD_PLAYLIST
+        with self.assertRaises(media.MediaError) as error:
+            self.resolve_vod_stream(url, source="https://www.twitch.tv/hutchmf")
+        self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
+        fixture = youtube_metadata()
+        for item in fixture["formats"]:
+            if item["format_id"] in ("136", "18"):
+                item["url"] = url
+        with self.assertRaises(media.MediaError) as error:
+            self.resolve_fixture("https://youtu.be/jNQXAC9IVRw", fixture)
+        self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
 
     def test_auto_prefers_h264_and_uses_lowest_resolution_when_no_720_format_exists(self):
         fixture = youtube_metadata()

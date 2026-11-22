@@ -29,9 +29,21 @@ TWITCH_QUALITY = re.compile(r"([1-9][0-9]{1,3})p([1-9][0-9]{0,2})?\Z")
 RESERVED_TWITCH = {"videos", "directory", "search", "settings", "subscriptions", "following", "downloads",
                   "login", "signup", "products", "p", "popout", "clips"}
 AUTO = {"id": "auto720", "label": "Auto · 720p preferred"}
-# Exact Twitch-owned distribution observed from Streamlink's public hutchmf VOD
-# 2923174759 on 2026-11-08. Deliberately do not allow arbitrary CloudFront tenants.
-TWITCH_VOD_DISTRIBUTIONS = {"d2vi6trrdongqn.cloudfront.net"}
+# Twitch serves VOD playlists from CloudFront distributions, and more than one exists: d2vi6trrdongqn
+# (observed 2026-11-08, VOD 2923174759) and d1m7jfoe9zdc1j (observed 2026-11-22, VOD 2935383720, all eight
+# streams). The list of Twitch's distributions is not published, so a VOD playlist is admitted by shape:
+#   host    exactly one CloudFront distribution id, d<13 lowercase letters or digits>.cloudfront.net;
+#           no subdomains, no suffix or prefix tricks;
+#   path    /<segment>/<segment>/index-<name>.m3u8 (observed: /<hash>_<channel>_<id>_<timestamp>/<quality>/
+#           index-muted-<token>.m3u8, and index-dvr.m3u8), so only an HLS playlist, nothing else;
+#   source  only for a twitch-vod source, never for a live channel or YouTube;
+#   plus the checks every media URL gets: https, no credentials, port 443, no fragment.
+# What this admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording
+# whose address came from Streamlink. The path is not a security boundary (anyone can create a distribution
+# with that path); the boundary is that Streamlink's Twitch plugin supplied the address, and the narrowing
+# above keeps surprises small. Closing it fully needs an explicit list of Twitch's distributions.
+TWITCH_VOD_HOST = re.compile(r"d[0-9a-z]{13}\.cloudfront\.net\Z")
+TWITCH_VOD_PATH = re.compile(r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/index-[A-Za-z0-9-]+\.m3u8\Z")
 
 
 ERROR_MESSAGES = {
@@ -245,7 +257,7 @@ def parse_source(value):
     raise MediaError("UNSUPPORTED_SOURCE")
 
 
-def _media_url(value, provider):
+def _media_url(value, provider, *, vod=False):
     if not isinstance(value, str) or not value or len(value) > MAX_URL_BYTES or re.search(r"[\x00-\x20\x7f\\]", value):
         raise MediaError("UNSAFE_MEDIA_URL")
     try:
@@ -253,7 +265,7 @@ def _media_url(value, provider):
         host = parsed.hostname or ""
         suffixes = ("ttvnw.net", "twitch.tv", "twitchcdn.net") if provider == "Twitch" else ("googlevideo.com",)
         allowed = any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
-        if provider == "Twitch" and host in TWITCH_VOD_DISTRIBUTIONS:
+        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and TWITCH_VOD_PATH.fullmatch(parsed.path):
             allowed = True
         if (parsed.scheme != "https" or parsed.username is not None or parsed.password is not None or
                 parsed.port not in (None, 443) or parsed.fragment or not re.fullmatch(r"[a-zA-Z0-9.-]+", host) or not allowed):
@@ -346,9 +358,10 @@ def _twitch(source, metadata, quality):
     selected = _choose(options, quality)
     stream = selected["raw"]
     details = metadata.get("metadata") if isinstance(metadata.get("metadata"), dict) else {}
+    media_url = _media_url(stream.get("url"), "Twitch", vod=source["kind"] == "twitch-vod")
     return {"ok": True, "source": source, "title": _title(details.get("title"), source["id"] + " — Twitch"),
             "live": source["kind"] == "twitch-live", "duration": None, "quality": selected["id"],
-            "formats": _public_formats(options), "mediaURL": _media_url(stream.get("url"), "Twitch"),
+            "formats": _public_formats(options), "mediaURL": media_url,
             "headers": _headers("Twitch", stream.get("headers"))}
 
 

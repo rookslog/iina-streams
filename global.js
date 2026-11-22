@@ -184,6 +184,8 @@ function onOpenWindowSubmit(data){
 // A player's sidebar field submits {input}; an older sidebar sends no input and gets the window.
 function onPlayerOpen(data,label){
  const input=data&&data.input;
+ // #56: record which label reached global and whether it is a managed player. No user text is traced.
+ qaTrace('player-open',{sender:label,id:targetID(label),hasInput:input!==undefined});
  if(input===undefined){
   showOpenWindow();
   return;
@@ -197,10 +199,15 @@ function onPlayerOpen(data,label){
 function postOpenError(label){
  const id=targetID(label);
  if(id!==null){
+  qaTrace('open-error',{route:'managed',id});
   postChild(id,'open-error',{});
   return;
  }
- if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label))return;
+ if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label)){
+  qaTrace('open-error',{route:'dropped',sender:label});
+  return;
+ }
+ qaTrace('open-error',{route:'label',sender:label});
  timers.setTimeout(()=>app.postMessage(label,'open-error','{}'),0);
 }
 

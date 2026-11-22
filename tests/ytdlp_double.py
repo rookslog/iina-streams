@@ -6,6 +6,9 @@ what the helpers do with the output:
   - each `-O TEMPLATE` prints one line. `%(.{a,b})j` prints an object holding the keys that exist,
     `%(formats.:.{a,b})j` prints a list of such objects, and `%(a.b)j` prints that value.
   - `%(key&1|0)s` prints 1 if the key holds a value and 0 if not (see the flag branch below).
+  - a playlist info is not printed as itself: yt-dlp expands it and prints each entry, as a video, with the
+    playlist's id added as `playlist_id` (see `printed_infos`). So `entries` is never 1 for a playlist; a
+    one-entry playlist is how `--no-playlist` still yields a playlist-derived video (#54).
   - a value that does not exist prints NA. (NA for an absent `formats` list is inferred, not observed.)
 It does not enforce the helpers' output cap; each test module does that with its own error class.
 """
@@ -37,9 +40,23 @@ def project_template(template, info):
     return "NA" if value is None else json.dumps(value)
 
 
+def printed_infos(info):
+    """The infos `-O` templates are applied to: the info itself, or for a playlist its entries, one each.
+
+    Observed 2026-11-22 (yt-dlp 2026.08.19, `--no-clean-info-json --load-info-json`, a one-entry playlist and a
+    standalone video, offline): the playlist printed one block, for the child, with `entries` 0 and `playlist_id`
+    set to the playlist's id; the standalone video printed `playlist_id` 0. Inferred, not observed: a playlist
+    of several entries prints one block per entry, and an empty playlist prints nothing.
+    """
+    if info.get("_type") in ("playlist", "multi_video"):
+        return [dict(entry, playlist_id=info.get("id")) for entry in info.get("entries") or []]
+    return [info]
+
+
 def output(command, info):
     """The bytes yt-dlp would write to stdout for `command`."""
     if "--dump-single-json" in command:
         return json.dumps(info).encode("utf-8")
     templates = [command[i + 1] for i, arg in enumerate(command) if arg == "-O"]
-    return "\n".join(project_template(template, info) for template in templates).encode("utf-8")
+    lines = [project_template(template, printed) for printed in printed_infos(info) for template in templates]
+    return "\n".join(lines).encode("utf-8")

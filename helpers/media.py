@@ -66,11 +66,15 @@ def _twitch_vod_path(path):
 #   line 2  the formats, a list of objects with only the format fields below;
 #   line 3  1 or 0: whether the info has an `entries` list (a playlist). Only presence is read, so the entries
 #           themselves, which can be thousands of objects, are not printed (#54).
+#   line 4  1 or 0: whether the info has a `playlist_id`. For a one-entry playlist yt-dlp prints the child video,
+#           which has no `entries` but does have the playlist's id; a standalone video has none (observed with
+#           yt-dlp 2026.08.19, #54). The id itself is not printed.
 # A nested selector for both returned NA in the spike, hence two flat templates. Every field here is read by
-# _youtube or resolve; add a field here when they start reading it. `error` is read by resolve.
+# _youtube or resolve; add a field here when they start reading it. `error` is read by resolve. The flags
+# (`entries`, `playlist_id`) are tested for presence only.
 YOUTUBE_VIDEO_FIELDS = ("id", "_type", "title", "extractor_key", "live_status", "is_live", "duration",
                         "availability", "has_drm", "_has_drm", "http_headers", "error")
-YOUTUBE_FLAG_FIELDS = ("entries",)
+YOUTUBE_FLAG_FIELDS = ("entries", "playlist_id")
 YOUTUBE_FORMAT_FIELDS = ("format_id", "url", "protocol", "vcodec", "acodec", "audio_ext", "height", "fps", "abr",
                          "language_preference", "quality", "source_preference", "asr", "has_drm", "http_headers")
 YOUTUBE_OUTPUT = ["-O", "%(.{" + ",".join(YOUTUBE_VIDEO_FIELDS) + "})j",
@@ -400,7 +404,8 @@ def _twitch(source, metadata, quality):
 
 def _youtube(source, metadata, quality):
     if (metadata.get("id") != source["id"] or metadata.get("_type") not in (None, "video") or
-            "entries" in metadata or metadata.get("extractor_key", "Youtube").lower() != "youtube"):
+            "entries" in metadata or metadata.get("playlist_id") is not None or
+            metadata.get("extractor_key", "Youtube").lower() != "youtube"):
         raise MediaError("INVALID_METADATA")
     if metadata.get("_has_drm") or metadata.get("has_drm"):
         raise MediaError("DRM_UNSUPPORTED")

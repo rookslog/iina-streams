@@ -205,7 +205,7 @@ test('IINA HTTP rejection preserves Twitch authorization_pending and the global 
   await poll.fn();
   assert.equal(r.auth.snapshot().phase, 'waiting');
   assert.ok(r.timers.some(timer => timer !== poll && timer.delay === 5000 && !timer.cancelled));
-  assert.equal(r.auth.snapshot().message, 'Authorize read-only chat in Twitch.');
+  assert.equal(r.auth.snapshot().message, '');  // the code panel and status line carry this state; no extra narration
 });
 
 test('real authorization orchestration requests only chat:read in a POST form after explicit opt-in', async () => {

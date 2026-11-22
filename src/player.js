@@ -7,7 +7,9 @@ const {create:createTimers}=require('./timers.js');
 const DEFAULT_VIEW={presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,x:1,y:0,width:340,height:260,density:'comfortable',editing:false};
 function clamp(n,low,high,fallback){n=Number(n);return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fallback;}
 function viewSettings(value,variant){const v=value||{};const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0,0.9,0.58),lines:Math.round(clamp(v.lines,2,12,6)),spacing,timestamps:!!v.timestamps,x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),width:Math.round(clamp(v.width,220,1200,340)),height:Math.round(clamp(v.height,100,1200,260)),density:spacing<=2?'compact':'comfortable',editing:false};}
-function start(host,config,services){
+// Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
+function shouldAutoOpen(data,armed){return !!armed&&!!data&&data.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(data.verificationURI||'');}
+function start(host,config,services){var autoOpen=false;
  const label=host.global.getLabel()||'';
  const identity=Sources.fromLabel(label);
  const qaIdentity=config.qa&&config.qa.source&&config.qa.source.kind==='local-test'&&label==='streams-candidate:qa-local'?{source:config.qa.source,variant:config.qa.variant||config.variant}:null;
@@ -58,7 +60,7 @@ function start(host,config,services){
   sidebar.onMessage('offset',value=>{if(closed||!sourceActive)return;chat.offset=clamp(value,-2592000,2592000,0);lastSignature='';tick(true);maybeRefreshTwitch(true);send();});
   sidebar.onMessage('seek-chat',value=>{const t=Number(value)-chat.offset;if(chat.mode==='replay'&&Number.isFinite(t)&&t>=0)mpv.command('seek',[String(t),'absolute+exact']);});
   sidebar.onMessage('first-message',()=>{if(!closed&&sourceActive&&chat.mode==='replay'&&replayMetadata){const t=Math.max(0,replayMetadata.timeline.availableStart-chat.offset);mpv.command('seek',[String(t),'absolute+exact']);}});
-  sidebar.onMessage('connect',data=>{
+  sidebar.onMessage('connect',data=>{autoOpen=!!(data&&data.open===true);
    if(closed||!sourceActive)return;
    if(source.kind!=='twitch-live'){chat.error='Live chat is available for Twitch channels.';send();return;}
    chatPreferred=true;if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
@@ -315,7 +317,7 @@ function start(host,config,services){
    }
    send();
   }),
-  'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});chat.state=data.phase;chat.error=data.message||'';send();}),
+  'auth-state':authReceiver(data=>['off','error','needs-client','authorizing','waiting','ready'].includes(data.phase),data=>{trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});if(chat.mode!=='live')return;auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});chat.state=data.phase;chat.error=data.message||'';if(shouldAutoOpen(data,autoOpen)){autoOpen=false;host.utils.open(data.verificationURI);}else if(data.phase!=='waiting'&&data.phase!=='authorizing')autoOpen=false;send();}),
   'auth-ready':authReceiver(data=>typeof data.token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(data.token)&&typeof data.login==='string'&&/^[a-z0-9_]{3,25}$/.test(data.login),data=>{if(chat.mode!=='live')return;if(liveStarted)stopLiveTransport();liveCredential={token:data.token,login:data.login};ensureOverlay();startLiveTransport();}),
   'auth-stop':authReceiver(()=>true,()=>{trace('auth-stop-received',{chatMode:chat.mode});stopLiveTransport();if(chat.mode==='live'){chat.state='disconnected';messages=[];send();}}),
   'auth-forgotten':authReceiver(data=>typeof data.removed==='boolean'&&typeof data.revoked==='boolean'&&data.stale!==true,result=>{auth={phase:'off',message:'',saved:false};chat.error=!result.removed?'The saved authorization could not be cleared from Keychain.':!result.revoked?'Saved login cleared. Twitch revocation could not be confirmed.':'';send();})
@@ -341,4 +343,4 @@ function start(host,config,services){
  if(windowLoaded)showSidebar();
  return{snapshot,showSidebar,hideSidebar,chatOff,setView,importArchive,resumeReplay,tick,changeQuality:q=>player.change(q),qaCommand:(name,data)=>{if(config.qa&&sidebarReady)postSidebar('qa-action',{name,data});},overlayCommand:(name,data)=>{if(config.qa&&overlayReady)postOverlay('qa-action',{name,data});},trace,_authCallbacks:authCallbacks};
 }
-module.exports={start,viewSettings};
+module.exports={start,viewSettings,shouldAutoOpen};

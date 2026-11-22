@@ -247,6 +247,12 @@ Starts after A1b merges, since it owns `src/player.js`. It builds on C1 and C2a.
 - If it's finite and more than 1 s ahead of `time-pos`: `mpv.command('seek', [String(target), 'absolute'])`.
 - Otherwise, reload the current quality, which is the fallback (spike §4: seeking at or past the cache end is a no-op).
 
+**Amended at merge (C3 review, 2026-11-22):**
+- **minSamples:** the player uses `minSamples: 10`. One sample per 2 s poll fits at most 16 samples in a 30 s window, so 18 could never be reached. 10 samples covers the same ~18 s of history as the spike's 18 one-second rows.
+- **Go Live key:** `Ctrl+Meta+g`. `Ctrl+Meta+l` is IINA 1.5.1's Log Viewer, and IINA doesn't reject a plugin key that clashes with the main menu.
+- **`behindLive()`** reads the current playhead, not the one from the last sample.
+- **Reload:** a Go Live reload's end-file isn't read as a stop.
+
 **Menu (five-item cap).** The top level becomes **Show Streams**, **Go Live** (`Ctrl+Meta+l`; the implementer checks for conflicts with `iina.menu`/`getAllKeyBindings` and reports them), and a **Chat ▸** submenu (Import Chat Archive…, Turn Chat Off, In Sidebar, Over Video, Beside Video). This is verified against IINA 1.5.1's `menu.item` submenu API; cite it in the shim.
 
 **Tests (shim).**

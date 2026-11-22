@@ -9,8 +9,11 @@
 - **Swallowed errors surfaced (#24, part 1):** an unreadable Keychain item, client file or saved login is logged as a code, never its text. A corrupt `settings.json` is kept as `settings.json.corrupt-<time>` before the defaults apply.
 - **Twitch opens without Streamlink (#36):** live channels and VODs resolve in plugin JS (GQL access token, then usher), with the title fetched in parallel. Observed: a live channel resolved in 349 ms in IINA. Network or parse failures fall back to the Python helper; offline, not-found and restricted answers don't.
 - **Official Twitch emotes in live chat (#34):** images from Twitch's CDN (`static-cdn.jtvnw.net`, the only image source the CSP allows), in the sidebar and the overlay. Observed natively in the overlay. Badges aren't rendered yet.
+- **Live chat on your timeline (#2, #28):**
+  - **Modes:** Auto, Manual and Live, in Chat settings. Auto delays chat by how far the video is behind live. That's estimated from the playlist's program date-time against mpv's cache (`src/live-latency.js`, `src/chat-timing.js`, `src/live-clock.js`). A hollow dot means not yet confident; Auto then uses the manual delay.
+  - **Calibrate (#28):** in Manual, ⌥-click a message to set the delay to its age.
+- **Live pill and Go Live (#51):** the sidebar header shows a red Live pill at the edge, or `−N s` behind. Clicking it, **Plugin › Go Live** (⌃⌘G) or the pill seeks to 2 s before the cache end, and reloads when there's nothing to seek to. Chat items moved into a **Chat** submenu.
 - **Groundwork, not yet wired:**
-  - a live-latency estimator (`src/live-latency.js`) from the #16/#31 spike;
   - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).
 - Docs: README rewritten for first-time visitors (#38); spikes on live latency, Go Live and the DVR window (#16/#31/#51) and on side chat (#47/#52); D-028, side chat docked beside the video with an mpv margin.
 

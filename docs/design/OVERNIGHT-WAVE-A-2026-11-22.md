@@ -27,8 +27,9 @@ Evidence labels follow AGENTS.md. "Observed" means checked on this Mac tonight.
   - Return posts `open` with `{input}`. The player forwards it as `app.postMessage('open',{input})`, and global calls `openStream(input)`.
   - Invalid input gets the same invalid-field state as above, sent back as `open-error`.
   - Escape or clicking + again hides the field.
+  - *Amended by A1b (2026-11-22):* Escape is handled at document level, and focus moving elsewhere in the sidebar also hides the field. The + rotates to × while the field is open.
   - The rule is minimize-ui-text: a placeholder only, no helper sentence.
-- **Adoption (#35):** in `onLoadHook`, when no Streams source is active in this window and the opened path parses with `Sources.parse` as Twitch or YouTube, Streams adopts it.
+- **Adoption (#35)** — *amended by A1b:* the hook must be an `async` function. IINA v1.5.1 continues any other hook itself (`MPVController.swift` `MPVHookValue.call`). The controller is built on a main-thread turn, and a 10 s watchdog releases a held load to IINA's own loader. `@data/qa-events-adopted.json` traces it in QA builds. Original text: in `onLoadHook`, when no Streams source is active in this window and the opened path parses with `Sources.parse` as Twitch or YouTube, Streams adopts it.
   - It sets the source, label and active state, and resolves through its normal pipeline, so quality, chat and replay work as they do for ⌃⌘O.
   - A file that doesn't parse (local media, other sites) still deactivates exactly as today.
   - A window whose active source differs from the new path still deactivates, as today: that's a foreign file in a Streams window.

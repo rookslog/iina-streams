@@ -27,8 +27,8 @@ LINK_NAME = DEV_ID + '.iinaplugin-dev'
 DEFAULT_PLUGINS = Path.home() / 'Library/Application Support/com.colliderli.iina/plugins'
 DEFAULT_STAGE = Path.home() / 'Library/Application Support/iina-streams-dev'
 TEST_COMMANDS = [
-    ['node', '--test', 'tests/*.test.js', 'tests_candidate/*.test.js'],
-    [sys.executable, '-B', '-m', 'unittest', 'discover', '-s', 'tests_candidate', '-p', 'test_*.py'],
+    ['node', '--test', 'tests/*.test.js'],
+    [sys.executable, '-B', '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'],
 ]
 
 

@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.5.4-beta (unreleased, 2026-11-22) — development workflow and CI
+- Repo cleanup (#12): removed the unshipped `plugin-dev/` 0.2.0 plugin and its 12 tests, the candidate builder/manager scripts with their tests (8 of them could never run), `verify.sh`, `export-review.py` and `releases/`. Renamed `tests_candidate/` → `tests/`. Moved 85 candidate-era docs and the old README to `docs/archive/`. New user-facing README. AGENTS.md and the project skills now point to current paths.
 - Live chat timestamps show Twitch's send time (`tmi-sent-ts`) instead of the panel's render time, which also made older messages jump to the current minute (#10). Normalized messages gain `sentAt`.
 - Removed `npm run install-local`, which deleted the installed stable plugin without a backup (#21).
 - Linked **Streams Dev** identity (`local.iina.streams.dev`, version `0.5.4-dev+g<sha>`): `npm run dev:deploy` runs both suites and stages a tested build outside the worktree; `npm run dev:link` creates one `.iinaplugin-dev` symlink; `dev:status`, `dev:rollback`, `dev:unlink`. Reload by relaunching IINA (Plugin › Reload All Plugins crashed IINA 1.5.1 on first native use).

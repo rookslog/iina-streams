@@ -173,14 +173,13 @@ function validClientID(v){
   renderLivePill(s);
  }
 
- // #51: Live (red) within 5 s of live, otherwise grey "−N s", which goes live on click. No pill while
- // the estimate is uncertain, and none outside Twitch live.
- const LIVE_EDGE_SECONDS=5;
+ // #51: Live (red) when the player says Go Live can gain nothing (atLiveEdge), otherwise grey "−N s",
+ // which goes live on click. No pill while the estimate is uncertain, and none outside Twitch live.
 
  function livePillState(s){
   const behind=s.behindLive;
   if(s.source.kind!=='twitch-live'||typeof behind!=='number'||!isFinite(behind))return null;
-  return behind<=LIVE_EDGE_SECONDS?'live':'behind';
+  return s.atLiveEdge===true?'live':'behind';
  }
 
  function renderLivePill(s){

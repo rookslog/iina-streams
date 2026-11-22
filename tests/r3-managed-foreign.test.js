@@ -113,7 +113,9 @@ test('r3 #5: a late cleanup turn does not deactivate the controller for the load
   shim.timers.fire(load.cleanup[0]);
   await settle();
   assert.notEqual(controller.snapshot().phase, 'inactive', 'the late turn leaves the later load alone');
-  assert.equal(controller.snapshot().chat.mode, 'replay', 'and its chat');
+  // v0.5.5 class L (L2, L3): the later load is a new activation with fresh state, so the earlier load's replay
+  // chat is dropped with its activation, not resumed.
+  assert.equal(controller.snapshot().chat.mode, 'off', 'the earlier activation\'s replay is not resumed');
 });
 
 test('r3 #5: a close before the cleanup turn leaves the close in charge', async t => {

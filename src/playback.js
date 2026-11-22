@@ -1,7 +1,12 @@
 "use strict";
 class Playback {
+ // One Playback per controller activation (src/authority.js). Its resolve, timers and replace are the
+ // activation's, so a change from an activation that has ended never continues. options.firstGeneration
+ // continues the previous activation's generations, so a load marker is never reused. `fresh` is the generation
+ // of the latest unstaged load (not a change's replacement), which loaded() confirms (set by the controller).
  constructor(options){
-  this.o=options;this.generation=0;this.pending=null;this.deadline=null;this.closed=false;this.disabled=false;
+  this.o=options;this.pending=null;this.deadline=null;this.closed=false;this.disabled=false;
+  this.generation=options.firstGeneration||0;this.fresh=0;
   this.data={phase:'loading',quality:'auto720',formats:[],busy:false,error:'',title:'',live:false,duration:0};
  }
  snapshot(){return Object.assign({},this.data,{formats:this.data.formats.map(f=>({id:f.id,label:f.label}))});}
@@ -40,7 +45,10 @@ class Playback {
    if(generation!==this.pending.generation)return false;
    const result=this.pending.result;this.pending=null;this.cancelDeadline();this.adopt(result);this.data.busy=false;this.data.phase='playing';this.data.error='';this.emit();return true;
   }
-  if(generation===0&&this.generation===0){this.data.phase='playing';this.data.error='';this.emit();return true;}
+  // An unstaged load of the source, with no change pending.
+  if(generation===this.fresh){
+   this.data.phase='playing';this.data.error='';this.emit();return true;
+  }
   return false;
  }
  ended(){if(this.closed||this.disabled)return;if(!this.pending&&!this.data.busy){this.data.phase='stopped';this.emit();}}

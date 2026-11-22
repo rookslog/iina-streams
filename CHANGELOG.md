@@ -1,6 +1,16 @@
 # Changelog
 
 ## 0.5.5-beta (unreleased) — chat on your timeline
+- **Open Stream without a modal (#50).** ⌃⌘O opens a small Open Stream window, and **＋** in the sidebar shows an inline field. Invalid input is marked in place. The old blocking prompt, which crashed IINA about 5 s after it opened, is gone.
+- **Twitch and YouTube URLs opened in IINA itself** (Open URL, `open -a IINA <url>`) are adopted by Streams, which brings quality, chat and replay (#35, part 1).
+- **QA mode on the dev identity (#33):** `npm run qa:deploy` stages a dev build with a request/response harness, driven by `qa/control.py` (open, click, state, wait). Release and beta builds never contain it.
+- **VOD chat acquisition is pinned by recorded Twitch fixtures and property tests (#17).** An empty page that claims more follow is retried once, then the window ends with a diagnostic.
+- **Swallowed errors surfaced (#24, part 1):** an unreadable Keychain item, client file or saved login is logged as a code, never its text. A corrupt `settings.json` is kept as `settings.json.corrupt-<time>` before the defaults apply.
+- **Groundwork, not yet wired:**
+  - a live-latency estimator (`src/live-latency.js`) from the #16/#31 spike;
+  - a JS Twitch playback resolver (`src/twitch-playback.js`, #36);
+  - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).
+- Docs: README rewritten for first-time visitors (#38); spikes on live latency, Go Live and the DVR window (#16/#31/#51) and on side chat (#47/#52); D-028, side chat docked beside the video with an mpv margin.
 
 ## 0.5.4 (2026-11-22) — development workflow, CI and the first GitHub Release
 - Release-review fixes: Sign out never claims a revocation it didn't make (#41). The sign-in button is now "Approve on Twitch": it opens Twitch, which autofills the code; there is no auto-open (#42). Appearance changes keep Chat Off (#43). A seek during a failed first VOD chat fetch is still fetched (#44). Twitch VODs on any Twitch CloudFront distribution play (#45). YouTube videos with large metadata open (#46). Readability rewrite, Focus layout removed, and the sidebar keeps its scroll position after Over video (#23).

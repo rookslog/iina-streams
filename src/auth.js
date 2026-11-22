@@ -15,12 +15,14 @@ class TwitchAuth {
  stop(){this.generation++;this.clearTimer();if(this.secret&&this.sessionOnly)this.lostSessionGrant=true;this.secret=null;this.publish('off');if(this.o.onStop)this.o.onStop();}
  fail(message){this.clearTimer();this.secret=null;this.publish('error',message);if(this.o.onStop)this.o.onStop();}
  schedule(fn,ms,generation){this.clearTimer();this.timer=this.o.setTimer(async()=>{this.timer=null;if(generation===this.generation)await fn();},ms);}
+ // Parses a stored grant. On bad JSON it reports a fixed code (never the text) and rethrows, so callers keep their behaviour.
+ parseGrant(text){try{return JSON.parse(text);}catch(error){try{if(this.o.diagnostic)this.o.diagnostic('keychain-unreadable');}catch(_){/* a failing diagnostic must not change sign-in or Forget */}throw error;}}
  async connect(clientID){
   this.stop();const generation=this.generation;this.client=String(clientID||'').trim();
   if(!/^[a-zA-Z0-9]{10,64}$/.test(this.client)){this.publish('needs-client','Enter a registered Twitch Public Client ID to connect.');return false;}
   this.publish('authorizing','Checking Twitch authorization…');
   try{
-   let stored=null;try{stored=this.o.read();if(typeof stored==='string'&&stored)stored=JSON.parse(stored);}catch(_){}
+   let stored=null;try{stored=this.o.read();if(typeof stored==='string'&&stored)stored=this.parseGrant(stored);}catch(_){/* unreadable item: treated as no saved grant, so a fresh sign-in starts */}
    if(stored&&stored.clientID===this.client&&typeof stored.access_token==='string'){
     this.secret=stored;this.sessionOnly=false;
     if(await this.validate(generation,false))return true;
@@ -90,7 +92,7 @@ class TwitchAuth {
   // Off deliberately releases the in-memory token. Explicit Forget may recover
   // this plugin's own saved grant so revocation still works after disconnecting.
   let saved=this.secret,known=true;
-  if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=JSON.parse(saved);}catch(_){saved=null;known=false;}
+  if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=this.parseGrant(saved);}catch(_){saved=null;known=false;}
   const grant=saved&&typeof saved.clientID==='string'&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID)&&typeof saved.access_token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(saved.access_token)?{clientID:saved.clientID,token:saved.access_token}:null;
   if(saved&&!grant&&holdsTokens(saved))known=false;
   // Read before stop(): stop() also sets the flag for the grant held right now, which this call revokes itself.

@@ -163,6 +163,8 @@ function waitForNativeStream(host,config,services){
  // functions are looked up per call, so a replaced global setTimeout is the one used.
  const hookTimers=createTimers((fn,ms)=>setTimeout(fn,ms),id=>clearTimeout(id));
  let current=null;
+ // The core's load epoch. Every load and every window close advances it, so a load waiting for its
+ // main-thread turn sees that it was superseded or that its window closed (review r3 #4).
  let loadSequence=0;
  // Review r2 #4: retiring a controller is not closing the window. While a stream adopted since the last
  // close has been retired and no controller is current (a passed-through file plays), this listener tells
@@ -178,9 +180,14 @@ function waitForNativeStream(host,config,services){
   host.event.off('iina.window-will-close',id);
  }
  function onRetiredWindowClose(){
+  loadSequence++;
   unwatchClose();
   if(current)return;
   host.global.postMessage('player-closed',{});
+ }
+ // The current controller's own close listener reports a close while a stream is current.
+ function onControllerWindowClose(){
+  loadSequence++;
  }
  function dropCurrentLoad(){
   if(current)current.controller.passThrough();
@@ -202,11 +209,13 @@ function waitForNativeStream(host,config,services){
   const path=loadingPath(host.mpv);
   const source=adoptableSource(path);
   qaTrace('source',source?{kind:source.kind,sourceId:source.id}:{kind:null});
-  if(!source&&!current){
-   load.release('pass-through');
+  if(!source){
+   passThroughNow(load,mine);
    return;
   }
   load.arm();
+  // Accepted residual (review r3 #4): a window closed during the turn of its first load is not fenced, since
+  // no close watcher or open controller exists to see that close.
   await mainThreadTurn();
   if(load.released)return;
   if(mine!==loadSequence){
@@ -218,16 +227,23 @@ function waitForNativeStream(host,config,services){
    return;
   }
   retireCurrent();
-  if(!source){
-   load.release('pass-through');
-   return;
-  }
   current=adopt(source);
   await current.loadHook(load.continueFromHook);
  }
+ // Review r3 #5: a file that is not adopted continues at once, on the hook: IINA invalidates plugin timers
+ // on unload, so a continuation that waits for a turn may never come. Only retiring the old controller
+ // needs the main thread; it runs on a later turn unless another load or a close came first, which then
+ // owns the controller.
+ function passThroughNow(load,mine){
+  load.release('pass-through');
+  if(!current)return;
+  hookTimers.setTimeout(()=>{
+   if(mine===loadSequence)retireCurrent();
+  },0);
+ }
  function adopt(source){
   const adopted={controller:null,loadHook:null};
-  const lifecycle={phase:qaTrace};
+  const lifecycle={phase:qaTrace,windowClosed:onControllerWindowClose};
   const identity={source,variant:config.variant};
   adopted.controller=run(host,config,services,identity,hook=>{
    adopted.loadHook=hook;
@@ -316,6 +332,7 @@ function adoptedTracer(host,config){
 // lifecycle.phase, when given, observes the load's resolve phases (adopted windows' QA trace).
 function run(host,config,services,identity,registerLoadHook,lifecycle){
  const phase=lifecycle&&lifecycle.phase||(()=>{});
+ const windowClosed=lifecycle&&lifecycle.windowClosed||(()=>{});
  const source=identity.source;
  const variant=identity.variant;
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
@@ -822,23 +839,35 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return typeof value==='number'&&Number.isFinite(value)?value:null;
  }
 
- // Review r2 #2: in Auto, a message is due when the video reaches its send time: the clock is the mapped
- // playhead (chatTiming.autoClockMs), so held chat waits while the video is paused or stalled. Manual, Live,
- // and Auto before any confident estimate reveal by wall clock less the effective delay.
- function revealClock(now){
-  const mapped=chatTiming.autoClockMs({nowMs:now,timePos:livePlayhead(),offset:confidentOffset()});
-  if(mapped!==null)return{atMs:mapped,delay:0,mapped:true};
-  return{atMs:now,delay:currentTiming().delay,mapped:false};
+ // Review r2 #2 and r3 #2: the reveal cutoff is the chat send time up to which rows show
+ // (chatTiming.revealCutoffMs). In Auto it follows the playhead, mapped to wall-clock time when the estimate
+ // allows, and is held while the playhead does not advance, so held chat waits while the video is paused or
+ // stalled. Manual and Live reveal by wall clock less their delay. Sampled for twitch-live whether or not
+ // chat is on (onLiveStatusTick), so chat enabled after a pause starts from the held cutoff.
+ function sampleCutoff(now){
+  return chatTiming.revealCutoffMs({
+   nowMs:now,
+   timePos:livePlayhead(),
+   paused:!!mpv.getFlag('pause'),
+   offset:confidentOffset(),
+   behindLive:behindLive()
+  });
  }
 
- // Wall-clock ms until the reveal clock reaches dueMs, or null to wait for the next status tick, seek or
- // pause change. A mapped clock does not move while paused, and moves at the playback speed otherwise; the
- // floor keeps a stalled playhead from re-arming a 0 ms timer.
+ // Review r3 #2: a seek, Go Live, a reload, a new file or a mode change moves the video to a new place, so
+ // Auto's cutoff takes its target at the next sample instead of catching up to it.
+ function resyncCutoff(){
+  chatTiming.resyncCutoff();
+ }
+
+ // Wall-clock ms until the cutoff reaches dueMs, or null to wait for the next status tick, seek or pause
+ // change. Auto's cutoff does not move while paused, and moves with the playhead otherwise; the floor keeps a
+ // stalled playhead from re-arming a 0 ms timer.
  const MAPPED_REVEAL_MIN_WAIT_MS=100;
 
- function revealWait(clock,dueMs){
-  const gap=Math.max(0,dueMs-clock.atMs);
-  if(!clock.mapped)return gap;
+ function revealWait(cutoffMs,dueMs){
+  const gap=Math.max(0,dueMs-cutoffMs);
+  if(chatTiming.settings().mode!=='auto')return gap;
   if(mpv.getFlag('pause'))return null;
   const speed=Number(mpv.getNumber('speed'))||1;
   return Math.max(MAPPED_REVEAL_MIN_WAIT_MS,gap/speed);
@@ -859,19 +888,23 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Recomputes the visible live chat with the current delay and arms a timer for the next held message.
  // Returns whether the visible messages changed.
  function revealLive(){
-  if(closed||chat.mode!=='live'){
+  if(closed){
    clearRevealTimer();
    return false;
   }
-  const clock=revealClock(Date.now());
-  const result=chatTiming.reveal(liveInbox,clock.atMs,clock.delay);
+  const cutoffMs=source.kind==='twitch-live'?sampleCutoff(Date.now()):null;
+  if(chat.mode!=='live'||cutoffMs===null){
+   clearRevealTimer();
+   return false;
+  }
+  const result=chatTiming.reveal(liveInbox,cutoffMs,0);
   const next=trimRevealed(result.visible).map(entry=>entry.message);
   const changed=next.length!==messages.length||next.some((message,i)=>message!==messages[i]);
   messages=next;
   chat.count=messages.length;
   if(result.nextDueMs!==revealDueMs){
    clearRevealTimer();
-   const wait=result.nextDueMs===null?null:revealWait(clock,result.nextDueMs);
+   const wait=result.nextDueMs===null?null:revealWait(cutoffMs,result.nextDueMs);
    if(wait!==null){
     revealDueMs=result.nextDueMs;
     revealTimer=timers.setTimeout(onRevealDue,wait);
@@ -897,7 +930,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   for(const key of ['mode','manualDelay','fineTune']){
    if(key in data)partial[key]=data[key];
   }
+  const modeBefore=chatTiming.settings().mode;
   chatTiming.update(partial);
+  if(chatTiming.settings().mode!==modeBefore)resyncCutoff();
   saveChatTiming();
   revealLive();
   send();
@@ -910,6 +945,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const entry=id?liveInbox.find(item=>item.id===id&&typeof item.timestampMs==='number'):null;
   if(!entry)return;
   chatTiming.calibrate(entry,Date.now());
+  // Calibrating already requires Manual, so the mode does not change and Auto's cutoff is not resynced.
   saveChatTiming();
   revealLive();
   send();
@@ -950,6 +986,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   liveClock.stop();
   liveClockRunning=false;
   chatTiming.forgetMapping();
+  resyncCutoff();
   if(liveStatusTimer!==null)timers.clearTimeout(liveStatusTimer);
   liveStatusTimer=null;
  }
@@ -976,6 +1013,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS&&reachesEdge){
    mpv.command('seek',[String(target),'absolute']);
    mpv.set('pause',false);
+   resyncCutoff();
    trace('go-live',{action:'seek'});
    return;
   }
@@ -1104,7 +1142,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  // Turns chat off. Unless told otherwise it also tells the broker this window no longer needs the login,
- // which releases the in-memory grant but never revokes or clears a saved one.
+ // which releases the in-memory grant but never revokes or clears a saved one. options.retire marks the
+ // controller's retirement on a reused core (review r3 #3): global then ends that label's auth session.
  function chatOff(options){
   chatGeneration++;
   pendingAuth=null;
@@ -1115,7 +1154,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     services.cancelHelpers(['replay','acquire']);
    }catch(_){}
   }
-  if(!options||options.releaseAuth!==false)app.postMessage('auth-disconnect',{});
+  if(!options||options.releaseAuth!==false){
+   app.postMessage('auth-disconnect',options&&options.retire?{retire:true}:{});
+  }
   resetLiveBuffer();
   chat.mode='off';
   chat.state='off';
@@ -1512,13 +1553,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const current=loadingPath(mpv);
    const parsed=Sources.parse(current);
    if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url)){
-    // Adopted windows never reach this: their core hook retires the controller on a main-thread turn
-    // (waitForNativeStream). Review r2 #6: a window Streams opened deactivates on a main-thread turn too,
-    // never on mpv's hook queue, and holds the load until then. A close or a later load meanwhile owns
-    // what happens next.
-    await mainThreadTurn();
-    if(!closed&&mine===generation)deactivateForForeignFile();
+    // Adopted windows never reach this: their core hook retires the controller (waitForNativeStream).
+    // Review r3 #5: the foreign file continues at once, on the hook, because a plugin timer may never run.
+    // Review r2 #6: deactivation runs on a later main-thread turn, never on mpv's hook queue. A close or a
+    // later load before that turn owns what happens next.
     finish();
+    timers.setTimeout(()=>{
+     if(!closed&&mine===generation)deactivateForForeignFile();
+    },0);
     return;
    }
    if(!sourceActive){
@@ -1630,8 +1672,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   trace('end-file');
  }
 
- // A seek or a pause change moves or stops Auto's mapped reveal clock.
+ // A seek moves the video, so Auto's cutoff resyncs; a pause change stops or restarts it.
  function onSeek(){
+  resyncCutoff();
   tick(true);
   maybeRefreshTwitch(true);
   if(revealLive())send();
@@ -1649,7 +1692,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onWindowWillClose(){
+  if(closed)return;
   teardown({notifyGlobal:true});
+  windowClosed();
  }
 
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is
@@ -1662,8 +1707,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   staged=null;
   player.deactivate();
   loadError=INACTIVE_MESSAGE;
-  // teardown's chatOff posts this final state before the controller closes.
-  teardown({notifyGlobal:false});
+  // teardown's chatOff posts this final state before the controller closes, and tells global this
+  // controller's auth use is over (review r3 #3).
+  teardown({notifyGlobal:false,retire:true});
  }
 
  // A load is this controller's own only when it is the staged reload it issued, by generation marker.
@@ -1682,7 +1728,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed)return;
   endReplacement();
   cancelAuthBinding();
-  chatOff();
+  chatOff({retire:!!options.retire});
   if(services.cancelHelpers)services.cancelHelpers();
   if(replayPath&&services.deleteDataPath)services.deleteDataPath(replayPath);
   replay=null;

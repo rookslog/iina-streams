@@ -267,9 +267,17 @@ test('Auto-uncertain uses the saved manual delay rather than the fine tune', asy
   await load();
   connectChat()([liveMessage(shim)]);
   assert.deepEqual(messageIds(shim.sidebar), [], 'uncertain Auto holds chat at launch');
-  shim.timers.advance(2999);
+  // Review r3 #2: Auto's cutoff follows the playhead, so the video plays: time-pos advances with the clock.
+  const play = ms => {
+    for (let left = ms; left > 0; left -= Math.min(100, left)) {
+      const step = Math.min(100, left);
+      shim.mpv.set('time-pos', shim.mpv.props.get('time-pos') + step / 1000);
+      shim.timers.advance(step);
+    }
+  };
+  play(2999);
   assert.deepEqual(messageIds(shim.sidebar), [], 'not due before the 3 s fallback');
-  shim.timers.advance(1);
+  play(1);
   assert.deepEqual(messageIds(shim.sidebar), ['chat-1']);
   const state = latestState(shim.sidebar);
   assert.equal(state.behindLive, null);

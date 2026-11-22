@@ -79,6 +79,10 @@ function createLiveClock({
   let lastTimePos = null;
   let lastCacheEnd = null;
   let lastGoodSampleMs = null;
+  // When the outstanding playlist request started, or null. Polls are skipped while one is
+  // outstanding, so a slow response can't overlap the next and be sampled late. A request
+  // older than staleMs no longer blocks, so a hung request can't stop the clock.
+  let inFlightSince = null;
 
   function cancelTimer() {
     if (timerId !== null) {
@@ -104,6 +108,10 @@ function createLiveClock({
   }
 
   function fetchPlaylist(mediaURL, myGeneration) {
+    if (inFlightSince !== null && now() - inFlightSince < staleMs) {
+      return;
+    }
+    inFlightSince = now();
     let request;
     try {
       // String-only header and param maps: the host rejects other value types.
@@ -114,11 +122,13 @@ function createLiveClock({
     request.then(
       response => {
         if (myGeneration === generation) {
+          inFlightSince = null;
           handlePlaylist(response && response.text);
         }
       },
       () => {
         if (myGeneration === generation) {
+          inFlightSince = null;
           log('playlist-fetch');
         }
       },
@@ -144,6 +154,7 @@ function createLiveClock({
     lastTimePos = null;
     lastCacheEnd = null;
     lastGoodSampleMs = null;
+    inFlightSince = null;
     poll(mediaURL, generation);
   }
 

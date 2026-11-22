@@ -22,5 +22,19 @@ if(config.qa){
  };
 }
 
+if(config.qa){
+ // #56 probe receiver: record which bare label global's string-target postMessage reached.
+ iina.global.onMessage('qa-label-probe',data=>{
+  let parsed=data;
+  try{
+   if(typeof data==='string')parsed=JSON.parse(data);
+  // A malformed probe is recorded as unparsed; it carries no user data.
+  }catch(_){
+   parsed={unparsed:true};
+  }
+  iina.file.write('@data/qa-label-probe.json',JSON.stringify({received:parsed,time:new Date().toISOString()}));
+ });
+}
+
 const controller=require('./src/player.js').start(iina,config,services);
 if(config.qa&&controller)require('./qa-harness.js').run(iina,controller,config.qa,services);

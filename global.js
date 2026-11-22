@@ -303,6 +303,20 @@ app.onMessage('player-closed',onPlayerClosed);
 app.onMessage('auth-forget',onAuthForget);
 
 if(config.qa){
+ // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label
+ // (JavascriptAPIGlobal.swift L105-111 in IINA 1.5.1)? QA restarts IINA, so every core loaded this plugin
+ // at creation (PlayerCore.swift L74-81) and L108's force-unwrap is safe here. Not for release builds.
+ let probes=0;
+ function sendLabelProbe(){
+  probes+=1;
+  for(let n=0;n<6;n+=1)app.postMessage(String(n),'qa-label-probe',JSON.stringify({label:String(n),probe:probes}));
+  qaTrace('label-probe-sent',{probe:probes});
+  if(probes<12)timers.setTimeout(sendLabelProbe,5000);
+ }
+ timers.setTimeout(sendLabelProbe,5000);
+}
+
+if(config.qa){
  app.onMessage('qa-ping',(_,label)=>{
   const id=targetID(label);
   qaTrace('ping',{id,sender:label});

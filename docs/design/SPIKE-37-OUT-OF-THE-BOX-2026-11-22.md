@@ -2,9 +2,14 @@
 
 Date: 2026-11-22. Base: `c3d6fd9` (beta). Issue: #37, parent goal #36 (fresh Mac, only IINA installed).
 Prototype and scripts: `spikes/out-of-box/`. Nothing in `src/`, `ui/`, `helpers/`, `global.js`, `main.js`, `tests/` was edited.
-Host: this Mac (Apple Silicon, IINA 1.5.1, Streamlink 8.6.3, yt-dlp 2026.08.19 both in Homebrew/pip and in IINA.app), Canadian residential IP, one run unless stated.
+Host: this Mac (Apple Silicon, IINA 1.5.1, Streamlink 8.6.3, yt-dlp 2026.08.19 both in Homebrew/pip and in IINA.app), a single network location (ad serving is geo-dependent), one run unless stated. No docs index, roadmap or other doc was updated; this report and `spikes/out-of-box/` are the only additions.
 
-Labels: **VERIFIED** = I ran or measured it. **INFERRED** = reasoned from source or from a measurement that does not test it directly. Playback access tokens, signatures, signed URLs and the viewer IP that Twitch echoes in the master playlist were never printed or saved; only shapes, counts, hosts and timings appear here.
+Labels: **VERIFIED** = I ran or measured it. **INFERRED** = reasoned from source or from a measurement that does not test it directly. Playback access tokens, signatures and signed URLs were never printed or saved. One exception: my first debug run printed a master playlist's `SESSION-DATA` lines to the session output once, and one of them is the viewer IP the usher echoes; it was not written to any file, and the script now prints only `EXT-X-STREAM-INF` lines. Only shapes, counts, hosts and timings appear in this report.
+
+## Existing defects found at `c3d6fd9` (route these; the helpers are not mine to edit)
+
+1. **Twitch VOD playback fails with `UNSAFE_MEDIA_URL`** for VOD `2935383720` (one VOD tested). `media.py` allows exactly one CloudFront tenant (`d2vi6trrdongqn.cloudfront.net`); this VOD's playlists are on `d1m7jfoe9zdc1j.cloudfront.net` (Streamlink returned that host for all 8 streams). VERIFIED by running `media.py resolve`. One VOD on a second tenant proves that more than one tenant exists, not how many; the allow-list should be pattern-based or dropped for URLs only mpv fetches. `Info.json` `allowedDomains` applies to `iina.http` calls (INFERRED for mpv, see below).
+2. **YouTube resolve and replay can fail with `OUTPUT_LIMIT`** when `--dump-single-json` exceeds 8 MiB. VERIFIED on `fTDvp9CBXoQ` (`media.py`, 11.7 MB; automatic_captions is 11.15 MB of it) and on `zn1dXa6W7t4` (`acquire.py`, same error; the automatic_captions share there is INFERRED). `Yd9q1Y7Ou7g` and the NASA live stream pass. A trimmed invocation is in Q3 caveat 5.
 
 ## Recommendation for #36
 
@@ -19,18 +24,17 @@ Labels: **VERIFIED** = I ran or measured it. **INFERRED** = reasoned from source
 
 Decision: Twitch resolve and Twitch VOD chat move to JS; YouTube resolve and YouTube replay acquisition go through IINA's yt-dlp; delete Python only after the replay importer is ported. The prototype's weakest evidence is ad handling (no ad was observed) and the real `iina.http` runtime (not run; modelled from source).
 
-Two defects in the current helpers surfaced independent of this decision (see "Existing defects found"): Twitch VODs on most CloudFront tenants fail with `UNSAFE_MEDIA_URL`, and YouTube videos with large auto-caption lists fail with `OUTPUT_LIMIT`.
-
 ## What `iina.http` and `utils.exec` can do (IINA v1.5.1 source)
 
 Read from `JavascriptAPIHttp.swift`, `JavascriptAPIUtils.swift`, `Utility.swift` and the Just library (`Just.swift`) that `iina.http` wraps. VERIFIED by reading; not by running a plugin.
 
 `iina.http` (`get/post/put/patch/delete/download`):
 - Options read: `params` (query), `headers` (string map), `data` (object). No `json`, raw body, timeout, redirect or cookie option is exposed.
+- **Trap: `params` and `headers` are cast with `as? [String: String]`.** One non-string value (a JS number, boolean) makes the whole map silently absent. The first prototype sent `p: Math.floor(...)`; the shim now models the drop, and VERIFIED against the live usher: with a numeric `p` the `params` map is dropped, the request goes without `sig`/`token`, and usher answers 403. Every param and header value must be a string. (The first version of the shim coerced with `String()` and would have hidden this.) `data` is `[String: Any]` and takes numbers and nested objects.
 - Body: if `data` is non-empty and a `Content-Type` header equals `application/json` (case-insensitive), `data` is sent as JSON; otherwise it is form-urlencoded. A top-level JSON array body is not possible, so Twitch's batched GraphQL form (an array of operations) is out; a single-operation object is fine.
 - Response object has only `statusCode`, `reason`, `data` (parsed JSON or null), `text` (UTF-8 string or null). No response headers, no binary body, no streaming.
 - Status 400-599 and transport failures reject with the same object, `text` included.
-- The host must match the plugin's `allowedDomains` (`hostIsValid`). That applies to `iina.http` only, not to what mpv fetches.
+- The host must match the plugin's `allowedDomains` (`hostIsValid`); read from source. That this check does not apply to URLs mpv fetches is INFERRED (I did not read the mpv loading path; playback in mpv from the same URLs worked in my headless runs, which say nothing about IINA's own checks).
 - Redirects followed, cache disabled, one shared `URLSession`, so connections are reused (INFERRED from `Just`'s single session; not measured in IINA).
 
 `iina.utils.exec(file, args, cwd, stdoutHook, stderrHook)`:
@@ -56,13 +60,13 @@ Recipe, copied from Streamlink 8.6.3's `twitch.py` and unchanged in behaviour: P
 | Resolve time, live, N=8 interleaved | median 1285 ms (range 1150-1748) | median 182 ms (first call 354 ms cold) |
 | Resolve time, VOD, N=8 | median 1189 ms | median 256 ms (first 382 ms) |
 | Offline channel | no streams | usher returns 404 (VERIFIED), nonexistent channel: token is `null` (VERIFIED) |
-| Plays in mpv 0.41.0 (Homebrew, same libmpv family as IINA), 8 s | not run through mpv | variant URL: first video at 1.0-1.2 s; master URL: 3.9-5.2 s (mpv probes all variants and picked 1080p60) |
+| Plays in mpv 0.41.0 (Homebrew; IINA embeds libmpv, a different build), 8 s, `--vo=null --ao=null` | not run through mpv | variant URL: mpv printed the video track line at 0.7-1.2 s (not a decoded frame); master URL: 3.9-5.2 s (mpv chose 1080p60). Exit 0 in all four runs; the live variant run also logged `[ffmpeg] tls: Unknown error` (not seen on the other runs; not investigated) |
 
 Streamlink's timings include Python start-up and a media-playlist check for every variant, which the JS path skips (it would not detect a channel that is listed but whose playlist is not yet reachable; Streamlink's comment says its GQL live status can lag by a minute). So the comparison favours JS partly because it does less. The JS numbers are Node `fetch` in-process on a warm DNS cache, not IINA's JSC.
 
 Hand mpv the variant URL, not the master. It matches what `media.py` returns today (`stream.url` is a per-variant playlist), keeps the quality picker, and starts about 4 s sooner.
 
-**Ads.** Not observed, so ad handling is **unverified**. I took 44 media-playlist polls across 3 live channels (xqc 18 polls in 6 fresh sessions, k4sen and theburntpeanut 8 fresh sessions each, plus a 10-channel single-poll sweep). None contained a `stitched-ad` DATERANGE or ad-titled segment; the only daterange classes were `timestamp`, `twitch-session`, `twitch-stream-source`, `twitch-trigger`. The token said `show_ads: true, server_ads: true, adblock: false, subscriber: false`, so ads were allowed, just not served in these samples. What the source does license: Streamlink only skips ad segments while it itself reads segments (`TwitchHLSStreamWorker`). `media.py` passes mpv a bare URL, so ad skipping is already not in effect in the current design; stitched ads, if present, reach mpv either way (INFERRED from the source and `media.py`, not tested with an ad present).
+**Ads.** Not observed, so ad handling is **unverified**. I took 44 media-playlist polls across 10 distinct live channels (xqc 18 polls in 6 fresh sessions, k4sen and theburntpeanut 8 fresh sessions with one poll each, plus a single-poll sweep of the 10 largest live channels, which includes those three). None contained a `stitched-ad` DATERANGE or ad-titled segment; the only daterange classes were `timestamp`, `twitch-session`, `twitch-stream-source`, `twitch-trigger`. The token said `show_ads: true, server_ads: true, adblock: false, subscriber: false`, so ads were allowed, just not served in these samples. What the source does license: Streamlink only skips ad segments while it itself reads segments (`TwitchHLSStreamWorker`). `media.py` passes mpv a bare URL, so ad skipping is already not in effect in the current design; stitched ads, if present, reach mpv either way (INFERRED from the source and `media.py`, not tested with an ad present).
 
 **Low latency.** With `fast_bread=true` the media playlist carries 2 `EXT-X-TWITCH-PREFETCH` tags, without it 0 (VERIFIED; the usher URL Streamlink builds always sets it, so the prototype matches). Segment duration was 2 s either way. Newest full segment lag was 0-1.7 s with and without prefetch; the lag at FFmpeg's default live start point (third segment from the end) was 6.0-7.7 s in both (4 samples each, local clock). mpv appears not to use the prefetch tags (INFERRED: the demuxer ignores unknown tags; I did not test a latency difference in a player). Conclusion: no low-latency difference between Streamlink-derived and JS-derived URLs for mpv.
 
@@ -90,7 +94,7 @@ What JS changes: cancellation becomes a generation check between pages (page req
 | VOD `fTDvp9CBXoQ` (45 min) | 188 formats, heights 144-2160, codecs avc1/vp9/av01, all with URLs. Wall 7.0-7.7 s, CPU 1.6 s, RSS 103-133 MB |
 | Live `ROboUHfPUrU` | 7 HLS formats, 144-720p avc1, `is_live`. Wall 6.1-6.8 s |
 | VOD `Yd9q1Y7Ou7g` (4.9 h) | 47 formats up to 1080p, `live_chat` track `youtube_live_chat_replay`. Wall 6.6 s |
-| Chat replay download for `zn1dXa6W7t4` (44 min), same flags as `acquire.py` | 2.36 MB, 1734 lines in 13.2 s wall, CPU 1.7 s, peak tree RSS 119 MB |
+| Chat replay download for `zn1dXa6W7t4` (44 min), same flags as `acquire.py` | 2.36 MB, 1734 lines in 13.2 s wall, CPU 1.7 s, peak tree RSS 119 MB. End to end: `replay.py import` accepted that file (1732 messages, 2 chunks, 0.27 s) and the JS importer port also gives 1732 |
 | Throughput of a 720p avc1 URL obtained with no JS runtime | 6 MB at 18.8-20.8 MB/s in 5 of 6 samples (one IINA-environment sample, the first, 2.8 MB/s); the with-PATH samples (node and deno found) were 18.8-20.8 MB/s |
 
 Caveats:
@@ -118,7 +122,7 @@ Caveats:
 
 ## Q5. Cost of today's helpers
 
-Commands run from the shell on public content, `python3` = pyenv 3.13.13, via `spikes/out-of-box/measure-helper.mjs` (`/usr/bin/time -l` for CPU and the largest process, plus a 100 ms `ps` sample of the summed RSS of the whole process tree; the sampler can miss shorter spikes). One run each unless noted. Note the 2026-11-22 live-playback snapshot saw no helper running; these are the transient costs when one does.
+Commands run from the shell on public content, via `spikes/out-of-box/measure-helper.mjs` (`/usr/bin/time -l` for CPU and the largest process, plus a 100 ms `ps` sample of the summed RSS of the whole process tree; the sampler can miss shorter spikes). One run each unless noted. Note the 2026-11-22 live-playback snapshot saw no helper running; these are the transient costs when one does.
 
 | Helper call | Wall | CPU (user+sys) | Largest process RSS | Peak tree RSS sum |
 |---|---|---|---|---|
@@ -134,19 +138,16 @@ Commands run from the shell on public content, `python3` = pyenv 3.13.13, via `s
 | IINA yt-dlp, VOD resolve, `iina` flags | 7.0-7.7 s | 1.6 s | 103-133 MB | n/a (`time -l` only) |
 | IINA yt-dlp, chat replay download 44 min | 13.2 s | 1.7 s | 117 MB | 119 MB |
 
+The table above used the pyenv `python3` shim (3.13.13), which adds shim processes (5-6 in the tree) and is not what `io.js` selects. I re-ran four rows with `/opt/homebrew/bin/python3` (3.14.7, the interpreter `io.js` prefers): Twitch window 11 pages 3.6 s wall, 0.11 s CPU, 35.2 MB largest and 36.1 MB tree (2 processes); `media.py` Twitch live 1.45 s, 0.36 s CPU, 67.4 MB largest, 90.2 MB tree; YouTube replay 4.9 h 37.2 s, 2.72 s CPU, 83.9 MB largest, 116.2 MB tree; `replay.py import` of that 8 MB archive 0.80 s, 0.77 s CPU, 28 MB. Same picture. Still not measured: the real path through `runner.py` with its cancel-marker watcher thread, launched by `iina.utils.exec` (an extra Python thread polling every 50 ms; not run).
+
 For comparison, JS in Node (not JSC): the whole 11-page chat window is 2.0 s wall, 0.11 s CPU; the replay import of the same 8 MB is 47 ms. Node's own process RSS of 67 MB is runtime baseline and says nothing about JSC.
 
-Reading: Python's own share is small. The chat window helper is about 33 MB and 0.1 s CPU, and its wall time is network waiting. The large numbers belong to yt-dlp (100+ MB, 1-2 s CPU) and Streamlink (67 MB), which a Rust helper would still have to spawn. Rewriting the helpers in Rust would save at most about 25-30 MB transient on chat windows and under 1 s CPU on the largest archive import. The case for removing Python is the fresh-Mac dependency, not cost; the case for a compiled helper is not supported by these numbers.
-
-## Existing defects found (at `c3d6fd9`; not fixed, helpers are not mine to edit)
-
-1. **Twitch VOD playback fails with `UNSAFE_MEDIA_URL`** for VOD `2935383720`. `media.py` allows exactly one CloudFront tenant (`d2vi6trrdongqn.cloudfront.net`); this VOD's playlists are on `d1m7jfoe9zdc1j.cloudfront.net` (Streamlink returned that host for all 8 streams). VERIFIED by running `media.py resolve`. Twitch VODs are served from several CloudFront tenants, so any plugin-side allow-list must be pattern-based (for example `*.cloudfront.net` for the media URL only) or drop the check for mpv URLs, and `Info.json` `allowedDomains` matters only for URLs the plugin fetches itself.
-2. **YouTube resolve and replay can fail with `OUTPUT_LIMIT`** on videos whose `--dump-single-json` exceeds 8 MiB: `fTDvp9CBXoQ` gives 11.7 MB, and `acquire.py` on `zn1dXa6W7t4` fails the same way. `Yd9q1Y7Ou7g` and the live stream pass. The cause is `automatic_captions`; see Q3 caveat 5 for a trimmed invocation.
+Reading: Python's own share is small. The chat window helper is about 33 MB and 0.1 s CPU, and its wall time is network waiting. The large numbers belong to yt-dlp (100+ MB, 1-2 s CPU) and Streamlink (67 MB), which a Rust helper would still have to spawn. A Rust helper could not remove the yt-dlp or Streamlink children, and its own saving is bounded by Python's measured share: about 33 MB and 0.1 s CPU on a chat window, about 25 MB and 0.8 s CPU on the largest archive import I made (8 MB). The case for removing Python is the fresh-Mac dependency, not cost; the case for a compiled helper is not supported by these numbers.
 
 ## Risks
 
 - **Undocumented endpoints.** The Twitch GraphQL operations, the web Client-ID, the persisted-query hashes (copied from Streamlink 8.6.3) and the usher parameters are not a public API and can change without notice; Streamlink and yt-dlp track those changes today, the plugin would own them. Mitigation is to fail closed with a clear state and ship a plugin update. A change that demands a client-integrity token would break JS resolution (see Q1).
-- **Twitch terms.** I tried to read Twitch's Terms of Service (`legal.twitch.com`) and the fetch returned only navigation text, so I have no verified statement of what they say about unofficial clients or scraping. Unchecked; the maintainer should read them before shipping and decide. The mechanics match what Streamlink and yt-dlp do (anonymous, no login, public web Client-ID); no account token or OAuth is involved.
+- **Twitch terms.** Unchecked. I tried the Terms of Service and the Developer Services Agreement on `legal.twitch.com`: `curl -sL` returned a 28-30 KB shell page with no clause text (greps for scraping/robot/automated/circumvent found nothing), and WebFetch returned only navigation and footer for both. I have no verified statement of what they say about unofficial clients, undocumented APIs or ad circumvention; the maintainer should read them before shipping and decide. The mechanics match what Streamlink and yt-dlp do (anonymous, no login, public web Client-ID); no account token or OAuth is involved.
 - **YouTube** can change at any time; the bundled yt-dlp is already 95 days old and warns about the missing JS runtime.
 - **Ads** unverified (above). Stitched ads would play through.
 - **`iina.http` runtime** behaviour is from source reading and a Node model. Not run inside IINA.
@@ -159,7 +160,8 @@ Reading: Python's own share is small. The chat window helper is about 33 MB and 
 - An actual ad break, ad-free vs ad-bearing latency, mpv/IINA latency differences beyond playlist-timestamp arithmetic, and subscriber-only, geoblocked or private content.
 - Playback of YouTube URLs from IINA's yt-dlp in mpv or IINA, YouTube formats that need separate audio (media.py's `audioURL` logic with the new output), and IINA's own ytdl path.
 - Deletion/moderation records and TwitchDownloader JSON in the JS importer; archives near the 64 MB cap.
-- Twitch's terms of service.
+- Twitch's terms of service and Developer Services Agreement (page text not retrievable).
+- The real `runner.py` path under `iina.utils.exec`.
 - Repeat-run variance beyond what is stated; most Q5 figures are single runs.
 
 ## Reproduce

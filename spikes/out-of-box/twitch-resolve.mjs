@@ -26,7 +26,8 @@ export async function accessToken(kind, id, ua) {
 }
 
 export function usherURL(kind, id, tok, { lowLatency = true } = {}) {
-  const common = { platform: 'web', p: Math.floor(Math.random() * 999999), allow_source: 'true', allow_audio_only: 'true',
+  // Every value must be a string: iina.http drops a whole params map that contains any non-string.
+  const common = { platform: 'web', p: String(Math.floor(Math.random() * 999999)), allow_source: 'true', allow_audio_only: 'true',
     playlist_include_framerate: 'true', multigroup_video: 'true', supported_codecs: 'h264' };
   if (kind === 'live') {
     const q = { ...common, sig: tok.signature, token: tok.value };
@@ -117,7 +118,7 @@ async function main() {
     kind, ok: true, ua: uaName, tokenFlags, fastBread: lowLatency, tokenShape, variantCount: variants.length,
     variants: variants.map(v => ({ name: v.name, source: v.source, res: v.res, fps: v.fps, codec: v.codecs.split(',')[0], bwKbps: Math.round(v.bw / 1000) })),
     masterBytes: master.text.length, picked: pick && pick.name, media: shape, T,
-    mediaHostBlockedByAllowedDomains: [...stats.wouldBeBlocked], requests: stats.requests, hosts: [...stats.hosts].map(h => h.replace(/^[^.]+\./, '*.')),
+    droppedMaps: stats.droppedMaps, mediaHostBlockedByAllowedDomains: [...stats.wouldBeBlocked], requests: stats.requests, hosts: [...stats.hosts].map(h => h.replace(/^[^.]+\./, '*.')),
   }));
 }
 if (import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.log('ERR', e && e.statusCode, e && e.reason); process.exit(1); });

@@ -15,7 +15,7 @@ export const ALLOWED = ["twitch.tv", "*.twitch.tv", "*.ttvnw.net", "*.twitchcdn.
 function allowed(host) {
   return ALLOWED.some(p => p.startsWith('*.') ? host.endsWith(p.slice(1)) : host === p);
 }
-export const stats = { requests: 0, bytes: 0, hosts: new Set(), wouldBeBlocked: new Set() };
+export const stats = { requests: 0, bytes: 0, hosts: new Set(), wouldBeBlocked: new Set(), droppedMaps: [] };
 
 export async function request(method, url, options = {}) {
   const u = new URL(url);
@@ -23,9 +23,14 @@ export async function request(method, url, options = {}) {
   // recorded in stats.wouldBeBlocked because a real plugin could NOT make it.
   if (!allowed(u.hostname) && options.measureOnly) stats.wouldBeBlocked.add(u.hostname);
   else if (!allowed(u.hostname)) throw { statusCode: null, reason: 'URL not allowed', data: null, text: null, blocked: u.hostname };
-  for (const [k, v] of Object.entries(options.params || {})) u.searchParams.set(k, String(v));
+  // Swift: options["params"] as? [String: String] and options["headers"] as? [String: String]. A single non-string
+  // value (e.g. a JS number) makes the cast fail and the WHOLE map is silently treated as absent. Mirror that.
+  const strMap = m => (m && typeof m === 'object' && Object.values(m).every(v => typeof v === 'string')) ? m : {};
+  if (options.params && Object.keys(strMap(options.params)).length !== Object.keys(options.params).length) stats.droppedMaps.push('params');
+  if (options.headers && Object.keys(strMap(options.headers)).length !== Object.keys(options.headers).length) stats.droppedMaps.push('headers');
+  for (const [k, v] of Object.entries(strMap(options.params))) u.searchParams.set(k, v);
   const headers = {};
-  for (const [k, v] of Object.entries(options.headers || {})) headers[k] = v;
+  for (const [k, v] of Object.entries(strMap(options.headers))) headers[k] = v;
   let body;
   const data = options.data;
   if (data && Object.keys(data).length) {

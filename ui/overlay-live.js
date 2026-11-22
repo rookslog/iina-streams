@@ -13,6 +13,23 @@
   'transport-unavailable':'Chat transport is unavailable.'
  };
  let client=null,history=[],session=0,closed=false;
+ // Moderation in one batch. Replays the batch one event at a time and records the message ids each
+ // clear-message or clear-user removed. Rollover past the 150 window is not moderation, so it is not reported.
+ function moderationOf(before,events){
+  const removed=[];
+  let clearedAll=false;
+  let state=before;
+  for(const event of Array.isArray(events)?events:[]){
+   const next=root.StreamsLiveHistory.reduce(state,[event],150);
+   if(event&&event.type==='clear-all')clearedAll=true;
+   else if(event&&(event.type==='clear-message'||event.type==='clear-user')){
+    const kept=new Set(next.map(row=>row.id));
+    for(const row of state)if(row.kind==='message'&&row.id&&!kept.has(row.id))removed.push(row.id);
+   }
+   state=next;
+  }
+  return{removed,clearedAll};
+ }
  function ensureClient(){
   if(!client&&root.StreamsLive&&root.StreamsLiveHistory){
    client=root.StreamsLive.create({
@@ -21,8 +38,10 @@
     },
     onBatch:events=>{
      if(!session)return;
+     const previous=history;
      history=root.StreamsLiveHistory.reduce(history,events,150);
-     post('live-messages',{session,messages:history});
+     const moderation=moderationOf(previous,events);
+     post('live-messages',{session,messages:history,removed:moderation.removed,clearedAll:moderation.clearedAll});
     }
    });
   }

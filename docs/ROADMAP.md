@@ -41,9 +41,19 @@ Same-window quality switching, a draggable and corner-resizable chat overlay, re
 - **Composer:** contextual rather than always present. 500-character limit and self-throttling. Outgoing messages bypass the delay queue and appear immediately as a local echo, marked so it's clear the video is behind. Shared Chat propagation is called out where it applies.
 - **Gate:** a user-authorized real grant and real send to a channel you own, with you present; refusal, revocation and rate-limit paths covered by unit tests.
 
+## 0.5.6 — an overlay you can shape (#1), designed together with 0.6.0's composer
+
+*User report, 2026-11-22: drag, resize and layout never felt right. Each agent iteration was buggy, and resize works but isn't intuitive. Not urgent, but wanted. The composer will need the same click-through overlay surface, so design both together and ship the overlay first.*
+
+- **Why earlier attempts churned** (inferred from git history `bf0f8d7` → `e4dfdf6` → `e5af2f2`): 4-edge resize was added, then reduced to a 10 px edge band, then cut back to drag plus corner, each time chasing hover-leave and stuck-cursor glitches in IINA's click-through overlay. No test could see those states.
+- **Measure the host before designing.** Run a native probe of what IINA 1.5.1's overlay WebView actually delivers: pointer events at the edges and outside `data-clickable` regions, capture during a drag, cursor changes, and the OSC region. Record what is impossible, so design stays within it.
+- **Real-WebKit interaction tests** of `ui/overlay.html` behind the IINA test shim, replaying pointer sequences (drag, edge resize, release outside, leave mid-drag). Run them in CI before any build reaches you. They catch "stuck in resize" mechanically. Feel stays your call.
+- **Then design:** direct manipulation with no mode (Handoff §3A), discoverable resize affordances, and a precise non-drag route with visible values. Prototype natively and compare at least two variants.
+- **Gate:** native: drag to every edge, resize from the offered affordances, release anywhere, with nothing stuck; position holds across fullscreen and window resize; clicks outside the overlay still reach IINA.
+
 ## Later (re-prioritise after 0.6.0)
 
-Overlay multi-edge and single-axis resize (#1). Twitch emotes and badges (bounded cache, text fallback). Automatic URL interception ahead of Online Media. YouTube live chat. Measured resource cost of Off, sidebar and overlay on a 16 GB Mac. Stable Twitch VOD acquisition beyond the undocumented offset GraphQL.
+Twitch emotes and badges (bounded cache, text fallback). Automatic URL interception ahead of Online Media. YouTube live chat. Measured resource cost of Off, sidebar and overlay on a 16 GB Mac. Stable Twitch VOD acquisition beyond the undocumented offset GraphQL.
 
 ## Engineering track (every release)
 

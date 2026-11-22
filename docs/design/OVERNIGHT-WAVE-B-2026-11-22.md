@@ -156,3 +156,71 @@ B2 is split: `src/player.js` is held by the A1b fix (#35), so its catch sites wa
 4. Source scan over `src/auth.js`, `global.js` and `src/io.js`: every `catch(_){` whose body is empty or only `return`s has a comment (`//` or `/* */`) on the same line or the line above.
 
 **Owns:** `src/auth.js`, `global.js`, `src/io.js`, and new `tests/b2a-*.test.js`. Not `src/player.js` or `ui/`.
+
+---
+
+## C2a — Chat timing policy and live clock (#2, #28; new modules only)
+
+Wiring into `src/player.js` and the sidebar, C2b, waits for A1b. This part builds two pure modules on C1's estimator.
+
+**Domain note.** The estimator only needs `cacheEnd` and `timePos` on the same timeline. Its offset absorbs any shift between them, and a reload resets it. In IINA (`rebase-start-time=yes`), `demuxer-cache-state.cache-end` and `time-pos` share that timeline: the spike's `seek <cache-end − 2> absolute` landed in this mode (§4). That rests on the spike's result, not on an IINA run. So C2a uses `time-pos` and `cache-end` directly, with no `demuxer-start-time`.
+
+### `src/chat-timing.js`
+
+`createChatTiming({mode, manualDelay, fineTune})`:
+- `mode` is `'auto' | 'manual' | 'live'`, default `'auto'`.
+- `manualDelay` is clamped to 0–120 s, default 0.
+- `fineTune` is clamped to −10…+10 s, default 0.
+
+Values are rounded to 0.5 s, and anything not finite falls back to the default.
+
+Methods:
+- **`effective(behindLive)`** returns `{delay, state}`:
+  - `live`: delay 0, state `'live'`.
+  - `manual`: delay `manualDelay`, state `'manual'`.
+  - `auto` with a finite `behindLive`: delay `max(0, behindLive + fineTune)`, state `'auto'`.
+  - `auto` with `null`: delay `manualDelay`, state `'auto-uncertain'`. Never a false "synced".
+- **`reveal(messages, nowMs, delaySeconds)`** returns `{visible, nextDueMs}`:
+  - A message, `{id, timestampMs, …}`, is visible if it was revealed before, or once `timestampMs + delay·1000 ≤ nowMs`.
+  - Order is kept.
+  - Once revealed, a message stays visible even if the delay grows, as after a pause. Nothing is un-shown.
+  - `nextDueMs` is the earliest pending due time, or `null`.
+  - The revealed-id memory is pruned to ids still present in `messages`.
+  - Messages without `timestampMs` (notices) are visible at once.
+- **`calibrate(message, nowMs)`** (#28) sets `manualDelay` to the message's age, `(nowMs − timestampMs)/1000`, clamped and rounded. It sets `mode` to `'manual'` and returns the settings.
+- **`settings()` / `update(partial)`** return and change the plain persisted object `{mode, manualDelay, fineTune}`.
+
+### `src/live-clock.js`
+
+`createLiveClock({http, readPlayer, estimator, setTimer, clearTimer, now, intervalMs = 2000, staleMs = 10000, log})`:
+- **`start(mediaURL)`**: every `intervalMs`, it fetches the media playlist with `http.get(mediaURL, {headers:{}, params:{}})`, using string maps only.
+  - It parses `newestSegmentEnd` = the last regular segment's `#EXT-X-PROGRAM-DATE-TIME` plus its `#EXTINF`, in epoch seconds. `#EXT-X-TWITCH-PREFETCH` lines are ignored.
+  - It reads `{timePos, cacheEnd}` from `readPlayer()`.
+  - If all are finite, it calls `estimator.addSample({now: now()/1000, newestSegmentEnd, rawCacheEnd: cacheEnd})`.
+  - It keeps the last `timePos` and the time of the last good sample.
+- **`behindLive()`** returns `null` if there's been no good sample within `staleMs`; otherwise `estimator.behindLive({now: now()/1000, rawTimePos: timePos})`.
+- **`goLiveTarget()`** returns the last `cacheEnd − 2`, or `null`.
+- **`stop()`** clears the timer; it's idempotent. A second `start` replaces the first, and its old in-flight response is ignored (generation check).
+- **Errors:** a fetch error or malformed text adds no sample. `log` receives only a code (`'playlist-fetch'`, `'playlist-malformed'`), **never the URL** (it's signed).
+- **`parseNewestSegmentEnd(text)`** is exported for tests. It returns epoch seconds or `null`.
+
+### Tests (synthetic playlists; no real URLs or signatures)
+
+`chat-timing`:
+- each mode's `effective`;
+- `auto` with `null` gives `auto-uncertain` and the manual delay;
+- `fineTune` with a negative result clamps at 0;
+- `reveal`: the due boundary is inclusive; the order is kept; a revealed message stays visible after the delay grows; `nextDueMs` is correct; notices show at once; pruning works;
+- `calibrate` with rounding and clamping (a 200 s-old message gives 120);
+- the clamp and round rules in the constructor and `update`.
+
+`live-clock`, with a fake `http`, timers and clock:
+- the parser: PDT plus EXTINF of the last regular segment; prefetch lines ignored; the 12-hour form of PDT with a `Z` or `+00:00` zone; no PDT gives `null`;
+- `start` → tick → `addSample` with the right numbers;
+- a fetch error or malformed text adds no sample and logs a code without the URL (assert that the URL substring is absent from every log argument);
+- stale after `staleMs` gives `null`;
+- `stop` prevents further fetches;
+- a restart ignores the old response;
+- every header and param value is a string.
+
+**Owns:** new `src/chat-timing.js`, `src/live-clock.js`, `tests/chat-timing.test.js` and `tests/live-clock.test.js`. The base is beta with C1 merged. Until then, tests inject a fake estimator, so they don't need `src/live-latency.js`.

@@ -6,6 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {createBridge, ACCESS_TOKEN} = require('./support/auth-bridge.js');
 const {SIGNED_OUT} = require('../src/auth.js');
+const BuiltInApp = require('../src/twitch-app.js');
 
 const FIRST_SAVE_FAILS = call => call > 1;
 const savedLogin = bridge => bridge.keychain.get('twitch-readonly', 'oauth');
@@ -71,6 +72,28 @@ test('Sign out after Chat Off cannot claim revocation for a grant that was never
   await bridge.click('forget-auth');
   assert.equal(bridge.revokes.length, 0, 'no grant is left to send');
   assert.match(bridge.chat().error, /revocation could not be confirmed/);
+  bridge.close();
+});
+
+test('Sign out still warns about a dropped session-only grant when an older saved grant is revoked (#53)', async () => {
+  // The reviewer's probe: an older Keychain grant for another client; a new grant whose save failed; Chat Off;
+  // Sign out. Revoking the older grant says nothing about the dropped one, which Twitch still holds.
+  const older = {clientID: 'b'.repeat(20), access_token: 'o'.repeat(30), refresh_token: 'p'.repeat(30)};
+  const bridge = createBridge({keychainWrites: FIRST_SAVE_FAILS});
+  bridge.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(older));
+  await bridge.settle();
+  // An empty client ID would reuse the saved grant's client; name the built-in client so the old grant is "another".
+  await bridge.click('connect', {clientID: BuiltInApp.clientID});
+  await bridge.approve();
+  assert.equal(bridge.player.snapshot().auth.phase, 'ready', 'precondition: the new grant is connected');
+  assert.equal(bridge.writeAttempts, 1, 'precondition: the new grant save was attempted and failed');
+  assert.equal(JSON.parse(savedLogin(bridge)).access_token, older.access_token, 'precondition: older grant still saved');
+  await bridge.click('chat-off');
+  await bridge.click('forget-auth');
+  assert.deepEqual(bridge.revokes.map(request => request.token), [older.access_token],
+    'only the older grant can be sent: Chat Off dropped the session-only token');
+  assert.match(bridge.chat().error, /revocation could not be confirmed/);
+  assert.equal(savedLogin(bridge), SIGNED_OUT);
   bridge.close();
 });
 

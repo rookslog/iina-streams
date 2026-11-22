@@ -93,13 +93,17 @@ class TwitchAuth {
   if(!saved)try{saved=this.o.read();if(typeof saved==='string'&&saved)saved=JSON.parse(saved);}catch(_){saved=null;known=false;}
   const grant=saved&&typeof saved.clientID==='string'&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID)&&typeof saved.access_token==='string'&&/^[A-Za-z0-9_-]{16,512}$/.test(saved.access_token)?{clientID:saved.clientID,token:saved.access_token}:null;
   if(saved&&!grant&&holdsTokens(saved))known=false;
-  if(this.lostSessionGrant&&!grant)known=false;
+  // Read before stop(): stop() also sets the flag for the grant held right now, which this call revokes itself.
+  const droppedSessionGrant=this.lostSessionGrant;
   this.stop();this.lostSessionGrant=false;const generation=this.generation;
   // Clear before awaiting the network; an older Forget must never erase a new
   // connection's persisted token when its revocation response arrives later.
   let removed=true;try{removed=this.o.write(SIGNED_OUT)!==false;}catch(_){removed=false;}
   let revoked=known&&!grant;
   if(grant)try{const r=await this.o.request('/revoke','POST',{client_id:grant.clientID,token:grant.token},{});revoked=!!r&&r.status===200;}catch(_){revoked=false;}
+  // Revoking whatever grant we could find says nothing about a session-only grant that was dropped earlier
+  // (stop() sets lostSessionGrant): Twitch still holds that one, so the result stays unconfirmed (#53).
+  if(droppedSessionGrant)revoked=false;
   const stale=generation!==this.generation;
   if(!stale){
    if(!removed)this.publish('error','Keychain could not clear the saved authorization.');

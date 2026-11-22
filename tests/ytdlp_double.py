@@ -5,6 +5,7 @@ what the helpers do with the output:
   - `--dump-single-json` prints the whole info dict as one line.
   - each `-O TEMPLATE` prints one line. `%(.{a,b})j` prints an object holding the keys that exist,
     `%(formats.:.{a,b})j` prints a list of such objects, and `%(a.b)j` prints that value.
+  - `%(key&1|0)s` prints 1 if the key holds a value and 0 if not (see the flag branch below).
   - a value that does not exist prints NA. (NA for an absent `formats` list is inferred, not observed.)
 It does not enforce the helpers' output cap; each test module does that with its own error class.
 """
@@ -23,6 +24,12 @@ def project_template(template, info):
         def pick(item):
             return {key: item[key] for key in fields if key in item}
         return json.dumps([pick(item) for item in value] if path.endswith(".:") else pick(value))
+    flag = re.fullmatch(r"%\((\w+)&1\|0\)s", template)
+    if flag:
+        # Observed 2026-11-22 with yt-dlp 2026.08.19 evaluate_outtmpl: `%(k&1|0)s` prints 0 for a missing key,
+        # None or {}, and 1 for anything else, including [] and ''. Presence, not length.
+        value = info.get(flag.group(1))
+        return "0" if value is None or value == {} else "1"
     plain = re.fullmatch(r"%\((.*)\)j", template)
     value = info
     for part in plain.group(1).split("."):

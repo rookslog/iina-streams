@@ -193,6 +193,40 @@ class MetadataTests(unittest.TestCase):
                 self.resolve_vod_stream(url)
             self.assertEqual(error.exception.code, "UNSAFE_MEDIA_URL")
 
+    def test_cloudfront_vod_path_refuses_dot_segments_and_their_encoded_forms(self):
+        # #55: the path rule let "." and ".." through as segments, so /../ walked out of the playlist directory.
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        playlist = "index-muted-AB12CD34EF.m3u8"
+        refused = [
+            "/../720p60/" + playlist,
+            "/./720p60/" + playlist,
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/../" + playlist,
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/./" + playlist,
+            "/../../" + playlist,
+            "/%2e%2e/720p60/" + playlist,                 # percent-encoded ".."
+            "/%2E%2E/720p60/" + playlist,
+            "/.%2e/720p60/" + playlist,                   # half encoded
+            "/%2e/720p60/" + playlist,                    # encoded "."
+            "/0123456789abcdef0123_hutchmf_2935383720_1700000000/%2e%2e/" + playlist,
+            "/%252e%252e/720p60/" + playlist,             # double encoded
+            "/..%2f720p60/" + playlist,                   # encoded slash after a dot pair
+        ]
+        for path in refused:
+            url = "https://" + host + path
+            with self.subTest(path=path):
+                try:
+                    self.resolve_vod_stream(url)
+                    code = "accepted"
+                except media.MediaError as error:
+                    code = error.code
+                self.assertEqual(code, "UNSAFE_MEDIA_URL")
+
+    def test_cloudfront_vod_path_still_admits_dots_inside_a_segment(self):
+        # Only the whole-segment forms "." and ".." are refused; a dot inside a name is fine.
+        host = "d1m7jfoe9zdc1j.cloudfront.net"
+        url = "https://" + host + "/a.b_hutchmf.2935383720/720p60.v2/index-muted-AB12CD34.m3u8"
+        self.assertEqual(self.resolve_vod_stream(url)["mediaURL"], url)
+
     def test_cloudfront_is_never_allowed_for_live_channels_or_for_youtube(self):
         url = "https://d1m7jfoe9zdc1j.cloudfront.net" + self.VOD_PLAYLIST
         with self.assertRaises(media.MediaError) as error:
@@ -382,6 +416,8 @@ class LargeMetadataTests(unittest.TestCase):
             try:
                 if trimmed:
                     return self.run_resolve(copy.deepcopy(fixture))[0]
+                if "error" in fixture:  # resolve() checks this before _youtube, on the full dump (c3d6fd9)
+                    return "UNAVAILABLE"
                 return media._youtube(source, copy.deepcopy(fixture), "auto720")
             except media.MediaError as error:
                 return error.code
@@ -410,7 +446,9 @@ class LargeMetadataTests(unittest.TestCase):
             "_has_drm": lambda f: f.update(_has_drm=True), "_type": lambda f: f.update(_type="playlist"),
             "extractor_key": lambda f: f.update(extractor_key="Vimeo"),
             "http_headers": lambda f: f.update(http_headers={"User-Agent": "Other/2"}),
+            "error": lambda f: f.update(error="Video unavailable"),
         }
+        flags = {"entries": lambda f: f.update(entries=[{"id": "jNQXAC9IVRw"}])}
         formats = {
             "format_id": lambda f: None, "url": lambda f: None, "protocol": lambda f: None, "vcodec": lambda f: None,
             "height": lambda f: None, "acodec": on_136(acodec="mp4a.40.2"), "audio_ext": only_audio_ext,
@@ -420,12 +458,13 @@ class LargeMetadataTests(unittest.TestCase):
         }
         self.assertEqual(set(top), set(media.YOUTUBE_VIDEO_FIELDS))
         self.assertEqual(set(formats), set(media.YOUTUBE_FORMAT_FIELDS))
-        for scope, cases in (("video", top), ("format", formats)):
+        self.assertEqual(set(flags), set(media.YOUTUBE_FLAG_FIELDS))
+        for scope, cases in (("video", top), ("format", formats), ("flag", flags)):
             for field, setup in cases.items():
                 fixture = youtube_metadata()
                 setup(fixture)
                 withheld = copy.deepcopy(fixture)
-                if scope == "video":
+                if scope in ("video", "flag"):
                     withheld.pop(field, None)
                 else:
                     for item in withheld["formats"]:
@@ -435,9 +474,38 @@ class LargeMetadataTests(unittest.TestCase):
                     self.assertNotEqual(outcome(withheld, trimmed=False), expected, "the case must depend on the field")
                     self.assertEqual(outcome(fixture, trimmed=True), expected)
 
+    def test_a_playlist_is_rejected_and_only_a_flag_of_it_reaches_the_output(self):
+        # #54: the full dump rejected any info dict that had `entries`. The trimmed output must too, without
+        # carrying the entries themselves (a 5000 entry playlist would put them all back over the cap).
+        fixture = youtube_metadata()
+        fixture["entries"] = [{"id": "e%04d" % number, "title": "t" * 2000} for number in range(5000)]
+        self.assertGreater(len(json.dumps(fixture)), media.MAX_METADATA_BYTES, "precondition: entries alone exceed the cap")
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, fixture))
+        self.assertEqual(error.exception.code, "INVALID_METADATA")
+        printed = ytdlp_double.output(["yt-dlp"] + media.YOUTUBE_OUTPUT, fixture)
+        self.assertLess(len(printed), 2000, "the entries are not in the output")
+        self.assertNotIn(b"e0001", printed)
+
+    def test_an_empty_entries_list_is_still_a_playlist(self):
+        fixture = youtube_metadata()
+        fixture["entries"] = []
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, fixture))
+        self.assertEqual(error.exception.code, "INVALID_METADATA")
+
+    def test_an_error_field_is_unavailable(self):
+        # #54: resolve() rejected `error` in the full dump with UNAVAILABLE; the trimmed output dropped the field.
+        fixture = youtube_metadata()
+        fixture["error"] = "Video unavailable"
+        with self.assertRaises(media.MediaError) as error:
+            media.resolve(self.URL, runner=lambda command, **kwargs: ytdlp_output(command, fixture))
+        self.assertEqual(error.exception.code, "UNAVAILABLE")
+
     def test_unexpected_output_shapes_are_sanitized_metadata_errors(self):
-        for payload in ["", "{}", '{"id":"jNQXAC9IVRw"}\n[]\n[]', '["not","an","object"]\n[]',
-                        "not-json https://private.example/?t=secret\n[]", '{"id":"jNQXAC9IVRw"}\nNA']:
+        for payload in ["", "{}", '{"id":"jNQXAC9IVRw"}\n[]\n[]', '["not","an","object"]\n[]\n0',
+                        "not-json https://private.example/?t=secret\n[]\n0", '{"id":"jNQXAC9IVRw"}\nNA\n0',
+                        '{"id":"jNQXAC9IVRw"}\nNA', '{"id":"jNQXAC9IVRw"}\n[]\n2', '{"id":"jNQXAC9IVRw"}\n[]\nNA']:
             with self.subTest(payload=payload[:40]), self.assertRaises(media.MediaError) as error:
                 media.resolve(self.URL, runner=lambda *args, **kwargs: payload)
             self.assertEqual(error.exception.code, "INVALID_METADATA")

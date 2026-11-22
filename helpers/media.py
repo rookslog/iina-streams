@@ -38,26 +38,45 @@ AUTO = {"id": "auto720", "label": "Auto · 720p preferred"}
 #           index-muted-<token>.m3u8, and index-dvr.m3u8), so only an HLS playlist, nothing else;
 #   source  only for a twitch-vod source, never for a live channel or YouTube;
 #   plus the checks every media URL gets: https, no credentials, port 443, no fragment.
-# What this admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording
-# whose address came from Streamlink. The path is not a security boundary (anyone can create a distribution
-# with that path); the boundary is that Streamlink's Twitch plugin supplied the address, and the narrowing
-# above keeps surprises small. Closing it fully needs an explicit list of Twitch's distributions.
+# TRUST BOUNDARY. This does not prove that a distribution belongs to Twitch, and it is not meant to. What this
+# admits, stated plainly: an HLS playlist on ANY CloudFront distribution, for a Twitch recording whose address
+# came from Streamlink. The boundary is Twitch's usher response: Streamlink's Twitch plugin asks Twitch's usher
+# endpoint for the playlist and returns the destination Twitch names, and this helper trusts that destination.
+# The path shape and host shape only narrow what a wrong answer could be; anyone can create a distribution with
+# this path. A list of Twitch's tenants is deliberately not used: Twitch has more than one, it does not publish
+# them, and a two-tenant list refused real VODs on other tenants (#45). Closing the boundary fully would need
+# Twitch's own list of distributions.
+# Dot segments are refused (#55): "." and ".." parse as path segments and would let /../ leave the playlist
+# directory. Percent-encoded forms (%2e, %2E, %252e, %2f) are refused because "%" is not in the segment
+# characters at all; the encoded-form cases in tests/test_media.py pin that.
 TWITCH_VOD_HOST = re.compile(r"d[0-9a-z]{13}\.cloudfront\.net\Z")
 TWITCH_VOD_PATH = re.compile(r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/index-[A-Za-z0-9-]+\.m3u8\Z")
 
+
+def _twitch_vod_path(path):
+    if not TWITCH_VOD_PATH.fullmatch(path):
+        return False
+    return not any(segment in (".", "..") for segment in path.split("/"))
+
+
 # yt-dlp's --dump-single-json can exceed MAX_METADATA_BYTES: one 45 minute video returned 11.7 MB, 11.15 MB
 # of it automatic_captions (spike #37, yt-dlp 2026.08.19). The helper asks yt-dlp for only the fields it reads,
-# as two -O (--print) templates, so the output is one JSON line per template (a missing value prints NA):
+# as three -O (--print) templates, so the output is one line per template (a missing value prints NA):
 #   line 1  the video's own fields, an object without the keys yt-dlp does not have;
-#   line 2  the formats, a list of objects with only the format fields below.
+#   line 2  the formats, a list of objects with only the format fields below;
+#   line 3  1 or 0: whether the info has an `entries` list (a playlist). Only presence is read, so the entries
+#           themselves, which can be thousands of objects, are not printed (#54).
 # A nested selector for both returned NA in the spike, hence two flat templates. Every field here is read by
-# _youtube; add a field here when _youtube starts reading it.
+# _youtube or resolve; add a field here when they start reading it. `error` is read by resolve.
 YOUTUBE_VIDEO_FIELDS = ("id", "_type", "title", "extractor_key", "live_status", "is_live", "duration",
-                        "availability", "has_drm", "_has_drm", "http_headers")
+                        "availability", "has_drm", "_has_drm", "http_headers", "error")
+YOUTUBE_FLAG_FIELDS = ("entries",)
 YOUTUBE_FORMAT_FIELDS = ("format_id", "url", "protocol", "vcodec", "acodec", "audio_ext", "height", "fps", "abr",
                          "language_preference", "quality", "source_preference", "asr", "has_drm", "http_headers")
 YOUTUBE_OUTPUT = ["-O", "%(.{" + ",".join(YOUTUBE_VIDEO_FIELDS) + "})j",
                   "-O", "%(formats.:.{" + ",".join(YOUTUBE_FORMAT_FIELDS) + "})j"]
+for _flag in YOUTUBE_FLAG_FIELDS:
+    YOUTUBE_OUTPUT += ["-O", "%(" + _flag + "&1|0)s"]
 
 
 ERROR_MESSAGES = {
@@ -279,7 +298,7 @@ def _media_url(value, provider, *, vod=False):
         host = parsed.hostname or ""
         suffixes = ("ttvnw.net", "twitch.tv", "twitchcdn.net") if provider == "Twitch" else ("googlevideo.com",)
         allowed = any(host == suffix or host.endswith("." + suffix) for suffix in suffixes)
-        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and TWITCH_VOD_PATH.fullmatch(parsed.path):
+        if provider == "Twitch" and vod and TWITCH_VOD_HOST.fullmatch(host) and _twitch_vod_path(parsed.path):
             allowed = True
         if (parsed.scheme != "https" or parsed.username is not None or parsed.password is not None or
                 parsed.port not in (None, 443) or parsed.fragment or not re.fullmatch(r"[a-zA-Z0-9.-]+", host) or not allowed):
@@ -441,16 +460,21 @@ def _youtube(source, metadata, quality):
 
 
 def _youtube_metadata(payload):
-    """Rebuild the metadata dict _youtube reads from the two -O lines of YOUTUBE_OUTPUT."""
+    """Rebuild the metadata dict _youtube and resolve read from the -O lines of YOUTUBE_OUTPUT."""
     text = payload.decode("utf-8") if isinstance(payload, bytes) else payload
     lines = text.strip().split("\n")
-    if len(lines) != 2:
+    if len(lines) != 2 + len(YOUTUBE_FLAG_FIELDS):
         raise MediaError("INVALID_METADATA")
     metadata = json.loads(lines[0])
     if not isinstance(metadata, dict):
         raise MediaError("INVALID_METADATA")
     if lines[1].strip() != "NA":
         metadata["formats"] = json.loads(lines[1])
+    for field, line in zip(YOUTUBE_FLAG_FIELDS, lines[2:]):
+        if line.strip() not in ("0", "1"):
+            raise MediaError("INVALID_METADATA")
+        if line.strip() == "1":
+            metadata[field] = []  # a stand-in: the readers only test that the key is there
     return metadata
 
 

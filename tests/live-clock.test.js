@@ -13,8 +13,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {inspect} = require('node:util');
 
-const MEDIA_URL = 'https://example.invalid/v.m3u8?sig=FAKE';
-const REPLACEMENT_URL = 'https://example.invalid/replacement.m3u8?sig=ALSO-FAKE';
+const MEDIA_URL = 'https://video-weaver.ttvnw.net/v.m3u8?sig=FAKE';
+const REPLACEMENT_URL = 'https://video-weaver.ttvnw.net/replacement.m3u8?sig=ALSO-FAKE';
 const INTERVAL_MS = 1250;
 const STALE_MS = 5000;
 const NEWEST_END = 946728010.75; // 2000-01-01 at 12:00:09.125 UTC plus 1.625 seconds.

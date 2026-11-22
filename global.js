@@ -295,10 +295,11 @@ function onAuthProbe(_,label){
 }
 
 function onAuthDisconnect(_,label){
- const id=acceptSender(label);
- if(id===null)return;
+ // A label that was never in the audience is neither registered nor allowed to stop the broker (r2 #4).
+ const managedID=targetID(label);
+ const id=managedID!==null?managedID:adoptedLabel(label);
+ if(id===null||!audience.delete(id))return;
  nextSession(id);
- audience.delete(id);
  if(!audience.size)auth.stop();
 }
 
@@ -317,10 +318,13 @@ async function onAuthForget(_,label){
  const id=acceptSender(label);
  if(id===null)return;
  nextSession(id);
+ // The requester's session now. If that label retires or reconnects during the revoke, the reply is dropped
+ // rather than landing on a successor controller (r2 #4).
+ const session=sessions.get(id);
  const pending=auth.forget();
  audience.clear();
  const result=await pending;
- if(result&&!result.stale&&isOpen(id))postChild(id,'auth-forgotten',result);
+ if(result&&!result.stale&&isOpen(id)&&sessions.get(id)===session)postChild(id,'auth-forgotten',result);
 }
 
 menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));

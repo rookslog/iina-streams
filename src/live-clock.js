@@ -5,6 +5,8 @@
 // a signed secret, so it is only ever passed to http.get and never logged, thrown or returned.
 // Design: docs/design/OVERNIGHT-WAVE-B-2026-11-22.md (C2a).
 
+const {isSafeMediaUrl} = require('./twitch-playback.js');
+
 const GO_LIVE_MARGIN_SECONDS = 2;
 const PDT_PREFIX = '#EXT-X-PROGRAM-DATE-TIME:';
 const EXTINF_PREFIX = '#EXTINF:';
@@ -155,6 +157,12 @@ function createLiveClock({
     lastCacheEnd = null;
     lastGoodSampleMs = null;
     inFlightSince = null;
+    // IINA embeds a disallowed or invalid URL in its http.get exception, and this URL is signed, so an
+    // unsafe one is never handed to it (v0.5.5 review r2 #1). Only a fixed code is recorded.
+    if (!isSafeMediaUrl(mediaURL, 'live')) {
+      log('playlist-url-unsafe');
+      return;
+    }
     poll(mediaURL, generation);
   }
 

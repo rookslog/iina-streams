@@ -408,4 +408,4 @@ async function resolveTwitch(request, deps = {}) {
   return result;
 }
 
-module.exports = {resolveTwitch, TwitchPlaybackError};
+module.exports = {resolveTwitch, TwitchPlaybackError, isSafeMediaUrl};

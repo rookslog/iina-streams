@@ -14,13 +14,15 @@ const config = {identifier: 'local.iina.streams.guard-test', variant: 'unified'}
 const twitchURL = 'https://www.twitch.tv/videos/2930971003';
 
 function unlabeledWindow(filePath) {
-  const shim = createIina({label: '', mpv: {path: filePath, 'stream-open-filename': filePath}, rejectModalDialogs: true});
+  const mpv = {path: filePath, 'stream-open-filename': filePath};
+  const shim = createIina({label: '', mpv, rejectModalDialogs: true});
   const resolves = [];
   const services = {
     readSettings: () => ({chatEnabled: false}),
     resolve: async source => {
       resolves.push(source);
-      return {ok: true, title: 'T', live: false, quality: '720p', formats: [], mediaURL: 'https://media.example.invalid/x'};
+      const mediaURL = 'https://media.example.invalid/x';
+      return {ok: true, title: 'T', live: false, quality: '720p', formats: [], mediaURL};
     }
   };
   const controller = start(shim.iina, {variant: 'unified'}, services);
@@ -81,7 +83,8 @@ test('A1 guard: global answers an adopted window by its IINA label, and ignores 
 test('A1 archive: a manually chosen archive for another video imports without a modal question', async () => {
   const source = Sources.parse(twitchURL);
   const shim = createIina({label: Sources.label(source, 'unified'), rejectModalDialogs: true});
-  const index = {version: 1, count: 0, chunks: [], sourceId: '999', title: 'Other video', timeline: {availableStart: 0}};
+  const timeline = {availableStart: 0};
+  const index = {version: 1, count: 0, chunks: [], sourceId: '999', title: 'Other video', timeline};
   const services = {
     readSettings: () => ({chatEnabled: false}),
     dataPath: name => '/private/data/' + name,

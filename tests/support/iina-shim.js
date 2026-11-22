@@ -222,7 +222,7 @@ function createIina(options = {}) {
       add(name, callback) {
         if (typeof name !== 'string') throw new TypeError(`IINA contract: ${label}.onMessage name must be a string`);
         if (typeof callback !== 'function') throw new TypeError(`IINA contract: ${label}.onMessage("${name}") callback must be a function`);
-        // IINA v1.5.1 JavascriptMessageHub.addListener keeps one callback per name: a second registration replaces the first.
+        // IINA v1.5.1 JavascriptMessageHub.addListener keeps one callback per name; a second one replaces it.
         listeners.set(name, callback);
       },
       clear() { listeners.clear(); hub.clears++; },

@@ -121,7 +121,7 @@ test('A1 window page: open-error marks the field invalid, keeps the text, and ty
   assert.equal(field.getAttribute('aria-invalid'), null);
 });
 
-test('A1 window wiring: Escape closes, reopening reloads a fresh page, and a second shortcut only focuses', async () => {
+test('A1 window wiring: Escape closes, reopening reloads, and a second shortcut only focuses', async () => {
   const {shim, menuItem} = loadGlobal();
   await menuItem.action();
   assert.equal(shim.standaloneWindow.loads.length, 1);

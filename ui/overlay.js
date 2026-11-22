@@ -7,6 +7,17 @@
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
+ // Provider-neutral entry point: the views never name a provider.
+ function segmentsFor(m){
+  return StreamsChatContent.twitch.segments(m.text,m.emotes);
+ }
+ // Text of a rendered node, using an emote image's alt text so QA sees emote names.
+ function nodeText(node){
+  if(node.nodeType===3)return node.nodeValue||'';
+  if(node.nodeName==='IMG')return node.alt||'';
+  if(!node.childNodes)return node.textContent||'';
+  return Array.from(node.childNodes).map(nodeText).join('');
+ }
  const on=(name,fn)=>iina.onMessage(name,data=>{
   try{
    fn(JSON.parse(decodeURIComponent(data.encoded)));
@@ -86,7 +97,7 @@
   author.style.color=authorColor(m.author,m.color);
   author.textContent=m.author;
   const text=document.createElement('span');
-  text.textContent=m.text;
+  text.replaceChildren(...StreamsChatContent.renderSegments(segmentsFor(m),{document}));
   row.append(author,text);
   return row;
  }
@@ -240,7 +251,7 @@
   post('qa-result',{
    action:a.name,
    messageIds:(state.messages||[]).map(m=>m.id),
-   renderedMessages:Array.from(messages.children).map(e=>e.textContent.slice(0,2100)),
+   renderedMessages:Array.from(messages.children).map(e=>nodeText(e).slice(0,2100)),
    visible:!panel.hidden,
    messages:messages.children.length,
    x:panel.offsetLeft,y:panel.offsetTop,

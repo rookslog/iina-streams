@@ -7,9 +7,9 @@
 - **QA mode on the dev identity (#33):** `npm run qa:deploy` stages a dev build with a request/response harness, driven by `qa/control.py` (open, click, state, wait). Release and beta builds never contain it.
 - **VOD chat acquisition is pinned by recorded Twitch fixtures and property tests (#17).** An empty page that claims more follow is retried once, then the window ends with a diagnostic.
 - **Swallowed errors surfaced (#24, part 1):** an unreadable Keychain item, client file or saved login is logged as a code, never its text. A corrupt `settings.json` is kept as `settings.json.corrupt-<time>` before the defaults apply.
+- **Twitch opens without Streamlink (#36):** live channels and VODs resolve in plugin JS (GQL access token, then usher), with the title fetched in parallel. Observed: a live channel resolved in 349 ms in IINA. Network or parse failures fall back to the Python helper; offline, not-found and restricted answers don't.
 - **Groundwork, not yet wired:**
   - a live-latency estimator (`src/live-latency.js`) from the #16/#31 spike;
-  - a JS Twitch playback resolver (`src/twitch-playback.js`, #36);
   - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).
 - Docs: README rewritten for first-time visitors (#38); spikes on live latency, Go Live and the DVR window (#16/#31/#51) and on side chat (#47/#52); D-028, side chat docked beside the video with an mpv margin.
 

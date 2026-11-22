@@ -1,0 +1,29 @@
+{
+  "accessToken": {
+    "value": "fixture-title-token+A/B=&",
+    "signature": "fixture-title-signature+X/Y="
+  },
+  "live": {
+    "data": {
+      "user": {"broadcastSettings": {"title": "Fixture live broadcast"}}
+    }
+  },
+  "vod": {
+    "data": {
+      "video": {"title": "Fixture recording"}
+    }
+  },
+  "missing": {
+    "data": {
+      "user": {"broadcastSettings": {"title": null}}
+    }
+  },
+  "errored": {
+    "data": {
+      "video": null
+    },
+    "errors": [
+      {"message": "Fixture title lookup failed", "path": ["video", "title"]}
+    ]
+  }
+}

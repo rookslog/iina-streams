@@ -9,6 +9,17 @@ function validClientID(v){
  const $=id=>document.getElementById(id);
  let state=null,following=true,signature='';
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
+ // Provider-neutral entry point: the views never name a provider.
+ function segmentsFor(m){
+  return StreamsChatContent.twitch.segments(m.text,m.emotes);
+ }
+ // Text of a rendered node, using an emote image's alt text so QA sees emote names.
+ function nodeText(node){
+  if(node.nodeType===3)return node.nodeValue||'';
+  if(node.nodeName==='IMG')return node.alt||'';
+  if(!node.childNodes)return node.textContent||'';
+  return Array.from(node.childNodes).map(nodeText).join('');
+ }
  const messages=$('messages');
  const FALLBACK_COLORS=['#1661c8','#b84b39','#1d7a6e','#7d49a6','#9a6700','#2e7d32','#ad1457','#0277bd'];
  const TRANSITIONS={
@@ -294,7 +305,10 @@ function validClientID(v){
   author.style.color=authorColor(m.author,m.color);
   author.textContent=m.author;
   const text=document.createElement('span');
-  text.textContent=m.text;
+  // The follow tests run this script alone, without chat-content.js; the page always loads it.
+  // If chat-content.js failed to load, chat still shows as plain text (also what tests/sidebar-follow's bare harness hits).
+  if(typeof StreamsChatContent==='undefined')text.textContent=m.text;
+  else text.replaceChildren(...StreamsChatContent.renderSegments(segmentsFor(m),{document}));
   row.append(author,text);
   return row;
  }
@@ -328,7 +342,7 @@ function validClientID(v){
    scrollTop:messages.scrollTop,
    scrollHeight:messages.scrollHeight,
    clientHeight:messages.clientHeight,
-   renderedMessages:action.name==='inspect'?Array.from(messages.children).slice(-12).map(e=>e.textContent.slice(0,2120)):[],
+   renderedMessages:action.name==='inspect'?Array.from(messages.children).slice(-12).map(e=>nodeText(e).slice(0,2120)):[],
    bodyWidth:document.body.clientWidth,
    scrollWidth:document.body.scrollWidth,
    focused:document.activeElement&&document.activeElement.id,

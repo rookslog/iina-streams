@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src wss://irc-ws.chat.twitch.tv:443; img-src 'none'"><title>Streams</title><link rel="stylesheet" href="sidebar.css"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src wss://irc-ws.chat.twitch.tv:443; img-src https://static-cdn.jtvnw.net"><title>Streams</title><link rel="stylesheet" href="sidebar.css"></head>
 <body>
  <header class="stream-header"><div class="identity"><h1 id="title">Streams</h1><div id="source" class="secondary"></div></div><button id="open" class="icon" title="Open another stream" aria-label="Open another stream" aria-expanded="false" aria-controls="open-form">＋</button><button id="hide" class="icon" title="Hide Streams" aria-label="Hide Streams">×</button></header>
  <form id="open-form" class="open-form" aria-label="Open another stream" hidden>
@@ -28,5 +28,6 @@
   <div id="messages" class="messages" role="log" aria-label="Chat messages" aria-live="off" tabindex="0"></div>
   <button id="follow" class="follow" hidden aria-label="Latest messages" title="Latest messages">↓</button>
  </section>
+ <script src="chat-content.js"></script>
  <script src="sidebar.js"></script>
 </body></html>

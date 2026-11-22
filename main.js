@@ -1,6 +1,13 @@
 "use strict";
 const config=require('./config.js');
 const services=require('./src/io.js').create(iina);
+services.resolve=require('./src/resolve.js').createResolver({
+ resolveTwitch:require('./src/twitch-playback.js').resolveTwitch,
+ http:iina.http,
+ helperResolve:services.resolve.bind(services),
+ log:(...args)=>iina.console.log(args.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' ')),
+ now:()=>Date.now()
+});
 
 if(config.qa){
  const events=[];

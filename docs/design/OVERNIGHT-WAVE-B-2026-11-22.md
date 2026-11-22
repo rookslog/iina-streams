@@ -363,3 +363,65 @@ Routing:
 - The session-change reset.
 
 **Owns:** `ui/overlay-live.js`, `ui/live-history.js` (only if the reducer must report removed ids), `src/player.js` (`onLiveMessages` and the inbox only), and new `tests/c3b-*.test.js`.
+
+---
+
+## A2 — Adopted windows reach global through a mailbox (#56), per D-029
+
+**Why.**
+- **Root cause.** A window IINA opened itself, and Streams adopted (#35), can't message global: `JavascriptAPIGlobalChild.postMessage` calls `parentAPI?…`, and only `createPlayerInstance` sets `parentAPI` (IINA v1.5.1 `JavascriptAPIGlobal.swift` L82–87, L129–131). Every child→global message is a silent no-op: `open`, `auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget` and `player-closed`. Observed natively: global's `player-open` trace stayed empty (#56 comment, 09:51).
+- **The reverse works.** Global's `postMessage(<bare-number label>, …)` reached the adopted window. Observed natively: the QA probe in `qa-label-probe.json` read `"0"` at 09:59. Source: L105–111, and `PlayerCore.swift` L67–81 for the labels.
+- **Global can safely post to any bare label.** Every IINA core has this plugin's instance whenever global runs: cores load plugins at creation (`PlayerCore.swift` L74–81), and enabling a plugin reloads it into every core (`JavascriptPlugin.swift` L54–64 → `reloadPluginForAll`). So L108's force-unwrap can't fail.
+- **The child can't name itself.** `getLabel()` returns `userLabel`, which only `createPlayerInstance` sets (L71–73, L125–127). An adopted child's label must come from global.
+
+**Design.**
+- **Detection:** a player is adopted when `iina.global.getLabel()` is empty. `src/player.js:100` already relies on this.
+- **New module `src/adopted-bridge.js`.** `createBridge({global, file, parse, now, random})` returns a `global`-shaped object: `{getLabel, postMessage, onMessage}`. `main.js` passes it to `start()` **only for adopted players**, through a host whose `global` is the bridge. `src/player.js` is unchanged.
+  - `onMessage(name, cb)` registers with the native child API and keeps a local copy, so the bridge can deliver locally.
+  - **`postMessage('open', {input})`:** if `parse(input)` (the same `Sources.parse` global uses) is null, or the input is blank, deliver `open-error` locally on the next turn and write nothing. If it's valid, file an `open` request with the input.
+  - **Every other name** (`auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget`, `player-closed`): file a request. Data is copied only for `auth-connect`, which carries `{}`-shaped options and no secrets. `auth-*` payloads must not contain tokens; tests assert this.
+  - **Request file:** `@data/bridge/<now>-<random>.json`, containing `{v:1, nonce, label|null, name, data}`. There is one file per request, never a shared read-modify-write.
+  - **Label handshake:** until the child knows its label, requests carry `label:null`, and the bridge listens for `bridge-hello {nonce, label}`. When a hello carries one of its pending nonces, it adopts that label for all later requests. The label is kept for the child's lifetime.
+- **Global, `global.js`:** poll `@data/bridge/` every 1000 ms. For each file, oldest first: read it, delete it, then validate (`v`, a string `name` from the allow-list, a 1–9 digit `label` or null, a nonce of 8–64 `[A-Za-z0-9]`, and an age under 30 s, else drop).
+  - **`label` null:** post `bridge-hello {nonce, label:String(n)}` to labels `"0"`…`"31"`, then re-queue the request in memory (not on disk) for 5 s. If the child files the same nonce again with its label, process it. Otherwise drop it.
+  - **`label` known:** dispatch to the same handlers the native path uses, with `sender = label`.
+    - `targetID` stays managed-only.
+    - A parallel `adopted` set, plus `sessions` keyed by label string, gets the same fences: `postChild` for an adopted label uses `app.postMessage(label, name, wire)`. `auth-ready` goes only to a label in `audience` for the current session, as for managed players.
+    - `open` → `openInput(input)`. `postOpenError` is not needed, because the child already validated.
+  - **Staleness:** `player-closed` removes the label from `adopted`, `audience` and `sessions`. IINA reuses idle cores, so a later `auth-connect` from the same label starts a new session (`nextSession`). An adopted label with no request for 30 min is dropped from `audience`.
+  - Polling cost: one `file.list` per second. Global starts polling only after reading `@data/bridge/` once and finding it present; the bridge creates the directory on its first request. Until an adopted player has filed something, nothing polls.
+- **Security:**
+  - Tokens and device codes travel only global→child in memory (`postMessage`), never through `@data/bridge`.
+  - A request file holds only the message name, the nonce, the label, and for `open` the user's typed input, which is deleted on read.
+  - Never log input text, tokens or signed URLs.
+
+**Tests.**
+- **Bridge (pure):**
+  - adopted detection;
+  - invalid and blank `open` deliver a local `open-error` and write no file;
+  - valid `open` writes one request;
+  - each other name writes one request per call, as distinct files;
+  - `bridge-hello` with a matching nonce sets the label, and a foreign nonce is ignored;
+  - later requests carry the label;
+  - no request file ever contains a token-shaped string, even when called with an `auth-ready`-like payload;
+  - `onMessage` passes through to the native API.
+- **Global (shim):**
+  - a label-null request triggers hellos to 0–31 and is processed when re-filed with the label;
+  - a label-known `auth-connect` adds the label to `audience` and posts `auth-state` by **string** label;
+  - `auth-ready` reaches only a label that connected in the current session;
+  - `player-closed` clears the label;
+  - an `open` request opens a managed player;
+  - malformed, too-old or unknown-name requests are dropped and their files deleted;
+  - files are processed oldest first and deleted after reading;
+  - no polling before the bridge directory exists;
+  - managed players are unchanged (the existing tests stay green).
+- **`main.js`:** an adopted start gets the bridge as `host.global`, and a managed start gets the native `iina.global`.
+
+**Owns:** `src/adopted-bridge.js` (new), `global.js`, `main.js`, new `tests/a2-*.test.js`. Not `src/player.js`.
+
+**Native (lead):**
+- in an adopted window, invalid input turns the + field red at once;
+- valid input opens a managed window;
+- with a saved login, turning chat on connects live chat;
+- sign-in from an adopted window shows the device code in that window;
+- closing the window, then opening another adopted window, works.

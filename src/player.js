@@ -4,6 +4,21 @@ const {Playback}=require('./playback.js');
 const {envelope}=require('./bridge.js');
 const {Replay}=require('./replay.js');
 const {create:createTimers}=require('./timers.js');
+const {createEstimator}=require('./live-latency.js');
+const {createChatTiming}=require('./chat-timing.js');
+const {createLiveClock}=require('./live-clock.js');
+
+// Live latency (#2, #16, #51). The spike's 30 s window held with 18 samples when mpv was read every 1 s; the
+// live clock samples once per 2 s playlist poll, so a 30 s window holds at most 16 samples. 10 samples cover
+// the same 18 s of history (docs/design/SPIKE-16-31-LIVE-LATENCY-2026-11-22.md section 6).
+const LIVE_WINDOW_SECONDS=30;
+const LIVE_MIN_SAMPLES=10;
+// How often the player re-reads the estimate to refresh the pill and the Auto chat delay.
+const LIVE_STATUS_MS=1000;
+// Go Live seeks only when the target is more than this far ahead; otherwise it reloads (spike section 4).
+const GO_LIVE_MIN_LEAD_SECONDS=1;
+// Collides with the main menu's Log Viewer key equivalent in IINA 1.5.1 (tests/fixtures/iina-1.5.1).
+const GO_LIVE_KEY='Ctrl+Meta+l';
 
 const DEFAULT_VIEW={
  presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,
@@ -13,6 +28,10 @@ const DEFAULT_VIEW={
 function clamp(n,low,high,fallback){
  n=Number(n);
  return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fallback;
+}
+
+function plainObject(value){
+ return !!value&&typeof value==='object'&&!Array.isArray(value);
 }
 
 function viewSettings(value){
@@ -236,6 +255,23 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Live chat transport, which runs in the overlay page.
  let liveCredential=null,liveStarted=false,liveRun=0;
  let chat={mode:'off',state:'off',error:'',count:0,sourceName:'',offset:0,available:false};
+ // Live timing (twitch-live only). The clock has its own timer registry, so only stopLiveClock ends it.
+ const chatTiming=createChatTiming(plainObject(persisted.chatTiming)?persisted.chatTiming:{});
+ const estimator=createEstimator({windowSeconds:LIVE_WINDOW_SECONDS,minSamples:LIVE_MIN_SAMPLES});
+ const clockTimers=createTimers(setTimeout,clearTimeout);
+ const liveClock=createLiveClock({
+  http:host.http,
+  readPlayer:readLivePlayer,
+  estimator,
+  setTimer:clockTimers.setTimeout,
+  clearTimer:clockTimers.clearTimeout,
+  now:()=>Date.now(),
+  log:onLiveClockLog
+ });
+ // liveClockURL is the resolved playlist for the load in progress; file-loaded consumes it.
+ let liveClockURL=null,liveClockRunning=false,liveStatusTimer=null,liveStatusKey='',lastClockCode='';
+ // Live chat as received (sanitized, newest 150), and the timer for the next held message.
+ let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
  const listeners=[];
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
  const postOverlay=(name,data)=>overlay.postMessage(name,envelope(data));
@@ -275,6 +311,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    messages:messages.slice(-150),
    position:Number(mpv.getNumber('time-pos'))||0,
    paused:!!mpv.getFlag('pause'),
+   behindLive:behindLive(),
+   chatTiming:Object.assign(chatTiming.settings(),currentTiming()),
    qa:!!config.qa
   });
  }
@@ -294,6 +332,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function send(){
   if(closed)return;
   const s=snapshot();
+  liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming);
   if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});
   if(sidebarReady&&sidebarVisible){
    try{
@@ -323,6 +362,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   sidebar.onMessage('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
   sidebar.onMessage('authorize-open',openActivation);
   sidebar.onMessage('forget-auth',forgetAuth);
+  sidebar.onMessage('chat-timing',setChatTiming);
+  sidebar.onMessage('chat-calibrate',calibrateChat);
+  sidebar.onMessage('go-live',goLive);
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
  }
 
@@ -523,9 +565,189 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function onLiveMessages(data){
   if(closed||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;
-  messages=data.messages.slice(-150).map(safeMessage);
-  chat.count=messages.length;
+  liveInbox=data.messages.slice(-150).map(inboxEntry);
+  revealLive();
   send();
+ }
+
+ // ---- Live chat timing (#2, #28) ----
+
+ // chatTiming.reveal reads {id, timestampMs}; safeMessage keeps the send time as sentAt. A message without
+ // a send time (a notice) has no timestampMs, so it shows at once.
+ function inboxEntry(raw){
+  const message=safeMessage(raw);
+  const entry={id:message.id,message};
+  if(message.sentAt>0)entry.timestampMs=message.sentAt;
+  return entry;
+ }
+
+ function behindLive(){
+  if(source.kind!=='twitch-live'||!liveClockRunning)return null;
+  const value=liveClock.behindLive();
+  return typeof value==='number'&&Number.isFinite(value)?value:null;
+ }
+
+ function currentTiming(){
+  return chatTiming.effective(behindLive());
+ }
+
+ // What the sidebar shows of live timing, at the precision it shows it.
+ function liveStatusKeyOf(behind,timing){
+  const shown=behind===null?'none':String(Math.round(behind));
+  return shown+'|'+timing.mode+'|'+timing.state+'|'+Math.round(timing.delay*2)/2;
+ }
+
+ function clearRevealTimer(){
+  if(revealTimer!==null)timers.clearTimeout(revealTimer);
+  revealTimer=null;
+  revealDueMs=null;
+ }
+
+ // Recomputes the visible live chat with the current delay and arms a timer for the next held message.
+ // Returns whether the visible messages changed.
+ function revealLive(){
+  if(closed||chat.mode!=='live'){
+   clearRevealTimer();
+   return false;
+  }
+  const now=Date.now();
+  const result=chatTiming.reveal(liveInbox,now,currentTiming().delay);
+  const next=result.visible.map(entry=>entry.message);
+  const changed=next.length!==messages.length||next.some((message,i)=>message!==messages[i]);
+  messages=next;
+  chat.count=messages.length;
+  if(result.nextDueMs!==revealDueMs){
+   clearRevealTimer();
+   if(result.nextDueMs!==null){
+    revealDueMs=result.nextDueMs;
+    revealTimer=timers.setTimeout(onRevealDue,Math.max(0,result.nextDueMs-now));
+   }
+  }
+  return changed;
+ }
+
+ function onRevealDue(){
+  revealTimer=null;
+  revealDueMs=null;
+  if(revealLive())send();
+ }
+
+ function saveChatTiming(){
+  saveSetting({chatTiming:chatTiming.settings()});
+ }
+
+ // Sidebar 'chat-timing': a partial {mode, manualDelay, fineTune}; chatTiming clamps and rounds it.
+ function setChatTiming(data){
+  if(closed||!sourceActive||!plainObject(data))return;
+  const partial={};
+  for(const key of ['mode','manualDelay','fineTune']){
+   if(key in data)partial[key]=data[key];
+  }
+  chatTiming.update(partial);
+  saveChatTiming();
+  revealLive();
+  send();
+ }
+
+ // #28 sidebar 'chat-calibrate' {id}: in Manual, the clicked message is what the video shows now.
+ function calibrateChat(data){
+  if(closed||!sourceActive||chat.mode!=='live'||chatTiming.settings().mode!=='manual')return;
+  const id=plainObject(data)&&typeof data.id==='string'?data.id:'';
+  const entry=id?liveInbox.find(item=>item.id===id&&typeof item.timestampMs==='number'):null;
+  if(!entry)return;
+  chatTiming.calibrate(entry,Date.now());
+  saveChatTiming();
+  revealLive();
+  send();
+ }
+
+ // ---- Live clock ----
+
+ // IINA 1.5.1 JavascriptAPIMpv.getNative returns the demuxer-cache-state node as an object.
+ function readLivePlayer(){
+  let cacheEnd=null;
+  try{
+   const state=typeof mpv.getNative==='function'?mpv.getNative('demuxer-cache-state'):null;
+   if(state&&typeof state['cache-end']==='number')cacheEnd=state['cache-end'];
+  }catch(_){}
+  return{timePos:mpv.getNumber('time-pos'),cacheEnd};
+ }
+
+ // The clock passes a code only. The playlist URL is signed and never reaches a log.
+ function onLiveClockLog(code){
+  if(code===lastClockCode)return;
+  lastClockCode=code;
+  trace('live-clock',{code:String(code)});
+ }
+
+ function startLiveClock(){
+  const url=liveClockURL;
+  liveClockURL=null;
+  stopLiveClock();
+  estimator.reset();
+  lastClockCode='';
+  liveClock.start(url);
+  liveClockRunning=true;
+  liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
+ }
+
+ function stopLiveClock(){
+  liveClock.stop();
+  liveClockRunning=false;
+  if(liveStatusTimer!==null)timers.clearTimeout(liveStatusTimer);
+  liveStatusTimer=null;
+ }
+
+ // The clock has no callback, so the player re-reads it: the pill and the Auto delay follow the estimate.
+ function onLiveStatusTick(){
+  liveStatusTimer=null;
+  if(closed||!liveClockRunning)return;
+  const changed=revealLive();
+  if(changed||liveStatusKeyOf(behindLive(),currentTiming())!==liveStatusKey)send();
+  liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
+ }
+
+ // ---- Go Live (#51) ----
+
+ async function goLive(){
+  if(closed||!sourceActive||source.kind!=='twitch-live'||goLiveBusy)return;
+  const target=liveClockRunning?liveClock.goLiveTarget():null;
+  const position=mpv.getNumber('time-pos');
+  if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS){
+   mpv.command('seek',[String(target),'absolute']);
+   trace('go-live',{action:'seek'});
+   return;
+  }
+  await reloadCurrentQuality();
+ }
+
+ // A seek at or past the cache end is a no-op, so the fallback reloads the playing quality at the live edge.
+ // player.change() returns early for the current quality, so this stages the reload itself, taking the next
+ // Playback generation so its load marker cannot repeat one a quality change will use.
+ async function reloadCurrentQuality(){
+  const quality=player.snapshot().quality;
+  if(player.snapshot().busy)return;
+  goLiveBusy=true;
+  try{
+   const result=await services.resolve(source,quality);
+   if(closed||!sourceActive||player.snapshot().busy)return;
+   if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The stream could not be reloaded.');
+   const context={
+    generation:++player.generation,
+    position:0,
+    paused:!!mpv.getFlag('pause'),
+    speed:Number(mpv.getNumber('speed'))||1
+   };
+   replaceFile(result,context);
+   trace('go-live',{action:'reload',quality:result.quality});
+  }catch(error){
+   if(!closed&&sourceActive){
+    loadError=publicError(error,'The stream could not be reloaded.');
+    send();
+   }
+  }finally{
+   goLiveBusy=false;
+  }
  }
 
  function setView(change){
@@ -585,6 +807,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    }catch(_){}
   }
   if(!options||options.releaseAuth!==false)app.postMessage('auth-disconnect',{});
+  clearRevealTimer();
+  liveInbox=[];
   messages=[];
   chat.mode='off';
   chat.state='off';
@@ -874,6 +1098,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
   if(result.audioURL)mpv.command('audio-add',[result.audioURL,'auto','Audio']);
   mpv.set('stream-open-filename',result.mediaURL);
+  liveClockURL=source.kind==='twitch-live'&&typeof result.mediaURL==='string'?result.mediaURL:null;
   mpv.set('file-local-options/force-media-title',String(result.title||source.id)+' — '+source.provider);
   if(context.position>0&&!result.live)mpv.set('file-local-options/start',context.position);
   mpv.set('pause',!!context.paused);
@@ -935,6 +1160,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   chatOff();
   if(services.cancelHelpers)services.cancelHelpers();
   player.deactivate();
+  stopLiveClock();
   timers.clearAll();
   staged=null;
   loadError='Streams controls are inactive for this file. Open a new stream from the Plugins menu.';
@@ -977,6 +1203,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     finish();
     return;
    }
+   // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
+   stopLiveClock();
+   liveClockURL=null;
    let result,context;
    if(staged){
     result=staged.result;
@@ -1049,6 +1278,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(controlsDesired&&loadedGeneration===0)showSidebar();
   if(overlayNeeded())ensureOverlay();
   if(loadedGeneration===0)maybeAutoFetchReplay();
+  if(liveClockURL)startLiveClock();
   tick(true);
   trace('file-loaded',{
    generation:loadedGeneration,
@@ -1092,6 +1322,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   closed=true;
   generation++;
   player.close();
+  stopLiveClock();
   timers.clearAll();
   restoreTimer=null;
   restoration=null;
@@ -1156,6 +1387,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   stopLiveTransport();
   if(chat.mode==='live'){
    chat.state='disconnected';
+   clearRevealTimer();
+   liveInbox=[];
    messages=[];
    send();
   }
@@ -1224,11 +1457,27 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   else if(source.kind==='twitch-live'&&chat.mode==='off')app.postMessage('auth-probe',{});
  }
 
+ // Beside Video is D1's presentation (D-028), not built yet: listed, disabled until D1 adds it.
+ function chatMenu(){
+  const parent=menu.item('Chat',null);
+  const children=[
+   menu.item('Import Chat Archive…',()=>importArchive()),
+   menu.item('Turn Chat Off',onChatOffRequest),
+   menu.item('In Sidebar',()=>setView({presentation:'sidebar'})),
+   menu.item('Over Video',()=>setView({presentation:'overlay'})),
+   menu.item('Beside Video',()=>setView({presentation:'beside'}),{enabled:false})
+  ];
+  for(const child of children)parent.addSubMenuItem(child);
+  return parent;
+ }
+
+ // IINA 1.5.1 shows five top-level plugin items, counting global's Open Stream (MenuController.updatePluginMenu).
+ // A parent with a null action only opens its submenu (JavascriptAPIMenu.item, JavascriptPluginMenuItem).
  menu.addItem(menu.item('Show Streams',showSidebar));
- menu.addItem(menu.item('Import Chat Archive…',()=>importArchive()));
- menu.addItem(menu.item('Turn Chat Off',onChatOffRequest));
- menu.addItem(menu.item('Chat in Sidebar',()=>setView({presentation:'sidebar'})));
- menu.addItem(menu.item('Chat over Video',()=>setView({presentation:'overlay'})));
+ menu.addItem(menu.item('Go Live',()=>{
+  goLive();
+ },{keyBinding:GO_LIVE_KEY,enabled:source.kind==='twitch-live'}));
+ menu.addItem(chatMenu());
  if(windowLoaded)showSidebar();
 
  return{

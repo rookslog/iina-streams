@@ -8,8 +8,14 @@ const ui = name => fs.readFileSync(path.join(__dirname, '..', 'ui', name), 'utf8
 
 test('removed narration stays removed', () => {
   const html = ui('sidebar.html'), side = ui('sidebar.js'), over = ui('overlay.js');
-  for (const gone of ['Chat will appear here', 'Drag chat on the video', 'Chat is displayed over the video', 'Read-only chat messages', 'Latest messages ↓'])
+  for (const gone of ['Chat will appear here', 'Drag chat on the video', 'Chat is displayed over the video', 'Read-only chat messages', 'Latest messages ↓', 'Hide inspector'])
     assert.ok(![html, side, over].some(src => src.includes(gone)), gone);
+});
+
+test('removed sidebar markup stays removed (D1c)', () => {
+  const html = ui('sidebar.html'), side = ui('sidebar.js'), css = ui('sidebar.css');
+  for (const gone of ['chat-status', 'hide-for-overlay', 'overlay-note', 'aria-label="Show chat"'])
+    assert.ok(![html, side, css].some(src => src.includes(gone)), gone);
 });
 
 test('connection and loading steps are tooltips on a busy indicator, not status text', () => {

@@ -553,6 +553,7 @@ def twitch_acquire(url, output, *, at=0, fetch_page=twitch_page, on_published=No
             total, messages, pages = 0, 0, 0
             offset, seen_ids = target_start, set()
             maximum, minimum, more, bounded = -1.0, None, True, False
+            empty_retried, diagnostic = False, None
             with path.open('x', encoding='utf-8') as out:
                 os.chmod(path, 0o600)
                 def emit(value):
@@ -574,9 +575,17 @@ def twitch_acquire(url, output, *, at=0, fetch_page=twitch_page, on_published=No
                     if not isinstance(edges, list) or type(more) is not bool or len(edges) > 500:
                         raise AcquireError('INVALID_ARCHIVE')
                     if not edges:
-                        if more:
-                            raise AcquireError('INVALID_ARCHIVE')
-                        break
+                        if not more:
+                            break
+                        # An empty page that says more follow is a schema-valid answer, not
+                        # an invalid archive. Ask for the same offset once more, then stop
+                        # with what was gathered and say why.
+                        if empty_retried:
+                            diagnostic = 'EMPTY_PAGE_WITH_MORE'
+                            break
+                        empty_retried = True
+                        continue
+                    empty_retried = False
                     page_max = -1
                     for edge in edges:
                         node = edge.get('node') if isinstance(edge, dict) else None
@@ -619,6 +628,8 @@ def twitch_acquire(url, output, *, at=0, fetch_page=twitch_page, on_published=No
                     'pages': pages, 'count': messages
                 },
             }
+            if diagnostic:
+                result['window']['diagnostic'] = diagnostic
             if on_published is not None:
                 on_published(result)
             return result

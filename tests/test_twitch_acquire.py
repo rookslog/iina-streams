@@ -141,7 +141,9 @@ class TwitchAcquisitionTests(unittest.TestCase):
     def test_no_replay_and_partial_failures_never_publish(self):
         cases = [
             (lambda *a, **kw: ([], False), 'NO_REPLAY'),
-            (lambda *a, **kw: ([edge()], True) if a[1] == 0 else ([], True), 'INVALID_ARCHIVE'),
+            # An empty page with more pages following is no longer INVALID_ARCHIVE; it is retried
+            # once and then ends with a diagnostic. See tests/test_acquire_property.py (issue #17).
+            (lambda *a, **kw: ([], True), 'NO_REPLAY'),
             (lambda *a, **kw: (_ for _ in ()).throw(acquire.AcquireError('EXTRACTOR_FAILED')), 'EXTRACTOR_FAILED'),
         ]
         for fetch, code in cases:

@@ -7,6 +7,13 @@
 
 const {isSafeMediaUrl} = require('./twitch-playback.js');
 
+// Copy of Info.json allowedDomains: IINA's http.get denies any other host and puts the whole (signed) URL
+// in its exception. A test keeps this equal to Info.json (v0.5.5 review r3 #1).
+const HTTP_ALLOWED_DOMAINS = Object.freeze([
+  'twitch.tv', '*.twitch.tv', '*.ttvnw.net', '*.twitchcdn.net', 'd2vi6trrdongqn.cloudfront.net',
+  'youtube.com', '*.youtube.com', 'youtu.be', '*.googlevideo.com', 'id.twitch.tv', 'irc-ws.chat.twitch.tv',
+]);
+
 const GO_LIVE_MARGIN_SECONDS = 2;
 const PDT_PREFIX = '#EXT-X-PROGRAM-DATE-TIME:';
 const EXTINF_PREFIX = '#EXTINF:';
@@ -52,6 +59,26 @@ function parseNewestSegmentEnd(text) {
     }
   }
   return newestEnd;
+}
+
+function urlHost(url) {
+  const match = /^https:\/\/([^/?#]*)/i.exec(url);
+  if (!match) {
+    return null;
+  }
+  const colon = match[1].indexOf(':');
+  return (colon === -1 ? match[1] : match[1].slice(0, colon)).toLowerCase();
+}
+
+// IINA's match: "*.x" needs a dotted subdomain of x (not x itself); any other entry must match exactly.
+function hostIsAllowedByIina(url) {
+  const host = urlHost(url);
+  if (!host) {
+    return false;
+  }
+  return HTTP_ALLOWED_DOMAINS.some(entry => (entry.startsWith('*.')
+    ? host.endsWith(entry.slice(1)) && host.length > entry.length - 1
+    : host === entry));
 }
 
 function isFiniteNumber(value) {
@@ -159,7 +186,7 @@ function createLiveClock({
     inFlightSince = null;
     // IINA embeds a disallowed or invalid URL in its http.get exception, and this URL is signed, so an
     // unsafe one is never handed to it (v0.5.5 review r2 #1). Only a fixed code is recorded.
-    if (!isSafeMediaUrl(mediaURL, 'live')) {
+    if (!isSafeMediaUrl(mediaURL, 'live') || !hostIsAllowedByIina(mediaURL)) {
       log('playlist-url-unsafe');
       return;
     }
@@ -192,4 +219,4 @@ function createLiveClock({
   return {start, stop, behindLive, goLiveTarget};
 }
 
-module.exports = {createLiveClock, parseNewestSegmentEnd};
+module.exports = {createLiveClock, parseNewestSegmentEnd, HTTP_ALLOWED_DOMAINS};

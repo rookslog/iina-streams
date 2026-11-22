@@ -67,7 +67,8 @@ function urlHost(url) {
     return null;
   }
   const colon = match[1].indexOf(':');
-  return (colon === -1 ? match[1] : match[1].slice(0, colon)).toLowerCase();
+  // Exactly as written, never lowercased: IINA compares hosts case-sensitively (v0.5.5 review r4 #1).
+  return colon === -1 ? match[1] : match[1].slice(0, colon);
 }
 
 // IINA's match: "*.x" needs a dotted subdomain of x (not x itself); any other entry must match exactly.

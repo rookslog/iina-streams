@@ -7,7 +7,11 @@ const {create:createTimers}=require('./src/timers.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
-const audience=new Set(),managed=new Set(),sessions=new Map();
+// A managed player is keyed by its numeric id. A window IINA opened itself ("adopted", #35) is keyed by
+// IINA's own label, a string of digits, so the two kinds never share a key.
+const audience=new Set(),managed=new Set(),adopted=new Set(),sessions=new Map();
+// Sessions come from one counter, so a label IINA reuses for an idle core never repeats an old session.
+let lastSession=0;
 let credentials=null;
 const qaEvents=[];
 // The user's own Twitch app Client ID, when they entered one.
@@ -30,22 +34,50 @@ function targetID(label){
  return managed.has(id)&&label===id+'-'+config.identifier?id:null;
 }
 
+// IINA labels the cores it creates itself with a bare number (PlayerCore.swift, IINA v1.5.1).
+function adoptedLabel(label){
+ return typeof label==='string'&&/^[0-9]{1,9}$/.test(label)?label:null;
+}
+
+// The reply key for a sender: a managed player's numeric id, an adopted window's string label, or null.
+// An adopted label is recorded here so replies can reach it until it reports player-closed.
+function acceptSender(label){
+ const id=targetID(label);
+ if(id!==null)return id;
+ const adoptedKey=adoptedLabel(label);
+ if(adoptedKey===null)return null;
+ if(!adopted.has(adoptedKey)){
+  adopted.add(adoptedKey);
+  // A fresh session: replies queued for this label before an earlier player-closed are dropped.
+  nextSession(adoptedKey);
+ }
+ return adoptedKey;
+}
+
+// Whether a reply key still names an open player: numbers are managed ids, strings are adopted labels.
+function isOpen(key){
+ return typeof key==='number'?managed.has(key):adopted.has(key);
+}
+
 function createPlayer(options){
  const id=app.createPlayerInstance(options);
  if(typeof id==='number'){
   managed.add(id);
-  sessions.set(id,0);
+  nextSession(id);
  }
  qaTrace('created',{id,type:typeof id});
  return id;
 }
 
-function nextSession(id){
- sessions.set(id,(sessions.get(id)||0)+1);
+function nextSession(key){
+ lastSession+=1;
+ sessions.set(key,lastSession);
 }
 
+// `id` is a reply key from acceptSender. IINA's global.postMessage takes a player id or a label string
+// (JavascriptAPIGlobal.swift L105-111, IINA v1.5.1).
 function postChild(id,name,data){
- if(!managed.has(id))return;
+ if(!isOpen(id))return;
  let wire;
  try{
   wire=JSON.stringify(data);
@@ -58,7 +90,7 @@ function postChild(id,name,data){
  // Match the successful native probe: use a primitive payload after the
  // originating child call has returned. Never enqueue native objects.
  timers.setTimeout(()=>{
-  if(!managed.has(id)||session!==sessions.get(id))return;
+  if(!isOpen(id)||session!==sessions.get(id))return;
   if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
   if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
   app.postMessage(id,name,wire);
@@ -197,22 +229,18 @@ function onPlayerOpen(data,label){
 // closed players. A window IINA opened itself and Streams adopted (#35) sends IINA's own label, a bare
 // number (PlayerCore.swift in IINA 1.5.1); global.postMessage reaches it by that label.
 function postOpenError(label){
- const id=targetID(label);
- if(id!==null){
-  qaTrace('open-error',{route:'managed',id});
-  postChild(id,'open-error',{});
-  return;
- }
- if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label)){
+ const key=acceptSender(label);
+ if(key===null){
   qaTrace('open-error',{route:'dropped',sender:label});
   return;
  }
- qaTrace('open-error',{route:'label',sender:label});
- timers.setTimeout(()=>app.postMessage(label,'open-error','{}'),0);
+ if(typeof key==='number')qaTrace('open-error',{route:'managed',id:key});
+ else qaTrace('open-error',{route:'label',sender:label});
+ postChild(key,'open-error',{});
 }
 
 async function onAuthConnect(data,label){
- const id=targetID(label);
+ const id=acceptSender(label);
  qaTrace('auth-connect',{sender:label,id,managed:Array.from(managed)});
  gLog('auth-connect',{id,phase:auth.snapshot().phase,hasCred:!!credentials});
  if(id===null)return;
@@ -248,7 +276,7 @@ async function onAuthConnect(data,label){
 }
 
 function onAuthProbe(_,label){
- const id=targetID(label);
+ const id=acceptSender(label);
  gLog('auth-probe',{id,hasCred:!!credentials});
  if(id===null)return;
  if(credentials){
@@ -267,34 +295,45 @@ function onAuthProbe(_,label){
 }
 
 function onAuthDisconnect(_,label){
- const id=targetID(label);
- if(id===null)return;
+ // A label that was never in the audience is neither registered nor allowed to stop the broker (r2 #4).
+ const managedID=targetID(label);
+ const id=managedID!==null?managedID:adoptedLabel(label);
+ if(id===null||!audience.delete(id))return;
  nextSession(id);
- audience.delete(id);
  if(!audience.size)auth.stop();
 }
 
 function onPlayerClosed(_,label){
- const id=targetID(label);
+ const managedID=targetID(label);
+ const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
  audience.delete(id);
- managed.delete(id);
+ if(typeof id==='number')managed.delete(id);
+ else adopted.delete(id);
  sessions.delete(id);
  if(!audience.size)auth.stop();
 }
 
 async function onAuthForget(_,label){
- const id=targetID(label);
+ const id=acceptSender(label);
  if(id===null)return;
  nextSession(id);
+ // The requester's session now. If that label retires or reconnects during the revoke, the reply is dropped
+ // rather than landing on a successor controller (r2 #4).
+ const session=sessions.get(id);
  const pending=auth.forget();
  audience.clear();
  const result=await pending;
- if(result&&!result.stale&&managed.has(id))postChild(id,'auth-forgotten',result);
+ if(result&&!result.stale&&isOpen(id)&&sessions.get(id)===session)postChild(id,'auth-forgotten',result);
 }
 
 menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
-if(typeof menu.forceUpdate==='function')menu.forceUpdate();
+// Refresh the menu on the next turn, not while this initializer runs. In IINA v1.5.1 a synchronous
+// forceUpdate runs updatePluginMenu -> PlayerCore.active -> PlayerCore.first, which creates core "0"
+// before this global instance is registered, so that core gets a nil parentAPI and can never message
+// global (MenuController.swift L619, PlayerCore.swift L40-46, JavascriptPlugin.swift L166-168,
+// JavascriptPluginInstance.swift L175-182). v0.5.5 review r1 #5.
+if(typeof menu.forceUpdate==='function')timers.setTimeout(()=>menu.forceUpdate(),0);
 app.onMessage('open',onPlayerOpen);
 app.onMessage('auth-connect',onAuthConnect);
 app.onMessage('auth-probe',onAuthProbe);

@@ -19,7 +19,7 @@ const requireFromPlayer = createRequire(playerPath);
 const liveSource = Sources.parse('fixture_c3_live');
 const vodSource = Sources.parse('https://www.twitch.tv/videos/99999999999999999999');
 const signature = 'fake-c3-signature';
-const mediaURL = quality => `https://media.invalid/${quality}.m3u8?sig=${signature}`;
+const mediaURL = quality => `https://video-weaver.ttvnw.net/${quality}.m3u8?sig=${signature}`;
 const playlist = [
   '#EXTM3U',
   '#EXT-X-PROGRAM-DATE-TIME:2026-01-01T00:00:00Z',
@@ -111,6 +111,16 @@ function playerFixture(t, options = {}) {
     assert.equal(continued, 1, 'the normal mpv load hook continues once');
   }
 
+  // v0.5.5 review r2 #6: a foreign file deactivates on a main-thread turn and holds the load until then.
+  async function loadForeignHook(path) {
+    shim.mpv.set('path', path);
+    let continued = 0;
+    const hook = shim.mpv.runHook('on_load', () => continued++);
+    shim.timers.advance(0);
+    await hook;
+    assert.equal(continued, 1, 'the foreign file load continues once');
+  }
+
   async function fileLoaded(path = source.url) {
     shim.emit('iina.file-loaded', path);
     shim.emit('iina.window-size-adjusted');
@@ -137,7 +147,7 @@ function playerFixture(t, options = {}) {
     return messages => shim.overlay.send('live-messages', {session, messages});
   }
 
-  return {shim, controller, traces, resolveCalls, loadHook, fileLoaded, load, connectChat};
+  return {shim, controller, traces, resolveCalls, loadHook, loadForeignHook, fileLoaded, load, connectChat};
 }
 
 // The shim records mpv argument arrays from the player's VM realm.
@@ -199,12 +209,12 @@ for (const replacedURL of [false, true]) {
 
 for (const trigger of ['close', 'deactivation', 'foreign source']) {
   test(`live clock stops on ${trigger}`, async t => {
-    const {shim, controller, load, loadHook} = playerFixture(t);
+    const {shim, controller, load, loadForeignHook} = playerFixture(t);
     await load();
     const activePolls = polledURLs(shim);
     if (trigger === 'close') shim.emit('iina.window-will-close');
     else if (trigger === 'deactivation') controller.passThrough();
-    else await loadHook(Sources.parse('fixture_c3_other').url);
+    else await loadForeignHook(Sources.parse('fixture_c3_other').url);
     assert.equal(controller.snapshot().phase, trigger === 'close' ? 'closed' : 'inactive');
     shim.timers.advance(10000);
     await settle();

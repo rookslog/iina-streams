@@ -29,6 +29,18 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(len(CHECK.problems(dict(self.info, ghVersion=True), self.package)), 1)
 
 
+    def test_a_new_version_raises_gh_version_above_main(self):
+        # IINA v1.5.1 offers a GitHub update only when ghVersion is strictly greater (JavascriptPlugin.swift
+        # L511-L526); v0.5.5 release review round 1, finding 4. Skipped where `main` isn't available.
+        import subprocess
+        shown = subprocess.run(['git', 'show', 'main:Info.json'], cwd=ROOT, capture_output=True, text=True)
+        if shown.returncode != 0:
+            self.skipTest('main is not available in this checkout')
+        released = json.loads(shown.stdout)
+        if released['version'] == self.info['version']:
+            return
+        self.assertGreater(int(self.info['ghVersion']), int(released['ghVersion']))
+
     def test_checked_in_embedded_helpers_match_helpers_sources(self):
         # A source install (IINA's main.zip fallback) runs this checked-in copy, not a rebuilt one.
         # Release review 2026-11-22 found 'acquire' stale. Fix: python3 scripts/build.py --sync-embedded

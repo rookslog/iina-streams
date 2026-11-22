@@ -29,7 +29,7 @@ function adoptedWindow({qa = false, resolve} = {}) {
   const shim = createIina({label: '', mpv: {path: vodURL, 'stream-open-filename': vodURL}});
   assert.equal(shim.iina.core.window.loaded, true, 'precondition: the window is loaded before adoption');
   const services = {readSettings: () => ({chatEnabled: false}), resolve};
-  assert.equal(start(shim.iina, {variant: 'unified', qa}, services), null);
+  assert.equal(start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified', qa}, services), null);
   return shim;
 }
 
@@ -106,8 +106,10 @@ test('watchdog also covers a later load in an adopted window', async t => {
   pending.calls[0].settle(resolved());
   await settle();
   assert.equal(continued, 1);
-  // The same URL opened again resolves again; that resolve never settles.
+  // The same URL opened again resolves again; that resolve never settles. Every later load yields a
+  // main-thread turn before controller work (review r1 #8).
   shim.mpv.runHook('on_load', () => continued++);
+  t.mock.timers.tick(0);
   await settle();
   assert.equal(pending.calls.length, 2);
   assert.equal(continued, 1);
@@ -170,7 +172,7 @@ test('a throw while reading the loading path passes the file through instead of 
 
 test('a file that is not adopted arms no timer', async t => {
   const shim = createIina({label: '', mpv: {path: '/Users/x/movie.mkv'}});
-  start(shim.iina, {variant: 'unified'}, {resolve: async () => assert.fail('no resolve')});
+  start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'}, {resolve: async () => assert.fail('no resolve')});
   const realSetTimeout = globalThis.setTimeout;
   let armed = 0;
   globalThis.setTimeout = (...args) => {

@@ -16,7 +16,7 @@ test('behindLive reads the current time-pos between samples', async () => {
     clearTimer() {},
     now: () => clockMs,
   });
-  clock.start('https://example.invalid/v.m3u8?sig=FAKE');
+  clock.start('https://video-weaver.ttvnw.net/v.m3u8?sig=FAKE');
   await new Promise(setImmediate);
   clockMs += 1500;
   timePos = 51.5;

@@ -22,7 +22,7 @@ const playerPath = join(__dirname, '../src/player.js');
 const requireFromPlayer = createRequire(playerPath);
 const liveSource = Sources.parse('fixture_c3_extra');
 const vodSource = Sources.parse('https://www.twitch.tv/videos/88888888888888888888');
-const mediaURL = quality => `https://media.invalid/${quality}.m3u8?sig=fake-c3-extra-signature`;
+const mediaURL = quality => `https://video-weaver.ttvnw.net/${quality}.m3u8?sig=fake-c3-extra-signature`;
 const START_MS = Date.parse('2026-01-01T00:00:10Z');
 
 const settle = () => new Promise(resolve => setImmediate(resolve));

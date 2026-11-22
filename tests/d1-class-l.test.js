@@ -4,9 +4,9 @@
 // The explorer's alphabet has no view change, so it never enters beside; these pin beside across a loss.
 //   - Between a foreign hook and its release turn nothing is current: a resize, an overlay column drag or a
 //     sidebar view change writes no margin and no frame. The release turn then leaves beside once.
-//   - The applied margin and widening are window-scoped (they mirror mpv's option and the window frame). An
-//     own-source reopen before the release turn is a new activation; it must neither keep a stale margin nor
-//     widen the window a second time.
+//   - The applied margin and widening are window-scoped (they mirror mpv's option and the window frame). D-033:
+//     an own-source reopen before the release turn passes through and begins no activation, so the release
+//     turn clears the margin and restores the width once, and the window stays inactive.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -132,48 +132,41 @@ test('D1 class L: the release turn of a foreign load clears the margin and resto
   assert.equal(shim.core.native.frame.width, 800);
 });
 
-test('D1 class L: an own-source reopen before the release turn neither keeps the margin nor widens twice', async t => {
-  const {shim, controller, load, connect} = await besideWindow(t);
-  await load(foreignFile);
-  const atLoss = mark(shim);
-  // A new activation, before the foreign load's release turn. Its chat starts off, so its first state
-  // (Playback.adopt, after the resolve) leaves beside.
-  await load(source.url);
-  shim.timers.advance(0);
-  await settle();
-  shim.emit('iina.file-loaded', source.url);
-  shim.emit('iina.window-size-adjusted', {...shim.core.native.frame});
-  shim.timers.advance(3000);
-  await settle();
-  assert.equal(controller.snapshot().chat.mode, 'off', 'precondition: the new activation starts with chat off');
-  assert.deepEqual(marginWrites(shim, atLoss.sets), [[marginOption, 0]], 'beside is left once, with chat off');
-  assert.equal(shim.core.native.frame.width, 800, 'and the widening is undone');
+// D-033 (v0.5.5): a loss is final. This replaces "an own-source reopen before the release turn neither keeps the
+// margin nor widens twice": the reopen no longer begins an activation, so nothing can widen the window again.
+test('D1 class L: an own-source reopen before the release turn passes through, and the release leaves beside once',
+  async t => {
+    const {shim, controller, load} = await besideWindow(t);
+    await load(foreignFile);
+    const atLoss = mark(shim);
+    await load(source.url); // The source reopens before the release turn, and continues once (load asserts it).
+    assert.deepEqual(shim.mpv.sets.slice(atLoss.sets), [], 'the reopen sets nothing on mpv: it passes through');
+    shim.timers.advance(0); // The release turn.
+    await settle();
+    shim.emit('iina.file-loaded', source.url);
+    shim.emit('iina.window-size-adjusted', {...shim.core.native.frame});
+    shim.timers.advance(3000);
+    await settle();
+    assert.deepEqual(marginWrites(shim, atLoss.sets), [[marginOption, 0]], 'the release clears the margin once');
+    assert.deepEqual(frameWrites(shim, atLoss.frames).map(frame => frame.width), [800], 'and restores the width once');
+    assert.equal(shim.core.native.frame.width, 800);
+    assert.equal(controller.snapshot().phase, 'inactive', 'the window stays inactive');
+  });
 
-  connect();
-  shim.overlay.send('overlay-ready', {});
-  shim.timers.flush();
-  assert.equal(controller.snapshot().chat.mode, 'live', 'precondition: chat is on again');
-  const widths = frameWrites(shim, atLoss.frames).map(frame => frame.width);
-  assert.deepEqual(widths, [800, 1120], 'the window widens again from its original width, once');
-  assert.ok(Math.abs(shim.mpv.props.get(marginOption) - 320 / 1120) < 1e-6, 'and the margin is reserved again');
-});
-
-test('D1 class L: a reopen still resolving at the release turn does not keep the old margin', async t => {
-  const {shim, load, holdResolve, releaseResolve} = await besideWindow(t);
-  await load(foreignFile);
-  const atLoss = mark(shim);
-  holdResolve();
-  shim.mpv.set('path', source.url);
-  let continued = 0;
-  shim.mpv.runHook('on_load', () => continued++);
-  await settle();
-  assert.equal(continued, 0, 'precondition: the reopen is still resolving');
-  shim.timers.advance(0); // The foreign load's release turn, with the newer activation current.
-  await settle();
-  assert.equal(shim.overlay.visible, false, 'the release hides the old overlay');
-  assert.deepEqual(marginWrites(shim, atLoss.sets), [[marginOption, 0]], 'and leaves beside with it');
-  assert.equal(shim.core.native.frame.width, 800, 'restoring the width');
-  releaseResolve();
-  await settle();
-  assert.equal(continued, 1, 'the reopen continues once');
-});
+// D-033 (v0.5.5): this replaces "a reopen still resolving at the release turn does not keep the old margin". The
+// reopen no longer resolves: with a resolve held, it still continues at once.
+test('D1 class L: a reopen at the release turn passes through without resolving, and beside is left once',
+  async t => {
+    const {shim, controller, load, holdResolve} = await besideWindow(t);
+    await load(foreignFile);
+    const atLoss = mark(shim);
+    holdResolve();
+    await load(source.url); // Continues once although a resolve would be held: nothing resolves.
+    shim.timers.advance(0); // The foreign load's release turn.
+    await settle();
+    assert.equal(shim.overlay.visible, false, 'the release hides the old overlay');
+    assert.deepEqual(marginWrites(shim, atLoss.sets), [[marginOption, 0]], 'and leaves beside with it');
+    assert.deepEqual(frameWrites(shim, atLoss.frames).map(frame => frame.width), [800], 'restoring the width once');
+    assert.equal(shim.core.native.frame.width, 800);
+    assert.equal(controller.snapshot().phase, 'inactive', 'the window stays inactive');
+  });

@@ -1,5 +1,6 @@
 "use strict";
 const config=require('./config.js');
+const {listen}=require('./src/listeners.js');
 const services=require('./src/io.js').create(iina);
 services.resolve=require('./src/resolve.js').createResolver({
  resolveTwitch:require('./src/twitch-playback.js').resolveTwitch,
@@ -24,7 +25,7 @@ if(config.qa){
 
 if(config.qa){
  // #56 probe receiver: record which bare label global's string-target postMessage reached.
- iina.global.onMessage('qa-label-probe',data=>{
+ listen(iina.global,'global','qa-label-probe',data=>{
   let parsed=data;
   try{
    if(typeof data==='string')parsed=JSON.parse(data);

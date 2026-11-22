@@ -11,11 +11,19 @@
 // is the model's name for an activation:
 //   - the first epoch begins when the controller starts;
 //   - a foreign-file hook or a window close ends the current epoch;
-//   - after that, an own-source hook begins a new epoch.
+//   - D-033 (v0.5.5): a loss is final. An own-source hook after it, before or after the cleanup turn, begins no
+//     epoch: it passes through, and its work is attributed to the ended epoch, so it may emit nothing.
 // Work is attributed to the epoch that started it:
 //   - a step to the epoch current when it runs (a loss step to the epoch it ends);
 //   - a timer to the step that armed it;
 //   - a resolve settlement to the step that called services.resolve.
+//
+// A close between promise jobs (class L pass 2). IINA delivers the window close on the main thread while mpv's hook
+// queue and promise jobs run on their own schedule, so a close need not wait for the previous step's jobs to drain.
+// Every exhaustive sequence that ends in a close after another step is also run with that close fired N promise
+// jobs after the previous step's promise settles, for each N in CLOSE_JOBS, before those jobs drain. Random runs
+// draw the same. The explorer is not told which N matters. These runs check L4, L5 and the host rule like any
+// other step (L5 before the close against the model as it was then).
 //
 // Checked per step:
 //   L4: an on_load hook's `next` runs at most once; at quiescence, exactly once.
@@ -28,6 +36,7 @@
 //         - overlay `live-stop`, `overlay.hide` and `overlay.setClickable`;
 //         - the `chat-off` and `window-closed` traces.
 //       Teardown that a newer epoch could see is never allowed: no global post once a newer epoch is current.
+//   D-033: at quiescence after a loss (window open), the controller reports the inactive phase.
 //   L6: at quiescence the current epoch is not busy, a Go Live click resolves a reload, and a quality change
 //       resolves (the controls are not stuck short of `playing`; not probed while a failed load shows its error).
 //   Host: a hook step makes no main-thread UI call on mpv's queue (shim.mpv.offMainCalls).
@@ -35,7 +44,7 @@
 // Not covered (see the design's "What this does not claim"): replay and VOD chat continuations (importArchive,
 // fetchTwitchWindow, fetchReplay); adopted windows (waitForNativeStream); anything beyond K and the seeds.
 //
-// Run deeper with `npm run test:explore` (CLASS_L_K, CLASS_L_RANDOM, CLASS_L_SEED).
+// Run deeper with `npm run test:explore` (CLASS_L_K, CLASS_L_RANDOM, CLASS_L_SEED, CLASS_L_CLOSE_JOBS).
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -54,6 +63,8 @@ const playerScript = new vm.Script(fs.readFileSync(playerPath, 'utf8'), {filenam
 const K = Number(process.env.CLASS_L_K || 3);
 const RANDOM_RUNS = Number(process.env.CLASS_L_RANDOM || 1000);
 const SEED = Number(process.env.CLASS_L_SEED || 20261122);
+// Offsets, in promise jobs, at which a close interrupts the previous step's jobs: 0 to CLASS_L_CLOSE_JOBS.
+const CLOSE_JOBS = Array.from({length: Number(process.env.CLASS_L_CLOSE_JOBS || 8) + 1}, (_, n) => n);
 const QUIESCENCE_HORIZON_MS = 40000; // Past the 25 s quality deadline and the 15 s Go Live timeout.
 const SOURCE = Sources.parse('https://www.twitch.tv/fixture_class_l');
 const FOREIGN = '/Users/fixture/movie.mkv';
@@ -188,10 +199,9 @@ async function runHook(world, path, onRun) {
   return made;
 }
 
-function beginEpochIfNeeded(model) {
-  if (model.epoch !== null || model.closed) return;
-  model.last++;
-  model.epoch = model.last;
+// The epoch an own-source hook is attributed to: the current one, or after a loss (D-033) the ended one.
+function ownSourceEpoch(model) {
+  return model.epoch === null ? model.last : model.epoch;
 }
 
 function endEpoch(model, kind) {
@@ -207,8 +217,7 @@ const STEPS = {
     const {model} = world;
     const path = ownPath(world);
     if (model.loadfiles.length) model.loadfiles.shift();
-    beginEpochIfNeeded(model);
-    model.attr = {epoch: model.epoch, loss: false};
+    model.attr = {epoch: ownSourceEpoch(model), loss: false};
     model.resolveKind = 'load';
     const offMain = await runHook(world, path);
     model.hooked = {path, failed: false};
@@ -218,8 +227,7 @@ const STEPS = {
   async reopen(world) {
     const {shim, model} = world;
     model.loadfiles.length = 0;
-    beginEpochIfNeeded(model);
-    model.attr = {epoch: model.epoch, loss: false};
+    model.attr = {epoch: ownSourceEpoch(model), loss: false};
     model.immediate = true;
     let offMain;
     try {
@@ -361,11 +369,11 @@ function enabled(world, name) {
 
 // Emissions since `mark`, in call order, as keys: 'sidebar:state', 'global:auth-probe',
 // 'call:mpv.command:loadfile', ... A post is keyed by its surface and name.
-function emissionsSince(world, mark) {
+function emissionsSince(world, mark, end) {
   const {shim} = world;
-  const posts = shim.posts.slice(mark.posts);
+  const posts = shim.posts.slice(mark.posts, end ? end.posts : undefined);
   const out = [];
-  for (const call of shim.log.slice(mark.log)) {
+  for (const call of shim.log.slice(mark.log, end ? end.log : undefined)) {
     if (POST_APIS.has(call.api)) {
       const post = posts.shift();
       if (!post) continue; // A post the host refused.
@@ -419,18 +427,48 @@ function checkHooks(world, final) {
   return null;
 }
 
+function resetAttribution(model) {
+  model.attr = {epoch: model.epoch === null ? model.last : model.epoch, loss: false};
+  model.resolveKind = 'other';
+}
+
 async function step(world, name) {
   const before = mark(world);
   const {model} = world;
-  model.attr = {epoch: model.epoch === null ? model.last : model.epoch, loss: false};
-  model.resolveKind = 'other';
+  resetAttribution(model);
   const outcome = await STEPS[name](world);
   const attr = model.attr;
   await settle();
-  model.attr = {epoch: model.epoch === null ? model.last : model.epoch, loss: false};
-  model.resolveKind = 'other';
+  resetAttribution(model);
   if (outcome.offMain) return {invariant: 'host', detail: name + ' made a main-thread call on the hook'};
   return checkEmissions(world, attr, emissionsSince(world, before)) || checkHooks(world, false);
+}
+
+// Runs `name`, then closes the window `jobs` promise jobs after the step's promise settles, before its remaining
+// jobs drain. Emissions before the close are checked against the model as it was then; the rest against the close.
+async function stepThenClose(world, name, jobs) {
+  const before = mark(world);
+  const {model} = world;
+  resetAttribution(model);
+  const outcome = await STEPS[name](world);
+  const attr = model.attr;
+  for (let job = 0; job < jobs; job++) await null;
+  const split = mark(world);
+  if (outcome.offMain) return {invariant: 'host', detail: name + ' made a main-thread call on the hook'};
+  const early = checkEmissions(world, attr, emissionsSince(world, before, split)) || checkHooks(world, false);
+  if (early) return early;
+  resetAttribution(model);
+  await STEPS.close(world);
+  const closeAttr = model.attr;
+  await settle();
+  resetAttribution(model);
+  return checkEmissions(world, closeAttr, emissionsSince(world, split)) || checkHooks(world, false);
+}
+
+// Whether the sequence's last two letters can run as a step and a close between its jobs.
+function closesBetweenJobs(sequence) {
+  const n = sequence.length;
+  return n >= 2 && sequence[n - 1] === 'close' && sequence[n - 2] !== 'close';
 }
 
 // Settles held resolves, delivers pending mpv loads, and runs every timer due within the horizon.
@@ -462,10 +500,14 @@ async function quiesce(world) {
   return checkHooks(world, true) || await checkNotBusy(world);
 }
 
-// L6, for the current epoch only.
+// L6, for the current epoch only; after a loss, the D-033 inactive check.
 async function checkNotBusy(world) {
   const {model, shim, controller} = world;
-  if (model.closed || model.epoch === null) return null;
+  if (model.closed) return null;
+  if (model.epoch === null) {
+    const phase = controller.snapshot().phase;
+    return phase === 'inactive' ? null : {invariant: 'D-033', detail: 'phase ' + phase + ' after a loss, not inactive'};
+  }
   const snapshot = controller.snapshot();
   if (snapshot.busy) return {invariant: 'L6', detail: 'busy at quiescence (' + snapshot.phase + ')'};
   const probes = [];
@@ -522,14 +564,21 @@ async function setUp(world) {
   assert.equal(shim.overlay.messages('live-config').length, 1, 'set-up: the live transport started');
 }
 
-// Runs one sequence; returns null or {at, invariant, detail}.
-async function runSequence(sequence) {
+// Runs one sequence; returns null or {at, invariant, detail}. With closeJobs, the final close runs that many
+// promise jobs after the step before it (closesBetweenJobs).
+async function runSequence(sequence, closeJobs) {
   const world = createWorld();
   await setUp(world);
-  for (let i = 0; i < sequence.length; i++) {
+  const split = closeJobs === undefined ? sequence.length : sequence.length - 2;
+  for (let i = 0; i < split; i++) {
     if (!enabled(world, sequence[i])) return {skipped: true};
     const violation = await step(world, sequence[i]);
     if (violation) return Object.assign({at: i + 1}, violation);
+  }
+  if (closeJobs !== undefined) {
+    if (!enabled(world, sequence[split])) return {skipped: true};
+    const violation = await stepThenClose(world, sequence[split], closeJobs);
+    if (violation) return Object.assign({at: split + 1}, violation);
   }
   const violation = await quiesce(world);
   return violation ? Object.assign({at: 'quiescence'}, violation) : null;
@@ -556,6 +605,16 @@ async function explore(depth) {
         if (outcome && !found.has(signature(outcome))) found.set(signature(outcome), {sequence, violation: outcome});
         // A step violation ends the sequence; one found only at quiescence leaves its steps worth extending.
         if (!outcome || outcome.at === 'quiescence') next.push(sequence);
+        if (!closesBetweenJobs(sequence)) continue;
+        for (const jobs of CLOSE_JOBS) {
+          const between = await runSequence(sequence, jobs);
+          if (between && between.skipped) continue;
+          runs++;
+          const labelled = sequence.slice(0, -1).concat('close@' + jobs);
+          if (between && !found.has(signature(between))) {
+            found.set(signature(between), {sequence: labelled, violation: between});
+          }
+        }
       }
     }
     frontier = next;
@@ -586,7 +645,11 @@ async function randomRun(random) {
     if (!choices.length) break; // Closed, with no late work left.
     const name = choices[Math.floor(random() * choices.length)];
     sequence.push(name);
-    const violation = await step(world, name);
+    // Sometimes a close interrupts this step's jobs (stepThenClose).
+    const between = name !== 'close' && enabled(world, 'close') && random() < 0.1;
+    const jobs = between ? CLOSE_JOBS[Math.floor(random() * CLOSE_JOBS.length)] : null;
+    if (between) sequence.push('close@' + jobs);
+    const violation = between ? await stepThenClose(world, name, jobs) : await step(world, name);
     if (violation) return {sequence, violation: Object.assign({at: sequence.length}, violation)};
   }
   const violation = await quiesce(world);

@@ -3,8 +3,8 @@
 // v0.5.5 class L: window actions after a loss (docs/design/V055-CLASS-REPAIR-2026-11-22.md, L2-L5). The explorer's
 // alphabet has no sidebar show or hide and its L5 oracle sees no missing teardown, so these two are pinned here.
 //   - A sidebar hidden when the source was lost shows the inactive state when the user shows it again.
-//   - A newer activation that has not started its own live transport does not inherit the old one: the old
-//     activation's release stops it and hides the overlay.
+//   - D-033: the source reopened before the release turn passes through; the release stops the live transport,
+//     hides the overlay and leaves the window inactive.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -66,27 +66,32 @@ test('class L: a sidebar hidden at the loss shows the inactive state when shown 
   assert.equal(decoded(states[0]).phase, 'inactive', 'and it shows that Streams is inactive');
 });
 
-test('class L: a newer activation without its own transport does not keep the old live transport', async t => {
-  const w = managedWindow(t, {chatEnabled: true, view: {presentation: 'overlay'}});
-  const {shim} = w;
-  shim.timers.advance(0);
-  await w.playOwn();
-  shim.sidebar.send('ready', {});
-  shim.sidebar.send('connect', {});
-  shim.global.send('auth-ready', JSON.stringify({login: 'fixture_reader', token: 'fake_class_l_window_token'}));
-  shim.emit('iina.plugin-overlay-loaded');
-  shim.overlay.send('overlay-ready', {});
-  assert.equal(shim.overlay.messages('live-config').length, 1, 'precondition: the live transport started');
-  assert.equal(shim.overlay.visible, true, 'precondition: the overlay shows');
+// D-033 (v0.5.5): a loss is final. This replaces "a newer activation without its own transport does not keep the
+// old live transport": the reopen no longer begins an activation, so the release turn tears everything down.
+test('class L: reopening the source before the release turn passes through, and the window stays inactive',
+  async t => {
+    const w = managedWindow(t, {chatEnabled: true, view: {presentation: 'overlay'}});
+    const {shim} = w;
+    shim.timers.advance(0);
+    await w.playOwn();
+    shim.sidebar.send('ready', {});
+    shim.sidebar.send('connect', {});
+    shim.global.send('auth-ready', JSON.stringify({login: 'fixture_reader', token: 'fake_class_l_window_token'}));
+    shim.emit('iina.plugin-overlay-loaded');
+    shim.overlay.send('overlay-ready', {});
+    assert.equal(shim.overlay.messages('live-config').length, 1, 'precondition: the live transport started');
+    assert.equal(shim.overlay.visible, true, 'precondition: the overlay shows');
 
-  const stops = shim.overlay.messages('live-stop').length;
-  const disconnects = shim.global.messages('auth-disconnect').length;
-  await w.load(localFile); // The loss; its release turn stays pending.
-  await w.load(live.url); // The source reopens before that turn: a new activation, chat not started.
-  shim.timers.flush(0); // The release turn of the old activation, then the new activation's first turn.
-  await settle();
-  assert.equal(shim.overlay.messages('live-stop').length, stops + 1, 'the old transport is stopped once');
-  assert.equal(shim.overlay.visible, false, 'the overlay is hidden while nothing needs it');
-  assert.equal(shim.global.messages('auth-disconnect').length, disconnects,
-    'no auth-disconnect: the newer activation owns the window\'s sign-in use');
-});
+    const stops = shim.overlay.messages('live-stop').length;
+    const disconnects = shim.global.messages('auth-disconnect').length;
+    await w.load(localFile); // The loss; its release turn stays pending.
+    const sets = shim.mpv.sets.length;
+    await w.load(live.url); // The source reopens before that turn, and continues once (load asserts it).
+    assert.equal(shim.mpv.sets.length, sets, 'the reopen sets nothing on mpv: it passes through');
+    shim.timers.flush(0); // The release turn.
+    await settle();
+    assert.equal(shim.overlay.messages('live-stop').length, stops + 1, 'the transport is stopped once');
+    assert.equal(shim.overlay.visible, false, 'the overlay is hidden');
+    assert.equal(shim.global.messages('auth-disconnect').length, disconnects + 1, 'the sign-in use is released');
+    assert.equal(w.controller.snapshot().phase, 'inactive', 'the window stays inactive');
+  });

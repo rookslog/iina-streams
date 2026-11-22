@@ -18,7 +18,8 @@ function loadGlobal(options = {}) {
     ['./src/timers.js', require('../src/timers.js')],
     ['./src/twitch-app.js', {clientID: ''}],
     ['./src/twitch-vods.js', require('../src/twitch-vods.js')],
-    ['./src/bridge.js', require('../src/bridge.js')]
+    ['./src/bridge.js', require('../src/bridge.js')],
+    ['./src/listeners.js', require('../src/listeners.js')]
   ]);
   const context = shim.runScript(path.join(__dirname, '../global.js'), {
     require(name) {

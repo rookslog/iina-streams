@@ -35,7 +35,7 @@ function nativeCore() {
   shim.runScript(playerPath, {globals: {module, Date: shim.timers.Date}, require: requireFromPlayer});
   const resolves = [];
   const services = {
-    readSettings: () => ({chatEnabled: false}),
+    readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}),
     saveSettings() {},
     async resolve(source) {
       resolves.push(source.url);

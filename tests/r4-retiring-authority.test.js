@@ -120,7 +120,9 @@ function nativeCore() {
   shim.runScript(playerPath, {globals: {module, Date: shim.timers.Date}, require: requireFromPlayer});
   const resolves = [];
   const gate = {held: false};
-  const services = {readSettings: () => ({chatEnabled: false}), saveSettings() {}, resolve: resolver(resolves, gate)};
+  const services = {
+    readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}), saveSettings() {}, resolve: resolver(resolves, gate)
+  };
   assert.equal(module.exports.start(shim.iina, {identifier: STABLE, variant: 'unified'}, services), null);
   function startHook(path, onNext = () => {}) {
     shim.mpv.set('path', path);
@@ -256,7 +258,9 @@ function managedWindow(t) {
   return {shim, controller, resolves, loadOwn, loadForeign};
 }
 
-test('r4 #3 managed: between next and cleanup the old controller has no authority; its own source restores it',
+// D-033 (v0.5.5): a loss is final. The tail of this test changed from "its own source restores it" to "its own
+// source passes through and the window stays inactive".
+test('r4 #3 managed: between next and cleanup the old controller has no authority; its own source does not restore it',
   async t => {
     const {shim, controller, resolves, loadOwn} = managedWindow(t);
     const seen = observer(shim);
@@ -282,15 +286,17 @@ test('r4 #3 managed: between next and cleanup the old controller has no authorit
     expectNoAuthority(shim, deliver, seen, new Set(cleanup));
     assert.equal(continued, 1, 'one continuation');
 
-    // The window returns to its own stream before the cleanup turn: the load is the controller's again.
+    // The window returns to its own stream before the cleanup turn: the load passes through.
     await loadOwn();
-    assert.equal(resolves.length, 2, 'the own load resolved again');
+    assert.equal(resolves.length, 1, 'the own load passed through: no second resolve');
     shim.timers.fire(cleanup[0]);
     await settle();
-    assert.notEqual(controller.snapshot().phase, 'inactive', 'the stale cleanup leaves the newer load alone');
-    const forgets = seen.forgets();
-    shim.sidebar.send('forget-auth', {});
-    assert.equal(seen.forgets(), forgets + 1, 'the controller holds authority again');
+    assert.equal(controller.snapshot().phase, 'inactive', 'the cleanup turn leaves the window inactive');
+    // Sign Out is a window action and still works in an inactive window, so authority is probed with a quality
+    // change, which only a current activation resolves.
+    shim.sidebar.send('change-quality', '480p30');
+    await settle();
+    assert.equal(resolves.length, 1, 'the controller does not hold authority again');
   });
 
 test('r4 #3 managed: the cleanup turn deactivates, and the inactive sidebar keeps its Open field', async t => {
@@ -310,7 +316,9 @@ test('r4 #3 managed: the cleanup turn deactivates, and the inactive sidebar keep
   assert.equal(shim.global.messages('open').length, 1, 'after cleanup: the Open field works as before');
 });
 
-test('r4 #3 managed: an own-source load before a second cleanup turn restores a deactivated window', async t => {
+// D-033 (v0.5.5): retitled from "... restores a deactivated window"; the window now stays inactive (asserted).
+test('r4 #3 managed: an own-source load before a second cleanup turn leaves the window inactive, not inert',
+  async t => {
   const {shim, controller, loadOwn, loadForeign} = managedWindow(t);
   await loadOwn();
   shim.sidebar.send('ready', {});
@@ -325,6 +333,7 @@ test('r4 #3 managed: an own-source load before a second cleanup turn restores a 
   assert.equal(continued, 1);
   shim.timers.advance(0);
   await settle();
+  assert.equal(controller.snapshot().phase, 'inactive', 'the window stays inactive');
   shim.sidebar.send('open', {input: 'fixture_r4_charlie'});
   assert.equal(shim.global.messages('open').length, 1, 'the Open field works: the window is not stuck inert');
-});
+  });

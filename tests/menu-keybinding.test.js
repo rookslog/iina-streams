@@ -18,6 +18,7 @@ function loadGlobalMenu() {
       if (name === './src/source.js') return require('../src/source.js');
       if (name === './src/auth.js') return require('../src/auth.js');
       if (name === './src/timers.js') return require('../src/timers.js');
+      if (name === './src/listeners.js') return require('../src/listeners.js');
       if (name === './src/twitch-app.js') return {clientID: ''};
       if (name === './src/twitch-vods.js') return require('../src/twitch-vods.js');
       if (name === './src/bridge.js') return require('../src/bridge.js');

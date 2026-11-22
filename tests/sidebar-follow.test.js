@@ -1,5 +1,7 @@
 'use strict';
-// Synthetic DOM geometry reproduces hidden-panel layout and queued scroll events.
+// Synthetic DOM geometry reproduces hidden-list layout and queued scroll events.
+// The list is hidden on the unified path when chat is presented over the video (presentation 'overlay').
+// scrollTop follows CSSOM View: 0 while the element has no layout box, clamped to the scroll range otherwise.
 // Native WKWebView paint remains a separate acceptance check.
 const test=require('node:test');
 const assert=require('node:assert/strict');
@@ -24,11 +26,12 @@ function setup(){
  for(const match of fs.readFileSync(path.join(root,'sidebar.html'),'utf8').matchAll(/\bid="([^"]+)"/g))elements[match[1]]=element(match[1]);
  const document={body:element('body'),documentElement:element('html'),activeElement:null,hidden:false,
   getElementById:id=>elements[id],createElement:()=>element(),addEventListener:(name,fn)=>documentEvents[name]=fn};
- const visible=()=>!elements.messages.hidden&&!elements['chat-panel'].hidden;
+ const visible=()=>!elements.messages.hidden;
+ const maxTop=()=>Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight);
  Object.defineProperties(elements.messages,{
   clientHeight:{get:()=>visible()?viewportHeight:0},
   scrollHeight:{get:()=>visible()?elements.messages.children.length*40:0},
-  scrollTop:{get:()=>top,set:value=>{top=Math.max(0,Math.min(Number(value)||0,Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight)));scrollEvents.push(()=>elements.messages.events.scroll?.({target:elements.messages}));}}
+  scrollTop:{get:()=>visible()?Math.min(top,maxTop()):0,set:value=>{top=Math.max(0,Math.min(Number(value)||0,Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight)));scrollEvents.push(()=>elements.messages.events.scroll?.({target:elements.messages}));}}
  });
  const requestAnimationFrame=fn=>{const id=++nextFrame;frames.set(id,fn);allFrames.set(id,fn);return id;};
  const cancelAnimationFrame=id=>frames.delete(id);
@@ -51,59 +54,69 @@ function setup(){
   advance(ms){now+=ms;},
   resize(height){viewportHeight=height;top=Math.min(top,Math.max(0,elements.messages.scrollHeight-height));windowEvents.resize?.({});},
   click:id=>elements[id].click(),
-  maxTop:()=>Math.max(0,elements.messages.scrollHeight-elements.messages.clientHeight)
+  maxTop
  };
 }
 
 function state(extra={}){
- return{variant:'focus',source:{kind:'youtube',provider:'youtube',id:'synthetic'},title:'Synthetic archive',
+ return{variant:'unified',source:{kind:'youtube',provider:'youtube',id:'synthetic'},title:'Synthetic archive',
   live:false,formats:[],quality:'auto720',phase:'playing',busy:false,error:'',
   auth:{phase:'off'},chat:{mode:'replay',state:'ready',available:true,count:40,sourceName:'Synthetic',offset:0,error:''},
   view:{presentation:'sidebar',fontSize:14,opacity:.64,lines:6,x:1,y:0,density:'comfortable',editing:false},
   messages:Array.from({length:40},(_,i)=>({id:String(i),time:i*3,author:'Synthetic',text:'message '+i})),qa:true,...extra};
 }
 
-test('Focus reveal follows latest after hidden import, seek and programmatic scroll events',()=>{
+const overlayView=()=>({...state().view,presentation:'overlay'});
+const withNewMessage=(extra={})=>{
+ const next=state(extra);
+ next.messages.push({id:'new',time:120,author:'Synthetic',text:'new message'});
+ return next;
+};
+
+// Ported from the Focus Playback/Chat tab cases (#23): the list is now hidden by presenting chat over the video.
+test('reveal from overlay presentation lands on the latest message after hidden updates and programmatic scrolls',()=>{
  const f=setup();
- f.state(state({view:{...state().view,presentation:'overlay'}}));
- f.state(state()); // Sidebar selected while Playback tab still hides the message list.
- assert.equal(f.elements['chat-panel'].hidden,true);
+ f.state(state({view:overlayView()}));
+ assert.equal(f.elements.messages.hidden,true);
  f.scroll();f.flushScroll(); // Hidden layout must not become a user scroll-up decision.
- f.click('chat-tab');
+ f.state(withNewMessage({view:overlayView()})); // An update arrives while the list is hidden.
+ f.flushFrames();f.flushScroll();
+ f.state(withNewMessage());
+ assert.equal(f.elements.messages.hidden,false);
  assert.equal(f.elements.messages.scrollTop,f.maxTop(),'repair the viewport on reveal without waiting for an animation frame');
  f.flushScroll();f.flushFrames();f.flushScroll();
  assert.equal(f.elements.messages.scrollTop,f.maxTop());
+ assert.ok(f.inspect().renderedMessages.at(-1).endsWith('Syntheticnew message'));
  assert.equal(f.elements.follow.hidden,true);
  assert.equal(f.frames.size,0);
 });
 
 test('hidden or queued layout scroll cannot opt out of following',()=>{
- const f=setup();f.state(state());f.scroll();f.click('chat-tab');
+ const f=setup();f.state(state({view:overlayView()}));f.scroll();f.state(state());
  f.scroll();f.flushScroll();f.flushFrames();f.flushScroll();
- const next=state();next.messages.push({id:'new',time:120,author:'Synthetic',text:'new message'});
- f.state(next);f.flushScroll();f.flushFrames();f.flushScroll();
+ f.state(withNewMessage());f.flushScroll();f.flushFrames();f.flushScroll();
  assert.equal(f.elements.messages.scrollTop,f.maxTop());assert.equal(f.elements.follow.hidden,true);
 });
 
 test('explicit scroll-up remains at its position across hidden updates and reveal',()=>{
- const f=setup();f.state(state());f.click('chat-tab');f.flushFrames();f.flushScroll();
+ const f=setup();f.state(state());f.flushFrames();f.flushScroll();
  f.userScrollTo(400);assert.equal(f.elements.follow.hidden,false);
- f.click('playback-tab');f.scroll();
- const next=state();next.messages.push({id:'new',time:120,author:'Synthetic',text:'new message'});
- f.state(next);f.flushFrames();f.flushScroll();f.click('chat-tab');f.flushFrames();f.flushScroll();
+ f.state(state({view:overlayView()}));assert.equal(f.elements.messages.hidden,true);f.scroll();
+ f.state(withNewMessage({view:overlayView()}));f.flushFrames();f.flushScroll();
+ f.state(withNewMessage());f.flushFrames();f.flushScroll();
  assert.equal(f.elements.messages.scrollTop,400);assert.equal(f.elements.follow.hidden,false);
  f.click('follow');f.flushFrames();f.flushScroll();
  assert.equal(f.elements.messages.scrollTop,f.maxTop());assert.equal(f.elements.follow.hidden,true);
 });
 
 test('a keyboard scroll-up cancels a pending automatic correction',()=>{
- const f=setup();f.state(state());f.click('chat-tab');
+ const f=setup();f.state(state());
  f.userScrollTo(300,'keydown');f.flushScroll();f.flushFrames();f.flushScroll();
  assert.equal(f.elements.messages.scrollTop,300);assert.equal(f.elements.follow.hidden,false);
 });
 
 test('layout work coalesces and pagehide cancels a late correction',()=>{
- const f=setup();f.state(state());f.click('chat-tab');
+ const f=setup();f.state(state());
  for(let i=0;i<10;i++)f.state(state());
  assert.equal(f.frames.size,1,'at most one bounded layout callback');
  const late=[...f.frames.values()][0];
@@ -113,7 +126,7 @@ test('layout work coalesces and pagehide cancels a late correction',()=>{
 });
 
 test('bounded QA rendered-message inspection remains available',()=>{
- const f=setup();f.state(state());f.click('chat-tab');
+ const f=setup();f.state(state());
  const result=f.inspect();
  assert.equal(result.messageCount,40);assert.equal(result.renderedMessages.length,12);
  assert.ok(result.renderedMessages.at(-1).endsWith('Syntheticmessage 39'));

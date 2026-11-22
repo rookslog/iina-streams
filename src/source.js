@@ -29,9 +29,10 @@ function parse(input){
  if(!/^[-A-Za-z0-9_]{11}$/.test(id))return null;
  return{kind:'youtube',provider:'YouTube',id,url:'https://www.youtube.com/watch?v='+id,startSeconds:seconds(queryValue(y[3]||'','t')||queryValue(y[3]||'','start'))};
 }
+// Every build is the 'unified' variant; the label still carries it so the format stays stable.
 function label(source,variant){
  const canonical=source&&parse(source.url);
- if(!canonical||!['unified','focus'].includes(variant))throw Error('Invalid player identity');
+ if(!canonical||variant!=='unified')throw Error('Invalid player identity');
  canonical.startSeconds=Number.isFinite(source.startSeconds)?Math.max(0,Math.min(2592000,source.startSeconds)):canonical.startSeconds;
  return 'streams-candidate:'+encodeURIComponent(JSON.stringify({source:canonical,variant}));
 }

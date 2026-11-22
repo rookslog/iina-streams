@@ -13,12 +13,12 @@ function setup(){
  global.setTimeout=shim.timers.setTimeout;
  global.clearTimeout=shim.timers.clearTimeout;
  const source=Sources.parse('https://www.twitch.tv/hutchmf');
- shim.global.label=Sources.label(source,'focus');
+ shim.global.label=Sources.label(source,'unified');
  const setPath=value=>shim.mpv.set('path',value).set('stream-open-filename',value);
  setPath(source.url);
  // Simulate the broker's deferred reply to an auth-connect request.
  shim.global.onPost=({name})=>{if(name==='auth-connect')shim.timers.setTimeout(()=>{shim.global.send('auth-state',JSON.stringify({phase:'off'}));shim.global.send('auth-state',JSON.stringify({phase:'needs-client',message:'Synthetic client required'}));},0);};
- const controller=start(shim.iina,{variant:'focus'},{readSettings:()=>({}),cancelHelpers(){}});
+ const controller=start(shim.iina,{variant:'unified'},{readSettings:()=>({}),cancelHelpers(){}});
  // Legacy post tuples: global messages are [name,data]; sidebar/overlay are [surface,name,data].
  const tuples=()=>shim.posts.map(p=>p.surface==='global'?[p.name,p.data]:[p.surface,p.name,p.data]);
  return{controller,shim,get callbacks(){return Object.fromEntries(shim.global.listeners);},

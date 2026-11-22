@@ -7,7 +7,7 @@ function validClientID(v){
 
 (function(){
  const $=id=>document.getElementById(id);
- let state=null,activeTab='playback',following=true,signature='';
+ let state=null,following=true,signature='';
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
  const messages=$('messages');
  const FALLBACK_COLORS=['#1661c8','#b84b39','#1d7a6e','#7d49a6','#9a6700','#2e7d32','#ad1457','#0277bd'];
@@ -30,7 +30,7 @@ function validClientID(v){
  };
  const PLACEMENTS={tr:[1,0],tl:[0,0],br:[1,1],bl:[0,1]};
  let scrollFrame=null,positionedTop=null,historyTop=0,pageClosed=false,scrollIntentUntil=0,pointerHeld=false;
- const messagesVisible=()=>!messages.hidden&&!$('chat-panel').hidden&&messages.clientHeight>0;
+ const messagesVisible=()=>!messages.hidden&&messages.clientHeight>0;
 
  function authorColor(name,supplied){
   if(supplied&&/^#[0-9a-f]{6}$/i.test(supplied))return supplied;
@@ -131,20 +131,6 @@ function validClientID(v){
   $('appearance-toggle').setAttribute('aria-expanded',String(open));
  }
 
- function tab(value){
-  const wasHidden=$('chat-panel').hidden;
-  activeTab=value;
-  const focus=state&&state.variant==='focus';
-  $('playback').hidden=focus&&value!=='playback';
-  $('chat-panel').hidden=focus&&value!=='chat';
-  for(const name of ['playback','chat']){
-   const e=$(name+'-tab');
-   e.setAttribute('aria-selected',String(name===value));
-   e.tabIndex=name===value?0:-1;
-  }
-  if(wasHidden&&!$('chat-panel').hidden)positionMessages();
- }
-
  // ---- Rendering ----
 
  function render(s){
@@ -164,11 +150,8 @@ function validClientID(v){
  }
 
  function renderLayout(s){
-  document.body.classList.toggle('focus',s.variant==='focus');
   document.documentElement.style.setProperty('--chat-size',s.view.fontSize+'px');
   document.documentElement.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
-  $('tabs').hidden=s.variant!=='focus';
-  tab(activeTab);
  }
 
  function renderHeader(s){
@@ -277,12 +260,14 @@ function validClientID(v){
  function renderMessages(s,chatOn){
   const overlayEmpty=s.chat.state!=='connected'&&!(s.messages&&s.messages.length);
   $('overlay-note').hidden=!chatOn||s.view.presentation!=='overlay'||overlayEmpty;
+  // A list that was hidden reads scrollTop 0, so its position is only re-read while it stays visible (#23).
+  const wasVisible=messagesVisible();
   messages.hidden=s.view.presentation==='overlay';
   const visibleMessages=s.view.presentation==='sidebar'?(s.messages||[]):[];
   const sig=visibleMessages.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds;
   if(sig===signature)return;
   signature=sig;
-  if(!following&&messagesVisible())historyTop=messages.scrollTop;
+  if(!following&&wasVisible&&messagesVisible())historyTop=messages.scrollTop;
   messages.replaceChildren();
   const replay=s.chat.mode==='replay';
   for(const m of visibleMessages)messages.appendChild(messageRow(m,replay,s.view));
@@ -325,8 +310,6 @@ function validClientID(v){
     const e=$(action.data.id);
     e.value=String(action.data.value);
     e.dispatchEvent(new Event('change',{bubbles:true}));
-   }else if(action.name==='tab'){
-    tab(action.data);
    }
    post('qa-result',qaResult(action));
   }catch(_){
@@ -346,7 +329,6 @@ function validClientID(v){
    scrollHeight:messages.scrollHeight,
    clientHeight:messages.clientHeight,
    renderedMessages:action.name==='inspect'?Array.from(messages.children).slice(-12).map(e=>e.textContent.slice(0,2120)):[],
-   tab:activeTab,
    bodyWidth:document.body.clientWidth,
    scrollWidth:document.body.scrollWidth,
    focused:document.activeElement&&document.activeElement.id,
@@ -424,14 +406,6 @@ function validClientID(v){
   if(p)post('view',{x:p[0],y:p[1],editing:false});
  });
  $('reset').addEventListener('click',()=>post('view',{reset:true,editing:false}));
-
- for(const name of ['playback','chat'])$(name+'-tab').addEventListener('click',()=>tab(name));
- $('tabs').addEventListener('keydown',e=>{
-  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-  e.preventDefault();
-  tab(e.key==='Home'?'playback':e.key==='End'?'chat':activeTab==='chat'?'playback':'chat');
-  $(activeTab+'-tab').focus();
- });
 
  // ---- Scroll input ----
 

@@ -15,12 +15,11 @@ function clamp(n,low,high,fallback){
  return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fallback;
 }
 
-function viewSettings(value,variant){
+function viewSettings(value){
  const v=value||{};
  const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));
- const fallbackPresentation=variant==='focus'?'overlay':'sidebar';
  return{
-  presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:fallbackPresentation,
+  presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:'sidebar',
   fontSize:clamp(v.fontSize,12,24,14),
   opacity:clamp(v.opacity,0,0.9,0.58),
   lines:Math.round(clamp(v.lines,2,12,6)),
@@ -73,7 +72,7 @@ function start(host,config,services){
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
  const timers=createTimers(setTimeout,clearTimeout);
  const persisted=services.readSettings?services.readSettings():{};
- let view=viewSettings(persisted.view,variant);
+ let view=viewSettings(persisted.view);
  let auth={phase:'off',message:'',saved:false};
  let chatPreferred=persisted.chatEnabled!==false;
  // Surface lifecycle.
@@ -374,7 +373,7 @@ function start(host,config,services){
  function setView(change){
   if(!sourceActive||!change||typeof change!=='object')return;
   const editing=change.editing===undefined?view.editing:!!change.editing;
-  view=viewSettings(change.reset?{}:Object.assign({},view,change),variant);
+  view=viewSettings(change.reset?{}:Object.assign({},view,change));
   view.editing=editing&&view.presentation==='overlay';
   if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false})});
   if(overlayNeeded()){

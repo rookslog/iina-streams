@@ -7,6 +7,7 @@ const {create:createTimers}=require('./timers.js');
 const {createEstimator}=require('./live-latency.js');
 const {createChatTiming}=require('./chat-timing.js');
 const {createLiveClock}=require('./live-clock.js');
+const {createAuthority}=require('./authority.js');
 
 // Live latency (#2, #16, #51). The spike's 30 s window held with 18 samples when mpv was read every 1 s; the
 // live clock samples once per 2 s playlist poll, so a 30 s window holds at most 16 samples. 10 samples cover
@@ -332,116 +333,152 @@ function adoptedTracer(host,config){
 
 // The Streams controller for one window and one source. registerLoadHook receives the on_load handler.
 // lifecycle.phase, when given, observes the load's resolve phases (adopted windows' QA trace).
+//
+// Class L (docs/design/V055-CLASS-REPAIR-2026-11-22.md): the controller keeps only window-scoped state here: the
+// views and their readiness, `closed` and the preferences. Everything that belongs to one load of the source
+// lives on the current activation's record, `act` (newActivation), and is dropped with it. Every timer,
+// listener and await of that work goes through the activation (src/authority.js), so it does nothing once the
+// activation has ended. A loss is one-way: the next load of this source begins a new activation.
 function run(host,config,services,identity,registerLoadHook,lifecycle){
  const phase=lifecycle&&lifecycle.phase||(()=>{});
  const windowClosed=lifecycle&&lifecycle.windowClosed||(()=>{});
  const source=identity.source;
  const variant=identity.variant;
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
- const timers=createTimers(setTimeout,clearTimeout);
+ const authority=createAuthority(setTimeout,clearTimeout,event);
  const persisted=services.readSettings?services.readSettings():{};
  let view=viewSettings(persisted.view);
  let auth={phase:'off',message:'',saved:false};
  let chatPreferred=persisted.chatEnabled!==false;
  // Surface lifecycle.
  let closed=false,windowLoaded=!!core.window.loaded;
- // Review r4 #3: true from a pass-through's `next` until its deferred cleanup turn (or, in a managed window, a
- // later load of this source). Set in pure JS on the hook. Every action guard, clock completion, overlay batch
- // and pending completion treats it as closed (inert); only physical teardown and deactivation still run.
- let retiring=false;
  let sidebarLoaded=false,sidebarReady=false,sidebarVisible=false,controlsDesired=true;
  let overlayLoaded=false,overlayReady=false;
- // Load generations and source ownership.
- let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false;
- let chatGeneration=0,sourceActive=true,autoReplayAttempted=false;
- // Auth listener binding (see bindAuthListeners). authBindSkipped: a bind turn ran while retiring (review r5 #1).
- let authBindTimer=null,authBound=false,pendingAuth=null,authBindSkipped=false;
- // Playback-state restoration after a quality reload.
- let restoration=null,restoreTimer=null,refreshing=false;
- // Replay chat.
- let replay=null,replayPath='',replayMetadata=null,messages=[],timeObserver=null,updateTimer=null;
- let lastTick=0,lastSignature='';
- // Twitch VOD chat windows.
- let twitchWindow=null,twitchFetchBusy=false,twitchFetchAt=0,twitchQueuedAt=null,twitchNextAttempt=0;
- // Review r1 #10: after an automatic fetch made no progress past the playhead, no automatic fetch until the
- // playhead passes `after`. A seek or a user retry clears it.
- let twitchStall=null;
- // Live chat transport, which runs in the overlay page.
- let liveCredential=null,liveStarted=false,liveRun=0;
- let chat={mode:'off',state:'off',error:'',count:0,sourceName:'',offset:0,available:false};
- // Live timing (twitch-live only). The clock has its own timer registry, so only stopLiveClock ends it.
+ // The global entry's messages are registered once, from a later turn (registerAppListeners).
+ let appListenersRegistered=false;
+ // Live timing preferences (#2, #28). Each activation starts a new Auto mapping (newActivation).
  const chatTiming=createChatTiming(plainObject(persisted.chatTiming)?persisted.chatTiming:{});
+ // Window-scoped, so estimator.updates() stays distinct across activations: Auto's estimateId must never repeat
+ // (class A interface). Each clock start resets its samples (startLiveClock).
  const estimator=createEstimator({windowSeconds:LIVE_WINDOW_SECONDS,minSamples:LIVE_MIN_SAMPLES});
- const clockTimers=createTimers(setTimeout,clearTimeout);
- // Review r4 #3: a retiring controller's clock neither polls nor samples. The clock's own timer stays armed
- // until stopLiveClock, so nothing native runs on the hook.
- const liveClock=createLiveClock({
-  http:host.http,
-  readPlayer:()=>inert()?{timePos:null,cacheEnd:null}:readLivePlayer(),
-  estimator,
-  setTimer:(fn,ms)=>clockTimers.setTimeout(()=>{
-   if(!inert())fn();
-  },ms),
-  clearTimer:clockTimers.clearTimeout,
-  now:()=>Date.now(),
-  log:onLiveClockLog
- });
- // liveClockURL is the resolved playlist for the load in progress; file-loaded consumes it.
- let liveClockURL=null,liveClockRunning=false,liveStatusTimer=null,liveStatusKey='',lastClockCode='';
- // Live chat buffer (C3b): an id-keyed union, in arrival order, of the chat received this session. Pending
- // messages (not yet due) are capped at LIVE_PENDING_CAP and revealed ones at LIVE_REVEALED_CAP. The timer
- // is for the next held message.
- let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
- // Review r1 #9 and r2 #3: a Go Live reload is one replacement transaction, {generation, timer, endSeen}.
- // goLiveBusy holds from the click until file-loaded of that generation or GO_LIVE_TIMEOUT_MS. An end-file
- // never ends it: IINA v1.5.1 delivers end-file on the main thread with no file id or reason, after mpv's
- // queue may already have run the replacement's on_load hook (MPVController.swift L1112-1125, L1241-1247),
- // so the replaced file's end cannot be told from the replacement's. endSeen records that one arrived; a
- // timeout after one is a stop.
- let replacement=null;
- // The last Go Live generation issued. Its file-loaded is authoritative even after the transaction ended,
- // because the timeout may have closed it first.
- let goLiveGeneration=null;
+ // Window-scoped host listeners, removed when the controller closes.
  const listeners=[];
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
  const postOverlay=(name,data)=>overlay.postMessage(name,envelope(data));
- const player=new Playback({
-  source,
-  resolve:q=>services.resolve(source,q),
-  readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),
-  replace:replaceFile,
-  onState:()=>send(),
-  fenced:()=>retiring,
-  setTimer:timers.setTimeout,
-  clearTimer:timers.clearTimeout
- });
  const diag=[];
+ // The current or, after a loss, the last activation. Its record is read for the final inactive snapshot.
+ let act=newActivation(null);
 
- function on(name,fn){
-  const id=event.on(name,fn);
+ // Begins a new activation with fresh per-activation state (L2, L3). `previous` is the activation before it.
+ function newActivation(previous){
+  const a=authority.begin();
+  Object.assign(a,{
+   // On_load hooks of this activation: a newer one supersedes an older one still resolving.
+   loads:0,
+   // The Playback generation of the file loading, and of the latest unstaged load (not a replacement).
+   activeGeneration:0,freshGeneration:0,staged:null,loadError:'',initialResolved:false,
+   chatGeneration:0,autoReplayAttempted:false,
+   // Whether this activation's first turn has run (startAuth), and a sign-in request made before it.
+   authStarted:false,pendingAuth:null,
+   // Playback-state restoration after a quality reload.
+   restoration:null,restoreTimer:null,refreshing:false,
+   // Replay chat.
+   replay:null,replayPath:'',replayMetadata:null,messages:[],timeObserver:null,updateTimer:null,
+   lastTick:0,lastSignature:'',
+   // Twitch VOD chat windows. Review r1 #10: after an automatic fetch made no progress past the playhead, no
+   // automatic fetch until the playhead passes twitchStall.after. A seek or a user retry clears it.
+   twitchWindow:null,twitchFetchBusy:false,twitchFetchAt:0,twitchQueuedAt:null,twitchNextAttempt:0,
+   twitchStall:null,
+   // Live chat transport, which runs in the overlay page.
+   liveCredential:null,liveStarted:false,liveRun:0,
+   chat:{mode:'off',state:'off',error:'',count:0,sourceName:'',offset:0,available:false},
+   // Live timing (twitch-live only). liveClockURL is the resolved playlist for the load in progress;
+   // file-loaded consumes it.
+   liveClockURL:null,liveClockRunning:false,liveStatusTimer:null,liveStatusKey:'',lastClockCode:'',
+   // Live chat buffer (C3b): an id-keyed union, in arrival order, of the chat received this session. Pending
+   // messages (not yet due) are capped at LIVE_PENDING_CAP and revealed ones at LIVE_REVEALED_CAP. The timer
+   // is for the next held message.
+   liveInbox:[],revealTimer:null,revealDueMs:null,
+   // Review r1 #9 and r2 #3: a Go Live reload is one replacement transaction, {generation, timer, endSeen}.
+   // goLiveBusy holds from the click until file-loaded of that generation or GO_LIVE_TIMEOUT_MS. An end-file
+   // never ends it: IINA v1.5.1 delivers end-file on the main thread with no file id or reason, after mpv's
+   // queue may already have run the replacement's on_load hook (MPVController.swift L1112-1125, L1241-1247),
+   // so the replaced file's end cannot be told from the replacement's. endSeen records that one arrived; a
+   // timeout after one is a stop. goLiveGeneration is the last Go Live generation issued: its file-loaded is
+   // authoritative even after the transaction ended, because the timeout may have closed it first.
+   goLiveBusy:false,replacement:null,goLiveGeneration:null
+  });
+  // The clock's timers and log are the activation's: after a loss it neither polls nor samples. A response in
+  // flight at the loss only reaches this clock's own estimator; release stops the clock, which then ignores it.
+  a.liveClock=createLiveClock({
+   http:host.http,
+   readPlayer:()=>a.isCurrent()?readLivePlayer():{timePos:null,cacheEnd:null},
+   estimator,
+   setTimer:a.setTimeout,
+   clearTimer:a.clearTimeout,
+   now:()=>Date.now(),
+   log:a.guard(onLiveClockLog)
+  });
+  // Generations continue across activations, so a #streams-generation marker is never issued twice.
+  a.player=new Playback({
+   source,
+   resolve:q=>a.wait(services.resolve(source,q)),
+   readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),
+   replace:a.guard(replaceFile),
+   onState:a.guard(()=>send()),
+   setTimer:a.setTimeout,
+   clearTimer:a.clearTimeout,
+   firstGeneration:previous?previous.player.generation:0
+  });
+  if(previous){
+   chatTiming.forgetMapping();
+   resyncCutoff();
+  }
+  // Review r5 #1: each activation asks the global entry for sign-in state on a later turn of its own.
+  a.setTimeout(startAuth,0);
+  return a;
+ }
+
+ // Whether an activation is current: the controller speaks for the file that is loading or loaded.
+ function active(){
+  return authority.current()!==null;
+ }
+
+ // A window-scoped host listener. It runs unless the window has closed.
+ function onWindow(name,fn){
+  const id=event.on(name,(...args)=>{
+   if(!closed)fn(...args);
+  });
   listeners.push([name,id]);
  }
 
- // Review r4 #3: a quality change that resolves while retiring must not replace the file that passed through.
+ // A host listener registered once for the window that acts only for the current activation (L1).
+ function onActive(name,fn){
+  const id=event.on(name,(...args)=>{
+   if(active())fn(...args);
+  });
+  listeners.push([name,id]);
+ }
+
+ // Called for the current activation only: Playback's guarded `replace`, or Go Live after its wait.
  function replaceFile(result,context){
-  if(inert())return;
   context.frame=Object.assign({},core.window.frame);
   context.fullscreen=!!core.window.fullscreen;
-  staged={result,context};
+  act.staged={result,context};
   mpv.command('loadfile',[source.url+'#streams-generation='+context.generation,'replace']);
  }
 
  function snapshot(){
-  const p=player.snapshot();
+  const p=act.player.snapshot();
   return Object.assign(p,{
    variant,
    source:{kind:source.kind,provider:source.provider,id:source.id},
    title:p.title||source.id||'Streams',
-   error:loadError||p.error,
-   chat:Object.assign({},chat),
+   error:act.loadError||p.error,
+   chat:Object.assign({},act.chat),
    auth:Object.assign({},auth),
    view:Object.assign({},view),
-   messages:messages.slice(-150),
+   messages:act.messages.slice(-150),
    position:Number(mpv.getNumber('time-pos'))||0,
    paused:!!mpv.getFlag('pause'),
    behindLive:behindLive(),
@@ -463,13 +500,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }catch(_){}
  }
 
- // Review r5 #2: a retiring controller publishes nothing, except its final inactive snapshot (publishFinal).
+ // Review r5 #2 and L5: without a current activation nothing is published, except the final inactive snapshot
+ // (publishFinal).
  function send(){
-  if(inert())return;
+  if(!active())return;
   publish();
  }
 
- // The intentional final inactive snapshot: retire()'s teardown and the foreign-file deactivation.
+ // The intentional final inactive snapshot, once per loss (releaseActivation, teardown).
  function publishFinal(){
   publish();
  }
@@ -477,7 +515,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function publish(){
   if(closed)return;
   const s=snapshot();
-  liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming,s.atLiveEdge);
+  act.liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming,s.atLiveEdge);
   if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});
   if(sidebarReady&&sidebarVisible){
    try{
@@ -488,37 +526,45 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // ---- Sidebar messages ----
 
- // Whether this controller has lost its authority: closed, or retiring (review r4 #3).
- function inert(){
-  return closed||retiring;
+ // Review r2 #4 and r4 #3: a retired or closed controller's sidebar and overlay can stay rendered, with their
+ // listeners, until something loads those views again. An action they send for the source acts only for the
+ // current activation (whileActive), so a stale Connect or quality change does nothing. Window actions (Open,
+ // Hide, Sign Out) act unless the window has closed or a loss is still being cleaned up with nothing current
+ // (whileWindow). Menu actions use the same guards.
+ function whileActive(handler){
+  return (...args)=>{
+   if(!active())return undefined;
+   return handler(...args);
+  };
  }
 
- // Review r2 #4 and r4 #3: a retiring, retired or closed controller's sidebar and overlay can stay rendered,
- // with their listeners, until something loads those views again. Every action they send is dropped from then
- // on, so a retired sidebar's Sign Out or Connect cannot act on the login another window shares. Menu actions
- // use the same guard.
- function whileOpen(handler){
-  return data=>{
-   if(inert())return undefined;
-   return handler(data);
+ function whileWindow(handler){
+  return (...args)=>{
+   if(closed||authority.releasing())return undefined;
+   return handler(...args);
   };
  }
 
  function onSidebar(name,handler){
-  sidebar.onMessage(name,whileOpen(handler));
+  sidebar.onMessage(name,whileActive(handler));
+ }
+
+ function onSidebarWindow(name,handler){
+  sidebar.onMessage(name,whileWindow(handler));
  }
 
  function onOverlay(name,handler){
-  overlay.onMessage(name,whileOpen(handler));
+  overlay.onMessage(name,whileActive(handler));
  }
 
+ // Actions for the source act only for the current activation; the rest belong to the window.
  function connectMessages(){
-  onSidebar('ready',onSidebarReady);
+  onSidebarWindow('ready',onSidebarReady);
   onSidebar('change-quality',q=>changeQuality(String(q)));
   onSidebar('refresh',()=>refresh());
-  onSidebar('hide',hideSidebar);
-  onSidebar('surface-visibility',onSurfaceVisibility);
-  onSidebar('open',onSidebarOpen);
+  onSidebarWindow('hide',hideSidebar);
+  onSidebarWindow('surface-visibility',onSurfaceVisibility);
+  onSidebarWindow('open',onSidebarOpen);
   onSidebar('import',()=>importArchive());
   onSidebar('replay-resume',onReplayResume);
   onSidebar('chat-off',onChatOffRequest);
@@ -528,13 +574,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   onSidebar('seek-chat',seekChat);
   onSidebar('first-message',seekFirstMessage);
   onSidebar('connect',connectLive);
-  onSidebar('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
-  onSidebar('authorize-open',openActivation);
-  onSidebar('forget-auth',forgetAuth);
+  onSidebarWindow('open-twitch-console',()=>host.utils.open('https://dev.twitch.tv/console/apps/create'));
+  onSidebarWindow('authorize-open',openActivation);
+  onSidebarWindow('forget-auth',forgetAuth);
   onSidebar('chat-timing',setChatTiming);
   onSidebar('chat-calibrate',calibrateChat);
   onSidebar('go-live',goLive);
-  if(config.qa)onSidebar('qa-result',data=>trace('ui-result',data));
+  if(config.qa)onSidebarWindow('qa-result',data=>trace('ui-result',data));
  }
 
  // The sidebar's inline field sends {input}; global parses it and opens the stream (#50).
@@ -545,19 +591,24 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // Global rejected the sidebar's input. This holds even after deactivation: the field stays usable.
  function onOpenError(){
-  if(inert())return;
   postSidebar('open-error',{});
  }
 
  function onSidebarReady(){
-  if(inert())return;
   sidebarReady=true;
-  send();
+  publishForWindow();
   trace('sidebar-ready');
  }
 
+ // A window action's publication: the current activation's state, or, with none, the last one's final state,
+ // so a sidebar shown or reloaded after a loss shows that Streams is inactive.
+ function publishForWindow(){
+  if(active())send();
+  else publish();
+ }
+
  function onSurfaceVisibility(data){
-  if(inert()||!data||typeof data.visible!=='boolean')return;
+  if(!data||typeof data.visible!=='boolean')return;
   trace('sidebar-document-visibility',{visible:data.visible});
  }
 
@@ -586,41 +637,41 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function setOffset(value){
-  if(inert()||!sourceActive)return;
-  chat.offset=clamp(value,-2592000,2592000,0);
-  lastSignature='';
+  if(!active())return;
+  act.chat.offset=clamp(value,-2592000,2592000,0);
+  act.lastSignature='';
   tick(true);
   maybeRefreshTwitch(true);
   send();
  }
 
  function seekChat(value){
-  const t=Number(value)-chat.offset;
-  if(chat.mode==='replay'&&Number.isFinite(t)&&t>=0)mpv.command('seek',[String(t),'absolute+exact']);
+  const t=Number(value)-act.chat.offset;
+  if(act.chat.mode==='replay'&&Number.isFinite(t)&&t>=0)mpv.command('seek',[String(t),'absolute+exact']);
  }
 
  function seekFirstMessage(){
-  if(inert()||!sourceActive||chat.mode!=='replay'||!replayMetadata)return;
-  const t=Math.max(0,replayMetadata.timeline.availableStart-chat.offset);
+  if(!active()||act.chat.mode!=='replay'||!act.replayMetadata)return;
+  const t=Math.max(0,act.replayMetadata.timeline.availableStart-act.chat.offset);
   mpv.command('seek',[String(t),'absolute+exact']);
  }
 
  function connectLive(data){
-  if(inert()||!sourceActive)return;
+  if(!active())return;
   if(source.kind!=='twitch-live'){
-   chat.error='Live chat is available for Twitch channels.';
+   act.chat.error='Live chat is available for Twitch channels.';
    send();
    return;
   }
   setChatPreferred(true);
   chatOff();
-  chat=authorizingLiveChat();
+  act.chat=authorizingLiveChat();
   requestAuth(String(data&&data.clientID||''));
   send();
  }
 
  function authorizingLiveChat(){
-  return{mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
+  return{mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!act.replay};
  }
 
  // Twitch opens only from the user's click on "Approve on Twitch"; the activation page fills in the code.
@@ -632,15 +683,16 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Sign out. The broker revokes the grant it holds, so this window must not post auth-disconnect first:
  // with one window connected that would make the broker discard the grant before revoking it.
  function forgetAuth(){
-  chatOff({releaseAuth:false});
+  if(active())chatOff({releaseAuth:false});
   app.postMessage('auth-forget',{});
  }
 
  // ---- Sidebar and overlay surfaces ----
 
+ // A window action: it also shows a deactivated window's controls.
  function showSidebar(){
   controlsDesired=true;
-  if(inert()||!windowLoaded)return;
+  if(closed||authority.releasing()||!windowLoaded)return;
   if(!sidebarLoaded){
    sidebar.loadFile('ui/sidebar.html');
    connectMessages();
@@ -649,42 +701,42 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
   sidebarVisible=true;
   sidebar.show();
-  if(chat.mode==='replay')tick(true);
-  send();
+  if(active()&&act.chat.mode==='replay')tick(true);
+  publishForWindow();
  }
 
  function hideSidebar(){
   controlsDesired=false;
   sidebarVisible=false;
   sidebar.hide();
-  if(view.presentation==='sidebar'&&chat.mode==='live')chatOff();
+  if(active()&&view.presentation==='sidebar'&&act.chat.mode==='live')chatOff();
  }
 
  function overlayNeeded(){
-  return chat.mode==='live'||view.presentation==='overlay'&&chat.mode!=='off';
+  return act.chat.mode==='live'||view.presentation==='overlay'&&act.chat.mode!=='off';
  }
 
  function stopLiveTransport(){
-  liveRun=nextLiveSession();
-  liveCredential=null;
-  liveStarted=false;
+  act.liveRun=nextLiveSession();
+  act.liveCredential=null;
+  act.liveStarted=false;
   if(overlayReady)postOverlay('live-stop',{});
  }
 
  function startLiveTransport(){
-  if(inert()||!sourceActive||chat.mode!=='live'||!overlayReady||!liveCredential||liveStarted)return;
-  const credential=liveCredential;
-  liveCredential=null;
-  liveStarted=true;
-  liveRun=nextLiveSession();
+  if(!active()||act.chat.mode!=='live'||!overlayReady||!act.liveCredential||act.liveStarted)return;
+  const credential=act.liveCredential;
+  act.liveCredential=null;
+  act.liveStarted=true;
+  act.liveRun=nextLiveSession();
   resetLiveBuffer();
   send();
-  postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:liveRun});
+  postOverlay('live-config',{token:credential.token,login:credential.login,channel:source.id,session:act.liveRun});
  }
 
  function ensureOverlay(){
-  diagLog('ensureOverlay',{windowLoaded,overlayLoaded,overlayReady,mode:chat.mode,pres:view.presentation});
-  if(inert()||!windowLoaded)return;
+  if(!active()||!windowLoaded)return;
+  diagLog('ensureOverlay',{windowLoaded,overlayLoaded,overlayReady,mode:act.chat.mode,pres:view.presentation});
   if(!overlayLoaded){
    overlayLoaded=true;
    overlay.loadFile('ui/overlay.html');
@@ -703,8 +755,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onOverlayLoaded(){
+  if(!overlayLoaded)return;
   diagLog('plugin-overlay-loaded',{overlayLoaded});
-  if(inert()||!overlayLoaded)return;
   onOverlay('overlay-ready',onOverlayReady);
   onOverlay('live-state',onLiveState);
   onOverlay('live-messages',onLiveMessages);
@@ -716,9 +768,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onOverlayReady(){
-  if(inert())return;
   overlayReady=true;
-  diagLog('overlay-ready',{needed:overlayNeeded(),hasCred:!!liveCredential});
+  diagLog('overlay-ready',{needed:overlayNeeded(),hasCred:!!act.liveCredential});
   // overlayLoaded is always true here: this listener is only registered once the overlay has loaded.
   if(overlayNeeded())ensureOverlay();
   else hideOverlay();
@@ -728,10 +779,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onLiveState(data){
-  diagLog('live-state',{state:data&&data.state,session:data&&data.session,liveRun,liveStarted});
-  if(inert()||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun)return;
-  chat.state=String(data.state||'connecting');
-  chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);
+  diagLog('live-state',{
+   state:data&&data.state,session:data&&data.session,liveRun:act.liveRun,liveStarted:act.liveStarted
+  });
+  if(act.chat.mode!=='live'||!act.liveStarted||!data||data.session!==act.liveRun)return;
+  act.chat.state=String(data.state||'connecting');
+  act.chat.error=String(data.message||(auth.phase==='ready'?auth.message:'')||'').slice(0,160);
   send();
  }
 
@@ -742,7 +795,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // only fell out of the overlay's window are kept. Accepted limit: a burst of more than 150 messages between two
  // posts can lose the oldest of them, because the overlay never sent them.
  function onLiveMessages(data){
-  if(inert()||chat.mode!=='live'||!liveStarted||!data||data.session!==liveRun||!Array.isArray(data.messages))return;
+  if(act.chat.mode!=='live'||!act.liveStarted||!data||data.session!==act.liveRun||!Array.isArray(data.messages))return;
   applyLiveRemovals(data.removed,data.clearedAll===true,data.removedUsers);
   mergeLiveMessages(data.messages.slice(-150));
   revealLive();
@@ -751,17 +804,17 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function applyLiveRemovals(removed,clearedAll,removedUsers){
   if(clearedAll){
-   liveInbox=[];
-   messages=[];
+   act.liveInbox=[];
+   act.messages=[];
    return;
   }
   const gone=new Set(Array.isArray(removed)?removed.filter(id=>typeof id==='string'&&id):[]);
-  for(const entry of liveInbox){
+  for(const entry of act.liveInbox){
    if(entry.id&&matchesRemovedUser(entry,removedUsers))gone.add(entry.id);
   }
   if(gone.size===0)return;
-  liveInbox=liveInbox.filter(entry=>!gone.has(entry.id));
-  messages=messages.filter(message=>!gone.has(message.id));
+  act.liveInbox=act.liveInbox.filter(entry=>!gone.has(entry.id));
+  act.messages=act.messages.filter(message=>!gone.has(message.id));
  }
 
  // A clear-user names a userId, a login, or both. An empty string never matches.
@@ -782,25 +835,25 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function mergeLiveMessages(rows){
-  const known=new Set(liveInbox.map(inboxKey));
+  const known=new Set(act.liveInbox.map(inboxKey));
   for(const raw of rows){
    const entry=inboxEntry(raw);
    const key=inboxKey(entry);
    if(known.has(key))continue;
    known.add(key);
-   liveInbox.push(entry);
+   act.liveInbox.push(entry);
   }
   capPending();
  }
 
  // Drops the oldest pending entries past the cap. Pending means not shown yet.
  function capPending(){
-  const shown=new Set(messages);
-  const pending=liveInbox.filter(entry=>!shown.has(entry.message));
+  const shown=new Set(act.messages);
+  const pending=act.liveInbox.filter(entry=>!shown.has(entry.message));
   const excess=pending.length-LIVE_PENDING_CAP;
   if(excess<=0)return;
   const dropped=new Set(pending.slice(0,excess));
-  liveInbox=liveInbox.filter(entry=>!dropped.has(entry));
+  act.liveInbox=act.liveInbox.filter(entry=>!dropped.has(entry));
  }
 
  // Keeps only the newest LIVE_REVEALED_CAP revealed entries in the buffer.
@@ -808,14 +861,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const excess=visible.length-LIVE_REVEALED_CAP;
   if(excess<=0)return visible;
   const dropped=new Set(visible.slice(0,excess));
-  liveInbox=liveInbox.filter(entry=>!dropped.has(entry));
+  act.liveInbox=act.liveInbox.filter(entry=>!dropped.has(entry));
   return visible.slice(excess);
  }
 
  function resetLiveBuffer(){
   clearRevealTimer();
-  liveInbox=[];
-  messages=[];
+  act.liveInbox=[];
+  act.messages=[];
  }
 
  // ---- Live chat timing (#2, #28) ----
@@ -833,8 +886,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function behindLive(){
-  if(source.kind!=='twitch-live'||!liveClockRunning)return null;
-  const value=liveClock.behindLive();
+  if(source.kind!=='twitch-live'||!act.liveClockRunning)return null;
+  const value=act.liveClock.behindLive();
   return typeof value==='number'&&Number.isFinite(value)?value:null;
  }
 
@@ -912,42 +965,42 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function clearRevealTimer(){
-  if(revealTimer!==null)timers.clearTimeout(revealTimer);
-  revealTimer=null;
-  revealDueMs=null;
+  if(act.revealTimer!==null)act.clearTimeout(act.revealTimer);
+  act.revealTimer=null;
+  act.revealDueMs=null;
  }
 
  // Recomputes the visible live chat with the current delay and arms a timer for the next held message.
  // Returns whether the visible messages changed.
  function revealLive(){
-  if(inert()){
+  if(!active()){
    clearRevealTimer();
    return false;
   }
   const cutoffMs=source.kind==='twitch-live'?sampleCutoff(Date.now()):null;
-  if(chat.mode!=='live'||cutoffMs===null){
+  if(act.chat.mode!=='live'||cutoffMs===null){
    clearRevealTimer();
    return false;
   }
-  const result=chatTiming.reveal(liveInbox,cutoffMs,0);
+  const result=chatTiming.reveal(act.liveInbox,cutoffMs,0);
   const next=trimRevealed(result.visible).map(entry=>entry.message);
-  const changed=next.length!==messages.length||next.some((message,i)=>message!==messages[i]);
-  messages=next;
-  chat.count=messages.length;
-  if(result.nextDueMs!==revealDueMs){
+  const changed=next.length!==act.messages.length||next.some((message,i)=>message!==act.messages[i]);
+  act.messages=next;
+  act.chat.count=act.messages.length;
+  if(result.nextDueMs!==act.revealDueMs){
    clearRevealTimer();
    const wait=result.nextDueMs===null?null:revealWait(cutoffMs,result.nextDueMs);
    if(wait!==null){
-    revealDueMs=result.nextDueMs;
-    revealTimer=timers.setTimeout(onRevealDue,wait);
+    act.revealDueMs=result.nextDueMs;
+    act.revealTimer=act.setTimeout(onRevealDue,wait);
    }
   }
   return changed;
  }
 
  function onRevealDue(){
-  revealTimer=null;
-  revealDueMs=null;
+  act.revealTimer=null;
+  act.revealDueMs=null;
   if(revealLive())send();
  }
 
@@ -957,7 +1010,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // Sidebar 'chat-timing': a partial {mode, manualDelay, fineTune}; chatTiming clamps and rounds it.
  function setChatTiming(data){
-  if(inert()||!sourceActive||!plainObject(data))return;
+  if(!active()||!plainObject(data))return;
   const partial={};
   for(const key of ['mode','manualDelay','fineTune']){
    if(key in data)partial[key]=data[key];
@@ -972,9 +1025,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // #28 sidebar 'chat-calibrate' {id}: in Manual, the clicked message is what the video shows now.
  function calibrateChat(data){
-  if(inert()||!sourceActive||chat.mode!=='live'||chatTiming.settings().mode!=='manual')return;
+  if(!active()||act.chat.mode!=='live'||chatTiming.settings().mode!=='manual')return;
   const id=plainObject(data)&&typeof data.id==='string'?data.id:'';
-  const entry=id?liveInbox.find(item=>item.id===id&&typeof item.timestampMs==='number'):null;
+  const entry=id?act.liveInbox.find(item=>item.id===id&&typeof item.timestampMs==='number'):null;
   if(!entry)return;
   chatTiming.calibrate(entry,Date.now());
   // Calibrating already requires Manual, so the mode does not change and Auto's cutoff is not resynced.
@@ -997,46 +1050,46 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // The clock passes a code only. The playlist URL is signed and never reaches a log.
  function onLiveClockLog(code){
-  if(code===lastClockCode)return;
-  lastClockCode=code;
+  if(code===act.lastClockCode)return;
+  act.lastClockCode=code;
   trace('live-clock',{code:String(code)});
  }
 
  function startLiveClock(){
-  const url=liveClockURL;
-  liveClockURL=null;
+  const url=act.liveClockURL;
+  act.liveClockURL=null;
   stopLiveClock();
   estimator.reset();
-  lastClockCode='';
-  liveClock.start(url);
-  liveClockRunning=true;
-  liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
+  act.lastClockCode='';
+  act.liveClock.start(url);
+  act.liveClockRunning=true;
+  act.liveStatusTimer=act.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
  }
 
  // Every stop ends the file timeline the estimator's offset maps (a reload, a new file, or the end).
  function stopLiveClock(){
-  liveClock.stop();
-  liveClockRunning=false;
+  act.liveClock.stop();
+  act.liveClockRunning=false;
   chatTiming.forgetMapping();
   resyncCutoff();
-  if(liveStatusTimer!==null)timers.clearTimeout(liveStatusTimer);
-  liveStatusTimer=null;
+  if(act.liveStatusTimer!==null)act.clearTimeout(act.liveStatusTimer);
+  act.liveStatusTimer=null;
  }
 
  // The clock has no callback, so the player re-reads it: the pill and the Auto delay follow the estimate.
  function onLiveStatusTick(){
-  liveStatusTimer=null;
-  if(inert()||!liveClockRunning)return;
+  act.liveStatusTimer=null;
+  if(!active()||!act.liveClockRunning)return;
   const changed=revealLive();
-  if(changed||liveStatusKeyOf(behindLive(),currentTiming(),atLiveEdge())!==liveStatusKey)send();
-  liveStatusTimer=timers.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
+  if(changed||liveStatusKeyOf(behindLive(),currentTiming(),atLiveEdge())!==act.liveStatusKey)send();
+  act.liveStatusTimer=act.setTimeout(onLiveStatusTick,LIVE_STATUS_MS);
  }
 
  // ---- Go Live (#51) ----
 
- async function goLive(){
-  if(inert()||!sourceActive||source.kind!=='twitch-live'||goLiveBusy)return;
-  const target=liveClockRunning?liveClock.goLiveTarget():null;
+ function goLive(){
+  if(!active()||source.kind!=='twitch-live'||act.goLiveBusy)return undefined;
+  const target=act.liveClockRunning?act.liveClock.goLiveTarget():null;
   const position=mpv.getNumber('time-pos');
   // Seek only when it reaches the edge. Observed in IINA 1.5.1 (2026-11-22): after a pause, mpv's cache
   // stops short of live, so cache-end - 2 landed 13 s short (-28 s to -15 s). A reload joins at the edge.
@@ -1047,25 +1100,26 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    mpv.command('seek',[String(target),'absolute']);
    mpv.set('pause',false);
    trace('go-live',{action:'seek'});
-   return;
+   return undefined;
   }
-  await reloadCurrentQuality();
+  return reloadCurrentQuality();
  }
 
  // A seek at or past the cache end is a no-op, so the fallback reloads the playing quality at the live edge.
  // player.change() returns early for the current quality, so this stages the reload itself, taking the next
  // Playback generation so its load marker cannot repeat one a quality change will use.
  async function reloadCurrentQuality(){
-  const quality=player.snapshot().quality;
-  if(player.snapshot().busy)return;
-  goLiveBusy=true;
+  const quality=act.player.snapshot().quality;
+  if(act.player.snapshot().busy)return;
+  act.goLiveBusy=true;
   let issued=false;
   try{
-   const result=await services.resolve(source,quality);
-   if(inert()||!sourceActive||player.snapshot().busy)return;
+   // Review r6 #2: a reload resolved for an activation that has ended does nothing (L1).
+   const result=await act.wait(services.resolve(source,quality));
+   if(act.player.snapshot().busy)return;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The stream could not be reloaded.');
    const context={
-    generation:++player.generation,
+    generation:++act.player.generation,
     position:0,
     paused:false,
     speed:Number(mpv.getNumber('speed'))||1
@@ -1075,62 +1129,58 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    replaceFile(result,context);
    trace('go-live',{action:'reload',quality:result.quality});
   }catch(error){
-   if(!inert()&&sourceActive){
-    loadError=publicError(error,'The stream could not be reloaded.');
-    send();
-   }
+   act.loadError=publicError(error,'The stream could not be reloaded.');
+   send();
   }finally{
-   if(!issued&&replacement===null)goLiveBusy=false;
+   if(!issued&&act.replacement===null)act.goLiveBusy=false;
   }
  }
 
  function beginReplacement(generation){
   endReplacement();
-  goLiveBusy=true;
-  goLiveGeneration=generation;
-  replacement={generation,timer:timers.setTimeout(onReplacementTimeout,GO_LIVE_TIMEOUT_MS),endSeen:false};
+  act.goLiveBusy=true;
+  act.goLiveGeneration=generation;
+  act.replacement={generation,timer:act.setTimeout(onReplacementTimeout,GO_LIVE_TIMEOUT_MS),endSeen:false};
  }
 
  function endReplacement(){
-  if(replacement&&replacement.timer!==null)timers.clearTimeout(replacement.timer);
-  replacement=null;
-  goLiveBusy=false;
+  if(act.replacement&&act.replacement.timer!==null)act.clearTimeout(act.replacement.timer);
+  act.replacement=null;
+  act.goLiveBusy=false;
  }
 
  function onReplacementTimeout(){
-  if(!replacement)return;
-  const endSeen=replacement.endSeen;
-  replacement.timer=null;
+  if(!act.replacement)return;
+  const endSeen=act.replacement.endSeen;
+  act.replacement.timer=null;
   endReplacement();
   trace('go-live',{action:'timeout'});
-  if(!inert()&&sourceActive){
-   loadError='The stream could not be reloaded.';
-   // No replacement loaded, and a file ended: whichever it was, nothing is playing now.
-   if(endSeen)player.ended();
-   send();
-  }
+  act.loadError='The stream could not be reloaded.';
+  // No replacement loaded, and a file ended: whichever it was, nothing is playing now.
+  if(endSeen)act.player.ended();
+  send();
  }
 
  // Playback (src/playback.js) tracks only its own quality changes, so the player sets the phase for the file
  // a Go Live reload actually loaded.
  function replacementLoaded(generation){
-  if(goLiveGeneration===null||generation!==goLiveGeneration)return;
-  goLiveGeneration=null;
-  if(replacement&&replacement.generation===generation)endReplacement();
-  loadError='';
-  player.data.phase='playing';
-  player.data.error='';
-  player.emit();
+  if(act.goLiveGeneration===null||generation!==act.goLiveGeneration)return;
+  act.goLiveGeneration=null;
+  if(act.replacement&&act.replacement.generation===generation)endReplacement();
+  act.loadError='';
+  act.player.data.phase='playing';
+  act.player.data.error='';
+  act.player.emit();
  }
 
  // A quality change while Go Live is reloading would issue a second replacement in parallel: ignored.
  function changeQuality(quality){
-  if(goLiveBusy)return Promise.resolve(false);
-  return player.change(quality);
+  if(act.goLiveBusy)return Promise.resolve(false);
+  return act.player.change(quality);
  }
 
  function setView(change){
-  if(!sourceActive||!change||typeof change!=='object')return;
+  if(!active()||!change||typeof change!=='object')return;
   const editing=change.editing===undefined?view.editing:!!change.editing;
   view=viewSettings(change.reset?{}:Object.assign({},view,change));
   view.editing=editing&&view.presentation==='overlay';
@@ -1147,52 +1197,31 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // ---- Chat modes ----
 
  function stopReplay(){
-  if(timeObserver!==null){
-   event.off('mpv.time-pos.changed',timeObserver);
-   timeObserver=null;
+  if(act.timeObserver!==null){
+   act.unlisten('mpv.time-pos.changed',act.timeObserver);
+   act.timeObserver=null;
   }
-  if(updateTimer!==null){
-   timers.clearTimeout(updateTimer);
-   updateTimer=null;
+  if(act.updateTimer!==null){
+   act.clearTimeout(act.updateTimer);
+   act.updateTimer=null;
   }
-  if(replay)replay.clear();
-  lastSignature='';
+  if(act.replay)act.replay.clear();
+  act.lastSignature='';
  }
 
+ // Before the activation's first turn (startAuth) a sign-in request waits on the activation.
  function requestAuth(clientID){
   const data={clientID};
-  if(authBound)app.postMessage('auth-connect',data);
-  else pendingAuth={data,generation:chatGeneration};
- }
-
- function cancelAuthBinding(){
-  if(authBindTimer!==null){
-   timers.clearTimeout(authBindTimer);
-   authBindTimer=null;
-  }
-  authBindSkipped=false;
-  pendingAuth=null;
- }
-
- // Review r5 #1: a bind turn that ran while retiring registered nothing. When this controller's own source
- // supersedes the cleanup, bind again on a later turn, as at startup.
- function rearmSkippedAuthBinding(){
-  if(!authBindSkipped||authBindTimer!==null||authBound||closed)return;
-  authBindSkipped=false;
-  const bindingTimer=timers.setTimeout(()=>{
-   if(authBindTimer!==bindingTimer)return;
-   authBindTimer=null;
-   bindAuthListeners();
-  },0);
-  authBindTimer=bindingTimer;
+  if(act.authStarted)app.postMessage('auth-connect',data);
+  else act.pendingAuth={data,generation:act.chatGeneration};
  }
 
  // Turns chat off. Unless told otherwise it also tells the broker this window no longer needs the login,
  // which releases the in-memory grant but never revokes or clears a saved one. options.retire marks the
  // controller's retirement on a reused core (review r3 #3): global then ends that label's auth session.
  function chatOff(options){
-  chatGeneration++;
-  pendingAuth=null;
+  act.chatGeneration++;
+  act.pendingAuth=null;
   stopReplay();
   stopLiveTransport();
   if(services.cancelHelpers){
@@ -1204,22 +1233,21 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    app.postMessage('auth-disconnect',options&&options.retire?{retire:true}:{});
   }
   resetLiveBuffer();
-  chat.mode='off';
-  chat.state='off';
-  chat.error='';
+  act.chat.mode='off';
+  act.chat.state='off';
+  act.chat.error='';
   view.editing=false;
   hideOverlay();
-  if(options&&options.retire)publishFinal();
-  else send();
+  send();
   trace('chat-off');
  }
 
  function resumeReplay(){
-  if(!replay||inert()||!sourceActive)return;
+  if(!act.replay||!active())return;
   chatOff();
-  chat.mode='replay';
-  chat.state='ready';
-  timeObserver=event.on('mpv.time-pos.changed',()=>tick(false));
+  act.chat.mode='replay';
+  act.chat.state='ready';
+  act.timeObserver=act.listen('mpv.time-pos.changed',()=>tick(false));
   if(view.presentation==='overlay')ensureOverlay();
   tick(true);
   send();
@@ -1228,50 +1256,50 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // ---- Replay chat ----
 
  function twitchTime(){
-  return Math.max(0,(Number(mpv.getNumber('time-pos'))||0)+chat.offset);
+  return Math.max(0,(Number(mpv.getNumber('time-pos'))||0)+act.chat.offset);
  }
 
  function maybeRefreshTwitch(seeking){
-  if(source.kind!=='twitch-vod'||!chatPreferred||inert()||!sourceActive)return;
+  if(source.kind!=='twitch-vod'||!chatPreferred||!active())return;
   const t=twitchTime();
-  if(seeking)twitchStall=null;
-  if(twitchStall){
-   if(t<=twitchStall.after)return;
-   twitchStall=null;
+  if(seeking)act.twitchStall=null;
+  if(act.twitchStall){
+   if(t<=act.twitchStall.after)return;
+   act.twitchStall=null;
   }
-  if(twitchFetchBusy){
-   if(seeking&&Math.abs(t-twitchFetchAt)>25)twitchQueuedAt=t;
+  if(act.twitchFetchBusy){
+   if(seeking&&Math.abs(t-act.twitchFetchAt)>25)act.twitchQueuedAt=t;
    return;
   }
-  if(chat.mode!=='replay'||!twitchWindow||(!seeking&&Date.now()<twitchNextAttempt))return;
-  if(t<twitchWindow.start-2||(twitchWindow.hasMore&&t>=twitchWindow.end-15)){
-   twitchNextAttempt=Date.now()+2500;
+  if(act.chat.mode!=='replay'||!act.twitchWindow||(!seeking&&Date.now()<act.twitchNextAttempt))return;
+  if(t<act.twitchWindow.start-2||(act.twitchWindow.hasMore&&t>=act.twitchWindow.end-15)){
+   act.twitchNextAttempt=Date.now()+2500;
    fetchTwitchWindow({auto:true,at:t});
   }
  }
 
  function tick(force){
-  if(inert()||chat.mode!=='replay'||!replay)return;
-  const elapsed=Date.now()-lastTick;
+  if(!active()||act.chat.mode!=='replay'||!act.replay)return;
+  const elapsed=Date.now()-act.lastTick;
   if(!force&&elapsed<200){
-   if(updateTimer===null)updateTimer=timers.setTimeout(onThrottledTick,200-elapsed);
+   if(act.updateTimer===null)act.updateTimer=act.setTimeout(onThrottledTick,200-elapsed);
    return;
   }
-  lastTick=Date.now();
+  act.lastTick=Date.now();
   try{
    const t=Number(mpv.getNumber('time-pos'))||0;
-   const result=replay.windowAt(t,{offsetSeconds:chat.offset,limit:150,windowSeconds:120});
+   const result=act.replay.windowAt(t,{offsetSeconds:act.chat.offset,limit:150,windowSeconds:120});
    const signature=result.map(m=>m.id+':'+m.time).join('|');
-   if(signature!==lastSignature){
-    lastSignature=signature;
-    messages=result.map(safeMessage);
+   if(signature!==act.lastSignature){
+    act.lastSignature=signature;
+    act.messages=result.map(safeMessage);
     send();
    }
   }catch(_){
-   chat.error='The chat archive could not be read. Import it again.';
-   chat.state='error';
+   act.chat.error='The chat archive could not be read. Import it again.';
+   act.chat.state='error';
    stopReplay();
-   messages=[];
+   act.messages=[];
    send();
    return;
   }
@@ -1279,29 +1307,50 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onThrottledTick(){
-  updateTimer=null;
+  act.updateTimer=null;
   tick(true);
  }
 
+ // A helper's output that an activation abandoned (L1): the late result is discarded with its files.
+ function discardLate(path,owns){
+  return value=>{
+   if(owns(value)&&services.deleteDataPath)services.deleteDataPath(path);
+  };
+ }
+
+ // options.consumed: a download the import reads; it is deleted once the import helper has finished with it.
  async function importArchive(path,options){
-  if(inert()||!sourceActive)return false;
-  const preserve=!!(options&&options.preserve&&chat.mode==='replay');
-  const selectionGeneration=chatGeneration;
-  if(!path)path=await host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']});
-  if(!path||inert()||selectionGeneration!==chatGeneration)return false;
+  if(!active())return false;
+  const preserve=!!(options&&options.preserve&&act.chat.mode==='replay');
+  const consumed=options&&options.consumed||'';
+  const selectionGeneration=act.chatGeneration;
+  if(!path){
+   path=await act.wait(host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']}));
+  }
+  if(!path||selectionGeneration!==act.chatGeneration){
+   if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   return false;
+  }
   if(!preserve){
    chatOff();
-   chat.state='importing';
-   chat.error='';
+   act.chat.state='importing';
+   act.chat.error='';
    send();
   }
-  const myGeneration=chatGeneration;
+  const myGeneration=act.chatGeneration;
   let output='',outputOwned=false;
   try{
    output=uniqueDataPath('replay');
-   const result=await services.runHelper('replay',['import','--input',path,'--output',output]);
-   outputOwned=!!result&&result.ok&&result.indexPath===output+'/index.json';
-   if(inert()||chatGeneration!==myGeneration)return false;
+   const owns=value=>!!value&&value.ok&&value.indexPath===output+'/index.json';
+   const late=discardLate(output,owns);
+   const helper=services.runHelper('replay',['import','--input',path,'--output',output]);
+   const result=await act.wait(helper,value=>{
+    late(value);
+    if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   });
+   if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
+   outputOwned=owns(result);
+   if(act.chatGeneration!==myGeneration)return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The archive could not be imported.');
    if(result.indexPath!==output+'/index.json')throw Error('The imported archive location is invalid.');
    const index=JSON.parse(services.readFile(result.indexPath));
@@ -1309,19 +1358,19 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     throw Error('The downloaded chat does not belong to this recording.');
    }
     const nextReplay=new Replay(index,file=>JSON.parse(services.readFile(output+'/'+file)));
-   const oldPath=replayPath;
-   replay=nextReplay;
-   replayPath=output;
-   replayMetadata=index;
+   const oldPath=act.replayPath;
+   act.replay=nextReplay;
+   act.replayPath=output;
+   act.replayMetadata=index;
    if(oldPath&&services.deleteDataPath)services.deleteDataPath(oldPath);
-   chat.count=index.count;
-   chat.sourceName=options&&options.twitch?'Twitch chat near playback':index.title||'Imported chat';
-   chat.available=true;
-   chat.error='';
-   if(!preserve)chat.offset=0;
-   twitchWindow=options&&options.twitch?options.window:null;
+   act.chat.count=index.count;
+   act.chat.sourceName=options&&options.twitch?'Twitch chat near playback':index.title||'Imported chat';
+   act.chat.available=true;
+   act.chat.error='';
+   if(!preserve)act.chat.offset=0;
+   act.twitchWindow=options&&options.twitch?options.window:null;
    if(preserve){
-    lastSignature='';
+    act.lastSignature='';
     tick(true);
     send();
    }else{
@@ -1334,13 +1383,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    });
    return true;
   }catch(error){
-   if(inert()||chatGeneration!==myGeneration)return false;
-   if(!preserve)chat.state='error';
-   chat.error=publicError(error,'Could not import chat.');
+   if(act.chatGeneration!==myGeneration)return false;
+   if(!preserve)act.chat.state='error';
+   act.chat.error=publicError(error,'Could not import chat.');
    send();
    return false;
   }finally{
-   if(outputOwned&&output!==replayPath&&services.deleteDataPath)services.deleteDataPath(output);
+   if(outputOwned&&output!==act.replayPath&&services.deleteDataPath)services.deleteDataPath(output);
   }
  }
 
@@ -1357,78 +1406,83 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  async function fetchTwitchWindow(options){
   const auto=!!(options&&options.auto);
-  if(inert()||!sourceActive||source.kind!=='twitch-vod'||(auto&&!chatPreferred))return false;
+  if(!active()||source.kind!=='twitch-vod'||(auto&&!chatPreferred))return false;
   const at=Number.isFinite(Number(options&&options.at))?Math.max(0,Number(options.at)):twitchTime();
-  if(twitchFetchBusy){
-   if(Math.abs(at-twitchFetchAt)>25)twitchQueuedAt=at;
+  if(act.twitchFetchBusy){
+   if(Math.abs(at-act.twitchFetchAt)>25)act.twitchQueuedAt=at;
    return false;
   }
   if(!auto){
    setChatPreferred(true);
-   twitchStall=null;
+   act.twitchStall=null;
   }
-  const preserve=chat.mode==='replay'&&!!replay;
+  const preserve=act.chat.mode==='replay'&&!!act.replay;
   if(!preserve){
    chatOff();
-   chat.state='fetching';
-   chat.error='';
+   act.chat.state='fetching';
+   act.chat.error='';
    send();
   }
-  const generation=chatGeneration;
+  const generation=act.chatGeneration;
   const downloadPath=uniqueDataPath('download');
   let owned=false,seekWasQueued=false;
-  twitchFetchBusy=true;
-  twitchFetchAt=at;
-  twitchNextAttempt=Date.now()+2500;
+  act.twitchFetchBusy=true;
+  act.twitchFetchAt=at;
+  act.twitchNextAttempt=Date.now()+2500;
   try{
-   const result=await services.runHelper('acquire',['--url',source.url,'--output',downloadPath,'--at',String(at)]);
-   owned=!!result&&result.ok&&result.path===downloadPath+'/replay.jsonl';
-   if(inert()||!sourceActive||generation!==chatGeneration)return false;
+   const owns=value=>!!value&&value.ok&&value.path===downloadPath+'/replay.jsonl';
+   const helper=services.runHelper('acquire',['--url',source.url,'--output',downloadPath,'--at',String(at)]);
+   const result=await act.wait(helper,discardLate(downloadPath,owns));
+   owned=owns(result);
+   if(generation!==act.chatGeneration)return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'Twitch chat could not be fetched.');
    if(!owned)throw Error('The downloaded chat location is invalid.');
    const w=result.window;
    if(!validTwitchWindow(w,at))throw Error('The chat window metadata is invalid.');
    const now=twitchTime();
    if(Math.abs(now-at)>25&&(now<w.start-10||now>w.end+10)){
-    twitchQueuedAt=now;
+    act.twitchQueuedAt=now;
     return false;
    }
-   const imported=await importArchive(result.path,{
+   // The import deletes the download once its helper has read it, also if this activation ends meanwhile.
+   owned=false;
+   const imported=await act.wait(importArchive(result.path,{
     preserve,
     twitch:true,
+    consumed:downloadPath,
     window:{start:w.start,end:w.end,hasMore:w.hasMore}
-   });
+   }));
    if(imported){
     // No progress past the playhead: the same request would return the same window.
     const partial=w.hasMore&&w.end<=at+15;
-    twitchNextAttempt=partial?Date.now()+2500:0;
-    twitchStall=auto&&partial?{after:Math.max(at,w.end)}:null;
+    act.twitchNextAttempt=partial?Date.now()+2500:0;
+    act.twitchStall=auto&&partial?{after:Math.max(at,w.end)}:null;
     return true;
    }
    return false;
   }catch(error){
-   if(!inert()&&sourceActive&&generation===chatGeneration){
-    twitchNextAttempt=Date.now()+30000;
+   if(generation===act.chatGeneration){
+    act.twitchNextAttempt=Date.now()+30000;
     // A seek that arrived while this request ran asks for a different position. Stay in "fetching" so the
-    // finally block below requests it; this failed position is not retried. Off, close and a source change
-    // end up in the generation and sourceActive checks above, so they never reach this branch.
-    seekWasQueued=!preserve&&twitchQueuedAt!==null&&chatPreferred;
+    // finally block below requests it; this failed position is not retried. Off is caught by the generation
+    // check; a close or a source change ends the activation, and then this continuation never runs.
+    seekWasQueued=!preserve&&act.twitchQueuedAt!==null&&chatPreferred;
     if(!preserve&&!seekWasQueued){
-     chat.state='unavailable';
-     chat.available=false;
+     act.chat.state='unavailable';
+     act.chat.available=false;
     }
-    chat.error=String(error&&error.message||'Twitch replay is unavailable.').slice(0,180);
+    act.chat.error=String(error&&error.message||'Twitch replay is unavailable.').slice(0,180);
     send();
    }
    return false;
   }finally{
    if(owned&&services.deleteDataPath)services.deleteDataPath(downloadPath);
-   twitchFetchBusy=false;
-   const pending=twitchQueuedAt;
-   twitchQueuedAt=null;
-   if(pending!==null&&!inert()&&sourceActive&&chatPreferred&&(chat.mode==='replay'||chat.state==='fetching')){
+   act.twitchFetchBusy=false;
+   const pending=act.twitchQueuedAt;
+   act.twitchQueuedAt=null;
+   if(pending!==null&&chatPreferred&&(act.chat.mode==='replay'||act.chat.state==='fetching')){
     // With no chat on screen, a failed first fetch has no window to cover the queued position.
-    const outside=seekWasQueued||!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
+    const outside=seekWasQueued||!act.twitchWindow||pending<act.twitchWindow.start-2||pending>act.twitchWindow.end-10;
     if(outside)fetchTwitchWindow({auto:true,at:pending});
    }
   }
@@ -1436,33 +1490,37 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  async function fetchReplay(options){
   const auto=!!(options&&options.auto);
-  if(inert()||!sourceActive)return;
+  if(!active())return;
   if(source.kind==='twitch-vod')return fetchTwitchWindow(options||{});
   if(source.kind!=='youtube')return;
   chatOff();
-  const myGeneration=chatGeneration;
-  chat.state='fetching';
+  const myGeneration=act.chatGeneration;
+  act.chat.state='fetching';
   send();
   const downloadPath=uniqueDataPath('download');
   let downloadOwned=false;
   try{
-   const result=await services.runHelper('acquire',['--url',source.url,'--output',downloadPath]);
-   downloadOwned=!!result&&result.ok&&result.path===downloadPath+'/replay.jsonl';
-   if(inert()||chatGeneration!==myGeneration)return;
+   const owns=value=>!!value&&value.ok&&value.path===downloadPath+'/replay.jsonl';
+   const helper=services.runHelper('acquire',['--url',source.url,'--output',downloadPath]);
+   const result=await act.wait(helper,discardLate(downloadPath,owns));
+   downloadOwned=owns(result);
+   if(act.chatGeneration!==myGeneration)return;
    if(!result.ok)throw Error(result.error&&result.error.message||'Replay is unavailable for this video.');
    if(!downloadOwned)throw Error('The downloaded replay location is invalid.');
-   await importArchive(result.path);
+   // The import deletes the download once its helper has read it, also if this activation ends meanwhile.
+   downloadOwned=false;
+   await act.wait(importArchive(result.path,{consumed:downloadPath}));
   }catch(error){
-   if(inert()||chatGeneration!==myGeneration)return;
+   if(act.chatGeneration!==myGeneration)return;
    if(auto&&source.kind==='youtube'){
-    chat.state='off';
-    chat.error='';
-    chat.available=false;
+    act.chat.state='off';
+    act.chat.error='';
+    act.chat.available=false;
     send();
     return;
    }
-   chat.state='unavailable';
-   chat.error=String(error&&error.message||'Replay is unavailable.').slice(0,180);
+   act.chat.state='unavailable';
+   act.chat.error=String(error&&error.message||'Replay is unavailable.').slice(0,180);
    send();
   }finally{
    if(downloadOwned&&services.deleteDataPath)services.deleteDataPath(downloadPath);
@@ -1472,37 +1530,34 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // ---- Quality reloads ----
 
  async function refresh(){
-  if(inert()||!sourceActive||refreshing||player.snapshot().busy)return;
-  refreshing=true;
+  if(!active()||act.refreshing||act.player.snapshot().busy)return;
+  act.refreshing=true;
   try{
-   const result=await services.resolve(source,player.snapshot().quality);
-   if(inert()||!sourceActive)return;
+   const result=await act.wait(services.resolve(source,act.player.snapshot().quality));
    if(!result.ok)throw Error('Unavailable');
-   player.data.formats=result.formats;
-   loadError='';
+   act.player.data.formats=result.formats;
+   act.loadError='';
    send();
   }catch(_){
-   if(!inert()&&sourceActive){
-    loadError='Qualities unavailable. Try again.';
-    send();
-   }
+   act.loadError='Qualities unavailable. Try again.';
+   send();
   }finally{
-   refreshing=false;
+   act.refreshing=false;
   }
  }
 
  function applyResolution(result,context){
-  if(restoreTimer!==null){
-   timers.clearTimeout(restoreTimer);
-   restoreTimer=null;
+  if(act.restoreTimer!==null){
+   act.clearTimeout(act.restoreTimer);
+   act.restoreTimer=null;
   }
-  restoration={context,live:result.live,loaded:false,sized:false,loadedAt:null,lastSizeAt:null};
+  act.restoration={context,live:result.live,loaded:false,sized:false,loadedAt:null,lastSizeAt:null};
   if(result.headers){
    mpv.set('file-local-options/http-header-fields',Object.keys(result.headers).map(k=>k+': '+result.headers[k]));
   }
   if(result.audioURL)mpv.command('audio-add',[result.audioURL,'auto','Audio']);
   mpv.set('stream-open-filename',result.mediaURL);
-  liveClockURL=source.kind==='twitch-live'&&typeof result.mediaURL==='string'?result.mediaURL:null;
+  act.liveClockURL=source.kind==='twitch-live'&&typeof result.mediaURL==='string'?result.mediaURL:null;
   mpv.set('file-local-options/force-media-title',String(result.title||source.id)+' — '+source.provider);
   if(context.position>0&&!result.live)mpv.set('file-local-options/start',context.position);
   mpv.set('pause',!!context.paused);
@@ -1510,22 +1565,22 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function restoreAfterNativeLoad(){
-  if(!restoration||!restoration.loaded)return;
-  if(restoreTimer!==null)timers.clearTimeout(restoreTimer);
-  const expected=restoration;
+  if(!act.restoration||!act.restoration.loaded)return;
+  if(act.restoreTimer!==null)act.clearTimeout(act.restoreTimer);
+  const expected=act.restoration;
   const now=Date.now();
   const sinceLoad=Math.max(0,now-expected.loadedAt);
   const quietRemaining=Math.max(0,600-Math.max(0,now-expected.lastSizeAt));
   const delay=expected.sized?Math.min(quietRemaining,Math.max(0,2500-sinceLoad)):Math.max(0,1600-sinceLoad);
-  restoreTimer=timers.setTimeout(()=>restorePlaybackState(expected),delay);
+  act.restoreTimer=act.setTimeout(()=>restorePlaybackState(expected),delay);
  }
 
  function restorePlaybackState(expected){
-  restoreTimer=null;
-  if(inert()||!sourceActive||restoration!==expected)return;
-  restoration=null;
+  act.restoreTimer=null;
+  if(!active()||act.restoration!==expected)return;
+  act.restoration=null;
   const c=expected.context;
-  if(c.generation!==activeGeneration)return;
+  if(c.generation!==act.activeGeneration)return;
   if(!expected.live&&c.position>0)mpv.command('seek',[String(c.position),'absolute+exact']);
   mpv.set('speed',c.speed||1);
   mpv.set('pause',!!c.paused);
@@ -1539,7 +1594,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    speed:c.speed||1,
    requestedPosition:expected.live?0:c.position
   });
-  player.loaded(c.generation);
+  act.player.loaded(c.generation);
   send();
  }
 
@@ -1549,43 +1604,72 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function onWindowSizeAdjusted(){
   trace('native-size-adjusted',{frame:core.window.frame});
-  if(restoration&&restoration.loaded){
-   restoration.sized=true;
-   restoration.lastSizeAt=Date.now();
+  if(act.restoration&&act.restoration.loaded){
+   act.restoration.sized=true;
+   act.restoration.lastSizeAt=Date.now();
    restoreAfterNativeLoad();
   }
  }
 
  // ---- Native file lifecycle ----
 
- function deactivateForForeignFile(){
-  sourceActive=false;
-  endReplacement();
-  cancelAuthBinding();
-  chatOff();
-  if(services.cancelHelpers)services.cancelHelpers();
-  player.deactivate();
+ // The physical end of an activation, on a main-thread turn: its timers, listeners, clock, helpers' late
+ // results and replay data stop with it. The window's shared surfaces (the live transport, the sign-in use, the
+ // overlay, the inactive snapshot) are torn down only when no newer activation holds the window by then; a newer
+ // one owns them. options.final: publish the final inactive snapshot (L5). options.retire: see chatOff.
+ function releaseActivation(ended,options){
+  if(ended.disposed)return;
+  const shared=ended===act;
+  if(shared){
+   chatOff({retire:!!options.retire});
+   if(services.cancelHelpers)services.cancelHelpers();
+  }
+  ended.dispose();
+  ended.liveClock.stop();
+  ended.player.deactivate();
+  if(ended.replay)ended.replay.clear();
+  if(ended.replayPath&&services.deleteDataPath)services.deleteDataPath(ended.replayPath);
+  ended.replay=null;
+  ended.replayPath='';
+  ended.staged=null;
+  if(!shared){
+   // The newer activation owns the window, but not a live transport it has not started itself. At a close the
+   // current activation's own teardown stops the transport.
+   if(ended.liveStarted&&!act.liveStarted&&!authority.isClosed()){
+    if(overlayReady)postOverlay('live-stop',{});
+    if(!overlayNeeded())hideOverlay();
+   }
+   return;
+  }
   stopLiveClock();
-  timers.clearAll();
-  staged=null;
-  loadError=INACTIVE_MESSAGE;
-  publishFinal();
+  ended.loadError=INACTIVE_MESSAGE;
+  if(options.final)publishFinal();
  }
 
  // The adopted hook's watchdog gave up on this load (see holdLoad): drop any late result, and leave this and
- // later files to IINA's own loader.
+ // later files to IINA's own loader. Runs on a main-thread turn.
  function passThrough(){
   if(closed)return;
-  generation++;
-  deactivateForForeignFile();
+  authority.end();
+  releaseActivation(act,{final:true});
  }
 
- function initialContext(){
-  return{generation:0,position:source.startSeconds||0,paused:false,speed:1};
+ // A fresh load's context. A path carrying a marker this activation did not issue (a replacement an earlier
+ // activation staged) keeps that marker as its generation, so its file-loaded is recognised.
+ function initialContext(path){
+  return{generation:markerGeneration(path),position:source.startSeconds||0,paused:false,speed:1};
+ }
+
+ function markerGeneration(path){
+  let decoded=String(path||'');
+  try{
+   decoded=decodeURIComponent(decoded);
+  }catch(_){}
+  const marker=/#streams-generation=(\d+)$/.exec(decoded);
+  return marker?Number(marker[1]):0;
  }
 
  async function onLoadHook(next){
-  const mine=++generation;
   let completed=false;
   const finish=()=>{
    if(completed)return;
@@ -1597,88 +1681,93 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     finish();
     return;
    }
-   const current=loadingPath(mpv);
-   const parsed=Sources.parse(current);
+   const path=loadingPath(mpv);
+   const parsed=Sources.parse(path);
    if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url)){
     // Adopted windows never reach this: their core hook retires the controller (waitForNativeStream).
     // Review r3 #5: the foreign file continues at once, on the hook, because a plugin timer may never run.
-    // Review r2 #6: deactivation runs on a later main-thread turn, never on mpv's hook queue. A close or a
-    // later load before that turn owns what happens next.
-    // Review r4 #3: the controller loses its authority before the hook continues, in pure JS.
-    retiring=true;
+    // Review r4 #3 and L2: the activation ends before the hook continues, in pure JS, and never returns.
+    // Review r2 #6: its release runs on a later main-thread turn, never on mpv's hook queue.
+    const ended=authority.end();
     finish();
-    timers.setTimeout(()=>{
-     if(closed||mine!==generation)return;
-     retiring=false;
-     deactivateForForeignFile();
-    },0);
+    if(ended)authority.windowTurn(()=>releaseActivation(ended,{final:true}));
     return;
    }
-   // This source loads again: a pending foreign cleanup is superseded, and the controller's authority returns,
-   // active or already deactivated.
-   retiring=false;
-   if(!sourceActive){
-    finish();
-    return;
-   }
-   rearmSkippedAuthBinding();
-   // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
-   stopLiveClock();
-   liveClockURL=null;
-   let result,context;
-   if(staged){
-    result=staged.result;
-    context=staged.context;
-    staged=null;
-   }else if(source.kind==='local-test'){
-    result={
-     ok:true,title:config.qa.title||'Native replay test',live:false,duration:600,quality:'local',formats:[],
-     mediaURL:source.url
-    };
-    context=initialContext();
-   }else{
-    phase('resolve-start',{quality:'auto720'});
-    result=await services.resolve(source,'auto720');
-    // A failed result is traced as 'error' by the catch below.
-    if(result&&result.ok)phase('resolve-done',{quality:result.quality,live:!!result.live});
-    context=initialContext();
-   }
-   // inert, not closed: an adopted controller retiring during this resolve must not touch the next file.
-   if(inert()||mine!==generation){
-    finish();
-    return;
-   }
-   if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
-   activeGeneration=context.generation;
-   applyResolution(result,context);
-   if(!initialResolved){
-    player.adopt(result);
-    initialResolved=true;
-   }
-   loadError='';
-   trace('resolved',{quality:result.quality,live:result.live});
+   // L2: after a loss, this source loading again is a new activation with fresh state, not a resumption.
+   if(!active())act=newActivation(act);
+   await act.wait(loadForActivation(path,finish));
   }catch(error){
    phase('error',{error:publicError(error,'Unable to open source.')});
-   if(!closed){
-    loadError=publicError(error,'Unable to open source.');
+   if(active()){
+    act.loadError=publicError(error,'Unable to open source.');
     send();
-    trace('load-error',{error:loadError});
+    trace('load-error',{error:act.loadError});
    }
   }finally{
    finish();
   }
  }
 
+ // One own-source load in the current activation. A resolve that settles after the activation ended only
+ // continues the hook (L4); a newer load of the same activation supersedes this one.
+ async function loadForActivation(path,finish){
+  const mine=++act.loads;
+  // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
+  stopLiveClock();
+  act.liveClockURL=null;
+  let result,context;
+  // The staged context belongs to the replacement it marked. Another load of the source (a plain reopen while
+  // the replacement was pending) supersedes it and resolves afresh.
+  const staged=act.staged&&isStagedPath(path)?act.staged:null;
+  act.staged=null;
+  if(staged){
+   result=staged.result;
+   context=staged.context;
+  }else if(source.kind==='local-test'){
+   result={
+    ok:true,title:config.qa.title||'Native replay test',live:false,duration:600,quality:'local',formats:[],
+    mediaURL:source.url
+   };
+  }else{
+   phase('resolve-start',{quality:'auto720'});
+   result=await act.wait(services.resolve(source,'auto720'),()=>finish());
+   // A failed result is traced as 'error' by onLoadHook's catch.
+   if(result&&result.ok)phase('resolve-done',{quality:result.quality,live:!!result.live});
+  }
+  if(mine!==act.loads){
+   finish();
+   return;
+  }
+  // Only the newest load of the activation sets the generation an unstaged load confirms.
+  if(!staged)context=freshContext(path);
+  if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
+  act.activeGeneration=context.generation;
+  applyResolution(result,context);
+  if(!act.initialResolved){
+   act.player.adopt(result);
+   act.initialResolved=true;
+  }
+  act.loadError='';
+  trace('resolved',{quality:result.quality,live:result.live});
+ }
+
+ // An unstaged load sets the generation its file-loaded and Playback confirm.
+ function freshContext(path){
+  const context=initialContext(path);
+  act.freshGeneration=context.generation;
+  act.player.fresh=context.generation;
+  return context;
+ }
+
  function onWindowLoaded(){
   windowLoaded=true;
   if(controlsDesired)showSidebar();
-  if(overlayNeeded())ensureOverlay();
+  if(active()&&overlayNeeded())ensureOverlay();
   trace('window-loaded');
  }
 
  // A quality reload must preserve IINA's native sidebar choice, including a collapse with no plugin event.
  function onFileLoaded(url){
-  if(inert()||!sourceActive)return;
   let decoded=String(url||'');
   try{
    decoded=decodeURIComponent(decoded);
@@ -1687,23 +1776,24 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url))return;
   const marker=/#streams-generation=(\d+)$/.exec(decoded);
   const loadedGeneration=marker?Number(marker[1]):0;
-  if(loadedGeneration!==activeGeneration)return;
+  if(loadedGeneration!==act.activeGeneration)return;
   replacementLoaded(loadedGeneration);
-  if(restoration){
-   if(!restoration.loaded){
-    restoration.loaded=true;
-    restoration.loadedAt=Date.now();
+  if(act.restoration){
+   if(!act.restoration.loaded){
+    act.restoration.loaded=true;
+    act.restoration.loadedAt=Date.now();
    }
    restoreAfterNativeLoad();
   }
-  if(controlsDesired&&loadedGeneration===0)showSidebar();
+  const initial=loadedGeneration===act.freshGeneration;
+  if(controlsDesired&&initial)showSidebar();
   if(overlayNeeded())ensureOverlay();
-  if(loadedGeneration===0)maybeAutoFetchReplay();
-  if(liveClockURL)startLiveClock();
+  if(initial)maybeAutoFetchReplay();
+  if(act.liveClockURL)startLiveClock();
   tick(true);
   trace('file-loaded',{
    generation:loadedGeneration,
-   reportedQuality:player.snapshot().quality,
+   reportedQuality:act.player.snapshot().quality,
    width:mpv.getNumber('video-params/w'),
    height:mpv.getNumber('video-params/h')
   });
@@ -1711,20 +1801,20 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function maybeAutoFetchReplay(){
   if(source.kind!=='youtube'&&source.kind!=='twitch-vod')return;
-  if(player.snapshot().live||chat.mode!=='off'||!chatPreferred||autoReplayAttempted)return;
-  autoReplayAttempted=true;
+  if(act.player.snapshot().live||act.chat.mode!=='off'||!chatPreferred||act.autoReplayAttempted)return;
+  act.autoReplayAttempted=true;
   fetchReplay({auto:true});
  }
 
  // During a Go Live replacement an end-file is unattributed (see `replacement`): it is not a stop and does
  // not end the transaction.
  function onEndFile(){
-  if(replacement){
-   replacement.endSeen=true;
+  if(act.replacement){
+   act.replacement.endSeen=true;
    trace('end-file',{replaced:true});
    return;
   }
-  player.ended();
+  act.player.ended();
   trace('end-file');
  }
 
@@ -1758,50 +1848,43 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // closed: the window stays, and a stream adopted next takes over the same player.
  function retire(){
   if(closed)return;
-  generation++;
-  sourceActive=false;
-  staged=null;
-  player.deactivate();
-  loadError=INACTIVE_MESSAGE;
-  // teardown's chatOff posts this final state before the controller closes, and tells global this
-  // controller's auth use is over (review r3 #3).
-  teardown({notifyGlobal:false,retire:true});
+  authority.end();
+  // The final inactive snapshot, and global hears that this controller's auth use is over (review r3 #3).
+  releaseActivation(act,{final:true,retire:true});
+  teardown({notifyGlobal:false});
  }
 
- // Review r4 #3: the core marks the controller before a pass-through continues; retire() tears it down later.
+ // Review r4 #3: the core ends the activation before a pass-through continues, in pure JS; retire() tears the
+ // controller down on a later turn.
  function beginRetiring(){
-  retiring=true;
+  authority.end();
  }
 
  // A load is this controller's own only when it is the staged reload it issued, by generation marker.
  function ownsLoad(path){
-  if(inert()||!sourceActive||!staged)return false;
+  return active()&&!!act.staged&&isStagedPath(path);
+ }
+
+ function isStagedPath(path){
   let decoded=String(path||'');
   try{
    decoded=decodeURIComponent(decoded);
   }catch(_){}
   const parsed=Sources.parse(decoded);
-  const marker=/#streams-generation=(\d+)$/.exec(decoded);
-  return !!parsed&&parsed.url===source.url&&!!marker&&Number(marker[1])===staged.context.generation;
+  const same=source.kind==='local-test'?decoded.split('#')[0]===source.url:!!parsed&&parsed.url===source.url;
+  const marked=/#streams-generation=\d+$/.test(decoded);
+  return same&&marked&&markerGeneration(path)===act.staged.context.generation;
  }
 
  function teardown(options){
   if(closed)return;
-  endReplacement();
-  cancelAuthBinding();
-  chatOff({retire:!!options.retire});
-  if(services.cancelHelpers)services.cancelHelpers();
-  if(replayPath&&services.deleteDataPath)services.deleteDataPath(replayPath);
-  replay=null;
-  replayPath='';
+  authority.close();
+  releaseActivation(act,{});
+  for(const ended of authority.undisposed())releaseActivation(ended,{});
   if(options.notifyGlobal)app.postMessage('player-closed',{});
   closed=true;
-  generation++;
-  player.close();
-  stopLiveClock();
-  timers.clearAll();
-  restoreTimer=null;
-  restoration=null;
+  act.player.close();
+  authority.clearWindowTimers();
   for(const [name,id] of listeners){
    try{
     event.off(name,id);
@@ -1814,7 +1897,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function authReceiver(accept,handler){
   return wire=>{
-   if(inert()||!sourceActive||typeof wire!=='string'||wire.length>8192)return;
+   if(!active()||typeof wire!=='string'||wire.length>8192)return;
    let data;
    try{
     data=JSON.parse(wire);
@@ -1830,11 +1913,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(data.login)auth=Object.assign({},auth,{login:data.login});
   if(data.saved){
    auth=Object.assign({},auth,{saved:true});
-   if(chatPreferred&&chat.mode==='off'&&source.kind==='twitch-live'){
-    chat=authorizingLiveChat();
-    const myGen=chatGeneration;
-    timers.setTimeout(()=>{
-     if(!inert()&&sourceActive&&chat.mode==='live'&&chatGeneration===myGen)requestAuth('');
+   if(chatPreferred&&act.chat.mode==='off'&&source.kind==='twitch-live'){
+    act.chat=authorizingLiveChat();
+    const myGen=act.chatGeneration;
+    act.setTimeout(()=>{
+     if(act.chat.mode==='live'&&act.chatGeneration===myGen)requestAuth('');
     },0);
    }
   }
@@ -1842,39 +1925,39 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onAuthState(data){
-  trace('auth-state-received',{authPhase:data.phase,chatMode:chat.mode});
-  if(chat.mode!=='live')return;
+  trace('auth-state-received',{authPhase:data.phase,chatMode:act.chat.mode});
+  if(act.chat.mode!=='live')return;
   auth=Object.assign({},data,{saved:data.phase==='ready'||auth.saved});
-  chat.state=data.phase;
-  chat.error=data.message||'';
+  act.chat.state=data.phase;
+  act.chat.error=data.message||'';
   send();
  }
 
  function onAuthReady(data){
-  if(chat.mode!=='live')return;
-  if(liveStarted)stopLiveTransport();
-  liveCredential={token:data.token,login:data.login};
+  if(act.chat.mode!=='live')return;
+  if(act.liveStarted)stopLiveTransport();
+  act.liveCredential={token:data.token,login:data.login};
   ensureOverlay();
   startLiveTransport();
  }
 
  function onAuthStop(){
-  trace('auth-stop-received',{chatMode:chat.mode});
+  trace('auth-stop-received',{chatMode:act.chat.mode});
   stopLiveTransport();
-  if(chat.mode==='live'){
-   chat.state='disconnected';
+  if(act.chat.mode==='live'){
+   act.chat.state='disconnected';
    clearRevealTimer();
-   liveInbox=[];
-   messages=[];
+   act.liveInbox=[];
+   act.messages=[];
    send();
   }
  }
 
  function onAuthForgotten(result){
   auth={phase:'off',message:'',saved:false};
-  if(!result.removed)chat.error='The saved authorization could not be cleared from Keychain.';
-  else if(!result.revoked)chat.error='Saved login cleared. Twitch revocation could not be confirmed.';
-  else chat.error='';
+  if(!result.removed)act.chat.error='The saved authorization could not be cleared from Keychain.';
+  else if(!result.revoked)act.chat.error='Saved login cleared. Twitch revocation could not be confirmed.';
+  else act.chat.error='';
   send();
  }
 
@@ -1898,41 +1981,38 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // ---- Registration ----
 
- on('iina.plugin-overlay-loaded',onOverlayLoaded);
- on('iina.window-size-adjusted',onWindowSizeAdjusted);
+ onActive('iina.plugin-overlay-loaded',onOverlayLoaded);
+ onActive('iina.window-size-adjusted',onWindowSizeAdjusted);
  registerLoadHook(onLoadHook);
- on('iina.window-loaded',onWindowLoaded);
- on('iina.file-loaded',onFileLoaded);
- on('mpv.end-file',onEndFile);
- on('mpv.seek',onSeek);
- on('mpv.pause.changed',onPauseChanged);
- on('iina.window-fs.changed',onFullscreenChanged);
- on('iina.window-will-close',onWindowWillClose);
+ onWindow('iina.window-loaded',onWindowLoaded);
+ onActive('iina.file-loaded',onFileLoaded);
+ onActive('mpv.end-file',onEndFile);
+ onActive('mpv.seek',onSeek);
+ onActive('mpv.pause.changed',onPauseChanged);
+ onActive('iina.window-fs.changed',onFullscreenChanged);
+ onWindow('iina.window-will-close',onWindowWillClose);
 
- // IINA creates the child while the parent's createPlayerInstance call is on
- // stack. Bind from a later child turn and retain callbacks in the controller.
- // The wrapped timer clears IINA's retained native entry when it fires.
- const bindingTimer=timers.setTimeout(()=>{
-  if(authBindTimer!==bindingTimer)return;
-  authBindTimer=null;
-  if(!closed)app.onMessage('open-error',onOpenError);
-  bindAuthListeners();
- },0);
- authBindTimer=bindingTimer;
-
- function bindAuthListeners(){
-  if(closed||authBound)return;
-  if(retiring){
-   authBindSkipped=true;
-   return;
-  }
-  if(!sourceActive)return;
+ // IINA creates the child while the parent's createPlayerInstance call is on stack, so the global entry's
+ // messages are registered from a later turn: the first activation's own turn (startAuth). A window that loses
+ // its source before that turn registers them with the next activation's. The callbacks are kept in the
+ // controller and act only for the current activation (authReceiver); the wrapped timer clears IINA's
+ // retained native entry when it fires.
+ function registerAppListeners(){
+  if(closed||appListenersRegistered)return;
+  appListenersRegistered=true;
+  app.onMessage('open-error',whileWindow(onOpenError));
   for(const name of Object.keys(authCallbacks))app.onMessage(name,authCallbacks[name]);
-  authBound=true;
-  const pending=pendingAuth;
-  pendingAuth=null;
-  if(pending&&pending.generation===chatGeneration&&chat.mode==='live')app.postMessage('auth-connect',pending.data);
-  else if(source.kind==='twitch-live'&&chat.mode==='off')app.postMessage('auth-probe',{});
+ }
+
+ // Review r5 #1: each activation's first turn sends its own sign-in request, or asks for sign-in state.
+ function startAuth(){
+  registerAppListeners();
+  act.authStarted=true;
+  const pending=act.pendingAuth;
+  act.pendingAuth=null;
+  if(pending&&pending.generation===act.chatGeneration&&act.chat.mode==='live'){
+   app.postMessage('auth-connect',pending.data);
+  }else if(source.kind==='twitch-live'&&act.chat.mode==='off')app.postMessage('auth-probe',{});
  }
 
  // Beside Video is D1's presentation (D-028), not built yet: listed and inert until D1 adds it. Its action is
@@ -1941,10 +2021,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function chatMenu(){
   const parent=menu.item('Chat',null);
   const children=[
-   menu.item('Import Chat Archive…',whileOpen(()=>importArchive())),
-   menu.item('Turn Chat Off',whileOpen(onChatOffRequest)),
-   menu.item('In Sidebar',whileOpen(()=>setView({presentation:'sidebar'}))),
-   menu.item('Over Video',whileOpen(()=>setView({presentation:'overlay'}))),
+   menu.item('Import Chat Archive…',whileActive(()=>importArchive())),
+   menu.item('Turn Chat Off',whileActive(onChatOffRequest)),
+   menu.item('In Sidebar',whileActive(()=>setView({presentation:'sidebar'}))),
+   menu.item('Over Video',whileActive(()=>setView({presentation:'overlay'}))),
    menu.item('Beside Video',()=>{},{enabled:false})
   ];
   for(const child of children)parent.addSubMenuItem(child);
@@ -1953,16 +2033,22 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // IINA 1.5.1 shows five top-level plugin items, counting global's Open Stream (MenuController.updatePluginMenu).
  // A parent with a null action only opens its submenu (JavascriptAPIMenu.item, JavascriptPluginMenuItem).
- menu.addItem(menu.item('Show Streams',whileOpen(showSidebar)));
- menu.addItem(menu.item('Go Live',whileOpen(()=>{
+ menu.addItem(menu.item('Show Streams',whileWindow(showSidebar)));
+ menu.addItem(menu.item('Go Live',whileActive(()=>{
   goLive();
  }),{keyBinding:GO_LIVE_KEY,enabled:source.kind==='twitch-live'}));
  menu.addItem(chatMenu());
  if(windowLoaded)showSidebar();
 
  return{
-  snapshot,showSidebar,hideSidebar,chatOff,setView,importArchive,resumeReplay,tick,
-  changeQuality:q=>changeQuality(q),
+  snapshot,showSidebar,hideSidebar,
+  // Work for the source, as the sidebar's actions: only for the current activation.
+  chatOff:whileActive(chatOff),
+  setView:whileActive(setView),
+  importArchive:whileActive(importArchive),
+  resumeReplay:whileActive(resumeReplay),
+  tick:whileActive(tick),
+  changeQuality:q=>active()?changeQuality(q):Promise.resolve(false),
   qaCommand:(name,data)=>{
    if(config.qa&&sidebarReady)postSidebar('qa-action',{name,data});
   },

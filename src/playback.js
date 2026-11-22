@@ -1,7 +1,12 @@
 "use strict";
 class Playback {
+ // One Playback per controller activation (src/authority.js). Its resolve, timers and replace are the
+ // activation's, so a change from an activation that has ended never continues. options.firstGeneration
+ // continues the previous activation's generations, so a load marker is never reused. `fresh` is the generation
+ // of the latest unstaged load (not a change's replacement), which loaded() confirms (set by the controller).
  constructor(options){
-  this.o=options;this.generation=0;this.pending=null;this.deadline=null;this.closed=false;this.disabled=false;
+  this.o=options;this.pending=null;this.deadline=null;this.closed=false;this.disabled=false;
+  this.generation=options.firstGeneration||0;this.fresh=0;
   this.data={phase:'loading',quality:'auto720',formats:[],busy:false,error:'',title:'',live:false,duration:0};
  }
  snapshot(){return Object.assign({},this.data,{formats:this.data.formats.map(f=>({id:f.id,label:f.label}))});}
@@ -11,27 +16,14 @@ class Playback {
   this.data.title=String(result.title||'').slice(0,300);this.data.live=!!result.live;this.data.duration=Number(result.duration)||0;this.data.phase='loading';this.emit();
  }
  cancelDeadline(){if(this.deadline!==null){this.o.clearTimer(this.deadline);this.deadline=null;}}
- // Review r5 #2: a change that completes while the controller is retiring (options.fenced) is abandoned
- // before it touches pending state or arms the deadline: the controls return to the phase and generation they
- // had, so a later load of the source confirms as before. Called only while `generation` is current.
- fencedOut(phase,generation){
-  if(!this.o.fenced||!this.o.fenced())return false;
-  this.generation=generation-1;
-  this.data.busy=false;
-  this.data.phase=phase;
-  this.data.error='';
-  return true;
- }
  async change(quality){
   if(this.closed||this.disabled||this.data.busy||!['playing','unconfirmed','stopped'].includes(this.data.phase))return false;
   if(quality!=='auto720'&&!this.data.formats.some(f=>f.id===quality)){this.data.error='That quality is unavailable. Refresh the list.';this.emit();return false;}
   if(quality===this.data.quality&&this.data.phase==='playing')return true;
-  const prior=this.data.phase;
   const generation=++this.generation;this.data.busy=true;this.data.phase='resolving';this.data.error='';this.emit();
   try{
    const result=await this.o.resolve(quality);
    if(this.closed||generation!==this.generation)return false;
-   if(this.fencedOut(prior,generation))return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'Could not retrieve that quality.');
    const player=this.o.readPlayer();
    const context={generation,position:result.live?0:Math.max(0,Number(player.position)||0),paused:!!player.paused,speed:Number(player.speed)||1};
@@ -43,7 +35,6 @@ class Playback {
    this.o.replace(result,context);this.emit();return true;
   }catch(error){
    if(this.closed||generation!==this.generation)return false;
-   if(this.fencedOut(prior,generation))return false;
    this.pending=null;this.cancelDeadline();this.data.busy=false;this.data.phase='playing';
    this.data.error=String(error&&error.message||'Could not retrieve that quality.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);this.emit();return false;
   }
@@ -54,7 +45,10 @@ class Playback {
    if(generation!==this.pending.generation)return false;
    const result=this.pending.result;this.pending=null;this.cancelDeadline();this.adopt(result);this.data.busy=false;this.data.phase='playing';this.data.error='';this.emit();return true;
   }
-  if(generation===0&&this.generation===0){this.data.phase='playing';this.data.error='';this.emit();return true;}
+  // An unstaged load of the source, with no change pending.
+  if(generation===this.fresh){
+   this.data.phase='playing';this.data.error='';this.emit();return true;
+  }
   return false;
  }
  ended(){if(this.closed||this.disabled)return;if(!this.pending&&!this.data.busy){this.data.phase='stopped';this.emit();}}

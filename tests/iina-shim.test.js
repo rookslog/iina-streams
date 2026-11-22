@@ -487,3 +487,29 @@ test('keychain: an empty write over a saved secret succeeds but keeps it, as mac
   assert.equal(shim.iina.utils.keychainWrite('svc', 'oauth', '{}'), true);
   assert.equal(shim.iina.utils.keychainRead('svc', 'oauth'), '{}');
 });
+
+// IINA v1.5.1 iina/JavascriptAPIStandaloneWindow.swift: no show/hide, a lazily created window, and
+// messageHub.clearListeners() on loadFile. Both the global and player instances get the API.
+test('standaloneWindow: v1.5.1 surface, lazy creation, and listeners cleared by loadFile', () => {
+  const shim = createIina({role: 'global'});
+  const win = shim.iina.standaloneWindow;
+  assert.equal(win.show, undefined);
+  assert.equal(win.hide, undefined);
+  assert.equal(win.isOpen(), false);
+  win.postMessage('early', {});
+  win.setProperty({title: 'Early'});
+  assert.deepEqual(shim.standaloneWindow.posts, [], 'messages before the window exists are dropped');
+  assert.deepEqual(shim.standaloneWindow.properties, {}, 'properties before the window exists are ignored');
+  win.onMessage('before-load', () => {});
+  win.loadFile('ui/open.html');
+  assert.deepEqual(shim.standaloneWindow.hub.names(), [], 'loadFile drops earlier listeners');
+  win.setProperty({title: 'Open Stream'});
+  win.postMessage('late', {});
+  assert.deepEqual(shim.standaloneWindow.properties, {title: 'Open Stream'});
+  assert.deepEqual(shim.standaloneWindow.messages('late'), [{name: 'late', data: {}}]);
+  win.open();
+  assert.equal(win.isOpen(), true);
+  win.close();
+  assert.equal(win.isOpen(), false);
+  assert.equal(typeof createIina().iina.standaloneWindow.open, 'function', 'player instances have it too');
+});

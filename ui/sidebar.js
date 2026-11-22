@@ -342,10 +342,62 @@ function validClientID(v){
  // ---- Controls ----
 
  const CLICK_MESSAGES=[
-  ['open','open'],['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],
+  ['hide','hide'],['hide-for-overlay','hide'],['refresh','refresh'],['import','import'],
   ['fetch','fetch-replay'],['resume','replay-resume'],['first','first-message'],['forget','forget-auth']
  ];
  for(const [id,event] of CLICK_MESSAGES)$(id).addEventListener('click',()=>post(event));
+
+ // ---- Open another stream (#50): an inline field, never a modal prompt ----
+
+ const openForm=$('open-form');
+ const openInput=$('open-input');
+
+ function showOpenField(){
+  openForm.hidden=false;
+  $('open').setAttribute('aria-expanded','true');
+  openInput.focus();
+ }
+
+ function hideOpenField(){
+  openForm.hidden=true;
+  $('open').setAttribute('aria-expanded','false');
+ }
+
+ // + opens an empty field, or hides an open one.
+ function toggleOpenField(){
+  if(!openForm.hidden){
+   hideOpenField();
+   return;
+  }
+  openInput.value='';
+  openInput.removeAttribute('aria-invalid');
+  showOpenField();
+ }
+
+ // Global parses the input. It answers only when the input is invalid (open-error).
+ function submitOpenField(event){
+  event.preventDefault();
+  const input=openInput.value;
+  if(!input.trim())return;
+  hideOpenField();
+  post('open',{input});
+ }
+
+ // The rejected text is still in the field: show it again, marked invalid, for correction.
+ function onOpenError(){
+  openInput.setAttribute('aria-invalid','true');
+  showOpenField();
+ }
+
+ $('open').addEventListener('click',toggleOpenField);
+ openForm.addEventListener('submit',submitOpenField);
+ openInput.addEventListener('input',()=>openInput.removeAttribute('aria-invalid'));
+ openInput.addEventListener('keydown',event=>{
+  if(event.key!=='Escape')return;
+  event.preventDefault();
+  hideOpenField();
+  $('open').focus();
+ });
 
  const chatAvailable=()=>!!(state&&state.chat&&state.chat.available);
  const twitchLive=()=>!!(state&&state.source&&state.source.kind==='twitch-live');
@@ -431,6 +483,7 @@ function validClientID(v){
  });
 
  on('state',render);
+ on('open-error',onOpenError);
  on('qa-action',onQaAction);
  window.addEventListener('pagehide',()=>{
   pageClosed=true;

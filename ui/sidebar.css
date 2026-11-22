@@ -6,3 +6,7 @@
 .busy-indicator[hidden]{display:none}
 @keyframes streams-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}}
+/* #50: inline Open Stream field. Invalid input is shown by state, not text. */
+.open-form{flex:none;margin:-8px 0 14px}
+.open-form input{width:100%}
+.open-form input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}

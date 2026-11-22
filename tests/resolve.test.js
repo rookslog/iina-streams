@@ -116,7 +116,7 @@ function setup({
 }
 
 function mediaURL(id, fixture = 'video') {
-  return `https://media.example.invalid/live/${id}.m3u8?fixture=${fixture}`;
+  return `https://media.fixture.ttvnw.net/live/${id}.m3u8?fixture=${fixture}`;
 }
 
 for (const example of [

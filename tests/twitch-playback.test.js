@@ -147,7 +147,7 @@ test('the master yields source, five transcodes, and audio-only with their metad
     ['audio_only', null, 155000, null, 'audio'],
   ].map(([name, resolution, bandwidth, fps, query]) => ({
     name, resolution, bandwidth, fps,
-    url: `https://media.example.invalid/live/${name}.m3u8?fixture=${query}`,
+    url: `https://media.fixture.ttvnw.net/live/${name}.m3u8?fixture=${query}`,
   }));
   assert.equal(variants.length, expected.length);
   for (const variant of expected) {

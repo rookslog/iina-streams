@@ -69,7 +69,7 @@
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
   const list=s.view.presentation==='overlay'?(s.messages||[]):[];
   const replay=s.chat&&s.chat.mode==='replay';
-  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+'|r='+!!replay;
+  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+'|r='+!!replay+'|st='+(s.chat&&s.chat.state);
   if(sig!==signature){
    signature=sig;
    const prevTop=messages.scrollTop;
@@ -93,11 +93,15 @@
     messages.appendChild(row);
    }
    if(s.view.presentation==='overlay'&&!messages.children.length&&s.chat&&s.chat.mode!=='off'){
-    const note=document.createElement('div');
-    note.className='message';
-    note.style.opacity='0.7';
-    note.textContent='Chat will appear here.';
-    messages.appendChild(note);
+    // Loading is shown, not narrated (#9): a quiet indicator while chat connects or loads; nothing once idle.
+    if(['authorizing','waiting','connecting','authenticating','joining','reconnecting','fetching','importing'].includes(s.chat.state)){
+     const spinner=document.createElement('div');
+     spinner.className='loading';
+     spinner.setAttribute('role','status');
+     spinner.setAttribute('aria-label','Loading chat');
+     for(let i=0;i<3;i++)spinner.appendChild(document.createElement('span'));
+     messages.appendChild(spinner);
+    }
    }
    if(following)messages.scrollTop=messages.scrollHeight;
    else messages.scrollTop=prevTop;

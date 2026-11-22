@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.6-beta (unreleased) — find what to watch
+- **An offline channel offers its recent broadcasts (#32, D-030).** When a Twitch channel isn't live, the sidebar replaces the error with up to 10 of its recent broadcasts: title, date and length. Clicking one opens it with replay chat. They come from Twitch's public GQL, so no sign-in is needed. Not yet observed natively.
+
 ## 0.5.5-beta (unreleased) — chat on your timeline
 - **Open Stream without a modal (#50).** ⌃⌘O opens a small Open Stream window, and **＋** in the sidebar shows an inline field. Invalid input is marked in place. The old blocking prompt, which crashed IINA about 5 s after it opened, is gone.
 - **Adopted loads are held correctly (#35):** IINA continues a non-async `on_load` hook by itself, so the first adoption code never held the load and called `next` twice. The hook is now async, the controller is built off the hook's thread, and a 10 s watchdog hands a stuck load back to IINA. The sidebar's open field closes on × (the + turns into it) or when focus moves elsewhere. Escape doesn't reach the page in IINA 1.5.1 (observed).

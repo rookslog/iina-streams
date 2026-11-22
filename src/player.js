@@ -4,9 +4,9 @@ const {Playback}=require('./playback.js');
 const {envelope}=require('./bridge.js');
 const {Replay}=require('./replay.js');
 const {create:createTimers}=require('./timers.js');
-const DEFAULT_VIEW={presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,x:1,y:0,width:340,height:260,density:'comfortable',editing:false};
+const DEFAULT_VIEW={presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,x:1,y:0,width:340,height:260,density:'comfortable',editing:false};
 function clamp(n,low,high,fallback){n=Number(n);return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fallback;}
-function viewSettings(value,variant){const v=value||{};const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0,0.9,0.58),lines:Math.round(clamp(v.lines,2,12,6)),spacing,timestamps:!!v.timestamps,x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),width:Math.round(clamp(v.width,220,1200,340)),height:Math.round(clamp(v.height,100,1200,260)),density:spacing<=2?'compact':'comfortable',editing:false};}
+function viewSettings(value,variant){const v=value||{};const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0,0.9,0.58),lines:Math.round(clamp(v.lines,2,12,6)),spacing,timestamps:!!v.timestamps,timestampSeconds:!!v.timestampSeconds,x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),width:Math.round(clamp(v.width,220,1200,340)),height:Math.round(clamp(v.height,100,1200,260)),density:spacing<=2?'compact':'comfortable',editing:false};}
 // Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
 function shouldAutoOpen(data,armed){return !!armed&&!!data&&data.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(data.verificationURI||'');}
 // Normalized chat message. `time` is media time (replay); `sentAt` is the provider's send time in epoch ms (live, from tmi-sent-ts).

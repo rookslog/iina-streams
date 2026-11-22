@@ -38,20 +38,34 @@ def git_state():
         return 'working-copy', True, set()
 
 
-def build(output, beta=False):
+VARIANTS = {
+    # variant: (identifier suffix, name suffix, version tag, bundle stem)
+    'release': ('', '', None, 'streams'),
+    'beta': ('.beta', ' Beta', 'beta', 'streams-beta'),
+    'dev': ('.dev', ' Dev', 'dev', 'streams-dev'),
+}
+
+
+def build(output, beta=False, dev=False):
+    """Build one variant. `dev` is the linked development identity; `beta` the packaged beta."""
+    if beta and dev:
+        raise ValueError('Choose one variant: beta or dev.')
+    variant = 'dev' if dev else 'beta' if beta else 'release'
+    id_suffix, name_suffix, tag, stem = VARIANTS[variant]
+    isolated = variant != 'release'
     info = json.loads((SOURCE / 'Info.json').read_text())
     version = info['version']
     commit, dirty, tags = git_state()
     ref = ('g' + commit[:8]) if commit != 'working-copy' else 'working'
     if dirty:
         ref += '.dirty'
-    if not beta and (dirty or 'v' + version not in tags):
+    if not isolated and (dirty or 'v' + version not in tags):
         raise ValueError('Stable packaging requires a clean checkout at its matching release tag.')
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    identifier = info['identifier'] + ('.beta' if beta else '')
-    name = info['name'] + (' Beta' if beta else '')
-    beta_version = version + '-beta+' + ref
+    identifier = info['identifier'] + id_suffix
+    name = info['name'] + name_suffix
+    build_version = f'{version}-{tag}+{ref}' if isolated else version
 
     source_files = sorted(
         p for entry in PLUGIN_ENTRIES for p in ([SOURCE / entry] if (SOURCE / entry).is_file() else (SOURCE / entry).rglob('*'))
@@ -63,8 +77,8 @@ def build(output, beta=False):
     )
     embedded = {p.stem: {'digest': digest(p.read_bytes()), 'source': p.read_text()} for p in helper_paths}
 
-    bundle = output / ('streams-beta.iinaplugin' if beta else 'streams.iinaplugin')
-    archive = output / (f'iina-streams-beta-{version}-{ref}.iinaplgz' if beta else f'iina-streams-{version}.iinaplgz')
+    bundle = output / f'{stem}.iinaplugin'
+    archive = output / (f'iina-{stem}-{version}-{ref}.iinaplgz' if isolated else f'iina-streams-{version}.iinaplgz')
 
     temp = Path(tempfile.mkdtemp(prefix='.build-', dir=str(output)))
     try:
@@ -72,16 +86,20 @@ def build(output, beta=False):
             target = temp / path.relative_to(SOURCE)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(path.read_bytes())
-        if beta:
-            beta_info = dict(info)
-            beta_info['name'] = name
-            beta_info['identifier'] = identifier
-            beta_info['version'] = beta_version
-            beta_info.pop('ghRepo', None)
-            beta_info.pop('ghVersion', None)
-            (temp / 'Info.json').write_text(json.dumps(beta_info, indent=2) + '\n')
+        if isolated:
+            isolated_info = dict(info)
+            isolated_info['name'] = name
+            isolated_info['identifier'] = identifier
+            isolated_info['version'] = build_version
+            # Isolated builds must never answer IINA's GitHub update check.
+            isolated_info.pop('ghRepo', None)
+            isolated_info.pop('ghVersion', None)
+            (temp / 'Info.json').write_text(json.dumps(isolated_info, indent=2) + '\n')
+            runtime = {'identifier': identifier, 'variant': 'unified', 'beta': True, 'qa': False}
+            if variant == 'dev':
+                runtime['dev'] = True
             (temp / 'config.js').write_text(
-                '"use strict";\nmodule.exports=' + json.dumps({'identifier': identifier, 'variant': 'unified', 'beta': True, 'qa': False}, separators=(',', ':')) + ';\n'
+                '"use strict";\nmodule.exports=' + json.dumps(runtime, separators=(',', ':')) + ';\n'
             )
         (temp / 'src' / 'embedded-helpers.js').write_text(
             '"use strict";\nmodule.exports=' + json.dumps(embedded, ensure_ascii=True, separators=(',', ':')) + ';\n'
@@ -112,7 +130,8 @@ def build(output, beta=False):
         'targetVersion': version,
         'name': name,
         'identifier': identifier,
-        'version': beta_version if beta else version,
+        'variant': variant,
+        'version': build_version,
         'archive': archive.name,
         'sha256': digest(archive.read_bytes()),
     }
@@ -123,9 +142,11 @@ def build(output, beta=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', default=str(ROOT / 'dist' / 'release'))
-    parser.add_argument('--beta', action='store_true', help='Build isolated Streams Beta package')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--beta', action='store_true', help='Build isolated Streams Beta package')
+    group.add_argument('--dev', action='store_true', help='Build isolated Streams Dev bundle (for the linked dev workflow)')
     args = parser.parse_args()
-    print(json.dumps(build(args.output, beta=args.beta), indent=2))
+    print(json.dumps(build(args.output, beta=args.beta, dev=args.dev), indent=2))
 
 
 if __name__ == '__main__':

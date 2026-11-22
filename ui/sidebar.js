@@ -1,4 +1,6 @@
 "use strict";
+var setupOpen=false;
+function validClientID(v){return /^[A-Za-z0-9]{10,64}$/.test(String(v||'').trim());}
 (function(){
  const $=id=>document.getElementById(id);let state=null,activeTab='playback',following=true,signature='';
  const post=(name,data)=>iina.postMessage(name,data===undefined?{}:data);
@@ -42,10 +44,10 @@
   $('import').hidden=on||s.live;
   $('fetch').hidden=!['youtube','twitch-vod'].includes(s.source.kind)||s.live||on;
   $('resume').hidden=!s.chat.available||on;
-  $('auth-panel').hidden=!['needs-client','error'].includes(s.auth.phase)||!on;$('auth-code-panel').hidden=s.auth.phase!=='waiting'||!on;$('auth-code').textContent=s.auth.userCode||'';
+  const ap=s.auth.phase;if(ap==='ready')setupOpen=false;const needsSetup=ap==='needs-client'||(setupOpen&&ap==='error');$('auth-panel').hidden=!on||!(needsSetup||ap==='error');$('auth-setup').hidden=!needsSetup;$('auth-retry').hidden=needsSetup||ap!=='error';$('auth-code-panel').hidden=s.auth.phase!=='waiting'||!on;$('auth-code').textContent=s.auth.userCode||'';
   const showAccount=twitch&&(s.auth.phase==='ready'||s.auth.login);$('account-row').hidden=!showAccount;$('account-label').textContent=s.auth.login?'Signed in as '+s.auth.login:'';
   let status='';
-  if(s.chat.state==='importing')status='Indexing chat archive…';else if(s.chat.state==='fetching')status='Loading archived chat…';else if(s.chat.state==='waiting')status='Approve read-only access in Twitch.';else if(s.chat.state==='authorizing')status='Checking Twitch login…';else if(s.chat.state==='connecting')status='Connecting to Twitch chat…';else if(s.chat.state==='authenticating')status='Signing into chat…';else if(s.chat.state==='joining')status='Joining channel…';else if(s.chat.state==='reconnecting')status='Reconnecting…';else if(replay)status=s.chat.sourceName+' · '+s.chat.count.toLocaleString()+' messages';else if(!on&&s.live&&s.source.kind==='youtube')status='YouTube live chat is unavailable; VOD replay loads automatically after streams end.';
+  if(s.chat.state==='importing')status='Indexing chat archive…';else if(s.chat.state==='fetching')status='Loading archived chat…';else if(s.chat.state==='waiting')status='Waiting for Twitch…';else if(s.chat.state==='authorizing')status='Signing in…';else if(s.chat.state==='connecting')status='Connecting to Twitch chat…';else if(s.chat.state==='authenticating')status='Signing into chat…';else if(s.chat.state==='joining')status='Joining channel…';else if(s.chat.state==='reconnecting')status='Reconnecting…';else if(replay)status=s.chat.sourceName+' · '+s.chat.count.toLocaleString()+' messages';else if(!on&&s.live&&s.source.kind==='youtube')status='YouTube live chat is unavailable; VOD replay loads automatically after streams end.';
   $('chat-status').textContent=status;$('chat-status').hidden=!status;$('chat-error').textContent=s.chat.error||'';$('chat-error').hidden=!s.chat.error;
   $('replay-controls').hidden=!replay;if(document.activeElement!==$('offset'))$('offset').value=s.chat.offset;
   $('presentation').value=s.view.presentation;$('font-size').value=s.view.fontSize;$('opacity').value=s.view.opacity;$('spacing').value=s.view.spacing||4;$('timestamps').checked=!!s.view.timestamps;
@@ -61,7 +63,9 @@
  $('chat-toggle').addEventListener('change',()=>{if($('chat-toggle').checked){if(state&&state.chat&&state.chat.available)post('replay-resume');else if(state&&state.source&&state.source.kind==='twitch-live')post('connect',{clientID:''});}else{post('chat-off');}});
  $('authorize-open').addEventListener('click',()=>{if(state&&state.auth&&state.auth.userCode&&navigator.clipboard&&navigator.clipboard.writeText)try{navigator.clipboard.writeText(state.auth.userCode);}catch(_){}post('authorize-open');});
  $('quality').addEventListener('change',()=>post('change-quality',$('quality').value));$('offset').addEventListener('change',()=>post('offset',Number($('offset').value)));
- $('connect').addEventListener('click',()=>post('connect',{clientID:''}));$('authorize').addEventListener('click',()=>post('connect',{clientID:$('client-id').value.trim()}));
+ $('connect').addEventListener('click',()=>post('connect',{clientID:'',open:true}));$('authorize').addEventListener('click',()=>{if(validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim(),open:true});});
+ $('client-id').addEventListener('input',()=>{$('authorize').disabled=!validClientID($('client-id').value);});$('client-id').addEventListener('keydown',e=>{if(e.key==='Enter'&&validClientID($('client-id').value))post('connect',{clientID:$('client-id').value.trim(),open:true});});
+ $('open-console').addEventListener('click',()=>post('open-twitch-console'));$('retry').addEventListener('click',()=>post('connect',{clientID:'',open:true}));$('use-other-id').addEventListener('click',()=>{setupOpen=true;if(state)render(state);});
  $('appearance-toggle').addEventListener('click',e=>{e.stopPropagation();setPopoverOpen($('appearance').hidden);});
  document.addEventListener('click',e=>{if(!$('appearance').hidden&&!$('appearance').contains(e.target)&&e.target!==$('appearance-toggle'))setPopoverOpen(false);});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('appearance').hidden)setPopoverOpen(false);});

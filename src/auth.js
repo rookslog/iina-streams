@@ -27,7 +27,7 @@ class TwitchAuth {
    if(!res||res.status!==200||typeof data.device_code!=='string'||!/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(data.verification_uri||'')||!/^[A-Za-z0-9-]{4,32}$/.test(data.user_code||''))throw Error('device');
    const expires=this.o.now()+Math.min(1800,Number(data.expires_in)||600)*1000;
    const interval=Math.max(5,Math.min(60,Number(data.interval)||5))*1000;
-   this.publish('waiting','Authorize read-only chat in Twitch.',{userCode:data.user_code,verificationURI:data.verification_uri});
+   this.publish('waiting','',{userCode:data.user_code,verificationURI:data.verification_uri});
    this.schedule(()=>this.poll(data.device_code,expires,interval,generation),interval,generation);return true;
   }catch(_){if(generation===this.generation)this.fail('Twitch authorization is unavailable. Check the Public Client ID and try again.');return false;}
  }

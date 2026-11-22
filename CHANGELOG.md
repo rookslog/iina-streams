@@ -14,7 +14,10 @@
   - **Calibrate (#28):** in Manual, ⌥-click a message to set the delay to its age.
   - **Pausing keeps chat:** delayed messages wait in a buffer (up to 3000) instead of dropping out of a 150-message window. A pause no longer empties chat, and resuming continues in order. Moderation (deleted messages, cleared users) removes waiting messages too. Observed natively.
 - **Live pill and Go Live (#51):** the sidebar header shows a red Live pill when the playhead is within 8 s of the cache end (Twitch's floor on this path is 6–8 s behind live), or `−N s` behind. Clicking it, **Plugin › Go Live** (⌃⌘G) jumps to the edge and resumes playback: it seeks when that reaches within 12 s of live, and otherwise reloads at the edge (after a pause, mpv's cache stops short). Observed natively on a live channel. Chat items moved into a **Chat** submenu.
-- **Release review fixes (five rounds of independent review; see `docs/reviews/2026-11-22-v0.5.5-release-review.md`):**
+- **Fixed at the root after six review rounds** (see the review record's Recurrence triage, and `docs/design/V055-CLASS-REPAIR-2026-11-22.md`):
+  - **A window that switches to another file stops acting for its stream at once, and never resumes.** Loading that stream again in the same window starts it fresh. Late quality changes, Go Live reloads, timers and sign-in steps from the old load can no longer touch the new one. Replay chat from before the switch does not carry over.
+  - **Auto chat timing follows the video's actual progress.** Chat never moves ahead while the video is paused or stalled, never faster than 1.5x the video, and catches up the same way however often the player checks.
+- **Release review fixes (rounds 1–5; see `docs/reviews/2026-11-22-v0.5.5-release-review.md`):**
   - **Windows IINA opened itself sign in to chat (#56).** Observed natively. Streams no longer creates IINA's first window during startup, and those windows get the same session checks as Streams' own.
   - **One owner adopts IINA's windows (D-031).** Only the stable plugin adopts by default. Beta and dev builds adopt only in QA mode or with `adoptNativeWindows: true` in their `settings.json`.
   - **A reused window starts fresh.** When IINA loads something else into a window, its Streams controller retires. Its sidebar stops acting, and its late chat batches and sign-out replies are ignored.

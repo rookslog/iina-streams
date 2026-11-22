@@ -18,7 +18,9 @@ const LIVE_STATUS_MS=1000;
 // Go Live seeks only when the target is more than this far ahead; otherwise it reloads (spike section 4).
 const GO_LIVE_MIN_LEAD_SECONDS=1;
 // Collides with the main menu's Log Viewer key equivalent in IINA 1.5.1 (tests/fixtures/iina-1.5.1).
-const GO_LIVE_KEY='Ctrl+Meta+l';
+// Ctrl+Meta+l is IINA 1.5.1's Log Viewer (MainMenu.xib; tests/fixtures/iina-1.5.1/mainmenu-keys.txt),
+// and IINA doesn't reject that clash for plugin items, so Go Live uses G.
+const GO_LIVE_KEY='Ctrl+Meta+g';
 
 const DEFAULT_VIEW={
  presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,

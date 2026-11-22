@@ -356,19 +356,19 @@ test('Twitch VOD replay retains its media-time offset and does not start a live 
   assert.deepEqual(polledURLs(shim), [], 'VOD never polls a live playlist');
 });
 
-test('menu has Show Streams, Go Live with Ctrl+Meta+l, and a Chat submenu', t => {
+test('menu has Show Streams, Go Live with Ctrl+Meta+g, and a Chat submenu', t => {
   const {shim} = playerFixture(t);
   const items = shim.menu.items;
   assert.deepEqual(items.map(item => item.title), ['Show Streams', 'Go Live', 'Chat']);
   const [show, goLive, chat] = items;
   assert.equal(typeof show.action, 'function');
   assert.equal(typeof goLive.action, 'function');
-  assert.equal(goLive.keyBinding, 'Ctrl+Meta+l');
+  assert.equal(goLive.keyBinding, 'Ctrl+Meta+g');
   assert.equal(chat.action, null, 'the parent only opens its submenu');
   assert.deepEqual(chat.items.map(item => item.title),
     ['Import Chat Archive…', 'Turn Chat Off', 'In Sidebar', 'Over Video', 'Beside Video']);
   assert.ok(chat.items.every(item => typeof item.action === 'function'));
-  // Do not assert collision-free here: the bundled v1.5.1 main-menu fixture assigns this key to Log Viewer.
+  // Lead: Ctrl+Meta+l collided with Log Viewer in the v1.5.1 main-menu fixture; G is free there.
 });
 
 test('playlist transport failures never leak the URL into player logs', async t => {

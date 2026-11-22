@@ -82,7 +82,8 @@ test('persisted Off disables automatic retrieval, but manual Fetch remains possi
  await f.shim.mpv.runHook('on_load',()=>{});
  f.shim.emit('iina.file-loaded',f.source.url);
  assert.equal(f.calls.length,0);
- assert.ok(f.shim.menu.items.some(m=>m.title==='Import Chat Archive…'));
+ // C3 moved chat items into the Chat submenu.
+ assert.ok(f.shim.menu.items.find(m=>m.title==='Chat').items.some(m=>m.title==='Import Chat Archive…'));
  f.shim.sidebar.send('fetch-replay');
  assert.equal(f.calls.length,1);
  assert.equal(f.controller.snapshot().chat.state,'fetching');

@@ -36,9 +36,16 @@ function viewSettings(value,variant){
  };
 }
 
+const ACTIVATION_URL=/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/;
+
 // Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
 function shouldAutoOpen(data,armed){
- return !!armed&&!!data&&data.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(data.verificationURI||'');
+ return !!armed&&!!data&&data.phase==='waiting'&&ACTIVATION_URL.test(data.verificationURI||'');
+}
+
+// A user-facing error message with any address removed, since media and chat URLs can be signed.
+function publicError(error,fallback){
+ return String(error&&error.message||fallback).replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
 }
 
 // Normalized chat message. `time` is media time (replay); `sentAt` is the provider's send time in epoch ms
@@ -196,15 +203,19 @@ function start(host,config,services){
   trace('sidebar-document-visibility',{visible:data.visible});
  }
 
+ // Remember whether the user wants chat, so the next player opens with it on or off.
+ function setChatPreferred(enabled){
+  chatPreferred=enabled;
+  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:enabled});
+ }
+
  function onReplayResume(){
-  chatPreferred=true;
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
+  setChatPreferred(true);
   resumeReplay();
  }
 
  function onChatOffRequest(){
-  chatPreferred=false;
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:false});
+  setChatPreferred(false);
   chatOff();
  }
 
@@ -236,17 +247,20 @@ function start(host,config,services){
    send();
    return;
   }
-  chatPreferred=true;
-  if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
+  setChatPreferred(true);
   chatOff();
-  chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
+  chat=authorizingLiveChat();
   requestAuth(String(data&&data.clientID||''));
   send();
  }
 
+ function authorizingLiveChat(){
+  return{mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
+ }
+
  function openActivation(){
   if(auth.phase!=='waiting')return;
-  if(/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);
+  if(ACTIVATION_URL.test(auth.verificationURI||''))host.utils.open(auth.verificationURI);
  }
 
  function forgetAuth(){
@@ -311,6 +325,12 @@ function start(host,config,services){
   send();
  }
 
+ function hideOverlay(){
+  if(!overlayLoaded)return;
+  overlay.setClickable(false);
+  overlay.hide();
+ }
+
  function onOverlayLoaded(){
   diagLog('plugin-overlay-loaded',{overlayLoaded});
   if(closed||!overlayLoaded)return;
@@ -328,12 +348,9 @@ function start(host,config,services){
   if(closed)return;
   overlayReady=true;
   diagLog('overlay-ready',{needed:overlayNeeded(),hasCred:!!liveCredential});
-  if(overlayNeeded()){
-   ensureOverlay();
-  }else{
-   overlay.setClickable(false);
-   overlay.hide();
-  }
+  // overlayLoaded is always true here: this listener is only registered once the overlay has loaded.
+  if(overlayNeeded())ensureOverlay();
+  else hideOverlay();
   startLiveTransport();
   send();
   trace('overlay-ready');
@@ -363,10 +380,7 @@ function start(host,config,services){
   if(overlayNeeded()){
    ensureOverlay();
   }else{
-   if(overlayLoaded){
-    overlay.setClickable(false);
-    overlay.hide();
-   }
+   hideOverlay();
    view.editing=false;
   }
   send();
@@ -417,10 +431,7 @@ function start(host,config,services){
   chat.state='off';
   chat.error='';
   view.editing=false;
-  if(overlayLoaded){
-   overlay.setClickable(false);
-   overlay.hide();
-  }
+  hideOverlay();
   send();
   trace('chat-off');
  }
@@ -504,7 +515,7 @@ function start(host,config,services){
   const myGeneration=chatGeneration;
   let output='',outputOwned=false;
   try{
-   output=services.dataPath('replay-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
+   output=uniqueDataPath('replay');
    const result=await services.runHelper('replay',['import','--input',path,'--output',output]);
    outputOwned=!!result&&result.ok&&result.indexPath===output+'/index.json';
    if(closed||chatGeneration!==myGeneration)return false;
@@ -551,12 +562,16 @@ function start(host,config,services){
   }catch(error){
    if(closed||chatGeneration!==myGeneration)return false;
    if(!preserve)chat.state='error';
-   chat.error=String(error&&error.message||'Could not import chat.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
+   chat.error=publicError(error,'Could not import chat.');
    send();
    return false;
   }finally{
    if(outputOwned&&output!==replayPath&&services.deleteDataPath)services.deleteDataPath(output);
   }
+ }
+
+ function uniqueDataPath(prefix){
+  return services.dataPath(prefix+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
  }
 
  function validTwitchWindow(w,at){
@@ -575,8 +590,7 @@ function start(host,config,services){
    return false;
   }
   if(!auto){
-   chatPreferred=true;
-   if(services.saveSettings)services.saveSettings({view:Object.assign({},view,{editing:false}),chatEnabled:true});
+   setChatPreferred(true);
   }
   const preserve=chat.mode==='replay'&&!!replay;
   if(!preserve){
@@ -586,7 +600,7 @@ function start(host,config,services){
    send();
   }
   const generation=chatGeneration;
-  const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
+  const downloadPath=uniqueDataPath('download');
   let owned=false;
   twitchFetchBusy=true;
   twitchFetchAt=at;
@@ -631,7 +645,8 @@ function start(host,config,services){
    const pending=twitchQueuedAt;
    twitchQueuedAt=null;
    if(pending!==null&&!closed&&sourceActive&&chatPreferred&&(chat.mode==='replay'||chat.state==='fetching')){
-    if(!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10)fetchTwitchWindow({auto:true,at:pending});
+    const outside=!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
+    if(outside)fetchTwitchWindow({auto:true,at:pending});
    }
   }
  }
@@ -645,7 +660,7 @@ function start(host,config,services){
   const myGeneration=chatGeneration;
   chat.state='fetching';
   send();
-  const downloadPath=services.dataPath('download-'+Date.now()+'-'+Math.random().toString(36).slice(2,9));
+  const downloadPath=uniqueDataPath('download');
   let downloadOwned=false;
   try{
    const result=await services.runHelper('acquire',['--url',source.url,'--output',downloadPath]);
@@ -730,7 +745,8 @@ function start(host,config,services){
   if(!expected.live&&c.position>0)mpv.command('seek',[String(c.position),'absolute+exact']);
   mpv.set('speed',c.speed||1);
   mpv.set('pause',!!c.paused);
-  if(c.generation>0&&!c.fullscreen&&!core.window.fullscreen&&usableFrame(c.frame))Reflect.set(core.window,'frame',c.frame);
+  const restoreFrame=c.generation>0&&!c.fullscreen&&!core.window.fullscreen&&usableFrame(c.frame);
+  if(restoreFrame)Reflect.set(core.window,'frame',c.frame);
   tick(true);
   send();
   trace('state-restored',{
@@ -770,6 +786,10 @@ function start(host,config,services){
   send();
  }
 
+ function initialContext(){
+  return{generation:0,position:source.startSeconds||0,paused:false,speed:1};
+ }
+
  async function onLoadHook(next){
   const mine=++generation;
   let completed=false;
@@ -804,10 +824,10 @@ function start(host,config,services){
      ok:true,title:config.qa.title||'Native replay test',live:false,duration:600,quality:'local',formats:[],
      mediaURL:source.url
     };
-    context={generation:0,position:source.startSeconds||0,paused:false,speed:1};
+    context=initialContext();
    }else{
     result=await services.resolve(source,'auto720');
-    context={generation:0,position:source.startSeconds||0,paused:false,speed:1};
+    context=initialContext();
    }
    if(closed||mine!==generation){
     finish();
@@ -824,7 +844,7 @@ function start(host,config,services){
    trace('resolved',{quality:result.quality,live:result.live});
   }catch(error){
    if(!closed){
-    loadError=String(error&&error.message||'Unable to open source.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);
+    loadError=publicError(error,'Unable to open source.');
     send();
     trace('load-error',{error:loadError});
    }
@@ -937,7 +957,7 @@ function start(host,config,services){
   if(data.saved){
    auth=Object.assign({},auth,{saved:true});
    if(chatPreferred&&chat.mode==='off'&&source.kind==='twitch-live'){
-    chat={mode:'live',state:'authorizing',error:'',count:0,sourceName:source.id,offset:0,available:!!replay};
+    chat=authorizingLiveChat();
     const myGen=chatGeneration;
     timers.setTimeout(()=>{
      if(!closed&&sourceActive&&chat.mode==='live'&&chatGeneration===myGen)requestAuth('');

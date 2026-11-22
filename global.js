@@ -10,6 +10,8 @@ const timers=createTimers(setTimeout,clearTimeout);
 const audience=new Set(),managed=new Set(),sessions=new Map();
 let credentials=null;
 const qaEvents=[];
+// The user's own Twitch app Client ID, when they entered one.
+const CLIENT_FILE='@data/twitch-client.json';
 const globalDiag=[];
 
 function qaTrace(phase,data){
@@ -92,6 +94,12 @@ function gLog(step,extra){
  }catch(_){}
 }
 
+// The saved Twitch login (a JSON string). Prefer the keychainRead spelling; fall back to keyChainRead.
+function readSavedLogin(){
+ if(typeof utils.keychainRead==='function')return utils.keychainRead('twitch-readonly','oauth');
+ return utils.keyChainRead('twitch-readonly','oauth');
+}
+
 async function request(path,method,form,headers){
  gLog('http-start',{path,method});
  try{
@@ -110,7 +118,7 @@ async function request(path,method,form,headers){
 
 const auth=new TwitchAuth({
  request,
- read:()=>typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth'),
+ read:readSavedLogin,
  write:value=>typeof utils.keychainWrite==='function'?
   utils.keychainWrite('twitch-readonly','oauth',value):utils.keyChainWrite('twitch-readonly','oauth',value),
  setTimer:timers.setTimeout,
@@ -135,7 +143,8 @@ function openStream(input){
   utils.ask('Enter a Twitch channel or recording URL, or a YouTube video or livestream URL.');
   return;
  }
- createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label:Sources.label(source,config.variant)});
+ const label=Sources.label(source,config.variant);
+ createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label});
 }
 
 async function onAuthConnect(data,label){
@@ -156,11 +165,11 @@ async function onAuthConnect(data,label){
  }
  let clientID=String(data&&data.clientID||'').trim();
  try{
-  if(!clientID&&file.exists('@data/twitch-client.json'))clientID=JSON.parse(file.read('@data/twitch-client.json')).clientID||'';
+  if(!clientID&&file.exists(CLIENT_FILE))clientID=JSON.parse(file.read(CLIENT_FILE)).clientID||'';
  }catch(_){}
  if(!clientID){
   try{
-   const raw=typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth');
+   const raw=readSavedLogin();
    const saved=typeof raw==='string'&&raw?JSON.parse(raw):null;
    if(saved&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID||''))clientID=saved.clientID;
   }catch(_){}
@@ -169,7 +178,7 @@ async function onAuthConnect(data,label){
  // Only a user's own ID is saved, so a later change to the built-in ID reaches everyone who never chose one.
  const builtIn=String(BuiltInApp&&BuiltInApp.clientID||'');
  if(!clientID&&/^[A-Za-z0-9]{10,64}$/.test(builtIn))clientID=builtIn;
- if(/^[A-Za-z0-9]{10,64}$/.test(clientID)&&clientID!==builtIn)file.write('@data/twitch-client.json',JSON.stringify({clientID}));
+ if(/^[A-Za-z0-9]{10,64}$/.test(clientID)&&clientID!==builtIn)file.write(CLIENT_FILE,JSON.stringify({clientID}));
  gLog('auth-connect-run',{hasClient:/^[A-Za-z0-9]{10,64}$/.test(clientID)});
  await auth.connect(clientID);
 }
@@ -184,9 +193,10 @@ function onAuthProbe(_,label){
  }
  let saved=false;
  try{
-  const raw=typeof utils.keychainRead==='function'?utils.keychainRead('twitch-readonly','oauth'):utils.keyChainRead('twitch-readonly','oauth');
+  const raw=readSavedLogin();
   const parsed=typeof raw==='string'&&raw?JSON.parse(raw):null;
-  saved=!!(parsed&&typeof parsed.access_token==='string'&&parsed.access_token&&typeof parsed.clientID==='string'&&parsed.clientID);
+  const hasToken=parsed&&typeof parsed.access_token==='string'&&parsed.access_token;
+  saved=!!(hasToken&&typeof parsed.clientID==='string'&&parsed.clientID);
  }catch(_){}
  gLog('auth-probe-reply',{id,saved});
  postChild(id,'auth-status',{saved});

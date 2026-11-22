@@ -337,3 +337,29 @@ Routing:
 **Owns:** new `src/resolve.js`, `src/twitch-playback.js` (title lookup only), `main.js` (the wiring line only), new `tests/resolve.test.js`, and fixtures. Not `src/io.js` (B2a holds it) or `src/player.js` (A1b holds it).
 
 **Native (lead):** a live channel and a VOD open with no Streamlink process (`pgrep streamlink` is empty during the resolve), and quality changes work.
+
+---
+
+## C3b — Live chat buffer that survives a delay (#2)
+
+**Why.** Observed natively (09:37, #2 comment): paused 70 s in Auto, the overlay chat went empty. `ui/overlay-live.js` keeps the newest 150 messages (`StreamsLiveHistory.reduce(…, 150)`) and posts them whole, and the player filters them through `reveal`. On a busy channel all 150 are newer than the delayed playhead, so nothing shows. The older ones are gone, which also leaves a gap after resuming.
+
+**Design.**
+- **Overlay → player bridge.** `live-messages` keeps `{session, messages}` (the newest 150, as today) and adds `removed: [id…]`, the ids that this batch's `clear-message` or `clear-user` events took out of history, and `clearedAll: true` when a `clear-all` arrived. Moderation must never be lost by the player's buffering.
+- **Player buffer.** `liveInbox` becomes an id-keyed union, in arrival order, of every message received this session:
+  - apply `removed` and `clearedAll` first;
+  - keep everything not yet revealed, capped at 3000 (drop the oldest pending past the cap);
+  - keep the newest 150 revealed messages.
+
+  `send()` shows the newest 150 visible messages. A session change or chat off clears the buffer.
+- **No messages are lost** between posts as long as fewer than 150 arrive between two batches. That's accepted, and stated in a code comment.
+- **Unchanged:** chat-timing rules, replay and IRC itself.
+
+**Tests.**
+- With a delay of 60 s and 400 messages arriving over 60 s in posts of the newest 150, all 400 are still buffered, and they reveal in order as the clock advances.
+- Revealed messages stay visible while newer ones are pending (the panel never goes empty after it has shown messages).
+- `clear-message`, `clear-user` and `clear-all` remove messages from the player buffer, both pending and revealed, through the new `removed` and `clearedAll` fields. A message that only fell out of the overlay's 150 window is **not** removed.
+- The pending cap at 3000 drops the oldest pending messages.
+- The session-change reset.
+
+**Owns:** `ui/overlay-live.js`, `ui/live-history.js` (only if the reducer must report removed ids), `src/player.js` (`onLiveMessages` and the inbox only), and new `tests/c3b-*.test.js`.

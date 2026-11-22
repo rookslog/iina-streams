@@ -124,3 +124,35 @@ Functions:
 - **Window:** only the last 30 s count.
 
 **Owns:** new `src/live-latency.js` and `tests/live-latency.test.js`.
+
+---
+
+## B2a — Surface swallowed errors outside the player (#24, part 1)
+
+B2 is split: `src/player.js` is held by the A1b fix (#35), so its catch sites wait for B2b. This part covers `src/auth.js`, `global.js` and `src/io.js`.
+
+**Design.**
+- **Unreadable Keychain item.** In `src/auth.js`, `connect()` and `forget()` read the saved grant. If the item is a non-empty string that isn't JSON, they call an optional `diagnostic(code)` option with `'keychain-unreadable'`. The behavior is otherwise unchanged:
+  - `connect` goes on to a new device-code sign-in;
+  - `forget` reports the grant as unknown, as today;
+  - the item isn't written until a new grant saves.
+
+  `global.js` passes `diagnostic: code => gLog('auth-diagnostic', {code})`.
+- **Other unreadable files in `global.js`.** The catch sites that parse the client file or the saved login, in auth connect and probe, log `gLog('auth-diagnostic', {code})` with `'client-file-unreadable'` or `'saved-login-unreadable'`.
+- **Unreadable `settings.json` in `src/io.js`.** If `@data/settings.json` exists but isn't JSON, `readSettings()` first writes its exact text to `@data/settings.json.corrupt-<Date.now()>`, logs `host.console.log('Streams: settings.json was unreadable; kept a copy and used defaults')` without the content, and returns `{}`. A later `saveSettings` can't destroy the user's only copy.
+- **Justified catches.** Every remaining catch that swallows an error in these three files carries a short comment on the same line or the line above saying why it's safe:
+  - `postChild`'s stringify;
+  - the `gLog` diagnostic write;
+  - the embedded-helpers require;
+  - helper marker cleanup;
+  - `cancelHelpers`;
+  - `deleteDataPath`.
+- **Never log secrets.** No diagnostic or log contains the raw Keychain text, a token or file content.
+
+**Tests** (new files only):
+1. `auth`: a stored value `'{not json'` calls `diagnostic('keychain-unreadable')` once from `connect`, goes on to the device request, and makes no write before a grant. The same stored value in `forget` calls the diagnostic. A missing item (`''` or `null`) does not.
+2. `global`, under the shim, with a corrupt saved-login Keychain value and a corrupt client file: an auth probe and a connect write `auth-diagnostic` entries with these codes. With a token-shaped string inside the corrupt value (`{"access_token":"abcd1234abcd1234abcd` with no closing brace), no diagnostic file or console line contains `abcd1234`. Use QA or beta config so `gLog` writes.
+3. `io`: a corrupt `settings.json` gives `{}`, a backup file whose text equals the original, and a console line without the content. A valid file is read as before, with no backup. A missing file gives `{}` and no backup.
+4. Source scan over `src/auth.js`, `global.js` and `src/io.js`: every `catch(_){` whose body is empty or only `return`s has a comment (`//` or `/* */`) on the same line or the line above.
+
+**Owns:** `src/auth.js`, `global.js`, `src/io.js`, and new `tests/b2a-*.test.js`. Not `src/player.js` or `ui/`.

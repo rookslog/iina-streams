@@ -3,8 +3,11 @@
 // Resolves Twitch playback (live channel or VOD) to its HLS variants in plugin JS.
 // Recipe: Streamlink 8.6.3 twitch.py (TwitchAPI.access_token, UsherService), observed working in spike #37.
 //
-//   resolveTwitch({kind: 'live', login} | {kind: 'vod', id}, {http, log, setTimeout, clearTimeout})
-//     -> {live, variants: [{name, resolution, bandwidth, fps, url}]}
+//   resolveTwitch({kind: 'live', login} | {kind: 'vod', id}, {http, log, setTimeout, clearTimeout, includeTitle})
+//     -> {live, variants: [{name, resolution, bandwidth, fps, url}]}   (plus `title` when includeTitle is true)
+//
+// includeTitle is opt-in. It sends the token operation and a title query as one GraphQL batch (one POST).
+// A missing title, a title error or an odd title value falls back to "<login or id> — Twitch"; it never fails playback.
 //
 // `http` is iina.http-shaped. IINA casts `params` and `headers` with `as? [String: String]`, so one
 // non-string value drops the whole map: every param and header value below is a string.
@@ -23,6 +26,8 @@ const REQUEST_TIMEOUT_MS = 2000;
 const LOGIN_PATTERN = /^[A-Za-z0-9_]{1,25}$/;
 const VOD_ID_PATTERN = /^\d{1,20}$/;
 const MEDIA_URL_PATTERN = /^https:\/\/\S+$/;
+
+const MAX_TITLE_LENGTH = 240;
 
 const TOKEN_FIELD = {live: 'streamPlaybackAccessToken', vod: 'videoPlaybackAccessToken'};
 
@@ -171,10 +176,58 @@ function readAccessToken(response, kind) {
   return {value: token.value, signature: token.signature};
 }
 
+// ---- title (opt-in, same POST as the token) ----
+
+// The login and id are validated against strict patterns, so quoting them with JSON.stringify is safe.
+function titleOperation(request) {
+  if (request.kind === 'live') {
+    return {query: `query{user(login:${JSON.stringify(request.login)}){broadcastSettings{title}}}`};
+  }
+  return {query: `query{video(id:${JSON.stringify(request.id)}){title}}`};
+}
+
+function fallbackTitle(request) {
+  const name = request.kind === 'live' ? request.login : request.id;
+  return `${name} — Twitch`;
+}
+
+// Same cleanup as helpers/media.py _title: strip URLs, turn control characters into spaces, trim, cut by code point.
+function cleanTitle(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const withoutUrls = value.replace(/https?:\/\/\S+/g, '');
+  const withoutControls = withoutUrls.replace(/[\x00-\x1f\x7f]/g, ' ').trim();
+  return Array.from(withoutControls).slice(0, MAX_TITLE_LENGTH).join('');
+}
+
+function readTitle(item, request) {
+  const payload = item && item.data;
+  if (!payload || typeof payload !== 'object') {
+    return '';
+  }
+  if (request.kind === 'live') {
+    const user = payload.user;
+    return cleanTitle(user && user.broadcastSettings && user.broadcastSettings.title);
+  }
+  return cleanTitle(payload.video && payload.video.title);
+}
+
 async function fetchAccessToken(request, deps) {
-  const options = {headers: tokenRequestHeaders(), data: tokenRequestBody(request)};
+  const tokenOperation = tokenRequestBody(request);
+  const body = deps.includeTitle ? [tokenOperation, titleOperation(request)] : tokenOperation;
+  const options = {headers: tokenRequestHeaders(), data: body};
   const response = await withTimeout(() => deps.http.post(GQL_URL, options), deps.timers);
-  return readAccessToken(response, request.kind);
+  if (!deps.includeTitle) {
+    return {token: readAccessToken(response, request.kind), title: ''};
+  }
+  const items = bodyOf(response);
+  if (!Array.isArray(items)) {
+    throw new TwitchPlaybackError('MALFORMED');
+  }
+  // The token is required; the title never is, so a bad title item is read as an empty one.
+  const token = readAccessToken({data: items[0]}, request.kind);
+  return {token, title: readTitle(items[1], request)};
 }
 
 // ---- usher ----
@@ -270,6 +323,7 @@ async function resolveTwitch(request, deps = {}) {
   validateRequest(request);
   const resolved = {
     http: deps.http,
+    includeTitle: deps.includeTitle === true,
     timers: {
       setTimeout: deps.setTimeout || globalThis.setTimeout,
       clearTimeout: deps.clearTimeout || globalThis.clearTimeout,
@@ -277,8 +331,9 @@ async function resolveTwitch(request, deps = {}) {
   };
 
   let token;
+  let title = '';
   try {
-    token = await fetchAccessToken(request, resolved);
+    ({token, title} = await fetchAccessToken(request, resolved));
   } catch (failure) {
     const error = mapFailure(failure, 'token', request.kind);
     logLine('token failed', {kind: request.kind, code: error.code, status: failure && failure.statusCode});
@@ -295,7 +350,11 @@ async function resolveTwitch(request, deps = {}) {
   }
 
   logLine('resolved', {kind: request.kind, variants: variants.length});
-  return {live: request.kind === 'live', variants};
+  const result = {live: request.kind === 'live', variants};
+  if (resolved.includeTitle) {
+    result.title = title || fallbackTitle(request);
+  }
+  return result;
 }
 
 module.exports = {resolveTwitch, TwitchPlaybackError};

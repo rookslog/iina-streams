@@ -2,6 +2,7 @@
 const config=require('./config.js');
 const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
+const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
 const {global:app,menu,utils,file,http}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
@@ -82,7 +83,11 @@ app.onMessage('auth-connect',async(data,label)=>{
    if(saved&&/^[A-Za-z0-9]{10,64}$/.test(saved.clientID||''))clientID=saved.clientID;
   }catch(_){}
  }
- if(/^[A-Za-z0-9]{10,64}$/.test(clientID))file.write('@data/twitch-client.json',JSON.stringify({clientID}));
+ // Order: the ID just entered, the user's own saved app, the saved login's app, then the built-in app (#8).
+ // Only a user's own ID is saved, so a later change to the built-in ID reaches everyone who never chose one.
+ const builtIn=String(BuiltInApp&&BuiltInApp.clientID||'');
+ if(!clientID&&/^[A-Za-z0-9]{10,64}$/.test(builtIn))clientID=builtIn;
+ if(/^[A-Za-z0-9]{10,64}$/.test(clientID)&&clientID!==builtIn)file.write('@data/twitch-client.json',JSON.stringify({clientID}));
  gLog('auth-connect-run',{hasClient:/^[A-Za-z0-9]{10,64}$/.test(clientID)});
  await auth.connect(clientID);
 });

@@ -29,12 +29,13 @@ function harness(overrides = {}) {
       if (moduleName === './src/source.js') return Sources;
       if (moduleName === './src/auth.js') return {TwitchAuth: CapturedAuth};
       if (moduleName === './src/timers.js') return require('../src/timers.js');
+      if (moduleName === './src/twitch-app.js') return {clientID: overrides.builtInClientID || ''};
       throw new Error('Unexpected module ' + moduleName);
     }
   });
   return {
     shim, config, handlers: shim.global.listeners, items: shim.menu.items, opens: shim.global.opens, messages, wires,
-    httpCalls: shim.http.calls, timers: shim.timers.all, files: shim.file.files, fileReads: shim.file.reads, fileWrites: shim.file.writes,
+    httpCalls: shim.http.calls, timers: shim.timers.all, files: shim.file.files, get fileReads() { return shim.file.reads; }, get fileWrites() { return shim.file.writes; }, // live: the shim builds these on access
     keychainReads: shim.keychain.reads, keychainWrites: shim.keychain.writes, prompts: shim.utils.prompts, alerts: shim.utils.asks,
     auth, authOptions,
     open(value) { shim.utils.promptResult = value; shim.menu.items[0].action(); return shim.global.opens.at(-1); },
@@ -276,4 +277,36 @@ test('A reconnecting after shared Forget still stops B without stopping A newer 
   assert.equal(r.messages.some(event => event.target === 1 && event.name === 'auth-forgotten'), false);
   assert.equal(r.messages.filter(event => event.target === 1 && event.name === 'auth-stop').length, 1);
   assert.equal(r.messages.filter(event => event.target === 1 && event.name === 'auth-state').at(-1).data.phase, 'needs-client');
+});
+
+// #8: built-in Client ID.
+const BUILT_IN = 'b'.repeat(30), OWN = 'c'.repeat(30);
+const clientFileWrites = r => r.fileWrites.filter(w => String(w.path || w.file || w[0] || '').includes('twitch-client.json'));
+
+test('with no ID entered, saved or in the saved login, Sign in uses the built-in app and saves nothing', async () => {
+  const r = harness({builtInClientID: BUILT_IN}); r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label());
+  assert.equal(r.auth.client, BUILT_IN);
+  assert.equal(clientFileWrites(r).length, 0, 'the built-in ID is never written as the user\'s own');
+  r.flushMessages();
+  assert.equal(r.messages.some(event => event.name === 'auth-state' && event.data.phase === 'needs-client'), false);
+});
+
+test('a user\'s own saved app wins over the built-in app', async () => {
+  const r = harness({builtInClientID: BUILT_IN}); r.shim.file.seed('@data/twitch-client.json', JSON.stringify({clientID: OWN}));
+  r.open('example');
+  await r.handlers.get('auth-connect')({}, r.label());
+  assert.equal(r.auth.client, OWN);
+});
+
+test('an ID entered in setup wins and is saved as the user\'s own', async () => {
+  const r = harness({builtInClientID: BUILT_IN}); r.open('example');
+  await r.handlers.get('auth-connect')({clientID: OWN}, r.label());
+  assert.equal(r.auth.client, OWN);
+  assert.equal(clientFileWrites(r).length, 1);
+});
+
+test('the shipped plugin carries a well-formed built-in Client ID', () => {
+  const app = require('../src/twitch-app.js');
+  assert.match(app.clientID, /^[A-Za-z0-9]{10,64}$/);
 });

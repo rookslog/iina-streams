@@ -4,8 +4,8 @@ One line per release. Each item lives in a GitHub issue, and each release is a [
 
 | Release | Theme | Issues |
 | --- | --- | --- |
-| [0.5.4](https://github.com/rookslog/iina-streams/milestone/1) | A loop you can trust; first GitHub Release | VOD chat #11 · dev workflow #5 · shortcut #4 · sign-in #7 · UI text #9 · live timestamps #10 · cleanup #12 · test shim #13 · release #14 · install-local footgun #21 · oldest-Python CI #22 |
-| [0.5.5](https://github.com/rookslog/iina-streams/milestone/2) | Chat on your timeline | delay modes #2 · click-to-calibrate #28 · latency spike #16 · reduce video lag #31 · VOD test fixtures #17 · built-in Client ID #8 · readability #23 · swallowed errors #24 |
+| [0.5.4](https://github.com/rookslog/iina-streams/milestone/1) | A loop you can trust; first GitHub Release | VOD chat #11 · dev workflow #5 · shortcut #4 · sign-in #7 · UI text #9 · live timestamps #10 · cleanup #12 · test shim #13 · release #14 · install-local footgun #21 · oldest-Python CI #22 · built-in Client ID #8 |
+| [0.5.5](https://github.com/rookslog/iina-streams/milestone/2) | Chat on your timeline | delay modes #2 · click-to-calibrate #28 · latency spike #16 · reduce video lag #31 · VOD test fixtures #17 · readability #23 · swallowed errors #24 |
 | [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | An overlay you can shape | resize and drag #1 · host probe and pointer tests #18 · panel design review #20 |
 | [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | Participate | send chat #3 · Auto sync if #16 passes |
 

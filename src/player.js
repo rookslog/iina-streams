@@ -7,6 +7,7 @@ const {create:createTimers}=require('./timers.js');
 const {createEstimator}=require('./live-latency.js');
 const {createChatTiming}=require('./chat-timing.js');
 const {createLiveClock}=require('./live-clock.js');
+const {recentArchives}=require('./twitch-vods.js');
 
 // Live latency (#2, #16, #51). The spike's 30 s window held with 18 samples when mpv was read every 1 s; the
 // live clock samples once per 2 s playlist poll, so a 30 s window holds at most 16 samples. 10 samples cover
@@ -343,6 +344,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Load generations and source ownership.
  let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false;
  let chatGeneration=0,sourceActive=true,autoReplayAttempted=false;
+ // B6b: an offline channel's recent broadcasts. offlineRun fences a pending lookup: any new load, source
+ // change or close advances it, so a late reply is ignored.
+ let offlineVods={state:'idle',items:[]},offlineRun=0;
  // Auth listener binding (see bindAuthListeners).
  let authBindTimer=null,authBound=false,pendingAuth=null;
  // Playback-state restoration after a quality reload.
@@ -423,6 +427,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    source:{kind:source.kind,provider:source.provider,id:source.id},
    title:p.title||source.id||'Streams',
    error:loadError||p.error,
+   offlineVods:{state:offlineVods.state,items:offlineVods.items.slice()},
    chat:Object.assign({},chat),
    auth:Object.assign({},auth),
    view:Object.assign({},view),
@@ -1625,8 +1630,32 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // ---- Native file lifecycle ----
 
+ // Drops any pending lookup and clears what it showed.
+ function resetOfflineVods(){
+  offlineRun++;
+  offlineVods={state:'idle',items:[]};
+ }
+
+ // One lookup per offline load. The reply is applied only if nothing has advanced offlineRun since.
+ function loadOfflineVods(){
+  const run=++offlineRun;
+  offlineVods={state:'loading',items:[]};
+  recentArchives({login:source.id},{http:host.http}).then(result=>{
+   if(closed||run!==offlineRun)return;
+   if(!result.ok)offlineVods={state:'error',items:[]};
+   else if(result.vods.length===0)offlineVods={state:'none',items:[]};
+   else offlineVods={state:'ready',items:result.vods};
+   send();
+  });
+ }
+
+ function isOfflineResult(result){
+  return source.kind==='twitch-live'&&!!result&&!!result.error&&result.error.reason==='offline';
+ }
+
  function deactivateForForeignFile(){
   sourceActive=false;
+  resetOfflineVods();
   endReplacement();
   cancelAuthBinding();
   chatOff();
@@ -1683,6 +1712,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
    stopLiveClock();
    liveClockURL=null;
+   resetOfflineVods();
    let result,context;
    if(staged){
     result=staged.result;
@@ -1705,7 +1735,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     finish();
     return;
    }
-   if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
+   if(!result||!result.ok){
+    if(isOfflineResult(result))loadOfflineVods();
+    throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
+   }
    activeGeneration=context.generation;
    applyResolution(result,context);
    if(!initialResolved){
@@ -1847,6 +1880,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(options.notifyGlobal)app.postMessage('player-closed',{});
   closed=true;
   generation++;
+  offlineRun++;
   player.close();
   stopLiveClock();
   timers.clearAll();

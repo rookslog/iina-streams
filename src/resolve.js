@@ -6,7 +6,7 @@
 //   createResolver({resolveTwitch, http, helperResolve, log, now}) -> async resolve(source, quality)
 //
 // The result has the helper's shape: {ok, source, title, live, duration, quality, formats, mediaURL}
-// or {ok: false, error: {code, message}}. The JS path sends no headers, so `headers` is absent.
+// or {ok: false, error: {code, message}} (plus error.reason 'offline' for a channel that is not live). The JS path sends no headers, so `headers` is absent.
 // Messages mirror helpers/media.py ERROR_MESSAGES. Nothing here logs a URL, token or signature.
 
 const AUTO = {id: 'auto720', label: 'Auto · 720p preferred'};
@@ -25,6 +25,16 @@ const DEFINITIVE_CODES = ['OFFLINE', 'NOT_FOUND', 'RESTRICTED'];
 
 function failure(code) {
   return {ok: false, error: {code, message: ERROR_MESSAGES[code]}};
+}
+
+// A definitive OFFLINE keeps the helper's UNAVAILABLE shape and adds reason 'offline' (D-030), so the
+// player can offer the channel's recent broadcasts. NOT_FOUND and RESTRICTED stay plain UNAVAILABLE.
+function definitiveFailure(code) {
+  const result = failure('UNAVAILABLE');
+  if (code === 'OFFLINE') {
+    result.error.reason = 'offline';
+  }
+  return result;
 }
 
 function twitchRequest(source) {
@@ -143,7 +153,7 @@ function createResolver({resolveTwitch, http, helperResolve, log}) {
     } catch (error) {
       const code = errorCode(error);
       if (DEFINITIVE_CODES.includes(code)) {
-        return failure('UNAVAILABLE');
+        return definitiveFailure(code);
       }
       recordFallback(code);
       return helperResolve(source, quality);

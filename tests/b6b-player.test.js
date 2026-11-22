@@ -125,8 +125,15 @@ for (const reason of ['source change', 'window close']) {
     assertArchiveRequest(shim, 1);
     assert.deepEqual(states().at(-1).offlineVods, {state: 'loading', items: []});
 
-    if (reason === 'source change') await load(YOUTUBE.url);
-    else shim.emit('iina.window-will-close');
+    if (reason === 'source change') {
+      // A foreign file deactivates the player on a main-thread turn (r2 #6), a shim timer that never runs
+      // on its own, so the load waits for it. Without this advance the load hangs. DEVIATION from the
+      // tests commit 9237fec, harness only: no assertion is changed.
+      const foreignLoad = load(YOUTUBE.url);
+      await settle();
+      shim.timers.advance(0);
+      await foreignLoad;
+    } else shim.emit('iina.window-will-close');
     const phase = reason === 'source change' ? 'inactive' : 'closed';
     assert.equal(controller.snapshot().phase, phase);
     if (phase === 'inactive') {

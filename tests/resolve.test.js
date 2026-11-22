@@ -209,7 +209,10 @@ for (const [code, source, options] of [
   test(`${code} returns the helper-compatible error without calling the helper`, async () => {
     const {resolve, helperCalls} = setup({transport: fakeHttp(options)});
 
-    assert.deepEqual(await resolve(source, 'auto720'), UNAVAILABLE);
+    const expected = code === 'OFFLINE'
+      ? {...UNAVAILABLE, error: {...UNAVAILABLE.error, reason: 'offline'}}
+      : UNAVAILABLE;
+    assert.deepEqual(await resolve(source, 'auto720'), expected);
     assert.deepEqual(helperCalls, []);
   });
 }

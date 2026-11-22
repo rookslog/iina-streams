@@ -38,7 +38,13 @@ function harness(overrides = {}) {
     httpCalls: shim.http.calls, timers: shim.timers.all, files: shim.file.files, get fileReads() { return shim.file.reads; }, get fileWrites() { return shim.file.writes; }, // live: the shim builds these on access
     keychainReads: shim.keychain.reads, keychainWrites: shim.keychain.writes, prompts: shim.utils.prompts, alerts: shim.utils.asks,
     auth, authOptions,
-    open(value) { shim.utils.promptResult = value; shim.menu.items[0].action(); return shim.global.opens.at(-1); },
+    // #50: Open Stream shows a standalone window, and its page submits the input as 'open-stream'.
+    open(value) {
+      shim.menu.items[0].action();
+      shim.standaloneWindow.send('open-stream', {input: value});
+      return shim.global.opens.at(-1);
+    },
+    openWindow: shim.standaloneWindow,
     setResponse: value => shim.http.setResponse(value),
     rejectResponse: value => shim.http.rejectResponse(value),
     failTransport: () => shim.http.failTransport(),
@@ -83,9 +89,13 @@ test('the global Open Stream menu creates canonical managed players with only th
   }
 });
 
-test('cancelled or invalid source prompts never create a managed player', () => {
+// #50 changed this: invalid input is marked in the Open Stream window (open-error), not shown in a modal alert.
+test('cancelled or invalid Open Stream input never creates a managed player', () => {
   const r = harness(); r.open(null); r.open('https://twitch.tv.evil.example/channel');
-  assert.equal(r.opens.length, 0); assert.equal(r.alerts.length, 1);
+  assert.equal(r.opens.length, 0);
+  assert.equal(r.prompts.length, 0);
+  assert.equal(r.alerts.length, 0);
+  assert.equal(r.openWindow.messages('open-error').length, 1, 'only the invalid input is answered');
   assert.equal(r.httpCalls.length, 0); assert.equal(r.keychainReads.length, 0);
 });
 
@@ -309,4 +319,13 @@ test('an ID entered in setup wins and is saved as the user\'s own', async () => 
 test('the shipped plugin carries a well-formed built-in Client ID', () => {
   const app = require('../src/twitch-app.js');
   assert.match(app.clientID, /^[A-Za-z0-9]{10,64}$/);
+});
+
+// #33: QA builds (`npm run qa:deploy`) set config.qa to true with no startup source. global.js must load,
+// register the QA handlers, and open no startup player.
+test('global.js loads with config.qa=true, registers qa-open, and opens no startup player', () => {
+  const h = harness({qa: true});
+  assert.equal(typeof h.handlers.get('qa-open'), 'function');
+  assert.equal(typeof h.handlers.get('qa-ping'), 'function');
+  assert.equal(h.opens.length, 0);
 });

@@ -61,8 +61,9 @@ function createBridge(options = {}) {
   });
 
   // ---- the player is created the way the product creates it: Open Stream, then a child with that label ----
-  globalShim.utils.promptResult = sourceURL;
+  // #50: Open Stream is a standalone window; its page submits the input as 'open-stream'.
   globalShim.menu.items[0].action();
+  globalShim.standaloneWindow.send('open-stream', {input: sourceURL});
   const opened = globalShim.global.opens[0];
   const senderLabel = '1-' + IDENTIFIER;
   const source = Sources.parse(sourceURL);

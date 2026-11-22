@@ -1,0 +1,31 @@
+:root{
+ color-scheme:light dark;
+ font:13px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+ --line:rgba(0,0,0,.16);
+ --surface:rgba(255,255,255,.6);
+ --accent:#1661c8;
+ --error:#aa2932;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{display:flex;align-items:center;padding:0 14px;background:transparent}
+form{flex:1}
+input{
+ width:100%;
+ min-height:28px;
+ padding:4px 8px;
+ font:inherit;
+ color:inherit;
+ background:var(--surface);
+ border:1px solid var(--line);
+ border-radius:6px;
+}
+input:focus-visible{outline:3px solid color-mix(in srgb,var(--accent),transparent 30%);outline-offset:1px}
+/* Invalid input is shown by state, not text (#50). */
+input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}
+@media(prefers-color-scheme:dark){
+ :root{--line:rgba(255,255,255,.18);--surface:rgba(255,255,255,.08);--accent:#8ab9ff;--error:#ff929a}
+}
+@media(prefers-contrast:more){
+ :root{--line:CanvasText;--surface:Canvas}
+}

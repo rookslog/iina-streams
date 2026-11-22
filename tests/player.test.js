@@ -10,14 +10,35 @@ function host(label){
 }
 async function finishLoad(r,url){r.shim.emit('iina.file-loaded',url);r.shim.emit('iina.window-size-adjusted');await new Promise(resolve=>setTimeout(resolve,650));}
 const resolution={ok:true,title:'Recording',live:false,duration:100,quality:'360p30',formats:[{id:'360p30',label:'360p'}],mediaURL:'https://vod-secure.twitch.tv/transport'};
-test('unrelated IINA windows acquire no candidate hooks, network, timers or controls',()=>{const r=host('');const c=start(r.h,{variant:'unified'},{resolve(){throw Error('unexpected');}});assert.equal(c,null);assert.equal(r.shim.mpv.hooks.size,0);assert.equal(r.shim.event.names().length,0);});
+// #35 changed this: an unlabeled window now gets one on_load hook so a stream opened in IINA can be adopted
+// (tests/a1-open-stream-player.test.js). Until a stream loads it still has no events, timers, network or controls.
+test('unrelated IINA windows acquire only the adoption hook, and no network, timers or controls',async()=>{
+ const r=host('');
+ const c=start(r.h,{variant:'unified'},{resolve(){throw Error('unexpected');}});
+ assert.equal(c,null);
+ assert.deepEqual([...r.shim.mpv.hooks.keys()],['on_load']);
+ assert.equal(r.shim.event.names().length,0);
+ assert.equal(r.shim.timers.all.length,0);
+ r.setPath('/Users/x/movie.mkv');
+ let next=0;
+ await r.shim.mpv.runHook('on_load',()=>next++);
+ assert.equal(next,1);
+ assert.equal(r.shim.event.names().length,0);
+ assert.equal(r.shim.timers.all.length,0);
+ assert.equal(r.shim.sidebar.loads.length,0);
+ assert.equal(r.shim.menu.items.length,0);
+});
 test('native hook resolves public source, continues once and sidebar ready receives real state',async()=>{const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));const service={resolve:async()=>resolution,readSettings:()=>({chatEnabled:false}),saveSettings(){},runHelper(){},readFile(){},dataPath:x=>'/private/data/'+x};const c=start(r.h,{variant:'unified'},service);let next=0;await r.shim.mpv.runHook('on_load',()=>next++);assert.equal(next,1);assert.ok(r.shim.mpv.sets.some(x=>x[0]==='stream-open-filename'&&x[1]===resolution.mediaURL));await finishLoad(r,'https://www.twitch.tv/videos/123456');r.shim.sidebar.send('ready',{});const state=JSON.parse(decodeURIComponent(r.shim.sidebar.messages('state').at(-1).data.encoded));assert.equal(state.title,'Recording');assert.equal(state.phase,'playing');assert.equal(state.chat.mode,'off');assert.equal(JSON.stringify(state).includes('vod-secure'),false);r.shim.emit('iina.window-will-close');assert.equal(c.snapshot().phase,'closed');});
 test('quality reload does not reopen a deliberately hidden sidebar',async()=>{
  const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));let shown=0;r.h.sidebar.show=()=>shown++;
  const c=start(r.h,{variant:'unified'},{resolve:async()=>resolution,readSettings:()=>({chatEnabled:false})});await r.shim.mpv.runHook('on_load',()=>{});await finishLoad(r,'https://www.twitch.tv/videos/123456');c.hideSidebar();const before=shown;await finishLoad(r,'https://www.twitch.tv/videos/123456');assert.equal(shown,before);c.showSidebar();assert.equal(shown,before+1);
 });
 test('QA configuration cannot attach to an unrelated blank player',()=>{
- const r=host('');const c=start(r.h,{variant:'unified',qa:{source:source.parse('https://twitch.tv/videos/123456')}},{resolve(){throw Error('unexpected');}});assert.equal(c,null);assert.equal(r.shim.mpv.hooks.size,0);
+ const r=host('');const c=start(r.h,{variant:'unified',qa:{source:source.parse('https://twitch.tv/videos/123456')}},{resolve(){throw Error('unexpected');}});assert.equal(c,null);
+ // Only the #35 adoption hook; QA configuration adds nothing to an unlabeled window.
+ assert.deepEqual([...r.shim.mpv.hooks.keys()],['on_load']);
+ assert.equal(r.shim.event.names().length,0);
+ assert.equal(r.shim.timers.all.length,0);
 });
 test('an unrelated file deactivates all quality work and fences an outstanding resolution',async()=>{
  const r=host(source.label(source.parse('https://twitch.tv/videos/123456'),'unified'));let count=0;

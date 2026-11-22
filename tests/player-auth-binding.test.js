@@ -35,9 +35,13 @@ test('child auth listeners bind once on a deferred turn with explicit retained r
   assert.equal(f.shim.timers.pending().length,1);assert.equal(f.shim.timers.pending()[0].delay,0);
   assert.deepEqual(f.posts,[],'passive setup must not request authentication');
   f.flush();
-  assert.deepEqual(Object.keys(f.callbacks).sort(),['auth-forgotten','auth-ready','auth-state','auth-status','auth-stop']);
+  // #50 adds 'open-error' (global rejects the sidebar's Open Stream input), bound on the same deferred turn.
+  const bound=['auth-forgotten','auth-ready','auth-state','auth-status','auth-stop','open-error'];
+  assert.deepEqual(Object.keys(f.callbacks).sort(),bound);
   assert.equal(f.shim.timers.pending().length,0);assert.equal(f.cleared.length,1,'clear fired native timer entry');
-  for(const [name,callback] of Object.entries(f.callbacks))assert.equal(f.controller._authCallbacks[name],callback);
+  for(const [name,callback] of Object.entries(f.callbacks)){
+   if(name!=='open-error')assert.equal(f.controller._authCallbacks[name],callback);
+  }
   f.flush();assert.equal(f.cleared.length,1);assert.deepEqual(f.posts.filter(([n])=>n!=='auth-probe'),[]);
  }finally{f.restore();}
 });
@@ -70,7 +74,8 @@ test('Off fences a queued Connect while passive binding remains network-inert',(
   f.shim.sidebar.send('connect',{clientID:''});f.controller.chatOff();f.flush();
   assert.equal(f.posts.filter(([name])=>name==='auth-connect').length,0);
   assert.equal(f.controller.snapshot().chat.mode,'off');
-  assert.equal(Object.keys(f.callbacks).length,5);
+  // Five auth callbacks plus the #50 'open-error' listener.
+  assert.equal(Object.keys(f.callbacks).length,6);
  }finally{f.restore();}
 });
 

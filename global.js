@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {global:app,menu,utils,file,http}=iina;
+const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
 const audience=new Set(),managed=new Set(),sessions=new Map();
@@ -135,16 +135,71 @@ const auth=new TwitchAuth({
  }
 });
 
-function openStream(input){
- if(input===undefined)input=utils.prompt('Twitch channel, Twitch recording, or YouTube URL');
- if(!input)return;
+// ---- Open Stream (#50): no blocking dialog. Input comes from the standalone window or a sidebar field. ----
+
+const OPEN_PAGE='ui/open.html';
+
+// Opens a player for the input. Returns 'opened', 'invalid', or 'blank' when there is nothing to open.
+function openInput(input){
+ if(typeof input!=='string'||!input.trim())return'blank';
  const source=Sources.parse(input);
- if(!source){
-  utils.ask('Enter a Twitch channel or recording URL, or a YouTube video or livestream URL.');
-  return;
- }
+ if(!source)return'invalid';
  const label=Sources.label(source,config.variant);
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label});
+ return'opened';
+}
+
+// With no input, show the Open Stream window; otherwise open the input directly.
+function openStream(input){
+ if(input===undefined){
+  showOpenWindow();
+  return;
+ }
+ openInput(input);
+}
+
+// Brings the window forward if it is open. Otherwise loads a fresh page, which clears every
+// onMessage listener in IINA 1.5.1, so the listeners are registered after loadFile.
+function showOpenWindow(){
+ if(openWindow.isOpen()){
+  openWindow.open();
+  return;
+ }
+ openWindow.loadFile(OPEN_PAGE);
+ openWindow.onMessage('open-stream',onOpenWindowSubmit);
+ openWindow.onMessage('open-cancel',()=>openWindow.close());
+ openWindow.setProperty({title:'Open Stream',resizable:false});
+ openWindow.setFrame(380,84);
+ openWindow.open();
+}
+
+function onOpenWindowSubmit(data){
+ const result=openInput(data&&data.input);
+ if(result==='opened')openWindow.close();
+ if(result==='invalid')openWindow.postMessage('open-error',{});
+}
+
+// A player's sidebar field submits {input}; an older sidebar sends no input and gets the window.
+function onPlayerOpen(data,label){
+ const input=data&&data.input;
+ if(input===undefined){
+  showOpenWindow();
+  return;
+ }
+ if(openInput(input)==='invalid')postOpenError(label);
+}
+
+// The error carries no user text. A player this entry created gets it through postChild, which fences
+// closed players. A window IINA opened itself and Streams adopted (#35) sends IINA's own label, a bare
+// number (PlayerCore.swift in IINA 1.5.1); global.postMessage reaches it by that label.
+function postOpenError(label){
+ const id=targetID(label);
+ if(id!==null){
+  postChild(id,'open-error',{});
+  return;
+ }
+ if(typeof label!=='string'||!/^[0-9]{1,9}$/.test(label))return;
+ timers.setTimeout(()=>app.postMessage(label,'open-error','{}'),0);
 }
 
 async function onAuthConnect(data,label){
@@ -231,7 +286,7 @@ async function onAuthForget(_,label){
 
 menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
 if(typeof menu.forceUpdate==='function')menu.forceUpdate();
-app.onMessage('open',()=>openStream());
+app.onMessage('open',onPlayerOpen);
 app.onMessage('auth-connect',onAuthConnect);
 app.onMessage('auth-probe',onAuthProbe);
 app.onMessage('auth-disconnect',onAuthDisconnect);
@@ -247,7 +302,13 @@ if(config.qa){
   },0);
  });
  app.onMessage('qa-open',data=>openStream(data&&data.url));
+ // QA builds from `npm run qa:deploy` set config.qa to true (no startup source): only open a
+ // startup player when a source is configured (#33).
  const q=config.qa;
+ if(q&&q.source)openQaStartupPlayer(q);
+}
+
+function openQaStartupPlayer(q){
  const source=q.source;
  const label=source.kind==='local-test'?'streams-candidate:qa-local':Sources.label(source,q.variant||config.variant);
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label});

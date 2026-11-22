@@ -222,7 +222,8 @@ function createIina(options = {}) {
       add(name, callback) {
         if (typeof name !== 'string') throw new TypeError(`IINA contract: ${label}.onMessage name must be a string`);
         if (typeof callback !== 'function') throw new TypeError(`IINA contract: ${label}.onMessage("${name}") callback must be a function`);
-        listeners.set(name, callback); // UNVERIFIED: JavascriptMessageHub replace-vs-append semantics
+        // IINA v1.5.1 JavascriptMessageHub.addListener keeps one callback per name; a second one replaces it.
+        listeners.set(name, callback);
       },
       clear() { listeners.clear(); hub.clears++; },
       // Message arriving at the plugin side (page -> plugin, or another JS context -> this one).
@@ -247,6 +248,7 @@ function createIina(options = {}) {
     const hub = createHub(kind);
     const view = {
       hub, listeners: hub.listeners, posts: [], loads: [], shows: 0, hides: 0, visible: false,
+      created: false, undelivered: [], properties: {}, frames: [],
       clickable: null, opacity: null, postError: null,
       receive: hub.receive, send: hub.send, dropped: hub.dropped,
       messages(name) { return view.posts.filter(p => p.name === name); }
@@ -261,7 +263,10 @@ function createIina(options = {}) {
         if (typeof file !== 'string') throw new TypeError(`IINA contract: ${kind}.loadFile path must be a string`);
         requireWindow('loadFile');
         view.loads.push(file);
-        hub.clear(); // messageHub.clearListeners(): every onMessage registration is dropped
+        view.created = true;
+        // messageHub.clearListeners(): every onMessage registration is dropped. In IINA v1.5.1 this holds for the
+        // standalone window too (JavascriptAPIStandaloneWindow.swift, loadFile).
+        hub.clear();
       },
       show() { record(`${kind}.show`); requireWindow('show'); view.shows++; view.visible = true; },
       hide() { record(`${kind}.hide`); requireWindow('hide'); view.hides++; view.visible = false; },
@@ -270,6 +275,8 @@ function createIina(options = {}) {
         if (typeof name !== 'string') throw new TypeError(`IINA contract: ${kind}.postMessage name must be a string`);
         const copy = jsonPayload(data, `${kind}.postMessage("${name}")`);
         if (view.postError) throw view.postError;
+        // The standalone window drops messages until something has created it (standaloneWindowCreated guard).
+        if (kind === 'standaloneWindow' && !view.created) { view.undelivered.push({name, data: copy}); return; }
         view.posts.push({name, data: copy});
         posts.push({surface: kind, name, data: copy});
       },
@@ -304,6 +311,44 @@ function createIina(options = {}) {
 
   const sidebar = createView('sidebar');
   const overlay = createView('overlay');
+
+  // Standalone window, modelled on IINA v1.5.1 iina/JavascriptAPIStandaloneWindow.swift (tag v1.5.1):
+  // the JSExport protocol is open, close, isOpen, loadFile, simpleMode, setStyle, setContent, postMessage,
+  // onMessage, setProperty and setFrame. There is no show or hide. JavascriptPluginInstance.swift creates the
+  // window lazily on first use and gives this API to the global and the player instances alike.
+  // simpleMode, setStyle and setContent are not modelled: Streams does not use them, so a call fails loudly.
+  const standaloneWindow = createView('standaloneWindow');
+  const standaloneView = standaloneWindow.view;
+  delete standaloneWindow.api.show;
+  delete standaloneWindow.api.hide;
+  standaloneWindow.api.open = function open() {
+    record('standaloneWindow.open');
+    standaloneView.created = true;
+    standaloneView.shows++;
+    standaloneView.visible = true;
+  };
+  standaloneWindow.api.close = function close() {
+    record('standaloneWindow.close');
+    standaloneView.created = true;
+    standaloneView.hides++;
+    standaloneView.visible = false;
+  };
+  standaloneWindow.api.isOpen = function isOpen() {
+    record('standaloneWindow.isOpen');
+    return standaloneView.created && standaloneView.visible;
+  };
+  // Host: ignored until the window exists; only title, resizable, fullSizeContentView and hideTitleBar apply.
+  standaloneWindow.api.setProperty = function setProperty(properties) {
+    record('standaloneWindow.setProperty', properties);
+    if (!standaloneView.created || !isPlainObject(properties)) return;
+    Object.assign(standaloneView.properties, jsonPayload(properties, 'standaloneWindow.setProperty'));
+  };
+  // Host: non-numbers keep the current value for that edge.
+  standaloneWindow.api.setFrame = function setFrame(width, height, x, y) {
+    record('standaloneWindow.setFrame', width, height, x, y);
+    standaloneView.created = true;
+    standaloneView.frames.push({width, height, x, y});
+  };
 
   // ---- global (plugin <-> plugin-instance messages) ----
   const globalHub = createHub('global');
@@ -485,8 +530,18 @@ function createIina(options = {}) {
     nextExec() { return utilsControl.execs.shift(); }
   };
   const utilsApi = {
-    prompt(title) { record('utils.prompt', title); utilsControl.prompts.push(title); return utilsControl.promptResult; },
-    ask(title) { record('utils.ask', title); utilsControl.asks.push(title); return utilsControl.askResult; },
+    prompt(title) {
+      record('utils.prompt', title);
+      utilsControl.prompts.push(title);
+      if (options.rejectModalDialogs) throw new Error('Unexpected blocking call to utils.prompt');
+      return utilsControl.promptResult;
+    },
+    ask(title) {
+      record('utils.ask', title);
+      utilsControl.asks.push(title);
+      if (options.rejectModalDialogs) throw new Error('Unexpected blocking call to utils.ask');
+      return utilsControl.askResult;
+    },
     chooseFile(title, opts) { record('utils.chooseFile', title); utilsControl.chosen.push({title, options: opts}); return Promise.resolve(utilsControl.chooseFileResult); },
     open(url) { record('utils.open', url); utilsControl.opened.push(url); return true; },
     fileInPath(file) { record('utils.fileInPath', file); return !!file && !!utilsControl.inPath(file); },
@@ -570,9 +625,11 @@ function createIina(options = {}) {
     global: globalApi, menu: menuApi, sidebar: sidebar.api, overlay: overlay.api, utils: utilsApi, file: fileApi,
     http: httpApi, mpv: mpvApi, core: core.api, event: eventApi, console: consoleApi
   };
+  iina.standaloneWindow = standaloneWindow.api;
 
   const shim = {
     iina, identifier, role, timers, log, posts,
+    standaloneWindow: standaloneWindow.view,
     menu: menuControl, sidebar: sidebar.view, overlay: overlay.view, global: globalControl, core, file: fileControl,
     http: httpControl, utils: utilsControl, keychain: keychainControl, event: eventControl, mpv: mpvControl, console: consoleControl,
     emit: (name, ...args) => eventControl.emit(name, ...args),

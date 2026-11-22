@@ -56,13 +56,73 @@ function safeMessage(m){
  };
 }
 
+// The QA build's local media window, which has no stream label.
+function qaLocalIdentity(config,label){
+ const qa=config.qa;
+ if(!(qa&&qa.source&&qa.source.kind==='local-test'&&label==='streams-candidate:qa-local'))return null;
+ return{source:qa.source,variant:qa.variant||config.variant};
+}
+
+function loadingPath(mpv){
+ return mpv.getString('path')||mpv.getString('stream-open-filename')||'';
+}
+
+// A window Streams created has a stream label and runs at once. Any other IINA window gets only an on_load
+// hook, and returns null: no controls, timers or network until a stream loads (see waitForNativeStream).
 function start(host,config,services){
  const label=host.global.getLabel()||'';
- const identity=Sources.fromLabel(label);
- const qaIdentity=qaLocalIdentity();
- if(!identity&&!qaIdentity)return null;
- const source=(identity||qaIdentity).source;
- const variant=(identity||qaIdentity).variant;
+ const identity=Sources.fromLabel(label)||qaLocalIdentity(config,label);
+ if(identity)return run(host,config,services,identity,onLoad=>host.mpv.addHook('on_load',20,onLoad));
+ waitForNativeStream(host,config,services);
+ return null;
+}
+
+// #35: a Twitch or YouTube URL opened in IINA itself (Open URL, the browser extension, `open -a IINA`)
+// arrives in a window Streams did not create. When the first such URL loads, Streams adopts it as the
+// window's source and handles that load, and every later one, through the normal pipeline.
+// Only an http(s) URL is adopted: Sources.parse reads a bare word as a Twitch channel, and a local path
+// can be a bare word. Any other file passes through untouched. IINA keeps every hook it is given, so
+// there is exactly one.
+const ADOPTABLE_KINDS=['twitch-live','twitch-vod','youtube'];
+
+function adoptableSource(path){
+ if(!/^https?:\/\//i.test(path))return null;
+ const source=Sources.parse(path);
+ return source&&ADOPTABLE_KINDS.includes(source.kind)?source:null;
+}
+
+function waitForNativeStream(host,config,services){
+ let adoptedLoadHook=null;
+ function adoptLoadHook(onLoad){
+  adoptedLoadHook=onLoad;
+ }
+ function onLoad(next){
+  if(adoptedLoadHook)return adoptedLoadHook(next);
+  const source=adoptableSource(loadingPath(host.mpv));
+  if(!source){
+   continueLoad(next);
+   return undefined;
+  }
+  // A window Streams does not own must never be left waiting: if adoption fails, the load goes on untouched.
+  try{
+   run(host,config,services,{source,variant:config.variant},adoptLoadHook);
+  }catch(_){
+   adoptedLoadHook=null;
+   continueLoad(next);
+   return undefined;
+  }
+  return adoptedLoadHook(next);
+ }
+ function continueLoad(next){
+  if(typeof next==='function')next();
+ }
+ host.mpv.addHook('on_load',20,onLoad);
+}
+
+// The Streams controller for one window and one source. registerLoadHook receives the on_load handler.
+function run(host,config,services,identity,registerLoadHook){
+ const source=identity.source;
+ const variant=identity.variant;
  const {mpv,core,sidebar,overlay,event,menu,global:app}=host;
  const timers=createTimers(setTimeout,clearTimeout);
  const persisted=services.readSettings?services.readSettings():{};
@@ -101,12 +161,6 @@ function start(host,config,services){
   clearTimer:timers.clearTimeout
  });
  const diag=[];
-
- function qaLocalIdentity(){
-  const qa=config.qa;
-  if(!(qa&&qa.source&&qa.source.kind==='local-test'&&label==='streams-candidate:qa-local'))return null;
-  return{source:qa.source,variant:qa.variant||config.variant};
- }
 
  function on(name,fn){
   const id=event.on(name,fn);
@@ -168,7 +222,7 @@ function start(host,config,services){
   sidebar.onMessage('refresh',()=>refresh());
   sidebar.onMessage('hide',hideSidebar);
   sidebar.onMessage('surface-visibility',onSurfaceVisibility);
-  sidebar.onMessage('open',()=>app.postMessage('open',{}));
+  sidebar.onMessage('open',onSidebarOpen);
   sidebar.onMessage('import',()=>importArchive());
   sidebar.onMessage('replay-resume',onReplayResume);
   sidebar.onMessage('chat-off',onChatOffRequest);
@@ -182,6 +236,18 @@ function start(host,config,services){
   sidebar.onMessage('authorize-open',openActivation);
   sidebar.onMessage('forget-auth',forgetAuth);
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
+ }
+
+ // The sidebar's inline field sends {input}; global parses it and opens the stream (#50).
+ function onSidebarOpen(data){
+  const input=data&&typeof data.input==='string'?data.input:undefined;
+  app.postMessage('open',input===undefined?{}:{input});
+ }
+
+ // Global rejected the sidebar's input. This holds even after deactivation: the field stays usable.
+ function onOpenError(){
+  if(closed)return;
+  postSidebar('open-error',{});
  }
 
  function onSidebarReady(){
@@ -530,16 +596,7 @@ function start(host,config,services){
    if(options&&options.twitch&&String(index.sourceId||'')!==String(source.id)){
     throw Error('The downloaded chat does not belong to this recording.');
    }
-   if(index.sourceId&&source.kind!=='local-test'&&String(index.sourceId)!==String(source.id)){
-    const question='This chat archive belongs to '+index.sourceId+', while this video is '+source.id+
-     '. Use this archive and align it manually?';
-    if(!host.utils.ask(question)){
-     chat.state='off';
-     send();
-     return false;
-    }
-   }
-   const nextReplay=new Replay(index,file=>JSON.parse(services.readFile(output+'/'+file)));
+    const nextReplay=new Replay(index,file=>JSON.parse(services.readFile(output+'/'+file)));
    const oldPath=replayPath;
    replay=nextReplay;
    replayPath=output;
@@ -813,7 +870,7 @@ function start(host,config,services){
     finish();
     return;
    }
-   const current=mpv.getString('path')||mpv.getString('stream-open-filename')||'';
+   const current=loadingPath(mpv);
    const parsed=Sources.parse(current);
    if(source.kind!=='local-test'&&(!parsed||parsed.url!==source.url)){
     deactivateForForeignFile();
@@ -1034,7 +1091,7 @@ function start(host,config,services){
 
  on('iina.plugin-overlay-loaded',onOverlayLoaded);
  on('iina.window-size-adjusted',onWindowSizeAdjusted);
- mpv.addHook('on_load',20,onLoadHook);
+ registerLoadHook(onLoadHook);
  on('iina.window-loaded',onWindowLoaded);
  on('iina.file-loaded',onFileLoaded);
  on('mpv.end-file',()=>{
@@ -1052,6 +1109,7 @@ function start(host,config,services){
  const bindingTimer=timers.setTimeout(()=>{
   if(authBindTimer!==bindingTimer)return;
   authBindTimer=null;
+  if(!closed)app.onMessage('open-error',onOpenError);
   bindAuthListeners();
  },0);
  authBindTimer=bindingTimer;

@@ -606,7 +606,7 @@ function start(host,config,services){
   }
   const generation=chatGeneration;
   const downloadPath=uniqueDataPath('download');
-  let owned=false;
+  let owned=false,seekWasQueued=false;
   twitchFetchBusy=true;
   twitchFetchAt=at;
   twitchNextAttempt=Date.now()+2500;
@@ -636,7 +636,11 @@ function start(host,config,services){
   }catch(error){
    if(!closed&&sourceActive&&generation===chatGeneration){
     twitchNextAttempt=Date.now()+30000;
-    if(!preserve){
+    // A seek that arrived while this request ran asks for a different position. Stay in "fetching" so the
+    // finally block below requests it; this failed position is not retried. Off, close and a source change
+    // end up in the generation and sourceActive checks above, so they never reach this branch.
+    seekWasQueued=!preserve&&twitchQueuedAt!==null&&chatPreferred;
+    if(!preserve&&!seekWasQueued){
      chat.state='unavailable';
      chat.available=false;
     }
@@ -650,7 +654,8 @@ function start(host,config,services){
    const pending=twitchQueuedAt;
    twitchQueuedAt=null;
    if(pending!==null&&!closed&&sourceActive&&chatPreferred&&(chat.mode==='replay'||chat.state==='fetching')){
-    const outside=!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
+    // With no chat on screen, a failed first fetch has no window to cover the queued position.
+    const outside=seekWasQueued||!twitchWindow||pending<twitchWindow.start-2||pending>twitchWindow.end-10;
     if(outside)fetchTwitchWindow({auto:true,at:pending});
    }
   }

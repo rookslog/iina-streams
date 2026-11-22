@@ -33,7 +33,9 @@ function gqlResponse(data) {
   return {statusCode: 200, reason: 'OK', data, text: JSON.stringify(data)};
 }
 
-function playerFixture(t, source = LIVE) {
+const OFFLINE_RESULT = {ok: false, error: {code: 'UNAVAILABLE', reason: 'offline', message: MESSAGE}};
+
+function playerFixture(t, source = LIVE, result = OFFLINE_RESULT) {
   const shim = createIina({label: Sources.label(source, 'unified'), mpv: {path: source.url}});
   shim.http.setResponse(gqlResponse(ARCHIVE_BODY));
   const module = {exports: {}};
@@ -44,7 +46,7 @@ function playerFixture(t, source = LIVE) {
     async resolve(resolvedSource, quality) {
       resolveCalls.push([resolvedSource.url, quality]);
       // Use the same reason for non-live sources to catch an implementation that checks only the reason.
-      return {ok: false, error: {code: 'UNAVAILABLE', reason: 'offline', message: MESSAGE}};
+      return result;
     },
   });
   t.after(() => shim.emit('iina.window-will-close'));
@@ -173,4 +175,21 @@ test('B6b player publishes error when the archive lookup fails and retains the l
   assert.equal(states().at(-1).error, MESSAGE);
   assert.deepEqual(states().at(-1).offlineVods, {state: 'error', items: []});
   assertArchiveRequest(shim, 1);
+});
+
+// Lead review: only the offline reason fetches. A live channel that is not found or restricted resolves to
+// UNAVAILABLE without reason:'offline', and must not look up archives.
+test('B6b a live load that fails for a reason other than offline does not fetch archives', async t => {
+  for (const error of [
+    {code: 'UNAVAILABLE', message: 'That channel does not exist.'},
+    {code: 'UNAVAILABLE', reason: 'restricted', message: 'That channel is restricted.'},
+    {code: 'NETWORK', message: 'Twitch could not be reached.'},
+  ]) {
+    const {shim, load, states} = playerFixture(t, LIVE, {ok: false, error});
+    await load();
+    await settle();
+    assert.equal(states().at(-1).error, error.message);
+    assert.deepEqual(shim.http.calls, [], `${error.reason || error.code} must not fetch archives`);
+    assert.equal(states().at(-1).offlineVods.state, 'idle');
+  }
 });

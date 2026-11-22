@@ -224,3 +224,110 @@ Methods:
 - every header and param value is a string.
 
 **Owns:** new `src/chat-timing.js`, `src/live-clock.js`, `tests/chat-timing.test.js` and `tests/live-clock.test.js`. The base is beta with C1 merged. Until then, tests inject a fake estimator, so they don't need `src/live-latency.js`.
+
+---
+
+## C2b + C3 — Chat timing and Go Live in the player (#2, #28, #51, #16)
+
+Starts after A1b merges, since it owns `src/player.js`. It builds on C1 and C2a.
+
+**Player.**
+- For `twitch-live`, after `file-loaded`, create one `liveClock` with `readPlayer: () => ({timePos: mpv.getNumber('time-pos'), cacheEnd: <demuxer-cache-state.cache-end>})` and the resolved media URL.
+- Restart it on a quality change, a reload or a new URL. Stop it on close, deactivation or a source change.
+- Live messages pass through `chatTiming.reveal(messages, now, effective(liveClock.behindLive()).delay)` before `send()`. A timer at `nextDueMs` re-sends.
+- The settings `{mode, manualDelay, fineTune}` persist with `saveSetting({chatTiming})`.
+- Replay (VOD) chat is unaffected: it keeps its own offset.
+
+**Sidebar (minimize-ui-text).**
+- **Live pill** in the header for `twitch-live`. It's red when `behindLive ≤ 5 s`. Otherwise it's grey and reads `−N s`, and clicking it does Go Live. It's hidden while uncertain.
+- **Chat timing** row in Chat settings: a segmented `Auto | Manual | Live` control and a delay stepper. In Manual, the stepper sets `manualDelay`; in Auto, it sets `fineTune`. Auto-uncertain shows a hollow-dot signifier with a tooltip; Manual is still selectable.
+- **#28:** in Manual, ⌥-clicking a chat message calibrates to it. Briefly highlight the message; no text.
+
+**Go Live.** `liveClock.goLiveTarget()`.
+- If it's finite and more than 1 s ahead of `time-pos`: `mpv.command('seek', [String(target), 'absolute'])`.
+- Otherwise, reload the current quality, which is the fallback (spike §4: seeking at or past the cache end is a no-op).
+
+**Menu (five-item cap).** The top level becomes **Show Streams**, **Go Live** (`Ctrl+Meta+l`; the implementer checks for conflicts with `iina.menu`/`getAllKeyBindings` and reports them), and a **Chat ▸** submenu (Import Chat Archive…, Turn Chat Off, In Sidebar, Over Video, Beside Video). This is verified against IINA 1.5.1's `menu.item` submenu API; cite it in the shim.
+
+**Tests (shim).**
+- the clock starts and stops per the lifecycle above;
+- a message is held until due, in Manual 10 s with fake timers;
+- Live mode shows it at once;
+- Auto-uncertain uses the manual delay;
+- the pill state is computed from `behindLive`;
+- Go Live seeks when the target is ahead, else reloads;
+- the settings persist;
+- replay is unaffected;
+- the menu structure;
+- no URL in any log.
+
+**Native (lead).** On a public live channel: watch the pill and Auto delay, compare chat to the video by eye, pause 30 s, resume, then Go Live.
+
+---
+
+## D1 — Chat beside the video (#47, #52), per D-028
+
+Starts after A1b merges. D-028's native gate passed (spike §7).
+
+**Design.**
+- `view.presentation` accepts `'beside'`. `view.columnWidth` defaults to 320 and is clamped to 240–480 px.
+- **Entering `beside`** with chat on:
+  - the overlay renders a **docked column**: full height, at the right edge, opaque in the theme, using the existing chat rendering. Its left edge is a drag handle for `columnWidth`.
+  - the player sets `video-margin-ratio-right` to `columnWidth / windowWidth`.
+  - In windowed mode, the window widens once by `columnWidth` (`core.window.frame`, clamped to the screen's visible frame), and the player remembers the widened width.
+- **Window changes:** recompute the ratio on IINA's window-resize and size-adjusted events. The implementer verifies the event names in IINA v1.5.1 source and cites them.
+- **Leaving** (another presentation, chat off, deactivation or window close): set the margin to 0. If the window is still at the widened width, shrink it back.
+- **Fullscreen:** margin only, no frame change.
+- **#52:** a small overlay cluster at the column's top: Go Live (twitch-live only, using C3's action) and Hide Chat (→ chat off). Icons only, with `aria-label`s.
+
+**Tests (shim).**
+- `viewSettings` accepts `'beside'` and clamps `columnWidth`;
+- entering sets the margin ratio, and a resize event recomputes it;
+- leaving, chat off, deactivation and close each reset it to 0;
+- widen and restore happen only when the width is unchanged;
+- fullscreen sends no frame change;
+- the overlay receives the `column` layout and width;
+- the cluster's messages route to Go Live and chat off.
+
+**Native (lead):** the spike's §5 steps 3, 7 and 8 with the real column, plus a drag-resize of the column and the window.
+
+---
+
+## B5b — Twitch playback in JS, wired in with the helper as fallback (#36, step 2)
+
+**Design.**
+
+New `src/resolve.js`: `createResolver({resolveTwitch, http, helperResolve, log, now})` returns `resolve(source, quality)`, which has the same contract as today's `services.resolve`: `{ok, source, title, live, duration, quality, formats, mediaURL, headers?}` or `{ok:false, error:{code, message}}`.
+
+Routing:
+- **Twitch live or VOD:** call `resolveTwitch({kind, login|id}, {http, log})`.
+- **Definitive answers** (`OFFLINE`, `NOT_FOUND`, `RESTRICTED`): return `{ok:false}` with the same error codes and messages the helper uses for these cases (read them from `helpers/media.py`). **Don't** fall back.
+- **Anything else** (`NETWORK`, `MALFORMED`, a thrown error, a timeout): call `helperResolve(source, quality)` and return its result. Record `log('twitch-js-fallback', code)` with the code only.
+- **YouTube and local** go straight to `helperResolve`.
+
+**Formats and quality.** Variants map to the helper's ids and labels, so saved quality choices carry over.
+- An id is `<height>p` plus the rounded fps when fps ≥ 50 (Streamlink's Twitch names: `1080p60`, `720p60`, `480p`, `360p`, `160p`). `chunked` (the source) takes its id from its RESOLUTION and FRAME-RATE. `audio_only` has the label `Audio only`.
+- `formats` is `[AUTO, …]` ordered like `_public_formats`.
+- Selection matches `_choose`: for `auto720`, the highest variant at 720p or below, else the lowest. An explicit id that's missing gives `QUALITY_UNAVAILABLE`, as in the helper.
+
+**Title.** `resolveTwitch` gains an optional title lookup in the same GQL request: `user(login){broadcastSettings{title}}` for live, `video(id){title}` for a VOD. A missing title or a title error falls back to `"<id> — Twitch"` and never fails playback. Apply the helper's `_title` cleanup: strip URLs and control characters, cut to 240 characters.
+
+**Other fields.** `live` comes from the kind; `duration` is `null`; there are no `headers` (the JS path sends none).
+
+**Wiring.** In `main.js`, set `services.resolve = createResolver({…, helperResolve: services.resolve.bind(services)})`, using `iina.http` and the existing log.
+
+**Never log** URLs, tokens or signatures.
+
+**Tests** (fake `http` and `helperResolve`, with fixtures from `tests/fixtures/twitch-playback/`, adding a title response):
+- live and VOD success give the helper-shaped result, with ids `1080p60`, `720p60`, `480p` and `audio_only`;
+- `auto720` selection, and the explicit and missing-quality cases;
+- each definitive error, with no helper call;
+- `NETWORK` or `MALFORMED` → the helper is called once with the same arguments and its result is returned;
+- YouTube goes to the helper only;
+- the title: present, missing, and cleaned;
+- no log argument contains the fixture's fake signature or token;
+- `main.js` wiring, under the shim: `services.resolve` is the wrapper.
+
+**Owns:** new `src/resolve.js`, `src/twitch-playback.js` (title lookup only), `main.js` (the wiring line only), new `tests/resolve.test.js`, and fixtures. Not `src/io.js` (B2a holds it) or `src/player.js` (A1b holds it).
+
+**Native (lead):** a live channel and a VOD open with no Streamlink process (`pgrep streamlink` is empty during the resolve), and quality changes work.

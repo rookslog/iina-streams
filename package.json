@@ -14,6 +14,7 @@
     "install-beta": "npm run build:beta && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\" && cp -R dist/beta/streams-beta.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
     "uninstall-beta": "rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
     "dev:deploy": "python3 -B scripts/dev.py deploy",
+    "qa:deploy": "python3 -B scripts/dev.py deploy --qa",
     "dev:link": "python3 -B scripts/dev.py link",
     "dev:unlink": "python3 -B scripts/dev.py unlink",
     "dev:status": "python3 -B scripts/dev.py status",

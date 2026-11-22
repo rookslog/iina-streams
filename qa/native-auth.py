@@ -40,7 +40,7 @@ if args.keychain:
     probe=command('keychain-probe');result['keychainProbe']=probe['result']
     result['checks']['nativeKeychainRoundTrip']=all(probe['result'].get(k) is True for k in ['wrote','matched','cleared'])
     if probe['result'].get('wrote'):
-        removed=subprocess.run(['/usr/bin/security','delete-generic-password','-s','local.iina.streams.qa - native-qa-probe','-a','noncredential'],capture_output=True)
+        removed=subprocess.run(['/usr/bin/security','delete-generic-password','-s','local.iina.streams.dev - native-qa-probe','-a','noncredential'],capture_output=True)
         result['checks']['temporaryKeychainItemRemoved']=removed.returncode==0
 result['callbacks']=[e for e in json.loads((DATA/('qa-events-'+source+'.json')).read_text()) if e['phase'] in ['auth-state-received','auth-stop-received']]
 path.write_text(json.dumps(result,indent=2)+'\n')

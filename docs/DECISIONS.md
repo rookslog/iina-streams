@@ -72,3 +72,5 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Supersedes:** `ROADMAP-RATIONALE-2026-11-22.md` from 0.5.6 onward.
 - **Rust helpers:** the user asked about rewriting the helpers in Rust to save memory and CPU. That was deferred to measurement in spike #37. A 2026-11-22 snapshot during live playback found no Streams helper processes, with IINA at 102 MB and 15% CPU, so a compiled helper saves nothing in steady state.
 
+
+2026-11-22 D-027 CHOSEN (user): license MIT. LICENSE ships inside every packaged plugin (scripts/build.py PLUGIN_ENTRIES). Alternatives weighed: GPL-3.0 (IINA's license; copyleft), Apache-2.0, none.

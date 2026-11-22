@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streams: Stage</title><meta name="description" content="Direction B for the Streams 0.6.0 overhaul: chat on the picture, docked or floating.">
+<style>
+/* Shared mock tokens. Constraint set: SF system type (13 body, 11 secondary, 15/600 stream name,
+   14 chat), 4pt spacing grid, macOS system colours, one accent (system blue), red only for LIVE
+   and errors. Dashed outline = drawn by IINA, not by Streams. */
+:root{
+ --page:#f3f3f5;--ink:#1d1d1f;--ink2:#5b5b62;--rule:#d8d8de;--note-bg:#fff;
+ --label:rgba(0,0,0,.85);--label2:rgba(0,0,0,.55);--label3:rgba(0,0,0,.28);
+ --sep:rgba(0,0,0,.1);--fill:rgba(0,0,0,.05);--fill2:rgba(0,0,0,.09);
+ --sb:rgba(238,238,240,.78);--pop:rgba(250,250,252,.92);--win:#ececee;
+ --accent:#007aff;--accent-ink:#fff;--live:#ff3b30;--warn:#c93400;
+ --host:rgba(0,0,0,.45);--shimmer:rgba(0,0,0,.08);
+ color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+ :root:not(:has(#t-light:checked)){
+  --page:#161618;--ink:#ececf0;--ink2:#a1a1aa;--rule:#2e2e33;--note-bg:#1e1e21;
+  --label:rgba(255,255,255,.88);--label2:rgba(235,235,245,.58);--label3:rgba(235,235,245,.28);
+  --sep:rgba(255,255,255,.1);--fill:rgba(255,255,255,.06);--fill2:rgba(255,255,255,.11);
+  --sb:rgba(36,36,40,.74);--pop:rgba(44,44,48,.94);--win:#262629;
+  --accent:#0a84ff;--live:#ff453a;--warn:#ff9f0a;--host:rgba(255,255,255,.5);--shimmer:rgba(255,255,255,.09);
+  color-scheme:dark;
+ }
+}
+:root:has(#t-dark:checked){
+ --page:#161618;--ink:#ececf0;--ink2:#a1a1aa;--rule:#2e2e33;--note-bg:#1e1e21;
+ --label:rgba(255,255,255,.88);--label2:rgba(235,235,245,.58);--label3:rgba(235,235,245,.28);
+ --sep:rgba(255,255,255,.1);--fill:rgba(255,255,255,.06);--fill2:rgba(255,255,255,.11);
+ --sb:rgba(36,36,40,.74);--pop:rgba(44,44,48,.94);--win:#262629;
+ --accent:#0a84ff;--live:#ff453a;--warn:#ff9f0a;--host:rgba(255,255,255,.5);--shimmer:rgba(255,255,255,.09);
+ color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--page)}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1180px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;letter-spacing:-.3px}
+h2{font-size:18px;margin:48px 0 4px;letter-spacing:-.2px}
+.lede{color:var(--ink2);max-width:760px;margin:0 0 12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;font-size:12px;color:var(--ink2);margin:12px 0 0}
+.meta label{display:inline-flex;gap:4px;align-items:center}
+.legend-host{display:inline-block;width:22px;height:12px;border:1.5px dashed var(--host);border-radius:3px;vertical-align:-2px;margin-right:4px}
+.sec-note{color:var(--ink2);margin:0 0 16px;max-width:760px}
+.row{display:flex;flex-wrap:wrap;gap:28px 24px;align-items:flex-start}
+figure{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+figcaption{font-size:12px;line-height:1.45;color:var(--ink2);max-width:360px}
+figcaption b{color:var(--ink);font-weight:600}
+.tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--fill2);color:var(--ink2);margin-right:4px}
+.tag.unv{background:rgba(255,159,10,.18);color:#b25000}
+@media (prefers-color-scheme:dark){:root:not(:has(#t-light:checked)) .tag.unv{color:#ffb340}}
+:root:has(#t-dark:checked) .tag.unv{color:#ffb340}
+table.notes{border-collapse:collapse;font-size:13px;width:100%;max-width:1100px;background:var(--note-bg);border-radius:10px;overflow:hidden}
+table.notes th,table.notes td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--rule)}
+table.notes th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink2);font-weight:600}
+.scroll-x{overflow-x:auto;max-width:100%}
+kbd{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;padding:1px 4px;border:1px solid var(--rule);border-radius:4px;background:var(--note-bg)}
+
+/* ---------- mock primitives ---------- */
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.s{width:13px;height:13px}
+svg.i.l{width:22px;height:22px}
+.ui{font:13px/1.35 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:var(--label);-webkit-user-select:none;user-select:none}
+.win{position:relative;border-radius:11px;overflow:hidden;background:#000;box-shadow:0 0 0 .5px rgba(0,0,0,.5),0 18px 50px rgba(0,0,0,.35);width:min(100%,940px);aspect-ratio:16/9.6}
+.win.fs{border-radius:4px;aspect-ratio:16/9}
+.titlebar{position:absolute;top:0;left:0;right:0;height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;z-index:5}
+.lights{display:flex;gap:7px}.lights i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.video{position:absolute;inset:0;background:
+ radial-gradient(60% 70% at 30% 40%,rgba(255,170,90,.55),transparent 60%),
+ radial-gradient(50% 60% at 75% 65%,rgba(40,140,160,.65),transparent 65%),
+ radial-gradient(30% 35% at 55% 30%,rgba(250,230,200,.35),transparent 70%),
+ linear-gradient(160deg,#1d2b35,#3a2a24 55%,#121a20)}
+.video.alt{background:
+ radial-gradient(55% 60% at 60% 45%,rgba(120,90,220,.5),transparent 65%),
+ radial-gradient(40% 50% at 25% 70%,rgba(60,180,120,.45),transparent 65%),
+ linear-gradient(200deg,#1b1830,#22303a 60%,#0f1418)}
+.host{outline:1.5px dashed var(--host);outline-offset:-1.5px}
+.osc{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(56%,440px);height:46px;border-radius:12px;background:rgba(40,40,44,.62);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);display:flex;align-items:center;gap:12px;padding:0 14px;color:rgba(255,255,255,.85);outline:1.5px dashed rgba(255,255,255,.55);outline-offset:-1.5px}
+.osc .bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.25);position:relative}
+.osc .bar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:78%;border-radius:2px;background:rgba(255,255,255,.8)}
+.osc .t{font-size:11px;font-variant-numeric:tabular-nums;opacity:.8}
+.hostlabel{position:absolute;font:600 9px -apple-system,system-ui;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.7);background:rgba(0,0,0,.45);padding:1px 4px;border-radius:3px}
+
+/* sidebar (IINA-owned container, Streams-owned content) */
+.sb{position:absolute;top:0;bottom:0;width:360px;background:var(--sb);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);display:flex;flex-direction:column;border-right:.5px solid var(--sep)}
+.sb.alone{position:relative;height:560px;border-radius:10px;border:.5px solid var(--sep);box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;background:linear-gradient(var(--sb),var(--sb)),linear-gradient(160deg,#2b3a44,#4a3329 60%,#18212a)}
+.sb-host{height:44px;flex:none;display:flex;align-items:center;justify-content:center;position:relative;margin:4px 6px 0;border-radius:8px}
+.pill{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;background:var(--fill2);font-size:13px;color:var(--label)}
+.pill .div{width:1px;height:14px;background:var(--sep)}
+.sb-host .collapse{position:absolute;right:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--fill2)}
+.sb-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:10px 14px 12px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:24px;padding:0 10px;border-radius:6px;background:var(--fill2);color:var(--label);font-size:13px;border:0;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn.large{height:32px;padding:0 16px;border-radius:8px;font-size:14px}
+.btn.wide{width:100%}
+.btn.text{background:none;color:var(--accent);padding:0 4px}
+.ib{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--label2);flex:none;position:relative}
+.ib.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.ib.off{opacity:.35}
+.ib.hover{background:var(--fill2);color:var(--label)}
+.menu-btn{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 6px 0 8px;border-radius:6px;background:var(--fill2);font-size:12px;font-variant-numeric:tabular-nums;color:var(--label)}
+.menu-btn svg{opacity:.6}
+.sp{flex:1}
+.sec{font-size:11px;color:var(--label2)}
+.live{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:5px;font:700 10px/1 -apple-system,system-ui;letter-spacing:.4px;color:#fff;background:var(--live)}
+.live::before{content:"";width:5px;height:5px;border-radius:50%;background:#fff}
+.behind{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 4px 0 7px;border-radius:5px;font:600 11px/1 -apple-system,system-ui;font-variant-numeric:tabular-nums;color:var(--label);background:var(--fill2)}
+.behind svg{color:var(--live)}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;opacity:.6;display:inline-block;flex:none}
+.ring{position:absolute;inset:2px;border-radius:7px;border:2px solid var(--accent);border-right-color:transparent;border-bottom-color:transparent;opacity:.9}
+.avatar{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 10px -apple-system,system-ui;color:#fff;background:linear-gradient(135deg,#6e5bd6,#3a8ee6);flex:none}
+.avatar.l{width:32px;height:32px;font-size:13px}
+.avatar.g2{background:linear-gradient(135deg,#e0743b,#d4407a)}
+.avatar.g3{background:linear-gradient(135deg,#2fa37a,#2f74a3)}
+.avatar.g4{background:linear-gradient(135deg,#888,#555)}
+
+/* chat */
+.msgs{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;font-size:14px;line-height:1.38;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 24px);mask-image:linear-gradient(to bottom,transparent,#000 24px);position:relative}
+.m b{font-weight:650;margin-right:5px}
+.m .ts{font-size:10px;color:var(--label3);margin-right:5px;font-variant-numeric:tabular-nums}
+.m.me{background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:5px;padding:2px 5px;margin:0 -5px}
+.c1{color:#e76f51}.c2{color:#4fa3f7}.c3{color:#2bb673}.c4{color:#b07cf2}.c5{color:#e0a400}.c6{color:#ef5da8}
+.jump{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--pop);box-shadow:0 2px 8px rgba(0,0,0,.3);color:var(--label)}
+.shim{height:12px;border-radius:6px;background:var(--shimmer)}
+.shim-row{display:flex;gap:6px;align-items:center;overflow:hidden}.shim-row .shim{flex:none}
+.err{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--warn);padding:6px 8px;border-radius:7px;background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.err .sp{flex:1}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.code{font:600 26px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:5px;color:var(--label);display:flex;align-items:center;gap:10px;padding:8px 12px 8px 16px;border-radius:9px;background:var(--fill)}
+.tip{position:absolute;z-index:30;max-width:230px;padding:5px 8px;border-radius:6px;background:var(--pop);color:var(--label);font-size:11px;line-height:1.35;box-shadow:0 4px 14px rgba(0,0,0,.3);border:.5px solid var(--sep)}
+.pop{position:absolute;z-index:30;width:250px;padding:10px 12px;border-radius:10px;background:var(--pop);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 12px 32px rgba(0,0,0,.35);border:.5px solid var(--sep);font-size:12px}
+.pop .r{display:flex;align-items:center;gap:8px;min-height:28px}
+.pop .r>span:first-child{flex:1}
+.pop hr{border:0;border-top:.5px solid var(--sep);margin:6px 0}
+.val{font-variant-numeric:tabular-nums;color:var(--label2);min-width:34px;text-align:right}
+.slider{width:110px;height:4px;border-radius:2px;background:var(--fill2);position:relative}
+.slider::after{content:"";position:absolute;left:var(--p,40%);top:50%;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.25),0 1px 3px rgba(0,0,0,.3);transform:translate(-50%,-50%)}
+.slider::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,40%);border-radius:2px;background:var(--accent)}
+.seg{display:inline-flex;padding:2px;border-radius:7px;background:var(--fill2);gap:2px}
+.seg span{padding:2px 8px;border-radius:5px;font-size:11px;color:var(--label2)}
+.seg span.sel{background:var(--pop);color:var(--label);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch{width:30px;height:18px;border-radius:9px;background:var(--fill2);position:relative;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.switch.on{background:var(--accent)}.switch.on::after{left:14px}
+.switch.dis{opacity:.4}
+.menu{position:absolute;z-index:30;min-width:190px;padding:5px;border-radius:9px;background:var(--pop);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 12px 32px rgba(0,0,0,.35);border:.5px solid var(--sep);font-size:13px}
+.menu div{display:flex;align-items:center;gap:6px;height:22px;padding:0 8px 0 4px;border-radius:5px}
+.menu div .ck{width:14px;text-align:center;font-size:11px}
+.menu div.hi{background:var(--accent);color:#fff}
+.menu div.dim{color:var(--label3)}
+.menu div .kb{margin-left:auto;color:var(--label3);font-size:12px}
+.menu div.hi .kb{color:rgba(255,255,255,.7)}
+.menu hr{border:0;border-top:.5px solid var(--sep);margin:4px 6px}
+
+/* overlay chat card (Streams overlay webview) */
+.card{position:absolute;border-radius:12px;background:rgba(20,22,28,.58);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.16);box-shadow:0 12px 32px rgba(0,0,0,.38);color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(0,0,0,.6);display:flex;flex-direction:column;padding:14px 12px 10px;--label:rgba(255,255,255,.92);--label2:rgba(255,255,255,.6);--label3:rgba(255,255,255,.35);--fill2:rgba(255,255,255,.14);--pop:rgba(50,52,58,.95);--shimmer:rgba(255,255,255,.14)}
+.card .grab{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:32px;height:4px;border-radius:2px;background:rgba(255,255,255,.35)}
+.edge{position:absolute;background:rgba(146,194,255,.85);border-radius:2px}
+.cursor{position:absolute;z-index:40;width:18px;height:18px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+
+/* standalone window */
+.sw{position:relative;border-radius:11px;overflow:hidden;background:var(--win);box-shadow:0 0 0 .5px rgba(0,0,0,.4),0 18px 50px rgba(0,0,0,.3);display:flex;flex-direction:column;color:var(--label)}
+.sw .titlebar{position:relative;height:38px;flex:none;border-bottom:.5px solid var(--sep)}
+.sw .titlebar .ttl{position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:var(--label2);pointer-events:none}
+.search{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:8px;background:var(--fill);color:var(--label2);font-size:14px}
+.search .typed{color:var(--label)}
+.search .caret{width:1.5px;height:16px;background:var(--accent);margin-left:-6px}
+.list{display:flex;flex-direction:column;padding:4px 6px}
+.li{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;min-height:44px}
+.li.sel{background:var(--accent);color:#fff;--label2:rgba(255,255,255,.75);--label:#fff}
+.li .txt{flex:1;min-width:0}
+.li .nm{font-size:13px;font-weight:600}
+.li .sub{font-size:12px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .n{font-size:12px;color:var(--label2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hdr{font-size:11px;font-weight:600;color:var(--label2);padding:10px 14px 2px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--live);flex:none}
+.thumb{border-radius:8px;aspect-ratio:16/9;position:relative;overflow:hidden;background:linear-gradient(135deg,#334,#556)}
+.thumb .badge{position:absolute;font:600 10px -apple-system,system-ui;color:#fff;background:rgba(0,0,0,.6);padding:1px 5px;border-radius:4px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px;padding:12px 14px}
+.tile .nm{font-size:13px;font-weight:600;margin-top:6px;display:flex;gap:5px;align-items:center}
+.tile .sub{font-size:12px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media (max-width:640px){.sb.alone{width:100%!important}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.corners{display:inline-grid;grid-template-columns:repeat(2,16px);gap:3px;padding:3px;border-radius:6px;background:var(--fill)}
+.corners i{height:10px;border-radius:2px;background:var(--fill2)}
+.corners i.sel{background:var(--accent)}
+.dotb{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 1.5px var(--sb)}
+.m.hov{background:var(--fill);border-radius:5px;padding:2px 26px 2px 5px;margin:0 -5px;position:relative}
+.m.hov .syncg{position:absolute;right:4px;top:50%;transform:translateY(-50%);color:var(--accent)}
+
+</style></head>
+<body>
+<input type="radio" name="theme" id="t-auto" checked hidden><input type="radio" name="theme" id="t-light" hidden><input type="radio" name="theme" id="t-dark" hidden>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+<symbol id="chevL" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="chevR" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="bubble" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-5 4v-4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></symbol>
+<symbol id="bubbleOff" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-5 4v-4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M3 3l18 18"/></symbol>
+<symbol id="aa" viewBox="0 0 24 24"><path d="M3 18L8 6l5 12M5 14h6M15 18l3-7 3 7M16 16h4"/></symbol>
+<symbol id="person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 5-5 8-5s6.5 1 8 5"/></symbol>
+<symbol id="down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+<symbol id="golive" viewBox="0 0 24 24"><path d="M4 6l7 6-7 6zM12 6l7 6-7 6zM20 6v12"/></symbol>
+<symbol id="sync" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+<symbol id="beside" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14"/></symbol>
+<symbol id="over" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="13" y="8" width="5" height="7" rx="1"/></symbol>
+<symbol id="dock" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M15 5v14M17.5 9v6"/></symbol>
+<symbol id="float" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="8" width="6" height="5" rx="1"/></symbol>
+<symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+<symbol id="warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+<symbol id="retry" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2-5M19 4v4h-4"/></symbol>
+<symbol id="copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4"/></symbol>
+<symbol id="puzzle" viewBox="0 0 24 24"><path d="M5 7h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H5z"/></symbol>
+<symbol id="play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></symbol>
+<symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3"/></symbol>
+<symbol id="vol" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6"/></symbol>
+<symbol id="more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18" cy="12" r="1.3" fill="currentColor"/></symbol>
+<symbol id="film" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4"/></symbol>
+<symbol id="slider" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+</svg>
+<main>
+
+<h1>Direction B: Stage</h1>
+<p class="lede">The video is the interface. Chat lives on the picture, either docked to the right edge as a full-height strip that the picture shrinks away from, or floating as a card. A small Streams cluster beside IINA’s controller carries LIVE, chat and placement. The IINA sidebar shrinks to a settings form you rarely open.</p>
+<div class="meta"><span><span class="legend-host"></span>dashed = drawn by IINA, not Streams</span><span>Theme: <label for="t-auto"><u>auto</u></label> · <label for="t-light"><u>light</u></label> · <label for="t-dark"><u>dark</u></label></span><span>Lens: Reduction (one signature element: chat on the picture)</span><span>Mock only. Native behaviour is not proven by any frame here.</span></div>
+
+<h2>1 · Watching live, chat docked</h2>
+<p class="sec-note">Streams sets mpv’s <code>video-margin-ratio-right</code> to the strip’s share of the width, so the picture is drawn left of the strip. That works the same windowed and fullscreen, and needs no IINA setting.</p>
+<figure><div class="scroll-x"><div style="zoom:.71">
+<div class="win ui" style="width:1320px;height:560px;aspect-ratio:auto">
+ <div class="video" style="right:340px"></div>
+ <div class="titlebar host" style="right:0"><div class="lights"><i></i><i></i><i></i></div>
+  <span style="flex:1;text-align:center;font-size:13px;color:rgba(255,255,255,.75)">night_owl · Speedrun practice: any% route</span></div>
+ <div class="osc" style=""><svg class="i "><use href="#pause"/></svg><svg class="i "><use href="#vol"/></svg><span class="t">1:42:07</span><div class="bar"></div><span class="t">LIVE</span></div>
+ <span class="hostlabel" style="left:640px;bottom:72px">IINA</span>
+ <div class="card" style="left:20px;bottom:26px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div>
+ <div class="card" style="top:0;bottom:0;right:0;width:340px;border-radius:0;border-width:0 0 0 1px;padding:36px 14px 12px"><div class="msgs"><div class="m"><b class="c1">pixelmoth</b>that skip was clean</div>
+<div class="m"><b class="c2">brine_shrimp</b>how many resets so far?</div>
+<div class="m"><b class="c3">quietfox</b>wr pace?</div>
+<div class="m"><b class="c4">tangerine_ops</b>gg on the cave split</div>
+<div class="m"><b class="c5">lowpoly_lu</b>the music on this level is so good</div>
+<div class="m"><b class="c6">marrow</b>first time catching a stream live, hi all</div>
+<div class="m me"><b class="c1">pixelmoth</b>@you_handle you asked about the route earlier, it's in the panel</div>
+<div class="m"><b class="c2">kettle</b>clip it</div>
+<div class="m"><b class="c3">quietfox</b>lets goooo</div>
+<div class="m"><b class="c2">brine_shrimp</b>that's the second gold split in a row</div>
+<div class="m"><b class="c4">orbweaver</b>chat is fast today</div></div></div>
+ <div class="edge" style="right:338px;top:200px;height:120px;width:3px;opacity:.6"></div>
+</div></div></div><figcaption><b>Docked.</b> The strip is the overlay webview, not the sidebar, so clicks on the video never dismiss it. Drag its inner edge to change width. Identity is IINA’s window title. <span class="tag unv">Unverified</span> mpv margins under IINA’s renderer; whether IINA’s controller and title bar draw above the overlay; overlay pointer delivery (#18).</figcaption></figure>
+
+<h2>2 · Floating</h2>
+<figure><div class="scroll-x"><div style="zoom:.71">
+<div class="win fs ui" style="width:1320px;height:742px;aspect-ratio:auto">
+ <div class="video alt"></div>
+ <div class="osc" style=""><svg class="i "><use href="#pause"/></svg><svg class="i "><use href="#vol"/></svg><span class="t">1:42:07</span><div class="bar"></div><span class="t">LIVE</span></div>
+ <div class="card" style="left:20px;bottom:26px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#float"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div>
+ <div class="card" style="top:40px;right:40px;width:330px;height:420px">
+  <div class="grab"></div>
+  <div class="msgs"><div class="m"><b class="c1">pixelmoth</b>that skip was clean</div>
+<div class="m"><b class="c2">brine_shrimp</b>how many resets so far?</div>
+<div class="m"><b class="c3">quietfox</b>wr pace?</div>
+<div class="m"><b class="c4">tangerine_ops</b>gg on the cave split</div>
+<div class="m"><b class="c5">lowpoly_lu</b>the music on this level is so good</div>
+<div class="m"><b class="c6">marrow</b>first time catching a stream live, hi all</div>
+<div class="m me"><b class="c1">pixelmoth</b>@you_handle you asked about the route earlier, it's in the panel</div>
+<div class="m"><b class="c2">kettle</b>clip it</div>
+<div class="m"><b class="c3">quietfox</b>lets goooo</div><div class="jump"><svg class="i s"><use href="#down"/></svg></div></div>
+  <div class="edge" style="left:-2px;top:20px;bottom:20px;width:3px"></div>
+ </div>
+ <svg class="cursor" viewBox="0 0 24 24" style="top:250px;right:362px"><path d="M3 12l4-4v3h10V8l4 4-4 4v-3H7v3z" fill="#fff" stroke="#000" stroke-width="1.1" stroke-linejoin="round"/></svg>
+</div></div></div><figcaption><b>Float</b>: the #1/#18 card. Drag anywhere, resize from any edge, ↓ jump when scrolled up (answers #20’s overlay scroll-back question). The cluster’s placement button switches Dock ⇄ Float.</figcaption></figure>
+
+<h2>3 · The cluster beside IINA’s controller (#51, #52)</h2>
+<p class="sec-note">IINA 1.5.1 offers no API to add controller buttons, so the cluster is Streams’ own overlay, placed beside the controller. It should appear and hide with the controller, but the plugin API has no controller-visibility event: the cluster would follow mouse movement on its own. The controller’s position is also a user preference (floating and draggable, bottom, or top) that the plugin can’t read, so “beside the controller” can collide with it. <span class="tag unv">Unverified</span></p>
+<div class="row">
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="msgs"><div class="m"><b class="c1">pixelmoth</b>that skip was clean</div>
+<div class="m"><b class="c2">brine_shrimp</b>how many resets so far?</div>
+<div class="m"><b class="c3">quietfox</b>wr pace?</div>
+<div class="m"><b class="c4">tangerine_ops</b>gg on the cave split</div>
+<div class="m"><b class="c5">lowpoly_lu</b>the music on this level is so good</div>
+<div class="m"><b class="c6">marrow</b>first time catching a stream live, hi all</div>
+<div class="m me"><b class="c1">pixelmoth</b>@you_handle you asked about the route earlier, it's in the panel</div>
+<div class="m"><b class="c2">kettle</b>clip it</div></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="behind" style="--label:#fff">−0:42<svg class="i s"><use href="#golive"/></svg></span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div><div class="tip" style="left:236px;bottom:28px">Go Live <span style="opacity:.6">⌃⌘L</span></div></div><figcaption><b>Behind live.</b> LIVE becomes the time behind live; clicking it goes live. Tooltip shows the shortcut.</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="msgs"><div class="m"><span class="ts">21:04</span><b class="c1">pixelmoth</b>that skip was clean</div>
+<div class="m"><span class="ts">21:04</span><b class="c2">brine_shrimp</b>how many resets so far?</div>
+<div class="m"><span class="ts">21:04</span><b class="c3">quietfox</b>wr pace?</div>
+<div class="m hov"><span class="ts">21:05</span><b class="c4">tangerine_ops</b>gg on the cave split<svg class="i s syncg"><use href="#sync"/></svg></div>
+<div class="m"><span class="ts">21:05</span><b class="c5">lowpoly_lu</b>the music on this level is so good</div>
+<div class="m"><span class="ts">21:05</span><b class="c6">marrow</b>first time catching a stream live, hi all</div>
+<div class="m me"><span class="ts">21:05</span><b class="c1">pixelmoth</b>@you_handle you asked about the route earlier, it's in the panel</div>
+<div class="m"><span class="ts">21:05</span><b class="c2">kettle</b>clip it</div>
+<div class="m"><span class="ts">21:06</span><b class="c3">quietfox</b>lets goooo</div></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;height:46px">
+ <div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div>
+ <span class="btn" style="width:22px;padding:0;height:22px">−</span><span style="font-size:12px;font-variant-numeric:tabular-nums;min-width:40px;text-align:center">+0:04</span>
+ <span class="btn" style="width:22px;padding:0;height:22px">+</span></div></div><figcaption><b>VOD replay.</b> The cluster swaps LIVE for the chat-offset stepper. Hovering a message shows a sync glyph that lines chat up at that message (#28).</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video alt"></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib off"><svg class="i "><use href="#bubbleOff"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div><div class="tip" style="left:16px;bottom:72px">YouTube live chat isn’t available yet. Replay loads after the stream ends.</div></div><figcaption><b>YouTube live.</b> No card; the chat button is disabled with the reason in its tooltip.</figcaption></figure>
+</div>
+
+<h2>4 · Chat card states</h2>
+<p class="sec-note">Sign-in happens where chat would be: inside the card.</p>
+<div class="row">
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="center"><span class="btn primary large">Sign in with Twitch</span></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div></div><figcaption><b>Signed out.</b> One primary button in the card.</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="center" style="gap:14px">
+ <div class="code" style="font-size:22px;background:rgba(255,255,255,.1)">WDJB-MJHT<span class="ib" style="width:22px;height:22px"><svg class="i s"><use href="#copy"/></svg></span></div>
+ <span class="btn primary large" style="min-width:200px">Approve on Twitch</span><span class="spin" style="opacity:.6"></span></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div></div><figcaption><b>Device code (#20 fix).</b> Filled primary action, code as a value with copy. Spinner = waiting.</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video alt"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="msgs" style="gap:10px"><div class="shim-row"><div class="shim" style="width:50px"></div><div class="shim" style="width:62%"></div></div>
+<div class="shim-row"><div class="shim" style="width:56px"></div><div class="shim" style="width:80%"></div></div>
+<div class="shim-row"><div class="shim" style="width:45px"></div><div class="shim" style="width:45%"></div></div>
+<div class="shim-row"><div class="shim" style="width:53px"></div><div class="shim" style="width:70%"></div></div>
+<div class="shim-row"><div class="shim" style="width:48px"></div><div class="shim" style="width:55%"></div></div>
+<div class="shim-row"><div class="shim" style="width:58px"></div><div class="shim" style="width:85%"></div></div>
+<div class="shim-row"><div class="shim" style="width:43px"></div><div class="shim" style="width:40%"></div></div>
+<div class="shim-row"><div class="shim" style="width:52px"></div><div class="shim" style="width:66%"></div></div></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div></div><figcaption><b>Connecting.</b> Shimmer rows; step detail in the chat button’s tooltip.</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="err" style="color:#ffb340;background:rgba(255,159,10,.16)"><svg class="i s"><use href="#warn"/></svg><span class="sp">Chat disconnected</span><span class="btn" style="height:20px">Retry</span></div><div class="msgs" style="opacity:.55"><div class="m"><b class="c1">pixelmoth</b>that skip was clean</div>
+<div class="m"><b class="c2">brine_shrimp</b>how many resets so far?</div>
+<div class="m"><b class="c3">quietfox</b>wr pace?</div>
+<div class="m"><b class="c4">tangerine_ops</b>gg on the cave split</div>
+<div class="m"><b class="c5">lowpoly_lu</b>the music on this level is so good</div>
+<div class="m"><b class="c6">marrow</b>first time catching a stream live, hi all</div>
+<div class="m me"><b class="c1">pixelmoth</b>@you_handle you asked about the route earlier, it's in the panel</div></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div></div><figcaption><b>Chat error.</b> One line, one action.</figcaption></figure>
+<figure><div class="win ui" style="width:360px;height:470px;aspect-ratio:auto;border-radius:10px"><div class="video"></div><div class="card" style="top:16px;right:16px;left:16px;bottom:84px"><div class="grab"></div><div class="center"></div></div><div class="card" style="left:16px;bottom:16px;padding:6px 8px;flex-direction:row;align-items:center;gap:4px;border-radius:12px;height:46px;--accent:#4aa3ff">
+ <span class="live">LIVE</span><div class="ib on"><svg class="i "><use href="#bubble"/></svg></div><div class="ib"><svg class="i "><use href="#dock"/></svg></div><div class="ib"><svg class="i "><use href="#slider"/></svg></div>
+</div></div><figcaption><b>Connected, nothing said yet.</b> An empty card; the solid chat button is the state.</figcaption></figure>
+</div>
+
+<h2>5 · The sidebar becomes a settings form</h2>
+<p class="sec-note">No messages, no status text. Opened from the cluster’s settings button or Plugins › Streams.</p>
+<div class="row">
+<figure><div class="sb alone ui" style="width:360px">
+ <div class="sb-host host"><div class="pill"><svg class="i "><use href="#puzzle"/></svg>Streams<span class="div"></span><svg class="i s"><use href="#chev"/></svg></div>
+  <div class="collapse"><svg class="i s"><use href="#chevL"/></svg></div></div>
+ <div class="sb-body" style="padding-top:4px">
+ <div class="sec" style="font-weight:600;margin:14px 4px 6px">Stream</div><div style="background:var(--fill);border-radius:9px"><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;"><span style="flex:1">Quality</span><span class="menu-btn">720p60<svg class="i s"><use href="#chev"/></svg></span></div></div>
+ <div class="sec" style="font-weight:600;margin:14px 4px 6px">Chat</div><div style="background:var(--fill);border-radius:9px"><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;"><span style="flex:1">Chat</span><span class="switch on"></span></div><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-top:.5px solid var(--sep);"><span style="flex:1">Placement</span><span class="seg"><span class="sel">Dock</span><span>Float</span></span></div><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-top:.5px solid var(--sep);"><span style="flex:1">Float position</span><span class="corners"><i></i><i class="sel"></i><i></i><i></i></span></div><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-top:.5px solid var(--sep);"><span style="flex:1">Text size</span><div class="slider" style="--p:30%"></div><span class="val">14</span></div><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-top:.5px solid var(--sep);"><span style="flex:1">Timestamps</span><span class="seg"><span class="sel">Off</span><span>12:34</span><span>:56</span></span></div><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;border-top:.5px solid var(--sep);"><span style="flex:1">Background</span><div class="slider" style="--p:64%"></div><span class="val">58%</span></div></div>
+ <div class="sec" style="font-weight:600;margin:14px 4px 6px">Twitch</div><div style="background:var(--fill);border-radius:9px"><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;"><div class="avatar">Y</div><span style="flex:1">you_handle</span><span class="btn">Sign Out</span></div></div>
+ <div style="margin-top:12px"><span class="btn text">Reset Chat Position</span></div>
+ </div></div><figcaption><b>Signed in.</b> Grouped like macOS Settings: Stream, Chat, Twitch. Values shown next to every slider. Placement is Dock/Float; the corner picker replaces Snap corner and is the keyboard route for placing the card.</figcaption></figure>
+<figure><div class="sb alone ui" style="width:360px;height:330px">
+ <div class="sb-host host"><div class="pill"><svg class="i "><use href="#puzzle"/></svg>Streams<span class="div"></span><svg class="i s"><use href="#chev"/></svg></div>
+  <div class="collapse"><svg class="i s"><use href="#chevL"/></svg></div></div>
+ <div class="sb-body" style="padding-top:4px">
+ <div class="sec" style="font-weight:600;margin:14px 4px 6px">Stream</div><div style="background:var(--fill);border-radius:9px"><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;"><span style="flex:1">Quality</span><span class="menu-btn"><span class="spin" style="width:11px;height:11px;border-width:1.5px"></span><svg class="i s"><use href="#chev"/></svg></span></div></div>
+ <div class="sec" style="font-weight:600;margin:14px 4px 6px">Twitch</div><div style="background:var(--fill);border-radius:9px"><div style="display:flex;align-items:center;gap:8px;min-height:34px;padding:0 10px;"><span class="btn primary">Sign in with Twitch</span></div></div>
+ </div></div><figcaption><b>Signed out, quality loading.</b> The quality button shows a spinner instead of a value. Sign-in sits in the Twitch group as well as in the card.</figcaption></figure>
+</div>
+
+<h2>6 · Open Stream (⌃⌘O): browse window</h2>
+<p class="sec-note">A larger standalone window with thumbnails, closer to the Twitch home page. The search field still accepts a channel or URL. Offline channels open a channel page of recent broadcasts (#32).</p>
+<div class="row">
+<figure><div class="sw ui" style="width:760px;height:560px">
+ <div class="titlebar" style="height:52px;gap:8px"><div class="lights"><i></i><i></i><i></i></div>
+  <div style="flex:1"></div><div class="search" style="width:320px"><svg class="i "><use href="#search"/></svg><span>Channel or URL</span></div><div style="flex:1"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden"><div class="hdr" style="padding-top:14px">Live</div><div class="grid"><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#5a4a8a,#d48a4a)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">1.2K</span></div><div class="nm">night_owl</div><div class="sub">Speedrun practice: any% route</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#2a6a8a,#9ad0c8)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">412</span></div><div class="nm">tidepool</div><div class="sub">Painting the coastline, chill stream</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#8a2a4a,#e0b040)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">3.8K</span></div><div class="nm">hexagon_hal</div><div class="sub">Ranked grind to diamond</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#3a7a3a,#d8d070)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">96</span></div><div class="nm">lantern_jo</div><div class="sub">Cozy farming sim, day 31</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#3a3a7a,#7ab0f0)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">230</span></div><div class="nm">orbit_kit</div><div class="sub">Building a synth from parts</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#6a4a2a,#e0a080)"><span class="badge" style="left:6px;top:6px;background:var(--live)">LIVE</span><span class="badge" style="right:6px;bottom:6px">58</span></div><div class="nm">pebble_ro</div><div class="sub">Morning coffee and chat</div></div></div></div></div><figcaption><b>Live now (#30).</b> Thumbnails, viewers, title. Thumbnails need Twitch’s image CDN allowed in the window’s CSP and <code>Info.json</code>. <span class="tag unv">Unverified</span> whether a standalone window may load remote images under IINA’s plugin URL policy.</figcaption></figure>
+<figure><div class="sw ui" style="width:760px;height:560px">
+ <div class="titlebar" style="height:52px;gap:8px"><div class="lights"><i></i><i></i><i></i></div><div class="ib"><svg class="i "><use href="#chevL"/></svg></div>
+  <div style="flex:1"></div><div class="search" style="width:320px"><svg class="i "><use href="#search"/></svg><span class="typed">mossbank</span></div><div style="flex:1"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:16px 14px 4px">
+ <div class="avatar l g4" style="width:44px;height:44px">MB</div><div><div style="font-size:17px;font-weight:600">mossbank</div>
+ <div class="sec">Offline</div></div></div><div class="grid"><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#4a5a3a,#a8b890)"><span class="badge" style="right:6px;bottom:6px">4:02:18</span></div><div class="nm">Restoration stream, part 4</div><div class="sub">Nov 21</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#3a4a5a,#90a8c0)"><span class="badge" style="right:6px;bottom:6px">1:47:05</span></div><div class="nm">Q&amp;A and tool tour</div><div class="sub">Nov 18</div></div><div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#5a4a3a,#c0a890)"><span class="badge" style="right:6px;bottom:6px">3:55:40</span></div><div class="nm">Restoration stream, part 3</div><div class="sub">Nov 15</div></div></div></div></div><figcaption><b>Offline channel (#32).</b> Channel page with recent broadcasts, length on the thumbnail. ‹ goes back.</figcaption></figure>
+<figure><div class="sw ui" style="width:760px;height:240px">
+ <div class="titlebar" style="height:52px;gap:8px"><div class="lights"><i></i><i></i><i></i></div>
+  <div style="flex:1"></div><div class="search" style="width:320px"><svg class="i "><use href="#search"/></svg><span>Channel or URL</span></div><div style="flex:1"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden"><div class="hdr" style="padding-top:14px">Following</div><div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="tile" style="opacity:.55;text-align:center"><div class="avatar l g2" style="width:56px;height:56px;margin:0 auto;font-size:16px">TP</div><div class="sub" style="margin-top:6px">tidepool</div></div><div class="tile" style="opacity:.55;text-align:center"><div class="avatar l g3" style="width:56px;height:56px;margin:0 auto;font-size:16px">HH</div><div class="sub" style="margin-top:6px">hexagon_hal</div></div><div class="tile" style="opacity:.55;text-align:center"><div class="avatar l g4" style="width:56px;height:56px;margin:0 auto;font-size:16px">MB</div><div class="sub" style="margin-top:6px">mossbank</div></div><div class="tile" style="opacity:.55;text-align:center"><div class="avatar l " style="width:56px;height:56px;margin:0 auto;font-size:16px">LJ</div><div class="sub" style="margin-top:6px">lantern_jo</div></div><div class="tile" style="opacity:.55;text-align:center"><div class="avatar l g2" style="width:56px;height:56px;margin:0 auto;font-size:16px">OR</div><div class="sub" style="margin-top:6px">orbit_kit</div></div></div></div></div><figcaption><b>Nobody you follow is live.</b> No Live section; followed channels appear dimmed, and each opens its channel page of recent broadcasts.</figcaption></figure>
+<figure><div class="sw ui" style="width:760px;height:300px">
+ <div class="titlebar" style="height:52px;gap:8px"><div class="lights"><i></i><i></i><i></i></div>
+  <div style="flex:1"></div><div class="search" style="width:320px"><svg class="i "><use href="#search"/></svg><span>Channel or URL</span></div><div style="flex:1"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden"><div class="hdr" style="padding-top:14px">Live</div><div class="grid"><div class="tile"><div class="thumb shim" style="height:auto;border-radius:8px"></div><div class="shim" style="width:50%;margin-top:8px"></div><div class="shim" style="width:80%;margin-top:6px;height:9px"></div></div><div class="tile"><div class="thumb shim" style="height:auto;border-radius:8px"></div><div class="shim" style="width:50%;margin-top:8px"></div><div class="shim" style="width:80%;margin-top:6px;height:9px"></div></div><div class="tile"><div class="thumb shim" style="height:auto;border-radius:8px"></div><div class="shim" style="width:50%;margin-top:8px"></div><div class="shim" style="width:80%;margin-top:6px;height:9px"></div></div></div></div></div><figcaption><b>Loading</b>: skeleton tiles.</figcaption></figure>
+<figure><div class="sw ui" style="width:760px;height:200px">
+ <div class="titlebar" style="height:52px;gap:8px"><div class="lights"><i></i><i></i><i></i></div>
+  <div style="flex:1"></div><div class="search" style="width:320px"><svg class="i "><use href="#search"/></svg><span>Channel or URL</span></div><div style="flex:1"></div></div>
+ <div style="flex:1;min-height:0;overflow:hidden"><div style="padding:40px 14px;display:flex;justify-content:center"><span class="btn">Show channels you follow</span></div></div></div><figcaption><b>Follows not granted</b>: one action; search still works.</figcaption></figure>
+</div>
+
+<h2>7 · Keyboard and VoiceOver (J10)</h2>
+<div class="scroll-x"><table class="notes">
+<tr><th>Task</th><th>Pointer</th><th>Keyboard</th><th>VoiceOver</th></tr>
+<tr><td>Open a stream</td><td>Menu, or ⌃⌘O</td><td>⌃⌘O, type, Tab into the grid, arrows, Return</td><td>Tiles read “night_owl, live, 1.2 thousand viewers, Speedrun practice…”</td></tr>
+<tr><td>Change quality</td><td>Cluster → settings → Quality</td><td>Plugins › Streams › Quality submenu</td><td>Sidebar form is a normal webview form. <span class="tag unv">Unverified</span> reachability of the overlay cluster by VoiceOver</td></tr>
+<tr><td>Chat on/off, Dock/Float</td><td>Cluster buttons</td><td>⌃⌘C, ⌃⌘B (proposed)</td><td>Same items in the menu; the cluster itself may be unreachable</td></tr>
+<tr><td>Go Live</td><td>Cluster LIVE badge</td><td>⌃⌘L</td><td>Menu item “Go Live”</td></tr>
+<tr><td>Read chat</td><td>Scroll the strip or card</td><td><span class="tag unv">Unverified</span>: needs keyboard focus in the overlay webview, which IINA may never give it</td><td><span class="tag unv">Unverified</span>: if the overlay isn’t in the accessibility tree, chat is unreadable. This is B’s biggest J10 risk.</td></tr>
+<tr><td>Move/resize</td><td>Drag card, drag edges</td><td>Placement presets in the form</td><td>Same</td></tr>
+<tr><td>Reduced motion / transparency / contrast</td><td colspan="3">As in A: static spinners, opaque strip and card, full-contrast text.</td></tr>
+</table></div>
+
+</main>
+</body></html>

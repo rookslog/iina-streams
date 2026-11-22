@@ -20,5 +20,6 @@
     "dev:rollback": "python3 -B scripts/dev.py rollback",
     "link-dev": "npm run dev:link",
     "unlink-dev": "npm run dev:unlink"
-  }
+  },
+  "license": "MIT"
 }

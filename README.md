@@ -37,3 +37,7 @@ The last tagged release is v0.5.3, and `beta` targets 0.5.4. The plan is in [doc
 | `scripts/` | Build (`build.py`), dev loop (`dev.py`), version check |
 | `qa/` | Diagnostics run by hand, never packaged. Most scripts drive a QA build that no current script produces (#33) |
 | `docs/` | Roadmap, release process, decisions, designs. `docs/archive/` holds history |
+
+## License
+
+[MIT](LICENSE).

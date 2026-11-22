@@ -12,7 +12,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT
 HELPER_ORDER = {'runner': 0, 'media': 1, 'acquire': 2, 'replay': 3}
-PLUGIN_ENTRIES = ['Info.json', 'config.js', 'global.js', 'main.js', 'src', 'ui', 'helpers']
+PLUGIN_ENTRIES = ['Info.json', 'config.js', 'global.js', 'main.js', 'src', 'ui', 'helpers', 'LICENSE']
 
 
 def digest(data):

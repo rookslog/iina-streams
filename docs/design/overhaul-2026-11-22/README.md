@@ -77,6 +77,9 @@ Gaps: neither page draws the first-run Client ID setup sheet. It is unchanged fr
 
 ## Recommendation
 
+> **2026-11-22 update:** the lead chose the margin-docked overlay column instead of A, pending the native margin test. See D-028 in `docs/DECISIONS.md`.
+
+
 **What you're deciding.** You're choosing which interaction model 0.6.0 builds. That is a judgement about what the launch audience values: chat as a dependable column, or chat that stays out of the way of the picture. It's yours because it sets the launch screenshots and the native tests that follow.
 
 | Option | Buys | Costs |

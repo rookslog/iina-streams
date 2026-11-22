@@ -74,3 +74,10 @@ Update this append-only log when actual decisions are made, with evidence and ro
 
 
 2026-11-22 D-027 CHOSEN (user): license MIT. LICENSE ships inside every packaged plugin (scripts/build.py PLUGIN_ENTRIES). Alternatives weighed: GPL-3.0 (IINA's license; copyleft), Apache-2.0, none.
+
+2026-11-22 D-028 CHOSEN (lead, overnight under `.kickoff.json`; reversible; for the operator to confirm in #49): side chat for 0.6.0 (#47) docks in the **overlay**, with the picture shrunk by the mpv margin (`video-margin-ratio-right`). The native sidebar keeps the controls and settings.
+- **Why not the native sidebar column** (Direction A in `docs/design/overhaul-2026-11-22/README.md`): it only sits beside the picture with IINA's app-wide Edge-to-Edge Video preference turned off. A fresh install would greet a launch user with a covering, click-to-close sidebar. A plugin can't read that preference either (spike #47 §1.3), so Streams couldn't adapt to it.
+- **Why the margin route:** the plugin sets the margin itself (it's on IINA's allow-list). It needs no setting change, works in fullscreen, and the column width is the plugin's own number. Observed in mpv 0.41 and in the libmpv render path; **not yet observed in IINA 1.5.1's GL path** (`docs/design/SPIKE-47-52-SIDE-CHAT-AND-CONTROLS-2026-11-22.md` §1, §4).
+- **Gate:** before any #47 code merges, the native test in that spike's §5, step 2, must show the picture shrinking in IINA. If it doesn't, this flips to Direction A, with a first-run hint about Edge-to-Edge.
+- **#52:** IINA 1.5.1 has no plugin API for OSC buttons. Go Live and Show/Hide Chat become menu items with key bindings, plus a small control cluster in the overlay.
+- **Overrides:** the "pick A" recommendation in `docs/design/overhaul-2026-11-22/README.md`. That README's assumption, that launch users will change an app-wide preference, is the one this decision rejects.

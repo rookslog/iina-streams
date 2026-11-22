@@ -12,7 +12,7 @@
 - **Live chat on your timeline (#2, #28):**
   - **Modes:** Auto, Manual and Live, in Chat settings. Auto delays chat by how far the video is behind live. That's estimated from the playlist's program date-time against mpv's cache (`src/live-latency.js`, `src/chat-timing.js`, `src/live-clock.js`). A hollow dot means not yet confident; Auto then uses the manual delay.
   - **Calibrate (#28):** in Manual, ⌥-click a message to set the delay to its age.
-- **Live pill and Go Live (#51):** the sidebar header shows a red Live pill at the edge, or `−N s` behind. Clicking it, **Plugin › Go Live** (⌃⌘G) or the pill seeks to 2 s before the cache end, and reloads when there's nothing to seek to. Chat items moved into a **Chat** submenu.
+- **Live pill and Go Live (#51):** the sidebar header shows a red Live pill when the playhead is within 8 s of the cache end (Twitch's floor on this path is 6–8 s behind live), or `−N s` behind. Clicking it, **Plugin › Go Live** (⌃⌘G) jumps to the edge and resumes playback: it seeks when that reaches within 12 s of live, and otherwise reloads at the edge (after a pause, mpv's cache stops short). Observed natively on a live channel. Chat items moved into a **Chat** submenu.
 - **Groundwork, not yet wired:**
   - a Twitch Helix client for Following and recent VODs (`src/twitch-helix.js`, #30/#32).
 - Docs: README rewritten for first-time visitors (#38); spikes on live latency, Go Live and the DVR window (#16/#31/#51) and on side chat (#47/#52); D-028, side chat docked beside the video with an mpv margin.

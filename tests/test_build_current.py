@@ -12,6 +12,8 @@ ROOT=Path(__file__).resolve().parents[1]
 SPEC=importlib.util.spec_from_file_location('streams_current_builder', ROOT/'scripts/build.py')
 BUILD=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BUILD)
+VERSION=json.loads((ROOT/'Info.json').read_text())['version']  # the next release, per D-020/D-021
+TAG='v'+VERSION
 
 class CurrentBuilderTests(unittest.TestCase):
     def test_beta_identity_archive_integrity_and_embedded_source(self):
@@ -19,8 +21,8 @@ class CurrentBuilderTests(unittest.TestCase):
             manifest=BUILD.build(Path(temp),beta=True)
             archive=Path(temp)/manifest['archive']
             self.assertEqual(manifest['identifier'],'local.iina.streams.beta')
-            self.assertEqual(manifest['targetVersion'],'0.5.4')
-            self.assertEqual(manifest['version'],'0.5.4-beta+'+manifest['buildRef'])
+            self.assertEqual(manifest['targetVersion'],VERSION)
+            self.assertEqual(manifest['version'],VERSION+'-beta+'+manifest['buildRef'])
             self.assertTrue(manifest['buildRef'].startswith('g'))
             self.assertIn(manifest['buildRef'],manifest['archive'])
             self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(),manifest['sha256'])
@@ -47,25 +49,25 @@ class CurrentBuilderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'stable'
             # Mocked, not the real checkout: on a release tag's own CI run HEAD is tagged and clean,
-            # so an unmocked call would build successfully (v0.5.4 tag CI, 2026-11-22).
+            # so an unmocked call would build successfully (the v0.5.4 tag CI, 2026-11-22).
             with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,set())):
                 with self.assertRaisesRegex(ValueError,'matching release tag'):
                     BUILD.build(path,beta=False)
             self.assertFalse(path.exists())
-            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,True,{'v0.5.4'})):
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,True,{TAG})):
                 with self.assertRaisesRegex(ValueError,'matching release tag'):
                     BUILD.build(path,beta=False)
             with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,{'v0.5.2'})):
                 with self.assertRaisesRegex(ValueError,'matching release tag'):
                     BUILD.build(path,beta=False)
-            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,{'v0.5.4'})):
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,{TAG})):
                 manifest=BUILD.build(path,beta=False)
-            self.assertEqual(manifest['version'],'0.5.4')
-            self.assertEqual(manifest['targetVersion'],'0.5.4')
+            self.assertEqual(manifest['version'],VERSION)
+            self.assertEqual(manifest['targetVersion'],VERSION)
             self.assertEqual(manifest['identifier'],'local.iina.streams')
             with zipfile.ZipFile(path/manifest['archive']) as zip:
                 info=json.loads(zip.read('Info.json'))
-                self.assertEqual(info['version'],'0.5.4')
+                self.assertEqual(info['version'],VERSION)
                 self.assertEqual(info['identifier'],'local.iina.streams')
                 self.assertFalse(any(n.endswith('settings.json') or n.startswith('.data/') for n in zip.namelist()))
                 self.assertNotIn('qa-harness.js',zip.namelist())
@@ -78,12 +80,12 @@ class CurrentBuilderTests(unittest.TestCase):
             with mock.patch.object(BUILD,'git_state',return_value=('b'*40,False,set())):
                 second=BUILD.build(root/'b',beta=True)
             self.assertEqual(first['targetVersion'],second['targetVersion'])
-            self.assertEqual(first['targetVersion'],'0.5.4')
+            self.assertEqual(first['targetVersion'],VERSION)
             self.assertNotEqual(first['version'],second['version'])
             self.assertNotEqual(first['archive'],second['archive'])
             self.assertNotEqual(first['sha256'],second['sha256'])
-            self.assertEqual(first['version'],'0.5.4-beta+gaaaaaaaa')
-            self.assertEqual(second['version'],'0.5.4-beta+gbbbbbbbb')
+            self.assertEqual(first['version'],VERSION+'-beta+gaaaaaaaa')
+            self.assertEqual(second['version'],VERSION+'-beta+gbbbbbbbb')
             self.assertFalse(first['sourceDirty'])
 
     def test_uncommitted_sources_are_marked_dirty(self):
@@ -92,7 +94,7 @@ class CurrentBuilderTests(unittest.TestCase):
                 manifest=BUILD.build(Path(temp),beta=True)
             self.assertTrue(manifest['sourceDirty'])
             self.assertEqual(manifest['buildRef'],'gaaaaaaaa.dirty')
-            self.assertEqual(manifest['version'],'0.5.4-beta+gaaaaaaaa.dirty')
+            self.assertEqual(manifest['version'],VERSION+'-beta+gaaaaaaaa.dirty')
             self.assertIn('gaaaaaaaa.dirty',manifest['archive'])
 
     def test_reproducible_zip_even_when_helper_enumeration_order_changes(self):

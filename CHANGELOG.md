@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.5.5-beta (unreleased) — chat on your timeline
+
 ## 0.5.4 (2026-11-22) — development workflow, CI and the first GitHub Release
 - Release-review fixes: Sign out never claims a revocation it didn't make (#41). The sign-in button is now "Approve on Twitch": it opens Twitch, which autofills the code; there is no auto-open (#42). Appearance changes keep Chat Off (#43). A seek during a failed first VOD chat fetch is still fetched (#44). Twitch VODs on any Twitch CloudFront distribution play (#45). YouTube videos with large metadata open (#46). Readability rewrite, Focus layout removed, and the sidebar keeps its scroll position after Over video (#23).
 - Sign in no longer needs a Twitch Client ID. Streams ships the public Client ID of its own Twitch app, a Public client with no secret. An ID the user entered or saved still takes precedence, and only a user's own ID is saved (#8, D-025).

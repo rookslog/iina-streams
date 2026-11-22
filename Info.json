@@ -1,7 +1,7 @@
 {
   "name": "Streams",
   "identifier": "local.iina.streams",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "ghRepo": "rookslog/iina-streams",
   "ghVersion": 3,
   "description": "Twitch and YouTube playback in IINA with a draggable glassy chat overlay, read-only Twitch chat, and automatic VOD replay.",

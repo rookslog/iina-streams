@@ -31,3 +31,5 @@ releases/
 .claude/worktrees/
 # Personal Claude Code settings (never shared)
 .claude/settings.local.json
+# Overnight-run authorization carry (stop-rule kickoff); local run state
+.kickoff.json

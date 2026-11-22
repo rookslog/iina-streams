@@ -20,7 +20,7 @@ const {createIina} = require('./support/iina-shim.js');
 const playerPath = join(__dirname, '../src/player.js');
 const requireFromPlayer = createRequire(playerPath);
 const liveSource = Sources.parse('fixture_r2_auto');
-const mediaURL = quality => `https://media.invalid/${quality}.m3u8?sig=fake-r2-auto-signature`;
+const mediaURL = quality => `https://video-weaver.ttvnw.net/${quality}.m3u8?sig=fake-r2-auto-signature`;
 const START_MS = Date.parse('2026-01-01T00:00:10Z');
 const settle = () => new Promise(resolve => setImmediate(resolve));
 

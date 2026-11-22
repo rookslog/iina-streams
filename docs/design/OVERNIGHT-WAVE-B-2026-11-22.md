@@ -380,16 +380,16 @@ Routing:
   - `onMessage(name, cb)` registers with the native child API and keeps a local copy, so the bridge can deliver locally.
   - **`postMessage('open', {input})`:** if `parse(input)` (the same `Sources.parse` global uses) is null, or the input is blank, deliver `open-error` locally on the next turn and write nothing. If it's valid, file an `open` request with the input.
   - **Every other name** (`auth-connect`, `auth-probe`, `auth-disconnect`, `auth-forget`, `player-closed`): file a request. Data is copied only for `auth-connect`, which carries `{}`-shaped options and no secrets. `auth-*` payloads must not contain tokens; tests assert this.
-  - **Request file:** `@data/bridge/<now>-<random>.json`, containing `{v:1, nonce, label|null, name, data}`. There is one file per request, never a shared read-modify-write.
+  - **Request file:** `@data/bridge-<now>-<random>.json`, flat in `@data` (IINA's `file.write` doesn't create directories, and the file API has no mkdir: `JavascriptAPIFile.swift`, `write` uses `String.write(toFile:)`). It contains `{v:1, nonce, label|null, name, data}`. There is one file per request, never a shared read-modify-write.
   - **Label handshake:** until the child knows its label, requests carry `label:null`, and the bridge keeps them pending in memory while listening for `bridge-hello {nonce, label}`. When a hello carries one of its pending nonces, it adopts that label, re-files the pending requests with it, and sends all later requests with it. The label is kept for the child's lifetime. Pending requests older than 30 s are dropped.
-- **Global, `global.js`:** poll `@data/bridge/` every 1000 ms. For each file, oldest first: read it, delete it, then validate (`v`, a string `name` from the allow-list, a 1–9 digit `label` or null, a nonce of 8–64 `[A-Za-z0-9]`, and an age under 30 s, else drop).
+- **Global, `global.js`:** every 2000 ms, `file.list('@data/')` and take only names matching `^bridge-[0-9]{13}-[A-Za-z0-9]{8,32}\.json$`. For each, oldest first by the time in the name: read it, delete it, then validate (`v`, a string `name` from the allow-list, a 1–9 digit `label` or null, a nonce of 8–64 `[A-Za-z0-9]`, and an age under 30 s, else drop).
   - **`label` null:** post `bridge-hello {nonce, label:String(n)}` to labels `"0"`…`"31"`, and drop the request. When the child receives a hello carrying its nonce, it re-files every pending request (same nonce) with its label.
   - **`label` known:** dispatch to the same handlers the native path uses, with `sender = label`.
     - `targetID` stays managed-only.
     - A parallel `adopted` set, plus `sessions` keyed by label string, gets the same fences: `postChild` for an adopted label uses `app.postMessage(label, name, wire)`. `auth-ready` goes only to a label in `audience` for the current session, as for managed players.
     - `open` → `openInput(input)`. `postOpenError` is not needed, because the child already validated.
   - **Staleness:** `player-closed` removes the label from `adopted`, `audience` and `sessions`. IINA reuses idle cores, so a later `auth-connect` from the same label starts a new session (`nextSession`). An adopted label with no request for 30 min is dropped from `audience`.
-  - **Polling cost:** one `file.exists('@data/bridge')` per second, plus a `file.list` only when the directory exists. The bridge creates the directory with its first request.
+  - **Polling cost:** one `file.list('@data/')` every 2 s, and reads only for matching names. This is the one timer global starts at load. It amends the rule pinned by `tests/global.test.js` ("global loading performs no … timer work"): an adopted child has no other channel to global (D-029 amendment).
 - **Security:**
   - Tokens and device codes travel only global→child in memory (`postMessage`), never through `@data/bridge`.
   - A request file holds only the message name, the nonce, the label, and for `open` the user's typed input, which is deleted on read.
@@ -413,7 +413,7 @@ Routing:
   - an `open` request opens a managed player;
   - malformed, too-old or unknown-name requests are dropped and their files deleted;
   - files are processed oldest first and deleted after reading;
-  - only an `exists` check, and no `list`, while the bridge directory is absent;
+  - global's load schedules exactly one timer (the 2 s poll), with no reads while no `bridge-*` file exists; non-matching `@data` files are never read or deleted;
   - managed players are unchanged (the existing tests stay green).
 - **`main.js`:** an adopted start gets the bridge as `host.global`, and a managed start gets the native `iina.global`.
 

@@ -99,3 +99,7 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **What would flip it:** GQL rejecting the public Client-ID for this query, or an operator preference for documented APIs only.
 - Design: `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md` §B6b.
 
+2026-11-22 D-029 AMENDMENT (lead, 10:20, from Codex's A2 test pass, verified in IINA v1.5.1 `JavascriptAPIFile.swift`): `file.write` doesn't create parent directories, and the file API has no mkdir. So the mailbox is flat files `@data/bridge-<time>-<random>.json`, not a `bridge/` directory. Global polls `file.list('@data/')` every **2 s**. That is the one timer it starts at load, which amends the earlier rule that loading global does no timer work (`tests/global.test.js`). An adopted child has no other channel: its `postMessage` is a no-op, global gets no player events, and preferences have no change signal.
+- **Cost:** one directory listing every 2 s while Streams is enabled. No reads unless a `bridge-*` file exists.
+- **What would flip it:** a measured energy cost the operator objects to (then poll only after a user opens an adopted Twitch window? Global can't see that). Or a host change from the D-029 flip list.
+

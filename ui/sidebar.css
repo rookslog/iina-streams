@@ -10,3 +10,5 @@
 #open{transition:transform 120ms ease}#open[aria-expanded=true]{transform:rotate(45deg)}.open-form{flex:none;margin:-8px 0 14px}
 .open-form input{width:100%}
 .open-form input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}
+/* #34: chat emote images; size is also fixed by width/height attributes. */
+.emote{width:24px;height:24px;vertical-align:middle;margin:-3px 1px 0;object-fit:contain}

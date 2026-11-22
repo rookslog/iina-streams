@@ -21,6 +21,7 @@ IINA plugin data lives in `~/Library/Application Support/com.colliderli.iina/plu
   - sign-in at `id.twitch.tv`, with the read-only `chat:read` permission;
   - live chat at `irc-ws.chat.twitch.tv`;
   - VOD chat at `gql.twitch.tv`;
+  - chat emote images from Twitch's CDN at `static-cdn.jtvnw.net`, fetched by the chat view when a message contains an emote;
   - video through Streamlink or yt-dlp.
 - **YouTube:** video and replay chat through yt-dlp.
 

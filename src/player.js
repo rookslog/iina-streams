@@ -45,7 +45,7 @@ function publicError(error,fallback){
 // Normalized chat message. `time` is media time (replay); `sentAt` is the provider's send time in epoch ms
 // (live, from tmi-sent-ts).
 function safeMessage(m){
- return{
+ const out={
   id:String(m.id||'').slice(0,160),
   time:Number(m.time||m.t)||0,
   sentAt:Number(m.timestampMs||m.sentAt)||0,
@@ -54,6 +54,9 @@ function safeMessage(m){
   color:/^#[0-9a-f]{6}$/i.test(m.color||'')?m.color:'',
   kind:String(m.kind||'message')
  };
+ if(typeof m.emotes==='string'&&m.emotes)out.emotes=m.emotes.slice(0,2048);
+ if(typeof m.badges==='string'&&m.badges)out.badges=m.badges.slice(0,1024);
+ return out;
 }
 
 // The QA build's local media window, which has no stream label.

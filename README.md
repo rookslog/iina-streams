@@ -35,5 +35,5 @@ The last tagged release is v0.5.3, and `beta` targets 0.5.4. The plan is in [doc
 | `helpers/` | Python helpers: stream resolution and chat acquisition |
 | `tests/` | JS (`npm test`) and Python (`npm run test:py`) suites, plus fixtures |
 | `scripts/` | Build (`build.py`), dev loop (`dev.py`), version check |
-| `qa/` | Native diagnostics run by hand. Never packaged |
+| `qa/` | Diagnostics run by hand, never packaged. Most scripts drive a QA build that no current script produces (#33) |
 | `docs/` | Roadmap, release process, decisions, designs. `docs/archive/` holds history |

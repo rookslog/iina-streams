@@ -4,6 +4,8 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
+const {recentArchives}=require('./src/twitch-vods.js');
+const {envelope}=require('./src/bridge.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
@@ -172,6 +174,10 @@ const auth=new TwitchAuth({
 // ---- Open Stream (#50): no blocking dialog. Input comes from the standalone window or a sidebar field. ----
 
 const OPEN_PAGE='ui/open.html';
+const OPEN_WIDTH=380,OPEN_HEIGHT=84;
+// openRun fences a pending broadcast lookup (B6c): a newer source-offline, a fresh page or a close advances
+// it. The page receives nothing until it posts open-ready; until then messages wait in openQueue.
+let openRun=0,openPageReady=false,openQueue=[];
 
 // Opens a player for the input. Returns 'opened', 'invalid', or 'blank' when there is nothing to open.
 function openInput(input){
@@ -199,18 +205,99 @@ function showOpenWindow(){
   openWindow.open();
   return;
  }
+ openRun++;
+ openPageReady=false;
+ openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
  openWindow.onMessage('open-stream',onOpenWindowSubmit);
- openWindow.onMessage('open-cancel',()=>openWindow.close());
+ openWindow.onMessage('open-cancel',closeOpenWindow);
+ openWindow.onMessage('open-ready',onOpenPageReady);
  openWindow.setProperty({title:'Open Stream',resizable:false});
- openWindow.setFrame(380,84);
+ openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
  openWindow.open();
+}
+
+function closeOpenWindow(){
+ openRun++;
+ openWindow.close();
 }
 
 function onOpenWindowSubmit(data){
  const result=openInput(data&&data.input);
- if(result==='opened')openWindow.close();
+ if(result==='opened')closeOpenWindow();
  if(result==='invalid')openWindow.postMessage('open-error',{});
+}
+
+function onOpenPageReady(){
+ openPageReady=true;
+ const queued=openQueue;
+ openQueue=[];
+ for(const message of queued)openWindow.postMessage(message.name,message.data);
+}
+
+function postOpenPage(name,data){
+ if(openPageReady)openWindow.postMessage(name,data);
+ else openQueue.push({name,data});
+}
+
+// ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. IINA closes a player
+// window once its load fails, so the player only reports the login and this window lists the broadcasts. ----
+
+const OFFLINE_REPEAT_MS=10000;
+const OFFLINE_ROWS=10;
+const OFFLINE_ROW_HEIGHT=28;
+// Logins reported in the last OFFLINE_REPEAT_MS, each with the timer that forgets it.
+const recentOffline=new Map();
+
+// A managed player or an adopted window may report; neither lookup registers the label.
+function onSourceOffline(data,label){
+ const managedID=targetID(label);
+ const sender=managedID!==null?managedID:adoptedLabel(label);
+ if(sender===null)return;
+ const login=offlineLogin(data);
+ if(login===null||recentOffline.has(login))return;
+ recentOffline.set(login,timers.setTimeout(()=>recentOffline.delete(login),OFFLINE_REPEAT_MS));
+ showOfflineVods(login);
+}
+
+// The login as a player reports it: a channel name that parses to the same Twitch live id.
+function offlineLogin(data){
+ const login=data&&data.login;
+ if(typeof login!=='string')return null;
+ const source=Sources.parse(login);
+ if(!source||source.kind!=='twitch-live'||source.id!==login)return null;
+ return login;
+}
+
+async function showOfflineVods(login){
+ showOpenWindow();
+ const run=++openRun;
+ postOpenPage('prefill',{input:login});
+ postOfflineVods({state:'loading'},1);
+ // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
+ const result=await recentArchives({login},{http});
+ if(run!==openRun||!openWindow.isOpen())return;
+ if(!result.ok){
+  postOfflineVods({state:'error'},1);
+  return;
+ }
+ if(!result.vods.length){
+  postOfflineVods({state:'none'},1);
+  return;
+ }
+ const items=result.vods.slice(0,OFFLINE_ROWS).map(vodItem);
+ postOfflineVods({state:'ready',items},items.length);
+}
+
+function vodItem(vod){
+ return{title:vod.title,createdAt:vod.createdAt,lengthSeconds:vod.lengthSeconds,url:vod.url};
+}
+
+// Titles are untrusted, and IINA 1.5.1 interpolates messages into a template literal, so the list travels
+// as an envelope (src/bridge.js). The frame grows by one row height per row the page shows.
+function postOfflineVods(value,rows){
+ openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT+rows*OFFLINE_ROW_HEIGHT);
+ postOpenPage('offline-vods',envelope(value));
 }
 
 // A player's sidebar field submits {input}; an older sidebar sends no input and gets the window.
@@ -340,6 +427,7 @@ app.onMessage('auth-probe',onAuthProbe);
 app.onMessage('auth-disconnect',onAuthDisconnect);
 app.onMessage('player-closed',onPlayerClosed);
 app.onMessage('auth-forget',onAuthForget);
+app.onMessage('source-offline',onSourceOffline);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

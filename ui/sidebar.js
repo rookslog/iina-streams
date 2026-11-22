@@ -223,66 +223,8 @@ function validClientID(v){
  function renderPlaybackStatus(s){
   $('transition').textContent=TRANSITIONS[s.phase]||'';
   $('transition').hidden=!TRANSITIONS[s.phase];
-  const offline=offlineVodsOf(s);
   $('playback-error').textContent=s.error||'';
-  $('playback-error').hidden=!s.error||offline.state==='loading'||offline.state==='ready';
-  renderOfflineVods(offline);
- }
-
- // B6b: an offline channel's recent broadcasts replace the error line. Titles are untrusted: rows are built
- // from text nodes, never from markup.
- const OFFLINE_ROWS=10;
- let vodSignature='';
-
- function offlineVodsOf(s){
-  const v=s.offlineVods;
-  if(!s.error||!v||!Array.isArray(v.items))return{state:'idle',items:[]};
-  return{state:v.state,items:v.items.slice(0,OFFLINE_ROWS)};
- }
-
- function renderOfflineVods(offline){
-  const ready=offline.state==='ready'&&offline.items.length>0;
-  $('offline-busy').hidden=offline.state!=='loading';
-  $('offline-list').hidden=!ready;
-  $('offline-vods').hidden=offline.state!=='loading'&&!ready;
-  const signature=ready?offline.items.map(item=>item.id).join(','):'';
-  if(signature===vodSignature)return;
-  vodSignature=signature;
-  $('offline-list').replaceChildren(...(ready?offline.items.map(vodRow):[]));
- }
-
- function vodRow(item){
-  const row=document.createElement('li');
-  const button=document.createElement('button');
-  button.setAttribute('type','button');
-  button.setAttribute('class','vod-row');
-  button.setAttribute('title',String(item.title||''));
-  const title=document.createElement('span');
-  title.setAttribute('class','vod-title');
-  title.textContent=String(item.title||'');
-  const date=document.createElement('span');
-  date.setAttribute('class','vod-meta');
-  date.textContent=vodDate(item.createdAt);
-  const length=document.createElement('span');
-  length.setAttribute('class','vod-meta');
-  length.textContent=vodLength(item.lengthSeconds);
-  button.append(title,date,length);
-  button.addEventListener('click',()=>post('open',{input:item.url}));
-  row.append(button);
-  return row;
- }
-
- function vodDate(createdAt){
-  const date=new Date(createdAt);
-  if(!createdAt||Number.isNaN(date.getTime()))return'';
-  return date.toLocaleDateString(undefined,{month:'short',day:'numeric'});
- }
-
- // h:mm:ss, with hours unbounded so a 47-hour broadcast does not wrap at 24.
- function vodLength(seconds){
-  const total=Math.max(0,Math.floor(Number(seconds)||0));
-  const two=n=>String(n).padStart(2,'0');
-  return Math.floor(total/3600)+':'+two(Math.floor(total%3600/60))+':'+two(total%60);
+  $('playback-error').hidden=!s.error;
  }
 
  function renderChatControls(s,chatOn){

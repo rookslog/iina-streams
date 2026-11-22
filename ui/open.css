@@ -5,11 +5,15 @@
  --surface:rgba(255,255,255,.6);
  --accent:#1661c8;
  --error:#aa2932;
+ --secondary:rgba(0,0,0,.55);
+ --hover:rgba(0,0,0,.06);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden}
-body{display:flex;align-items:center;padding:0 14px;background:transparent}
-form{flex:1}
+/* A column centred in the window: the field alone, or the field over the broadcast list (B6c). Global grows
+   the window by one row height per row, so the field keeps its place. */
+body{display:flex;flex-direction:column;justify-content:center;padding:0 14px;background:transparent}
+form{flex:none}
 input{
  width:100%;
  min-height:28px;
@@ -24,8 +28,25 @@ input:focus-visible{outline:3px solid color-mix(in srgb,var(--accent),transparen
 /* Invalid input is shown by state, not text (#50). */
 input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}
 @media(prefers-color-scheme:dark){
- :root{--line:rgba(255,255,255,.18);--surface:rgba(255,255,255,.08);--accent:#8ab9ff;--error:#ff929a}
+ :root{--line:rgba(255,255,255,.18);--surface:rgba(255,255,255,.08);--accent:#8ab9ff;--error:#ff929a;
+  --secondary:rgba(255,255,255,.6);--hover:rgba(255,255,255,.08)}
 }
 @media(prefers-contrast:more){
  :root{--line:CanvasText;--surface:Canvas}
 }
+/* B6c: an offline channel's recent broadcasts, under the field. Rows are plain text: title, date, length. */
+.offline-vods{margin:6px 0 0}
+.busy-indicator{display:inline-block;width:12px;height:12px;margin:8px 0 0 8px;border-radius:50%;
+ border:2px solid currentColor;border-right-color:transparent;opacity:.6;animation:streams-spin .9s linear infinite}
+.busy-indicator[hidden]{display:none}
+@keyframes streams-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}}
+.muted{margin:6px 8px 0;color:var(--secondary);font-size:12px}
+.vod-list{list-style:none;margin:0;padding:0}
+.vod-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:baseline;width:100%;
+ height:28px;padding:0 8px;border:0;border-radius:6px;font:inherit;font-size:12px;color:inherit;
+ background:transparent;text-align:left}
+.vod-row:hover{background:var(--hover)}
+.vod-row:focus-visible{outline:3px solid color-mix(in srgb,var(--accent),transparent 30%);outline-offset:-2px}
+.vod-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vod-meta{color:var(--secondary);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}

@@ -19,6 +19,8 @@ function loadGlobalMenu() {
       if (name === './src/auth.js') return require('../src/auth.js');
       if (name === './src/timers.js') return require('../src/timers.js');
       if (name === './src/twitch-app.js') return {clientID: ''};
+      if (name === './src/twitch-vods.js') return require('../src/twitch-vods.js');
+      if (name === './src/bridge.js') return require('../src/bridge.js');
       throw new Error('Unexpected module ' + name);
     }
   });

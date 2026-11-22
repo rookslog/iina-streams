@@ -92,7 +92,9 @@ test('r1 #6: stream A, stream B, a local file, then stream A on one core resolve
   assert.deepEqual(core.resolves, [vodA, vodB], 'a local file is not resolved');
   assert.equal(shim.mpv.props.get('stream-open-filename'), localFile, 'IINA\'s own loader plays the file');
   assert.equal(shim.menu.items.length, 0, 'no Streams controls for a local file');
-  assert.deepEqual(shim.event.names(), [], 'no Streams listeners remain for a local file');
+  // Review r2 #4: only the core's close listener remains, so closing this window still tells global.
+  assert.deepEqual(shim.event.names(), ['iina.window-will-close'], 'no controller listeners remain for a local file');
+  assert.equal(core.listenerCount('iina.window-will-close'), 1);
 
   const again = await core.load(vodA);
   assert.equal(again.continued, 1);

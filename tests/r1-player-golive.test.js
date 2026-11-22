@@ -1,13 +1,13 @@
 'use strict';
 
 // v0.5.5 release review r1 #9 (docs/reviews/2026-11-22-v0.5.5-release-review.md): a Go Live reload is one
-// replacement transaction per generation. It stays busy until the replacement's file-loaded, an end-file of
-// the replacement itself, or a 15 s timeout; a second Go Live or a quality change meanwhile is ignored; and
-// the live clock and playback phase follow the file that actually loaded.
+// replacement transaction per generation. It stays busy until the replacement's file-loaded or a 15 s
+// timeout; a second Go Live or a quality change meanwhile is ignored; and the live clock and playback phase
+// follow the file that actually loaded.
 //
-// Host order assumed (not checked against IINA source here): mpv's end-file for the replaced file reaches
-// JS before the replacement's on_load hook. An end-file after that hook and before file-loaded is the
-// replacement failing.
+// Review r2 #3 dropped the host-order assumption this file first made (the replaced file's end-file reaches
+// JS before the replacement's hook): IINA delivers end-file without saying which file ended, so no end-file
+// ends the transaction. tests/r2-golive-endfile.test.js covers both orders.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -128,17 +128,24 @@ test('r1 #9: a reload from stopped playback plays, and the clock restarts on the
   assert.equal(w.polled(), 'https://video-weaver.ttvnw.net/720p60-2.m3u8', 'the clock restarts on the replacement');
 });
 
-test('r1 #9: a replacement that fails after its hook clears busy, and the next Go Live reloads', async t => {
-  const w = await playing(t);
-  await w.goLive();
-  const [replacement] = w.reloads();
-  w.shim.emit('mpv.end-file'); // the replaced file
-  await w.hook(replacement);
-  w.shim.emit('mpv.end-file'); // the replacement itself
-  assert.equal(w.controller.snapshot().phase, 'stopped', 'a failed replacement leaves playback stopped');
-  await w.goLive();
-  assert.equal(w.reloads().length, 2, 'busy is cleared by the failed replacement');
-});
+// Review r2 #3: the replacement's own end-file cannot be told from the replaced file's, so a failed
+// replacement ends at the timeout, not at its end-file.
+test('r1 #9: a replacement that fails after its hook clears busy at the timeout, and the next Go Live reloads',
+  async t => {
+    const w = await playing(t);
+    await w.goLive();
+    const [replacement] = w.reloads();
+    w.shim.emit('mpv.end-file'); // the replaced file
+    await w.hook(replacement);
+    w.shim.emit('mpv.end-file'); // the replacement itself
+    await w.goLive();
+    assert.equal(w.reloads().length, 1, 'still busy: the end-file is unattributed');
+    w.shim.timers.advance(15000);
+    await settle();
+    assert.equal(w.controller.snapshot().phase, 'stopped', 'a failed replacement leaves playback stopped');
+    await w.goLive();
+    assert.equal(w.reloads().length, 2, 'busy is cleared by the timeout');
+  });
 
 test('r1 #9: a replacement that never loads clears busy after about 15 s', async t => {
   const w = await playing(t);

@@ -35,13 +35,17 @@ function normalizeMode(value) {
   return MODES.includes(value) ? value : DEFAULT_MODE;
 }
 
+function isFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 function hasTimestamp(message) {
   return typeof message.timestampMs === 'number' && Number.isFinite(message.timestampMs);
 }
 
 /**
  * Create a chat timing policy. Settings are the plain object {mode, manualDelay, fineTune}.
- * Returns {settings, update, effective, reveal, calibrate}.
+ * Returns {settings, update, effective, autoClockMs, forgetMapping, reveal, calibrate}.
  * @param {{mode?: string, manualDelay?: number, fineTune?: number}} [options]
  */
 function createChatTiming(options = {}) {
@@ -54,6 +58,9 @@ function createChatTiming(options = {}) {
   let revealedIds = new Set();
   // The last delay Auto computed from a confident estimate, or null before the first one.
   let lastConfidentDelay = null;
+  // The last confident offset from the raw mpv timeline to epoch seconds, or null before the first one
+  // or after the file timeline changed (v0.5.5 review r2 #2).
+  let lastConfidentOffset = null;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -102,6 +109,31 @@ function createChatTiming(options = {}) {
   }
 
   /**
+   * Auto's reveal clock (v0.5.5 review r2 #2): the send time, in epoch ms, that the video shows now. It is
+   * the playhead mapped to wall-clock time, minus the fine tune, so it stops when the video stops. Without
+   * confidence (offset null) the last confident offset maps the current playhead. It never passes nowMs.
+   * Returns null outside Auto, before any confident offset, or without a playhead; the caller then reveals
+   * by wall clock with effective().delay. An offset is remembered in every mode: it describes the timeline.
+   * @param {{nowMs: number, timePos: number|null, offset: number|null}} reading
+   * @returns {number|null}
+   */
+  function autoClockMs({nowMs, timePos, offset}) {
+    if (isFiniteNumber(offset)) {
+      lastConfidentOffset = offset;
+    }
+    if (state.mode !== 'auto' || lastConfidentOffset === null || !isFiniteNumber(timePos)) {
+      return null;
+    }
+    const clockMs = (timePos + lastConfidentOffset - state.fineTune) * 1000;
+    return Math.min(nowMs, clockMs);
+  }
+
+  /** A new file has its own raw timeline, so the remembered offset no longer maps it. */
+  function forgetMapping() {
+    lastConfidentOffset = null;
+  }
+
+  /**
    * Choose the messages visible now. A message shown once stays shown while it is in the input.
    * @param {Array<{id: *, timestampMs?: number}>} messages in display order
    * @param {number} nowMs
@@ -138,7 +170,7 @@ function createChatTiming(options = {}) {
     return settings();
   }
 
-  return {settings, update, effective, reveal, calibrate};
+  return {settings, update, effective, autoClockMs, forgetMapping, reveal, calibrate};
 }
 
 module.exports = {createChatTiming};

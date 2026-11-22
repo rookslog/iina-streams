@@ -455,7 +455,10 @@ test('r3 #2: after a quality reload, the first confident mapping is adopted at o
     assert.ok(Math.abs(w.state().behindLive - 8) <= 1, `precondition: ~8 s behind (${w.state().behindLive})`);
     // This fixture moves the playhead 2 s per poll, so the first confident sample can fall on a status tick
     // with no playhead advance since the last one. Adoption waits for an advancing sample: one more poll.
+    // Each poll's new estimate lands on a tick with no playhead advance, so the agreeing estimate of that poll
+    // only corroborates; the next poll's advancing tick adopts (v0.5.5 review r5 #3): a second poll.
     const before = w.shim.mpv.props.get('time-pos');
+    await w.poll();
     await w.poll();
     assert.ok(w.shim.mpv.props.get('time-pos') > before, 'precondition: the playhead advanced');
     const nowMs = w.shim.timers.now;

@@ -404,6 +404,8 @@ test('r4 #2: after a quality reload, a status tick that rereads the first confid
     const nowMs = w.shim.timers.now;
     deliver([row('ten-back', nowMs - 10_000)]);
     assert.deepEqual(w.shown(), [], 'a reread of one estimate does not adopt the new mapping');
-    await w.poll(); // A new, agreeing estimate.
-    assert.deepEqual(w.shown(), ['ten-back'], 'the next distinct estimate adopts it');
+    await w.poll(); // A new, agreeing estimate, on a tick with no playhead advance (v0.5.5 review r5 #3).
+    assert.deepEqual(w.shown(), [], 'the next distinct estimate corroborates, on a stalled tick: nothing new');
+    await w.poll(); // This poll's first tick advances the playhead.
+    assert.deepEqual(w.shown(), ['ten-back'], 'the next advancing tick adopts it');
   });

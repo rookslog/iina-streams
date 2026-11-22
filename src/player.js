@@ -354,8 +354,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Load generations and source ownership.
  let generation=0,activeGeneration=0,staged=null,loadError='',initialResolved=false;
  let chatGeneration=0,sourceActive=true,autoReplayAttempted=false;
- // Auth listener binding (see bindAuthListeners).
- let authBindTimer=null,authBound=false,pendingAuth=null;
+ // Auth listener binding (see bindAuthListeners). authBindSkipped: a bind turn ran while retiring (review r5 #1).
+ let authBindTimer=null,authBound=false,pendingAuth=null,authBindSkipped=false;
  // Playback-state restoration after a quality reload.
  let restoration=null,restoreTimer=null,refreshing=false;
  // Replay chat.
@@ -411,6 +411,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),
   replace:replaceFile,
   onState:()=>send(),
+  fenced:()=>retiring,
   setTimer:timers.setTimeout,
   clearTimer:timers.clearTimeout
  });
@@ -462,7 +463,18 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }catch(_){}
  }
 
+ // Review r5 #2: a retiring controller publishes nothing, except its final inactive snapshot (publishFinal).
  function send(){
+  if(inert())return;
+  publish();
+ }
+
+ // The intentional final inactive snapshot: retire()'s teardown and the foreign-file deactivation.
+ function publishFinal(){
+  publish();
+ }
+
+ function publish(){
   if(closed)return;
   const s=snapshot();
   liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming,s.atLiveEdge);
@@ -1158,7 +1170,21 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    timers.clearTimeout(authBindTimer);
    authBindTimer=null;
   }
+  authBindSkipped=false;
   pendingAuth=null;
+ }
+
+ // Review r5 #1: a bind turn that ran while retiring registered nothing. When this controller's own source
+ // supersedes the cleanup, bind again on a later turn, as at startup.
+ function rearmSkippedAuthBinding(){
+  if(!authBindSkipped||authBindTimer!==null||authBound||closed)return;
+  authBindSkipped=false;
+  const bindingTimer=timers.setTimeout(()=>{
+   if(authBindTimer!==bindingTimer)return;
+   authBindTimer=null;
+   bindAuthListeners();
+  },0);
+  authBindTimer=bindingTimer;
  }
 
  // Turns chat off. Unless told otherwise it also tells the broker this window no longer needs the login,
@@ -1183,7 +1209,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   chat.error='';
   view.editing=false;
   hideOverlay();
-  send();
+  if(options&&options.retire)publishFinal();
+  else send();
   trace('chat-off');
  }
 
@@ -1542,7 +1569,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   timers.clearAll();
   staged=null;
   loadError=INACTIVE_MESSAGE;
-  send();
+  publishFinal();
  }
 
  // The adopted hook's watchdog gave up on this load (see holdLoad): drop any late result, and leave this and
@@ -1594,6 +1621,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     finish();
     return;
    }
+   rearmSkippedAuthBinding();
    // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
    stopLiveClock();
    liveClockURL=null;
@@ -1893,7 +1921,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  authBindTimer=bindingTimer;
 
  function bindAuthListeners(){
-  if(inert()||!sourceActive||authBound)return;
+  if(closed||authBound)return;
+  if(retiring){
+   authBindSkipped=true;
+   return;
+  }
+  if(!sourceActive)return;
   for(const name of Object.keys(authCallbacks))app.onMessage(name,authCallbacks[name]);
   authBound=true;
   const pending=pendingAuth;

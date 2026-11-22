@@ -72,11 +72,14 @@ function createChatTiming(options = {}) {
   // the first sample. Every mode records it, so Auto starts from the cutoff in use. timePos is null after a
   // resync: the next sample re-anchors it (v0.5.5 review r3 #2, r4 #2).
   let heldCutoff = null;
-  // True from a resync (and at the start) until a mapping is corroborated: the fallback before it can hold
+  // True from a resync (and at the start) until a mapping is adopted: the fallback before it can hold
   // a stale delay, such as the one from before a Go Live reload.
   let awaitingMapping = true;
   // While awaiting, the last confident sample, {offset, timePos, estimateId}, which the next one must agree with.
   let candidate = null;
+  // While awaiting, whether the run ending at the candidate is corroborated: two distinct estimator updates
+  // agreed, possibly while stalled. It permits no rebase by itself (v0.5.5 review r5 #3).
+  let corroborated = false;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -158,11 +161,12 @@ function createChatTiming(options = {}) {
    *   A seek's jump counts as advance, so within one file the cutoff follows a seek: the playhead-to-chat
    *   offset does not change across it. A jump made while paused counts once playing resumes;
    * - follows a lower target at once (rows already shown stay shown: see reveal);
-   * - after a resync, keeps its value and adopts a mapping outright only once two consecutive confident
-   *   samples from distinct estimator updates agree within MAPPING_AGREEMENT_SECONDS while the playhead
-   *   advances; the clamp applies until then, and from then on. A confident sample from the candidate's own
-   *   update (estimateId) neither confirms nor breaks the run. Without an estimateId every sample is distinct.
-   *   A sample that is not confident always breaks it.
+   * - after a resync, keeps its value and adopts a mapping outright only on a tick whose playhead advanced,
+   *   once two consecutive confident samples from distinct estimator updates agreed within
+   *   MAPPING_AGREEMENT_SECONDS (corroboration, which may happen while stalled) and that tick's own sample
+   *   is confident and still agrees; the clamp applies until then, and from then on (v0.5.5 review r5 #3).
+   *   A confident sample from the candidate's own update (estimateId) neither confirms nor breaks the run.
+   *   Without an estimateId every sample is distinct. A sample that is not confident always breaks it.
    * Call it whether or not chat is on, so the cutoff is held across a pause.
    * @param {{nowMs: number, timePos: number|null, paused: boolean, offset: number|null, behindLive: number|null,
    *   estimateId?: number}} reading estimateId identifies the estimator update the offset comes from
@@ -195,10 +199,15 @@ function createChatTiming(options = {}) {
       return target;
     }
     const advance = playheadAdvance(timePos, paused);
+    if (awaitingMapping) {
+      noteCorroboration(timePos, paused, estimate);
+    }
     let cutoffMs;
-    if (awaitingMapping && corroborates(timePos, paused, estimate)) {
+    // Corroboration is confidence, not permission: the rebase also needs the playhead to move on this tick.
+    if (awaitingMapping && corroborated && advance > 0) {
       awaitingMapping = false;
       candidate = null;
+      corroborated = false;
       cutoffMs = target;
     } else {
       const ceiling = heldCutoff.cutoffMs + AUTO_CATCH_UP_RATE * advance * 1000;
@@ -229,17 +238,29 @@ function createChatTiming(options = {}) {
     return timePos;
   }
 
-  // Whether this sample and the candidate are both confident, come from distinct estimator updates, agree
-  // on the offset, and the playhead advanced between them while playing.
-  function corroborates(timePos, paused, estimate) {
-    if (paused || estimate.offset === null || timePos === null || candidate === null) {
+  // A sample that is not confident breaks the corroboration; a reread of the candidate's update leaves it;
+  // a sample from a new update sets it to whether it corroborates the candidate.
+  function noteCorroboration(timePos, paused, estimate) {
+    if (estimate.offset === null || timePos === null) {
+      corroborated = false;
+      return;
+    }
+    if (sameUpdate(estimate)) {
+      return;
+    }
+    corroborated = corroborates(paused, estimate);
+  }
+
+  // Whether this sample and the candidate are both confident, come from distinct estimator updates and agree
+  // on the offset, while playing. The playhead need not have moved between them (v0.5.5 review r5 #3).
+  function corroborates(paused, estimate) {
+    if (paused || estimate.offset === null || candidate === null) {
       return false;
     }
     if (sameUpdate(estimate)) {
       return false;
     }
-    const advanced = timePos > candidate.timePos;
-    return advanced && Math.abs(estimate.offset - candidate.offset) <= MAPPING_AGREEMENT_SECONDS;
+    return Math.abs(estimate.offset - candidate.offset) <= MAPPING_AGREEMENT_SECONDS;
   }
 
   // A confident sample that rereads the candidate's estimator update (v0.5.5 review r4 #2).
@@ -270,6 +291,7 @@ function createChatTiming(options = {}) {
   function resyncCutoff() {
     awaitingMapping = true;
     candidate = null;
+    corroborated = false;
     if (heldCutoff !== null) {
       heldCutoff = {cutoffMs: heldCutoff.cutoffMs, timePos: null};
     }

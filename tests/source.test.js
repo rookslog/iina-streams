@@ -15,8 +15,12 @@ test('rejects host confusion, unsupported paths, extra path segments, credential
 });
 test('player labels contain only canonical source and validated variant', () => {
   const s=source.parse('hutchmf');
-  const label=source.label(s,'focus');
-  assert.deepEqual(source.fromLabel(label),{source:s,variant:'focus'});
+  const label=source.label(s,'unified');
+  assert.deepEqual(source.fromLabel(label),{source:s,variant:'unified'});
+  // The Focus variant was removed (#23): it can neither be labelled nor read back.
+  assert.throws(()=>source.label(s,'focus'));
+  const focusLabel='streams-candidate:'+encodeURIComponent(JSON.stringify({source:s,variant:'focus'}));
+  assert.equal(source.fromLabel(focusLabel),null);
   assert.equal(source.fromLabel('streams:twitch:hutchmf'),null);
   assert.equal(source.fromLabel('streams-candidate:%7Bbad'),null);
   assert.throws(()=>source.label({kind:'twitch-live',url:'https://evil.test',id:'x'},'unified'));

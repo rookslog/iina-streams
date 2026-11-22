@@ -75,10 +75,10 @@ test('the global Open Stream menu creates canonical managed players with only th
     ['https://youtu.be/AbC_123-xYz?t=95&tracking=discard', 'https://www.youtube.com/watch?v=AbC_123-xYz', 'youtube', 95]
   ];
   for (const [input, url, kind, startSeconds] of cases) {
-    const r = harness({variant: 'focus'}), opened = r.open(input);
+    const r = harness({variant: 'unified'}), opened = r.open(input);
     assert.equal(opened.url, url); assert.equal(opened.enablePlugins, false);
     const identity = Sources.fromLabel(opened.label);
-    assert.equal(identity.variant, 'focus'); assert.equal(identity.source.kind, kind); assert.equal(identity.source.startSeconds, startSeconds);
+    assert.equal(identity.variant, 'unified'); assert.equal(identity.source.kind, kind); assert.equal(identity.source.startSeconds, startSeconds);
     assert.equal(r.httpCalls.length, 0); assert.equal(r.keychainReads.length, 0);
   }
 });

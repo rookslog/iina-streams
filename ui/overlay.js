@@ -7,7 +7,11 @@
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
- const on=(name,fn)=>iina.onMessage(name,data=>{try{fn(JSON.parse(decodeURIComponent(data.encoded)));}catch(_){}});
+ const on=(name,fn)=>iina.onMessage(name,data=>{
+  try{
+   fn(JSON.parse(decodeURIComponent(data.encoded)));
+  }catch(_){}
+ });
  on('hello',()=>post('overlay-ready',{ready:true}));
 
  function markClickable(){
@@ -17,7 +21,8 @@
 
  function authorColor(name,supplied){
   if(supplied&&/^#[0-9a-f]{6}$/i.test(supplied))return supplied;
-  let h=0;const s=String(name||'');
+  let h=0;
+  const s=String(name||'');
   for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;
   return FALLBACK_COLORS[Math.abs(h)%FALLBACK_COLORS.length];
  }
@@ -28,7 +33,8 @@
    return(s>=3600?Math.floor(s/3600)+':':'')+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   }
   const d=value?new Date(value):new Date();
-  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+(seconds?':'+String(d.getSeconds()).padStart(2,'0'):'');
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+
+   (seconds?':'+String(d.getSeconds()).padStart(2,'0'):'');
  }
 
  function clampedSize(){
@@ -58,58 +64,73 @@
   return{val,snapped:false};
  }
 
- on('state',s=>{
-  if((drag||resize)&&state){
-   s.view.x=state.view.x;s.view.y=state.view.y;
-   s.view.width=state.view.width;s.view.height=state.view.height;
+ function keepLocalGeometry(s){
+  if(!(drag||resize)||!state)return;
+  s.view.x=state.view.x;
+  s.view.y=state.view.y;
+  s.view.width=state.view.width;
+  s.view.height=state.view.height;
+ }
+
+ function messageRow(m,s,replay){
+  const row=document.createElement('div');
+  row.className='message';
+  if(s.view.timestamps){
+   const ts=document.createElement('span');
+   ts.className='msg-time';
+   ts.textContent=formatTime(replay?m.time:(m.sentAt||m.time),replay,s.view.timestampSeconds);
+   row.appendChild(ts);
   }
+  const author=document.createElement('span');
+  author.className='author';
+  author.style.color=authorColor(m.author,m.color);
+  author.textContent=m.author;
+  const text=document.createElement('span');
+  text.textContent=m.text;
+  row.append(author,text);
+  return row;
+ }
+
+ // Loading is shown, not narrated (#9): a quiet indicator while chat connects or loads; nothing once idle.
+ function appendLoadingIndicator(s){
+  if(s.view.presentation!=='overlay'||messages.children.length||!s.chat||s.chat.mode==='off')return;
+  if(!['authorizing','waiting','connecting','authenticating','joining','reconnecting','fetching','importing'].includes(s.chat.state))return;
+  const spinner=document.createElement('div');
+  spinner.className='loading';
+  spinner.setAttribute('role','status');
+  spinner.setAttribute('aria-label','Loading chat');
+  for(let i=0;i<3;i++)spinner.appendChild(document.createElement('span'));
+  messages.appendChild(spinner);
+ }
+
+ function renderMessages(s){
+  const list=s.view.presentation==='overlay'?(s.messages||[]):[];
+  const replay=s.chat&&s.chat.mode==='replay';
+  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+
+   '|r='+!!replay+'|st='+(s.chat&&s.chat.state);
+  if(sig===signature)return;
+  signature=sig;
+  const prevTop=messages.scrollTop;
+  messages.replaceChildren();
+  for(const m of list)messages.appendChild(messageRow(m,s,replay));
+  appendLoadingIndicator(s);
+  if(following)messages.scrollTop=messages.scrollHeight;
+  else messages.scrollTop=prevTop;
+ }
+
+ function render(s){
+  keepLocalGeometry(s);
   state=s;
   panel.style.setProperty('--opacity',s.view.opacity);
   panel.style.setProperty('--size',s.view.fontSize+'px');
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
-  const list=s.view.presentation==='overlay'?(s.messages||[]):[];
-  const replay=s.chat&&s.chat.mode==='replay';
-  const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+'|r='+!!replay+'|st='+(s.chat&&s.chat.state);
-  if(sig!==signature){
-   signature=sig;
-   const prevTop=messages.scrollTop;
-   messages.replaceChildren();
-   for(const m of list){
-    const row=document.createElement('div');
-    row.className='message';
-    if(s.view.timestamps){
-     const ts=document.createElement('span');
-     ts.className='msg-time';
-     ts.textContent=formatTime(replay?m.time:(m.sentAt||m.time),replay,s.view.timestampSeconds);
-     row.appendChild(ts);
-    }
-    const author=document.createElement('span');
-    author.className='author';
-    author.style.color=authorColor(m.author,m.color);
-    author.textContent=m.author;
-    const text=document.createElement('span');
-    text.textContent=m.text;
-    row.append(author,text);
-    messages.appendChild(row);
-   }
-   if(s.view.presentation==='overlay'&&!messages.children.length&&s.chat&&s.chat.mode!=='off'){
-    // Loading is shown, not narrated (#9): a quiet indicator while chat connects or loads; nothing once idle.
-    if(['authorizing','waiting','connecting','authenticating','joining','reconnecting','fetching','importing'].includes(s.chat.state)){
-     const spinner=document.createElement('div');
-     spinner.className='loading';
-     spinner.setAttribute('role','status');
-     spinner.setAttribute('aria-label','Loading chat');
-     for(let i=0;i<3;i++)spinner.appendChild(document.createElement('span'));
-     messages.appendChild(spinner);
-    }
-   }
-   if(following)messages.scrollTop=messages.scrollHeight;
-   else messages.scrollTop=prevTop;
-  }
+  renderMessages(s);
   markClickable();
   panel.hidden=s.view.presentation!=='overlay'||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
   position();
- });
+ }
+
+ on('state',render);
 
  messages.addEventListener('scroll',()=>{
   const max=Math.max(0,messages.scrollHeight-messages.clientHeight);
@@ -165,39 +186,53 @@
    drag=null;
    panel.classList.remove('dragging','snapped');
    if(panel.blur)panel.blur();
-   if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
+   if(state)postGeometry();
   }
   if(resize){
    resize=null;
    panel.classList.remove('resizing');
    if(panel.blur)panel.blur();
-   if(state)post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
+   if(state)postGeometry();
   }
+ }
+
+ function postGeometry(){
+  post('geometry',{x:state.view.x,y:state.view.y,width:state.view.width,height:state.view.height});
  }
  window.addEventListener('mouseup',finishMouse);
  window.addEventListener('blur',finishMouse);
 
- panel.addEventListener('keydown',e=>{
+ const RESIZE_KEYS={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]};
+ const MOVE_KEYS={ArrowLeft:[-.05,0],ArrowRight:[.05,0],ArrowUp:[0,-.05],ArrowDown:[0,.05]};
+
+ function onPanelKey(e){
   if(!state)return;
   if(e.shiftKey){
-   const rDelta={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]}[e.key];
-   if(rDelta){
-    e.preventDefault();
-    const w=Math.max(MIN_W,Math.min(innerWidth,(state.view.width||340)+rDelta[0]));
-    const h=Math.max(MIN_H,Math.min(innerHeight,(state.view.height||260)+rDelta[1]));
-    post('geometry',{x:state.view.x,y:state.view.y,width:w,height:h});
-   }
+   resizeByKey(e);
    return;
   }
-  const delta={ArrowLeft:[-.05,0],ArrowRight:[.05,0],ArrowUp:[0,-.05],ArrowDown:[0,.05]}[e.key];
+  const delta=MOVE_KEYS[e.key];
   if(delta){
    e.preventDefault();
-   post('geometry',{x:Math.max(0,Math.min(1,state.view.x+delta[0])),y:Math.max(0,Math.min(1,state.view.y+delta[1])),width:state.view.width,height:state.view.height});
+   const x=Math.max(0,Math.min(1,state.view.x+delta[0]));
+   const y=Math.max(0,Math.min(1,state.view.y+delta[1]));
+   post('geometry',{x,y,width:state.view.width,height:state.view.height});
   }else if(e.key==='0'||e.key==='r'||e.key==='R'){
    e.preventDefault();
    post('geometry',{x:1,y:0,width:340,height:260});
   }
- });
+ }
+
+ function resizeByKey(e){
+  const rDelta=RESIZE_KEYS[e.key];
+  if(!rDelta)return;
+  e.preventDefault();
+  const w=Math.max(MIN_W,Math.min(innerWidth,(state.view.width||340)+rDelta[0]));
+  const h=Math.max(MIN_H,Math.min(innerHeight,(state.view.height||260)+rDelta[1]));
+  post('geometry',{x:state.view.x,y:state.view.y,width:w,height:h});
+ }
+
+ panel.addEventListener('keydown',onPanelKey);
 
  window.addEventListener('resize',position);
  on('qa-action',a=>{

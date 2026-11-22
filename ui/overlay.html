@@ -10,6 +10,15 @@
 <body>
  <section id="panel" aria-label="Read-only chat overlay. Drag to move, drag bottom-right corner to resize." tabindex="0">
   <div id="drag-pill" aria-hidden="true"></div>
+  <div id="column-handle" role="separator" aria-orientation="vertical" aria-label="Chat width" tabindex="0" hidden></div>
+  <div id="column-tools" hidden>
+   <button id="go-live" type="button" aria-label="Go Live" title="Go Live">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path class="fill" d="M3 3.2v9.6L10.2 8z"/><rect class="fill" x="11.2" y="3.2" width="1.8" height="9.6" rx=".6"/></svg>
+   </button>
+   <button id="hide-chat" type="button" aria-label="Hide Chat" title="Hide Chat">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect class="line" x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path class="line" d="M10 3v10"/><path class="line" d="M5.5 6l2 2-2 2"/></svg>
+   </button>
+  </div>
   <div id="messages" role="log" aria-live="off"></div>
   <div id="resize-handle" aria-label="Resize chat overlay" title="Drag to resize"></div>
  </section>

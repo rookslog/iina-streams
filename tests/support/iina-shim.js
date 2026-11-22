@@ -261,7 +261,8 @@ function createIina(options = {}) {
         if (typeof file !== 'string') throw new TypeError(`IINA contract: ${kind}.loadFile path must be a string`);
         requireWindow('loadFile');
         view.loads.push(file);
-        hub.clear(); // messageHub.clearListeners(): every onMessage registration is dropped
+        // Do not assume sidebar/overlay listener clearing also applies to the provisional window API.
+        if (kind !== 'standaloneWindow') hub.clear();
       },
       show() { record(`${kind}.show`); requireWindow('show'); view.shows++; view.visible = true; },
       hide() { record(`${kind}.hide`); requireWindow('hide'); view.hides++; view.visible = false; },
@@ -304,6 +305,24 @@ function createIina(options = {}) {
 
   const sidebar = createView('sidebar');
   const overlay = createView('overlay');
+
+  // PROVISIONAL: the implementer must verify the method names in IINA v1.5.1's
+  // iina/JavascriptAPIStandaloneWindow.swift and cite the source here.
+  const standaloneWindow = createView('standaloneWindow');
+  standaloneWindow.api.open = function open() {
+    record('standaloneWindow.open');
+    standaloneWindow.view.visible = true;
+  };
+  standaloneWindow.api.close = function close() {
+    record('standaloneWindow.close');
+    standaloneWindow.view.visible = false;
+  };
+  standaloneWindow.api.isOpen = function isOpen() {
+    record('standaloneWindow.isOpen');
+    return standaloneWindow.view.visible;
+  };
+  delete standaloneWindow.api.show;
+  delete standaloneWindow.api.hide;
 
   // ---- global (plugin <-> plugin-instance messages) ----
   const globalHub = createHub('global');
@@ -485,8 +504,18 @@ function createIina(options = {}) {
     nextExec() { return utilsControl.execs.shift(); }
   };
   const utilsApi = {
-    prompt(title) { record('utils.prompt', title); utilsControl.prompts.push(title); return utilsControl.promptResult; },
-    ask(title) { record('utils.ask', title); utilsControl.asks.push(title); return utilsControl.askResult; },
+    prompt(title) {
+      record('utils.prompt', title);
+      utilsControl.prompts.push(title);
+      if (options.rejectModalDialogs) throw new Error('Unexpected blocking call to utils.prompt');
+      return utilsControl.promptResult;
+    },
+    ask(title) {
+      record('utils.ask', title);
+      utilsControl.asks.push(title);
+      if (options.rejectModalDialogs) throw new Error('Unexpected blocking call to utils.ask');
+      return utilsControl.askResult;
+    },
     chooseFile(title, opts) { record('utils.chooseFile', title); utilsControl.chosen.push({title, options: opts}); return Promise.resolve(utilsControl.chooseFileResult); },
     open(url) { record('utils.open', url); utilsControl.opened.push(url); return true; },
     fileInPath(file) { record('utils.fileInPath', file); return !!file && !!utilsControl.inPath(file); },
@@ -570,9 +599,11 @@ function createIina(options = {}) {
     global: globalApi, menu: menuApi, sidebar: sidebar.api, overlay: overlay.api, utils: utilsApi, file: fileApi,
     http: httpApi, mpv: mpvApi, core: core.api, event: eventApi, console: consoleApi
   };
+  if (role === 'global') iina.standaloneWindow = standaloneWindow.api;
 
   const shim = {
     iina, identifier, role, timers, log, posts,
+    standaloneWindow: standaloneWindow.view,
     menu: menuControl, sidebar: sidebar.view, overlay: overlay.view, global: globalControl, core, file: fileControl,
     http: httpControl, utils: utilsControl, keychain: keychainControl, event: eventControl, mpv: mpvControl, console: consoleControl,
     emit: (name, ...args) => eventControl.emit(name, ...args),

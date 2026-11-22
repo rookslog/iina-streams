@@ -24,7 +24,8 @@ function startPlayer(t, {path, label = '', chatEnabled = false}) {
   const helpers = [];
   const shim = createIina({label, mpv: {path, 'stream-open-filename': path}, rejectModalDialogs: true});
   const controller = start(shim.iina, config, {
-    readSettings: () => ({chatEnabled}),
+    // v0.5.5 descope: adoption runs only when opted in (or in QA).
+    readSettings: () => ({chatEnabled, adoptNativeWindows: true}),
     resolve: async source => {
       resolves.push(source);
       return resolution;

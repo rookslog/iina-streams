@@ -4,8 +4,9 @@
 // plugin on a native core (PlayerCore.swift L367-374, v1.5.1, as cited by the review), so stable and an
 // isolated beta or dev build would both claim the same Open URL load. Lead decision: native adoption is on
 // for the stable identifier; for any other identifier only with config.qa or the setting
-// adoptNativeWindows: true. When it is off, no on_load hook is registered at all. Windows Streams created
-// itself (a stream label) keep their own hook in every build.
+// adoptNativeWindows: true. v0.5.5 descope (operator, 2026-11-22): stable is no longer special, so every
+// identifier adopts only with config.qa or the setting. When it is off, no on_load hook is registered at all.
+// Windows Streams created itself (a stream label) keep their own hook in every build.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -40,12 +41,20 @@ test('r1 #12: a missing identifier is not treated as stable', () => {
   assert.equal(hooked(shim), false);
 });
 
-test('r1 #12: stable, and dev with qa, register the adoption hook', () => {
-  const stable = nativeCore({identifier: STABLE, variant: 'unified', qa: false});
-  assert.equal(hooked(stable), true);
+test('v0.5.5 descope: hooks per core for stable, default beta, default dev, QA dev and opted-in beta', () => {
+  const cores = [
+    nativeCore({identifier: STABLE, variant: 'unified', qa: false}),
+    nativeCore({identifier: BETA, variant: 'unified', qa: false}),
+    nativeCore({identifier: DEV, variant: 'unified', qa: false}),
+    nativeCore({identifier: DEV, variant: 'unified', qa: {variant: 'unified'}}),
+    nativeCore({identifier: BETA, variant: 'unified', qa: false}, () => ({adoptNativeWindows: true}))
+  ];
+  assert.deepEqual(cores.map(addHookCalls), [0, 0, 0, 1, 1]);
+});
+
+test('v0.5.5 descope: stable adopts when settings opt in', () => {
+  const stable = nativeCore({identifier: STABLE, variant: 'unified', qa: false}, () => ({adoptNativeWindows: true}));
   assert.equal(addHookCalls(stable), 1, 'exactly one hook per core');
-  const qa = nativeCore({identifier: DEV, variant: 'unified', qa: {variant: 'unified'}});
-  assert.equal(hooked(qa), true);
 });
 
 test('r1 #12: beta adopts when settings opt in, and an unreadable settings file means off', () => {

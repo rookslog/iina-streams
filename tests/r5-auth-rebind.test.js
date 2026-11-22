@@ -7,7 +7,8 @@
 //
 // The reviewer's sequence, replayed in the shim with every main-thread turn explicit: foreign hook -> the
 // startup bind timer fires while retiring -> the own-source hook supersedes cleanup -> playback reaches
-// playing. Leaving the retiring state on that reactivation re-arms the skipped bind.
+// playing. Leaving the retiring state on that reactivation re-arms the skipped bind. D-033 (v0.5.5) removed that
+// reactivation: the last two tests now pin that the own-source load passes through and the window stays inactive.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -100,44 +101,35 @@ test('r5 #1 control: the normal startup binds once and Connect posts auth-connec
   expectUsableAuthReady(shim);
 });
 
-test('r5 #1: a bind skipped while retiring is re-armed when the own source supersedes cleanup', async t => {
-  const {shim, controller, source, bindTimer} = managedWindow(t);
-  const cleanup = await bindWhileRetiring(shim, bindTimer);
+// D-033 (v0.5.5): a loss is final, so the own source loading again before cleanup no longer reactivates the
+// window, and no skipped bind is re-armed. These two replace "a bind skipped while retiring is re-armed when the
+// own source supersedes cleanup" and "Connect clicked before the re-armed bind turn posts one auth-connect when it
+// binds".
+test('r5 #1: the own source loading before cleanup passes through; the window stays inactive and binds nothing',
+  async t => {
+    const {shim, controller, source, bindTimer} = managedWindow(t);
+    const cleanup = await bindWhileRetiring(shim, bindTimer);
 
-  await runOwnHook(shim, source); // Supersedes the held cleanup turn.
-  shim.timers.fire(cleanup);
-  await settle();
-  assert.notEqual(controller.snapshot().phase, 'inactive', 'the stale cleanup leaves the window alone');
-  await reachPlaying(shim, controller, source);
+    await runOwnHook(shim, source); // Passes through; the cleanup turn is still held.
+    shim.timers.fire(cleanup);
+    await settle();
+    assert.equal(controller.snapshot().phase, 'inactive', 'the cleanup turn leaves the window inactive');
+    shim.emit('iina.file-loaded', source.url);
+    shim.timers.advance(3000);
+    await settle();
+    assert.equal(controller.snapshot().phase, 'inactive', 'the own file playing does not reactivate it');
+    shim.sidebar.send('ready', {});
+    shim.sidebar.send('connect', {});
+    shim.timers.advance(0);
+    assert.equal(binds(shim), 0, 'no bind');
+    assert.equal(connects(shim), 0, 'Connect posts nothing');
+  });
 
-  shim.sidebar.send('connect', {});
-  assert.equal(binds(shim), 1, 'one bind');
-  assert.equal(connects(shim), 1, 'one auth-connect on Connect');
-  assert.equal(controller.snapshot().chat.state, 'authorizing');
-  expectUsableAuthReady(shim);
-  shim.timers.advance(0);
-  assert.equal(binds(shim), 1, 'still one bind');
-  assert.equal(connects(shim), 1, 'still one auth-connect');
-});
-
-test('r5 #1: Connect clicked before the re-armed bind turn posts one auth-connect when it binds', async t => {
-  const {shim, controller, source, bindTimer} = managedWindow(t);
-  const cleanup = await bindWhileRetiring(shim, bindTimer);
+test('r5 #1: the own source loading before cleanup schedules no bind turn', async t => {
+  const {shim, source, bindTimer} = managedWindow(t);
+  await bindWhileRetiring(shim, bindTimer);
   const before = new Set(shim.timers.all);
   await runOwnHook(shim, source);
-  const rebind = shim.timers.pending().filter(timer => !before.has(timer) && timer.delay === 0);
-  assert.equal(rebind.length, 1, 'the reactivation schedules one bind turn');
-
-  shim.emit('iina.window-loaded');
-  shim.sidebar.send('ready', {});
-  shim.sidebar.send('connect', {});
-  assert.equal(connects(shim), 0, 'before the bind turn: Connect waits');
-  shim.timers.fire(rebind[0]);
-  assert.equal(binds(shim), 1, 'one bind');
-  assert.equal(connects(shim), 1, 'the waiting Connect posts once');
-  shim.timers.fire(cleanup);
-  await settle();
-  await reachPlaying(shim, controller, source);
-  assert.equal(connects(shim), 1, 'still one auth-connect');
-  expectUsableAuthReady(shim);
+  const scheduled = shim.timers.pending().filter(timer => !before.has(timer) && timer.delay === 0);
+  assert.equal(scheduled.length, 0, 'the pass-through schedules no turn');
 });

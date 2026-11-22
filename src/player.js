@@ -8,6 +8,12 @@ const {createEstimator}=require('./live-latency.js');
 const {createChatTiming}=require('./chat-timing.js');
 const {createLiveClock}=require('./live-clock.js');
 const {createAuthority}=require('./authority.js');
+const {listen}=require('./listeners.js');
+
+// #60 lifetime probe: one id and start time per JS context (IINA creates one per plugin instance), written with
+// every last-session.json. A new id for the same window shows its context was replaced.
+const INSTANCE_ID=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
+const INSTANCE_STARTED_AT=new Date().toISOString();
 
 // Live latency (#2, #16, #51). The spike's 30 s window held with 18 samples when mpv was read every 1 s; the
 // live clock samples once per 2 s playlist poll, so a 30 s window holds at most 16 samples. 10 samples cover
@@ -143,12 +149,11 @@ function adoptableSource(path){
 }
 
 // Review r1 #12: IINA loads every enabled plugin on a native core, so stable and an isolated beta or dev
-// build would both claim the same load. Stable adopts; another identifier adopts only in a QA build or when
-// its settings say adoptNativeWindows: true. Read once, when the core starts.
-const STABLE_IDENTIFIER='local.iina.streams';
-
+// build would both claim the same load. v0.5.5 descopes adoption (#35, operator decision 2026-11-22): every
+// identifier, stable included, adopts only in a QA build or when its settings say adoptNativeWindows: true.
+// Read once, when the core starts.
 function nativeAdoptionEnabled(config,services){
- if(config.identifier===STABLE_IDENTIFIER||config.qa)return true;
+ if(config.qa)return true;
  try{
   const settings=services.readSettings?services.readSettings():null;
   return !!settings&&settings.adoptNativeWindows===true;
@@ -312,6 +317,9 @@ function holdLoad(next,qaTrace,onWatchdog,timers){
   watchdog=null;
   if(load.released)return;
   qaTrace('watchdog-fired',{ms:ADOPTION_WATCHDOG_MS});
+  // Dropping the load ends the controller's activation, which continues the load bound to it (L4,
+  // src/authority.js) from inside onWatchdog. That continuation is the watchdog's.
+  load.cause='watchdog';
   try{
    onWatchdog();
   }catch(_){}
@@ -322,7 +330,7 @@ function holdLoad(next,qaTrace,onWatchdog,timers){
   load.released=true;
   if(watchdog!==null)timers.clearTimeout(watchdog);
   watchdog=null;
-  qaTrace('next-called',{by});
+  qaTrace('next-called',{by:load.cause||by});
   if(typeof next==='function')next();
  };
  load.continueFromHook=()=>load.release('hook');
@@ -350,7 +358,8 @@ function adoptedTracer(host,config){
 // views and their readiness, `closed` and the preferences. Everything that belongs to one load of the source
 // lives on the current activation's record, `act` (newActivation), and is dropped with it. Every timer,
 // listener and await of that work goes through the activation (src/authority.js), so it does nothing once the
-// activation has ended. A loss is one-way: the next load of this source begins a new activation.
+// activation has ended. A loss is final (D-033, v0.5.5): a later load of this source passes through like any
+// other file, and the window stays inactive, as in v0.5.4. So a controller has exactly one activation.
 function run(host,config,services,identity,registerLoadHook,lifecycle){
  const phase=lifecycle&&lifecycle.phase||(()=>{});
  const windowClosed=lifecycle&&lifecycle.windowClosed||(()=>{});
@@ -373,7 +382,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  let besideActive=false,besideMargin=0,besideColumnWidth=null,besideWiden=null;
  // The global entry's messages are registered once, from a later turn (registerAppListeners).
  let appListenersRegistered=false;
- // Live timing preferences (#2, #28). Each activation starts a new Auto mapping (newActivation).
+ // Live timing preferences (#2, #28).
  const chatTiming=createChatTiming(plainObject(persisted.chatTiming)?persisted.chatTiming:{});
  // Window-scoped, so estimator.updates() stays distinct across activations: Auto's estimateId must never repeat
  // (class A interface). Each clock start resets its samples (startLiveClock).
@@ -383,11 +392,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  const postSidebar=(name,data)=>sidebar.postMessage(name,envelope(data));
  const postOverlay=(name,data)=>overlay.postMessage(name,envelope(data));
  const diag=[];
- // The current or, after a loss, the last activation. Its record is read for the final inactive snapshot.
- let act=newActivation(null);
+ // The controller's one activation, current until a loss or the close. Its record is read for the final
+ // inactive snapshot.
+ const act=newActivation();
 
- // Begins a new activation with fresh per-activation state (L2, L3). `previous` is the activation before it.
- function newActivation(previous){
+ // Begins the activation, with its per-activation state (L3).
+ function newActivation(){
   const a=authority.begin();
   Object.assign(a,{
    // On_load hooks of this activation: a newer one supersedes an older one still resolving.
@@ -436,24 +446,24 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    now:()=>Date.now(),
    log:a.guard(onLiveClockLog)
   });
-  // Generations continue across activations, so a #streams-generation marker is never issued twice.
   a.player=new Playback({
    source,
-   resolve:q=>a.wait(services.resolve(source,q)),
+   resolve:q=>a.wait(resolveFor(a,q)),
    readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),
    replace:a.guard(replaceFile),
    onState:a.guard(()=>send()),
    setTimer:a.setTimeout,
-   clearTimer:a.clearTimeout,
-   firstGeneration:previous?previous.player.generation:0
+   clearTimer:a.clearTimeout
   });
-  if(previous){
-   chatTiming.forgetMapping();
-   resyncCutoff();
-  }
   // Review r5 #1: each activation asks the global entry for sign-in state on a later turn of its own.
   a.setTimeout(startAuth,0);
   return a;
+ }
+
+ // Class L pass 2: every resolve carries the loss signal of the activation it is for, so nothing the resolver
+ // starts after that activation's loss (an HTTP request, a helper launch) begins (src/resolve.js).
+ function resolveFor(a,quality){
+  return services.resolve(source,quality,a.signal);
  }
 
  // Whether an activation is current: the controller speaks for the file that is loading or loaded.
@@ -513,7 +523,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   try{
    diag.push(Object.assign({step,t:Date.now()},extra||{}));
    if(diag.length>40)diag.shift();
-   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(diag));
+   const record={instanceId:INSTANCE_ID,instanceStartedAt:INSTANCE_STARTED_AT,steps:diag};
+   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(record));
   }catch(_){}
  }
 
@@ -576,15 +587,15 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  }
 
  function onSidebar(name,handler){
-  sidebar.onMessage(name,whileActive(handler));
+  listen(sidebar,'sidebar',name,whileActive(handler));
  }
 
  function onSidebarWindow(name,handler){
-  sidebar.onMessage(name,whileWindow(handler));
+  listen(sidebar,'sidebar',name,whileWindow(handler));
  }
 
  function onOverlay(name,handler){
-  overlay.onMessage(name,whileActive(handler));
+  listen(overlay,'overlay',name,whileActive(handler));
  }
 
  // Actions for the source act only for the current activation; the rest belong to the window.
@@ -1159,7 +1170,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   let issued=false;
   try{
    // Review r6 #2: a reload resolved for an activation that has ended does nothing (L1).
-   const result=await act.wait(services.resolve(source,quality));
+   const result=await act.wait(resolveFor(act,quality));
+   if(!act.continues())return;
    if(act.player.snapshot().busy)return;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'The stream could not be reloaded.');
    const context={
@@ -1173,6 +1185,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    replaceFile(result,context);
    trace('go-live',{action:'reload',quality:result.quality});
   }catch(error){
+   if(!act.continues())return;
    act.loadError=publicError(error,'The stream could not be reloaded.');
    send();
   }finally{
@@ -1493,6 +1506,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   const selectionGeneration=act.chatGeneration;
   if(!path){
    path=await act.wait(host.utils.chooseFile('Import chat archive',{allowedFileTypes:['json','jsonl','ndjson']}));
+   if(!act.continues())return false;
   }
   if(!path||selectionGeneration!==act.chatGeneration){
    if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
@@ -1511,10 +1525,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const owns=value=>!!value&&value.ok&&value.indexPath===output+'/index.json';
    const late=discardLate(output,owns);
    const helper=services.runHelper('replay',['import','--input',path,'--output',output]);
-   const result=await act.wait(helper,value=>{
+   const abandon=value=>{
     late(value);
     if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
-   });
+   };
+   const result=await act.wait(helper,abandon);
+   if(!act.continues(result,abandon))return false;
    if(consumed&&services.deleteDataPath)services.deleteDataPath(consumed);
    outputOwned=owns(result);
    if(act.chatGeneration!==myGeneration)return false;
@@ -1550,6 +1566,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    });
    return true;
   }catch(error){
+   if(!act.continues())return false;
    if(act.chatGeneration!==myGeneration)return false;
    if(!preserve)act.chat.state='error';
    act.chat.error=publicError(error,'Could not import chat.');
@@ -1599,7 +1616,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   try{
    const owns=value=>!!value&&value.ok&&value.path===downloadPath+'/replay.jsonl';
    const helper=services.runHelper('acquire',['--url',source.url,'--output',downloadPath,'--at',String(at)]);
-   const result=await act.wait(helper,discardLate(downloadPath,owns));
+   const late=discardLate(downloadPath,owns);
+   const result=await act.wait(helper,late);
+   if(!act.continues(result,late))return false;
    owned=owns(result);
    if(generation!==act.chatGeneration)return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'Twitch chat could not be fetched.');
@@ -1619,6 +1638,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     consumed:downloadPath,
     window:{start:w.start,end:w.end,hasMore:w.hasMore}
    }));
+   if(!act.continues())return false;
    if(imported){
     // No progress past the playhead: the same request would return the same window.
     const partial=w.hasMore&&w.end<=at+15;
@@ -1628,6 +1648,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    }
    return false;
   }catch(error){
+   if(!act.continues())return false;
    if(generation===act.chatGeneration){
     act.twitchNextAttempt=Date.now()+30000;
     // A seek that arrived while this request ran asks for a different position. Stay in "fetching" so the
@@ -1669,7 +1690,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   try{
    const owns=value=>!!value&&value.ok&&value.path===downloadPath+'/replay.jsonl';
    const helper=services.runHelper('acquire',['--url',source.url,'--output',downloadPath]);
-   const result=await act.wait(helper,discardLate(downloadPath,owns));
+   const late=discardLate(downloadPath,owns);
+   const result=await act.wait(helper,late);
+   if(!act.continues(result,late))return;
    downloadOwned=owns(result);
    if(act.chatGeneration!==myGeneration)return;
    if(!result.ok)throw Error(result.error&&result.error.message||'Replay is unavailable for this video.');
@@ -1677,7 +1700,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // The import deletes the download once its helper has read it, also if this activation ends meanwhile.
    downloadOwned=false;
    await act.wait(importArchive(result.path,{consumed:downloadPath}));
+   if(!act.continues())return;
   }catch(error){
+   if(!act.continues())return;
    if(act.chatGeneration!==myGeneration)return;
    if(auto&&source.kind==='youtube'){
     act.chat.state='off';
@@ -1700,12 +1725,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(!active()||act.refreshing||act.player.snapshot().busy)return;
   act.refreshing=true;
   try{
-   const result=await act.wait(services.resolve(source,act.player.snapshot().quality));
+   const result=await act.wait(resolveFor(act,act.player.snapshot().quality));
+   if(!act.continues())return;
    if(!result.ok)throw Error('Unavailable');
    act.player.data.formats=result.formats;
    act.loadError='';
    send();
   }catch(_){
+   if(!act.continues())return;
    act.loadError='Qualities unavailable. Try again.';
    send();
   }finally{
@@ -1786,19 +1813,16 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return source.kind==='twitch-live'&&!!result&&!!result.error&&result.error.reason==='offline';
  }
 
- // The physical end of an activation, on a main-thread turn: its timers, listeners, clock, helpers' late
- // results and replay data stop with it. The window's shared surfaces (the live transport, the sign-in use, the
- // overlay, the inactive snapshot) are torn down only when no newer activation holds the window by then; a newer
- // one owns them. options.final: publish the final inactive snapshot (L5). options.retire: see chatOff.
+ // The physical end of the activation, on a main-thread turn: its timers, listeners, clock, helpers, helpers'
+ // late results and replay data stop with it, and so do the window's surfaces it used (the live transport, the
+ // sign-in use, the overlay, beside). No successor can exist (D-033), so its helpers are always cancelled.
+ // options.final: publish the final inactive snapshot (L5). options.retire: see chatOff.
  function releaseActivation(ended,options){
   if(ended.disposed)return;
-  const shared=ended===act;
-  if(shared){
-   chatOff({retire:!!options.retire});
-   // D1: the loss leaves beside once, here on the main-thread turn; chatOff has already hidden the overlay.
-   if(besideActive)leaveBeside();
-   if(services.cancelHelpers)services.cancelHelpers();
-  }
+  chatOff({retire:!!options.retire});
+  // D1: the loss leaves beside once, here on the main-thread turn; chatOff has already hidden the overlay.
+  if(besideActive)leaveBeside();
+  if(services.cancelHelpers)services.cancelHelpers();
   ended.dispose();
   ended.liveClock.stop();
   ended.player.deactivate();
@@ -1807,17 +1831,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   ended.replay=null;
   ended.replayPath='';
   ended.staged=null;
-  if(!shared){
-   // The newer activation owns the window, but not a live transport it has not started itself. At a close the
-   // current activation's own teardown stops the transport.
-   if(ended.liveStarted&&!act.liveStarted&&!authority.isClosed()){
-    if(overlayReady)postOverlay('live-stop',{});
-    if(!overlayNeeded())hideOverlay();
-   }
-   // D1: nor beside, which the newer activation has not asked for (it may still be resolving).
-   if(besideActive&&!besideWanted())leaveBeside();
-   return;
-  }
   stopLiveClock();
   ended.loadError=INACTIVE_MESSAGE;
   if(options.final)publishFinal();
@@ -1846,16 +1859,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return marker?Number(marker[1]):0;
  }
 
- async function onLoadHook(next){
-  let completed=false;
-  const finish=()=>{
-   if(completed)return;
-   completed=true;
-   if(typeof next==='function')next();
-  };
+ // The on_load hook's body. authority.onLoad owns the continuation (L4): the load continues exactly once, when
+ // this body releases it, when the activation it is bound to ends, when the window closes, or at the latest when
+ // this body settles.
+ async function loadHookBody(load){
   try{
    if(closed){
-    finish();
+    load.release();
     return;
    }
    const path=loadingPath(mpv);
@@ -1866,28 +1876,34 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     // Review r4 #3 and L2: the activation ends before the hook continues, in pure JS, and never returns.
     // Review r2 #6: its release runs on a later main-thread turn, never on mpv's hook queue.
     const ended=authority.end();
-    finish();
+    load.release();
     if(ended)authority.windowTurn(()=>releaseActivation(ended,{final:true}));
     return;
    }
-   // L2: after a loss, this source loading again is a new activation with fresh state, not a resumption.
-   if(!active())act=newActivation(act);
-   await act.wait(loadForActivation(path,finish));
+   // D-033: after a loss, this source loading again, before or after the cleanup turn, passes through like any
+   // other file, and the window stays inactive.
+   if(!active()){
+    load.release();
+    return;
+   }
+   load.bind(act);
+   await act.wait(loadForActivation(path,load));
+   if(!act.continues())return;
   }catch(error){
+   if(!act.continues())return;
    phase('error',{error:publicError(error,'Unable to open source.')});
    if(active()){
     act.loadError=publicError(error,'Unable to open source.');
     send();
     trace('load-error',{error:act.loadError});
    }
-  }finally{
-   finish();
   }
  }
+ const onLoadHook=authority.onLoad(loadHookBody);
 
- // One own-source load in the current activation. A resolve that settles after the activation ended only
- // continues the hook (L4); a newer load of the same activation supersedes this one.
- async function loadForActivation(path,finish){
+ // One own-source load in the current activation, which `load` is bound to: its loss continues the load (L4). A
+ // newer load of the same activation supersedes this one.
+ async function loadForActivation(path,load){
   const mine=++act.loads;
   // A new file is loading: the old playlist no longer describes what plays. file-loaded starts the next.
   stopLiveClock();
@@ -1907,12 +1923,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    };
   }else{
    phase('resolve-start',{quality:'auto720'});
-   result=await act.wait(services.resolve(source,'auto720'),()=>finish());
+   result=await act.wait(resolveFor(act,'auto720'));
+   if(!act.continues())return;
    // A failed result is traced as 'error' by onLoadHook's catch.
    if(result&&result.ok)phase('resolve-done',{quality:result.quality,live:!!result.live});
   }
   if(mine!==act.loads){
-   finish();
+   load.release();
    return;
   }
   // Only the newest load of the activation sets the generation an unstaged load confirms.
@@ -2064,7 +2081,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed)return;
   authority.close();
   releaseActivation(act,{});
-  for(const ended of authority.undisposed())releaseActivation(ended,{});
   if(options.notifyGlobal)app.postMessage('player-closed',{});
   closed=true;
   act.player.close();
@@ -2185,8 +2201,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function registerAppListeners(){
   if(closed||appListenersRegistered)return;
   appListenersRegistered=true;
-  app.onMessage('open-error',whileWindow(onOpenError));
-  for(const name of Object.keys(authCallbacks))app.onMessage(name,authCallbacks[name]);
+  listen(app,'global','open-error',whileWindow(onOpenError));
+  for(const name of Object.keys(authCallbacks))listen(app,'global',name,authCallbacks[name]);
  }
 
  // Review r5 #1: each activation's first turn sends its own sign-in request, or asks for sign-in state.

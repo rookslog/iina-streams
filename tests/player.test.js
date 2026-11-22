@@ -14,7 +14,7 @@ const resolution={ok:true,title:'Recording',live:false,duration:100,quality:'360
 // (tests/a1-open-stream-player.test.js). Until a stream loads it still has no events, timers, network or controls.
 test('unrelated IINA windows acquire only the adoption hook, and no network, timers or controls',async()=>{
  const r=host('');
- const c=start(r.h,{identifier:'local.iina.streams',variant:'unified'},{resolve(){throw Error('unexpected');}});
+ const c=start(r.h,{identifier:'local.iina.streams',variant:'unified'},{readSettings:()=>({adoptNativeWindows:true}),resolve(){throw Error('unexpected');}});
  assert.equal(c,null);
  assert.deepEqual([...r.shim.mpv.hooks.keys()],['on_load']);
  assert.equal(r.shim.event.names().length,0);

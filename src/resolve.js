@@ -3,7 +3,12 @@
 // Resolves a source to a playable media URL. Twitch is resolved in plugin JS (src/twitch-playback.js);
 // everything else, and every Twitch failure that is not a definitive answer, goes to the media helper.
 //
-//   createResolver({resolveTwitch, http, helperResolve, log, now}) -> async resolve(source, quality)
+//   createResolver({resolveTwitch, http, helperResolve, log, now}) -> async resolve(source, quality, signal)
+//
+// `signal` (optional) is the loss signal of the activation the resolve is for, {lost()} (src/authority.js).
+// Class L pass 2: nothing downstream starts once it is lost. Each stage starts through one gate that checks it
+// at that moment: every HTTP request through gatedHttp, every media helper launch through launchHelper. A
+// stage that would start after the loss rejects with a LOST error instead.
 //
 // The result has the helper's shape: {ok, source, title, live, duration, quality, formats, mediaURL}
 // or {ok: false, error: {code, message}} (plus error.reason 'offline' for a channel that is not live). The JS path sends no headers, so `headers` is absent.
@@ -127,6 +132,36 @@ function helperShapedResult(source, quality, twitch) {
   };
 }
 
+// ---- loss ----
+
+function stopIfLost(signal) {
+  if (signal && signal.lost()) {
+    const error = new Error('The resolve was abandoned.');
+    error.code = 'LOST';
+    throw error;
+  }
+}
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+
+// `http` with every request checked against `signal` when it would start. Methods keep `http` as their `this`.
+// Without a signal (a two-argument resolve) there is nothing to check, and `http` itself is used.
+function gatedHttp(http, signal) {
+  if (!signal) {
+    return http;
+  }
+  // Every method is wrapped, whatever typeof reports for a native export: a missing one throws at the call, as
+  // it would on `http` itself.
+  const gated = {};
+  for (const method of HTTP_METHODS) {
+    gated[method] = (...args) => {
+      stopIfLost(signal);
+      return http[method](...args);
+    };
+  }
+  return gated;
+}
+
 // ---- resolver ----
 
 function errorCode(error) {
@@ -146,27 +181,35 @@ function createResolver({resolveTwitch, http, helperResolve, log}) {
     }
   }
 
-  async function resolveWithTwitch(source, quality, request) {
+  // The only launch of the media helper. fallbackCode, when given, is the Twitch failure it falls back from.
+  function launchHelper(source, quality, signal, fallbackCode) {
+    stopIfLost(signal);
+    if (fallbackCode) {
+      recordFallback(fallbackCode);
+    }
+    return helperResolve(source, quality);
+  }
+
+  async function resolveWithTwitch(source, quality, request, signal) {
     let twitch;
     try {
-      twitch = await resolveTwitch(request, {http, log, includeTitle: true});
+      twitch = await resolveTwitch(request, {http: gatedHttp(http, signal), log, includeTitle: true});
     } catch (error) {
       const code = errorCode(error);
       if (DEFINITIVE_CODES.includes(code)) {
         return definitiveFailure(code);
       }
-      recordFallback(code);
-      return helperResolve(source, quality);
+      return launchHelper(source, quality, signal, code);
     }
     return helperShapedResult(source, quality, twitch);
   }
 
-  return async function resolve(source, quality) {
+  return async function resolve(source, quality, signal) {
     const request = twitchRequest(source);
     if (!request) {
-      return helperResolve(source, quality);
+      return launchHelper(source, quality, signal, null);
     }
-    return resolveWithTwitch(source, quality, request);
+    return resolveWithTwitch(source, quality, request, signal);
   };
 }
 

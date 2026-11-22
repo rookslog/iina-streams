@@ -98,25 +98,27 @@ test('r3 #5: a cleanup turn that never runs still leaves exactly one continuatio
   assert.equal(load.continued, 1);
 });
 
-test('r3 #5: a late cleanup turn does not deactivate the controller for the load after it', async t => {
-  const {shim, controller, resolves} = await withReplay(t);
-  const load = foreignLoad(shim);
-  assert.equal(load.cleanup.length, 1, 'precondition: one cleanup turn is scheduled');
+// D-033 (v0.5.5): a loss is final. This replaces "a late cleanup turn does not deactivate the controller for the
+// load after it": the own source loading again before the cleanup turn passes through, and the turn still
+// deactivates the window.
+test('r3 #5: the own source reloading before the cleanup turn passes through; the turn leaves the window inactive',
+  async t => {
+    const {shim, controller, resolves} = await withReplay(t);
+    const load = foreignLoad(shim);
+    assert.equal(load.cleanup.length, 1, 'precondition: one cleanup turn is scheduled');
 
-  // The window returns to its own stream before the delayed cleanup turn runs.
-  shim.mpv.set('path', vod.url);
-  let continued = 0;
-  await shim.mpv.runHook('on_load', () => continued++);
-  assert.equal(continued, 1, 'precondition: the next load continued');
-  assert.equal(resolves.length, 2, 'precondition: the next load resolved the stream again');
+    // The window returns to its own stream before the delayed cleanup turn runs.
+    shim.mpv.set('path', vod.url);
+    let continued = 0;
+    await shim.mpv.runHook('on_load', () => continued++);
+    assert.equal(continued, 1, 'the next load continued once');
+    assert.equal(resolves.length, 1, 'the next load passed through: no second resolve');
 
-  shim.timers.fire(load.cleanup[0]);
-  await settle();
-  assert.notEqual(controller.snapshot().phase, 'inactive', 'the late turn leaves the later load alone');
-  // v0.5.5 class L (L2, L3): the later load is a new activation with fresh state, so the earlier load's replay
-  // chat is dropped with its activation, not resumed.
-  assert.equal(controller.snapshot().chat.mode, 'off', 'the earlier activation\'s replay is not resumed');
-});
+    shim.timers.fire(load.cleanup[0]);
+    await settle();
+    assert.equal(controller.snapshot().phase, 'inactive', 'the cleanup turn leaves the window inactive');
+    assert.equal(controller.snapshot().chat.mode, 'off', 'the earlier activation\'s replay is not resumed');
+  });
 
 test('r3 #5: a close before the cleanup turn leaves the close in charge', async t => {
   const {shim, controller} = await withReplay(t);

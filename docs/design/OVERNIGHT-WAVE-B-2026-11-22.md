@@ -96,3 +96,31 @@ Never log the token.
 - no log line contains the token.
 
 **Owns:** new `src/twitch-helix.js`, new `tests/twitch-helix.test.js` and `tests/fixtures/twitch-helix/**`. Nothing else.
+
+---
+
+## C1 — Live latency estimator (#2, #16, #51; module only)
+
+From [SPIKE-16-31-LIVE-LATENCY-2026-11-22.md](SPIKE-16-31-LIVE-LATENCY-2026-11-22.md), section 6: observed on recorded rows from two channels, with a maximum error of 0.02 s for a 30 s window.
+
+**Design.** A new pure module, `src/live-latency.js`, with no IINA calls. The caller feeds samples and gets estimates.
+
+Functions:
+- `createEstimator({windowSeconds:30, minSamples:18})` returns `{addSample, offset, behindLive, videoWallClock, reset}`.
+  - `addSample({now, newestSegmentEnd, rawCacheEnd})` takes seconds. `newestSegmentEnd` is the PDT of the newest playlist segment's end, as epoch seconds. `rawCacheEnd` is mpv's cache end on the raw timeline (`time-pos + demuxer-start-time` domain).
+  - `offset()` returns `c_hat`, the median of `newestSegmentEnd − rawCacheEnd` over the window, or `null` while uncertain: fewer than `minSamples`, or no value within ±0.5 s of the median holding more than half the window.
+  - `videoWallClock(rawTimePos)` is `rawTimePos + c_hat`, or `null`.
+  - `behindLive({now, rawTimePos})` is `now − videoWallClock(rawTimePos)`, or `null`.
+  - **Reload detection:** a `rawCacheEnd` that drops by more than 10 s from the previous sample resets the window.
+- `goLiveTarget({cacheEnd})` returns `cacheEnd − 2` (time-pos domain). The spike found a seek at or past the cache end is a silent no-op, and `−0.5` stalls.
+- `isDue({sentAt, videoWallClock, offsetSeconds})`: a chat message (`tmi-sent-ts` in epoch seconds) is due once `videoWallClock ≥ sentAt + offsetSeconds`.
+
+**Tests**, using synthetic sample streams:
+- **Constant offset:** a constant offset with 30% of samples off by ±2 s gives the exact median.
+- **Not enough samples:** 17 samples give `null`.
+- **Split window:** a window split 50/50 between two values gives `null` (uncertain).
+- **Reload:** the window resets and goes uncertain, then recovers after 18 samples.
+- **Calculations:** `behindLive` and `videoWallClock` arithmetic; `goLiveTarget`; `isDue` at the boundary and with an offset.
+- **Window:** only the last 30 s count.
+
+**Owns:** new `src/live-latency.js` and `tests/live-latency.test.js`.

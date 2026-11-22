@@ -45,6 +45,20 @@ AUTO = {"id": "auto720", "label": "Auto · 720p preferred"}
 TWITCH_VOD_HOST = re.compile(r"d[0-9a-z]{13}\.cloudfront\.net\Z")
 TWITCH_VOD_PATH = re.compile(r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/index-[A-Za-z0-9-]+\.m3u8\Z")
 
+# yt-dlp's --dump-single-json can exceed MAX_METADATA_BYTES: one 45 minute video returned 11.7 MB, 11.15 MB
+# of it automatic_captions (spike #37, yt-dlp 2026.08.19). The helper asks yt-dlp for only the fields it reads,
+# as two -O (--print) templates, so the output is one JSON line per template (a missing value prints NA):
+#   line 1  the video's own fields, an object without the keys yt-dlp does not have;
+#   line 2  the formats, a list of objects with only the format fields below.
+# A nested selector for both returned NA in the spike, hence two flat templates. Every field here is read by
+# _youtube; add a field here when _youtube starts reading it.
+YOUTUBE_VIDEO_FIELDS = ("id", "_type", "title", "extractor_key", "live_status", "is_live", "duration",
+                        "availability", "has_drm", "_has_drm", "http_headers")
+YOUTUBE_FORMAT_FIELDS = ("format_id", "url", "protocol", "vcodec", "acodec", "audio_ext", "height", "fps", "abr",
+                         "language_preference", "quality", "source_preference", "asr", "has_drm", "http_headers")
+YOUTUBE_OUTPUT = ["-O", "%(.{" + ",".join(YOUTUBE_VIDEO_FIELDS) + "})j",
+                  "-O", "%(formats.:.{" + ",".join(YOUTUBE_FORMAT_FIELDS) + "})j"]
+
 
 ERROR_MESSAGES = {
     "INVALID_ARGUMENTS": "The media request is invalid.",
@@ -426,6 +440,20 @@ def _youtube(source, metadata, quality):
     return result
 
 
+def _youtube_metadata(payload):
+    """Rebuild the metadata dict _youtube reads from the two -O lines of YOUTUBE_OUTPUT."""
+    text = payload.decode("utf-8") if isinstance(payload, bytes) else payload
+    lines = text.strip().split("\n")
+    if len(lines) != 2:
+        raise MediaError("INVALID_METADATA")
+    metadata = json.loads(lines[0])
+    if not isinstance(metadata, dict):
+        raise MediaError("INVALID_METADATA")
+    if lines[1].strip() != "NA":
+        metadata["formats"] = json.loads(lines[1])
+    return metadata
+
+
 def resolve(url, quality="auto720", *, runner=None):
     source = parse_source(url)
     if not isinstance(quality, str) or not FORMAT_ID.fullmatch(quality):
@@ -436,14 +464,14 @@ def resolve(url, quality="auto720", *, runner=None):
                    "--http-timeout", "12", "--json", source["url"]]
     else:
         command = [YTDLP, "--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--no-playlist", "--simulate",
-                   "--dump-single-json", "--no-warnings", "--no-progress", "--no-check-formats", "--socket-timeout", "12",
+                   "--no-warnings", "--no-progress", "--no-check-formats", "--socket-timeout", "12",
                    "--retries", "1", "--extractor-retries", "1", "--no-remote-components",
-                   "--js-runtimes", "node:/opt/homebrew/bin/node", source["url"]]
+                   "--js-runtimes", "node:/opt/homebrew/bin/node"] + YOUTUBE_OUTPUT + [source["url"]]
     payload = (runner or run_command)(command)
     if not isinstance(payload, (bytes, str)) or len(payload) > MAX_METADATA_BYTES:
         raise MediaError("OUTPUT_LIMIT")
     try:
-        metadata = json.loads(payload)
+        metadata = json.loads(payload) if source["provider"] == "Twitch" else _youtube_metadata(payload)
     except (ValueError, UnicodeError, RecursionError):
         raise MediaError("INVALID_METADATA") from None
     if not isinstance(metadata, dict):

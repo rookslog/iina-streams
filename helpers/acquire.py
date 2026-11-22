@@ -47,6 +47,15 @@ except BaseException:
     sys.exit(127)
 '''
 CANONICAL = re.compile(r'https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})\Z')
+# yt-dlp's --dump-single-json can exceed MAX_METADATA_BYTES: one 45 minute video returned 11.7 MB, 11.15 MB
+# of it automatic_captions (spike #37, yt-dlp 2026.08.19). validate_metadata reads only the fields below and
+# the live-chat track list, so the preflight asks for just those as two -O (--print) templates. The output is
+# one JSON line per template; a missing value prints NA:
+#   line 1  an object with the video fields that exist;
+#   line 2  the live_chat subtitle tracks, or NA when the video has none.
+# Add a field here when validate_metadata starts reading it.
+PREFLIGHT_VIDEO_FIELDS = ('id', '_type', 'extractor_key', 'is_live', 'is_upcoming', 'live_status', 'availability')
+PREFLIGHT_OUTPUT = ['-O', '%(.{' + ','.join(PREFLIGHT_VIDEO_FIELDS) + '})j', '-O', '%(subtitles.live_chat)j']
 ERRORS = {
     'INVALID_ARGUMENTS': 'Use a YouTube URL and a new output directory to fetch replay.',
     'UNSUPPORTED_SOURCE': 'Replay fetch requires a canonical public YouTube video URL.',
@@ -264,11 +273,23 @@ def replay_track_identity(value, identifier):
         return False
 
 
+def preflight_metadata(payload):
+    """Rebuild the metadata dict validate_metadata reads from the two -O lines of PREFLIGHT_OUTPUT."""
+    text = payload.decode('utf-8') if isinstance(payload, bytes) else payload
+    lines = text.strip().split('\n')
+    if len(lines) != 2:
+        raise AcquireError('INVALID_METADATA')
+    value = json.loads(lines[0])
+    if isinstance(value, dict) and lines[1].strip() != 'NA':
+        value['subtitles'] = {'live_chat': json.loads(lines[1])}
+    return value
+
+
 def validate_metadata(payload, identifier, url):
     if not isinstance(payload, (bytes, str)) or len(payload) > MAX_METADATA_BYTES:
         raise AcquireError('OUTPUT_LIMIT')
     try:
-        value = json.loads(payload)
+        value = preflight_metadata(payload)
     except (ValueError, UnicodeError, RecursionError):
         raise AcquireError('INVALID_METADATA') from None
     if (not isinstance(value, dict) or value.get('id') != identifier or
@@ -351,7 +372,7 @@ def acquire(url, output, *, runner=None, on_published=None):
     owned_directory = stage.stat()
     with cancellation_scope() as cancelled:
         try:
-            payload = run(base + ['--simulate', '--dump-single-json', '--no-check-formats', '--', url],
+            payload = run(base + ['--simulate', '--no-check-formats'] + PREFLIGHT_OUTPUT + ['--', url],
                           timeout=remaining(deadline, cancelled, MAX_PREFLIGHT_SECONDS),
                           max_output_bytes=MAX_METADATA_BYTES, watch_dir=stage, cancelled=cancelled)
             validate_metadata(payload, identifier, url)

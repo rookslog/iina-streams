@@ -15,6 +15,8 @@ from unittest import mock
 
 HELPERS = Path(__file__).resolve().parents[1] / 'helpers'
 RUNNER = HELPERS / 'runner.py'
+# Prefix for helper scripts run in a child process: gives their fake yt-dlp the shared tests/ytdlp_double.py.
+DOUBLE_IMPORT = 'import sys;sys.path.insert(0,' + repr(str(Path(__file__).resolve().parent)) + ');import ytdlp_double\n'
 SPEC = importlib.util.spec_from_file_location('candidate_runner', RUNNER)
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
@@ -189,7 +191,7 @@ class RunnerTests(unittest.TestCase):
         meta = {'id':'92h_kU8O58M','is_live':False,'live_status':'was_live','availability':'public',
                 'subtitles':{'live_chat':[{'ext':'json','protocol':'youtube_live_chat_replay','video_id':'92h_kU8O58M','url':url}]}}
         archive = b'{"replayChatItemAction":{"videoOffsetTimeMsec":"0","actions":[{}]}}\n'
-        source = ('import importlib.util,json,sys,time\nfrom pathlib import Path\n'
+        source = (DOUBLE_IMPORT + 'import importlib.util,json,sys,time\nfrom pathlib import Path\n'
                   's=importlib.util.spec_from_file_location("real_acquire",' + repr(str(HELPERS / 'acquire.py')) + ')\n'
                   'm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\n'
                   'original=m.os.rename\n'
@@ -200,7 +202,7 @@ class RunnerTests(unittest.TestCase):
                   ' return result\n'
                   'm.os.rename=publish\n'
                   'def fake(command,**kwargs):\n'
-                  ' if "--dump-single-json" in command:return ' + repr(json.dumps(meta).encode()) + '\n'
+                  ' if "-O" in command:return ytdlp_double.output(command,' + repr(meta) + ')\n'
                   ' (kwargs["watch_dir"]/"archive.live_chat.json").write_bytes(' + repr(archive) + ');return b""\n'
                   'try:\n print(json.dumps(m.acquire(' + repr(url) + ',' + repr(str(output)) + ',runner=fake)))\n'
                   'except m.AcquireError as e:\n print(json.dumps({"ok":False,"error":{"code":e.code,"message":str(e)}}));sys.exit(1)\n')
@@ -218,11 +220,11 @@ class RunnerTests(unittest.TestCase):
                 'subtitles':{'live_chat':[{'ext':'json','protocol':'youtube_live_chat_replay','video_id':'92h_kU8O58M','url':url}]}}
         function = 'acquire' if name == 'acquire' else 'import_archive'
         arguments = ['--url',url,'--output',str(output)] if name == 'acquire' else ['import','--input',str(input_file),'--output',str(output)]
-        source = ('import importlib.util,json,sys,time\nfrom pathlib import Path\n'
+        source = (DOUBLE_IMPORT + 'import importlib.util,json,sys,time\nfrom pathlib import Path\n'
                   's=importlib.util.spec_from_file_location("real_helper",' + repr(str(HELPERS / (name + '.py'))) + ')\n'
                   'm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\n'
                   'def fake(command,**kwargs):\n'
-                  ' if "--dump-single-json" in command:return ' + repr(json.dumps(meta).encode()) + '\n'
+                  ' if "-O" in command:return ytdlp_double.output(command,' + repr(meta) + ')\n'
                   ' (kwargs["watch_dir"]/"archive.live_chat.json").write_text(\'{"replayChatItemAction":{"videoOffsetTimeMsec":"0","actions":[{}]}}\\n\');return b""\n'
                   'original=m.' + function + '\n'
                   'def delayed(*args,**kwargs):\n' +
@@ -278,11 +280,11 @@ class RunnerTests(unittest.TestCase):
         meta = {'id':'92h_kU8O58M','_type':'video','extractor_key':'Youtube','is_live':False,'live_status':'was_live',
                 'availability':'public','subtitles':{'live_chat':[{'ext':'json','protocol':'youtube_live_chat_replay','video_id':'92h_kU8O58M','url':url}]}}
         child = 'import pathlib,time;pathlib.Path(' + repr(str(ready)) + ').write_text("ready");time.sleep(30)'
-        source = ('import importlib.util,json,sys\nfrom pathlib import Path\n'
+        source = (DOUBLE_IMPORT + 'import importlib.util,json,sys\nfrom pathlib import Path\n'
                   's=importlib.util.spec_from_file_location("real_acquire",' + repr(str(HELPERS / 'acquire.py')) + ')\n'
                   'm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\n'
                   'def fake(command,**kwargs):\n'
-                  ' if "--dump-single-json" in command:return ' + repr(json.dumps(meta).encode()) + '\n'
+                  ' if "-O" in command:return ytdlp_double.output(command,' + repr(meta) + ')\n'
                   ' (kwargs["watch_dir"]/"archive.live_chat.json.part").write_text("partial")\n'
                   ' return m.run_command([sys.executable,"-c",' + repr(child) + '],**kwargs)\n'
                   'try:\n m.acquire(' + repr(url) + ',' + repr(str(output)) + ',runner=fake)\n'

@@ -29,5 +29,10 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(len(CHECK.problems(dict(self.info, ghVersion=True), self.package)), 1)
 
 
+    def test_no_npm_script_deletes_the_installed_stable_plugin(self):
+        # #21: stable deployment goes through a Release with a backup, never rm -rf.
+        for name, command in self.package['scripts'].items():
+            self.assertFalse('rm -rf' in command and 'local.iina.streams.iinaplugin' in command, name)
+
 if __name__ == '__main__':
     unittest.main()

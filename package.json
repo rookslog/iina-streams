@@ -11,7 +11,6 @@
     "build": "python3 -B scripts/build.py --output dist/release",
     "build:beta": "python3 -B scripts/build.py --beta --output dist/beta",
     "build:dev": "python3 -B scripts/build.py --dev --output dist/dev",
-    "install-local": "npm run build && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\" && cp -R dist/release/streams.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin\"",
     "install-beta": "npm run build:beta && rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\" && cp -R dist/beta/streams-beta.iinaplugin \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
     "uninstall-beta": "rm -rf \"$HOME/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.beta.iinaplugin\"",
     "dev:deploy": "python3 -B scripts/dev.py deploy",

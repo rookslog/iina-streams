@@ -46,8 +46,11 @@ class CurrentBuilderTests(unittest.TestCase):
     def test_stable_build_requires_matching_release_tag_and_clean_tree(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'stable'
-            with self.assertRaisesRegex(ValueError,'matching release tag'):
-                BUILD.build(path,beta=False)
+            # Mocked, not the real checkout: on a release tag's own CI run HEAD is tagged and clean,
+            # so an unmocked call would build successfully (v0.5.4 tag CI, 2026-11-22).
+            with mock.patch.object(BUILD,'git_state',return_value=('a'*40,False,set())):
+                with self.assertRaisesRegex(ValueError,'matching release tag'):
+                    BUILD.build(path,beta=False)
             self.assertFalse(path.exists())
             with mock.patch.object(BUILD,'git_state',return_value=('a'*40,True,{'v0.5.4'})):
                 with self.assertRaisesRegex(ValueError,'matching release tag'):

@@ -2,7 +2,7 @@
 """Linked development workflow for Streams Dev (`local.iina.streams.dev`).
 
 One-time:  dev.py deploy && dev.py link   (then enable "Streams Dev" in IINA › Settings › Plugins)
-Per change: dev.py deploy                 (then IINA › Plugin › Reload All Plugins, or relaunch IINA)
+Per change: dev.py deploy                 (then quit and reopen IINA)
 
 `deploy` runs the full JS + Python suites, builds the dev variant from this worktree,
 and swaps it into a fixed stage directory. The IINA plugins folder holds a single
@@ -185,8 +185,8 @@ def status(plugins=DEFAULT_PLUGINS, stage=DEFAULT_STAGE, read_prefs=True):
     }
 
 
-RELOAD_HINT = ('Next: in IINA choose Plugin › Reload All Plugins (it restarts every plugin in every open '
-               'player; reopen Streams windows afterwards), or relaunch IINA.')
+RELOAD_HINT = ('Next: quit IINA (Cmd-Q) and reopen it. Do NOT use Plugin › Reload All Plugins: on IINA 1.5.1 '
+               'it crashed IINA on 2026-11-22 (trap in JavascriptAPISidebarView.loadFile during the re-emitted events).')
 
 
 def main(argv=None):
@@ -209,11 +209,11 @@ def main(argv=None):
             result = link(args.plugins_dir, args.stage_dir)
             print(f'{result}: {Path(args.plugins_dir) / LINK_NAME} -> {Path(args.stage_dir) / "current"}')
             if result == 'linked':
-                print('IINA sees it after Reload All Plugins or a relaunch. Then enable "Streams Dev" in '
+                print('IINA sees it after a relaunch (not Reload All Plugins, which crashed IINA 1.5.1). Then enable "Streams Dev" in '
                       'Settings › Plugins (disable Streams Beta to avoid two Streams menus). Streams Dev has '
                       'its own data and Keychain entry: re-enter the Twitch Client ID and sign in once.')
         elif args.command == 'unlink':
-            print(unlink(args.plugins_dir, args.stage_dir) + '. IINA drops it after Reload All Plugins or a relaunch.')
+            print(unlink(args.plugins_dir, args.stage_dir) + '. IINA drops it after a relaunch.')
         else:
             print(json.dumps(status(args.plugins_dir, args.stage_dir, read_prefs=not custom_plugins), indent=2))
     except DevError as error:

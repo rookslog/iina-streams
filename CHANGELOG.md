@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.5.4-beta (unreleased, 2026-11-22) — development workflow and CI
-- Linked **Streams Dev** identity (`local.iina.streams.dev`, version `0.5.4-dev+g<sha>`): `npm run dev:deploy` runs both suites and stages a tested build outside the worktree; `npm run dev:link` creates one `.iinaplugin-dev` symlink; `dev:status`, `dev:rollback`, `dev:unlink`. Reload is IINA's Plugin › Reload All Plugins. Not yet exercised in native IINA.
+- Linked **Streams Dev** identity (`local.iina.streams.dev`, version `0.5.4-dev+g<sha>`): `npm run dev:deploy` runs both suites and stages a tested build outside the worktree; `npm run dev:link` creates one `.iinaplugin-dev` symlink; `dev:status`, `dev:rollback`, `dev:unlink`. Reload by relaunching IINA (Plugin › Reload All Plugins crashed IINA 1.5.1 on first native use).
 - Removed `scripts/link-dev.sh`/`unlink-dev.sh` (targeted the deleted `candidate-plugin/`; unlink disabled the stable plugin's preference). `npm run link-dev`/`unlink-dev` now alias the new commands.
 - CI runs on every branch and PR: version-metadata check, both suites, and a commit-stamped beta artifact; only `v*` tags build stable and publish the GitHub Release. Fixed two host-dependent Python tests (yt-dlp path; Python 3.13 `rglob`).
 - Rewrote docs/RELEASE.md (old version archived) and docs/ROADMAP.md (proposed); DECISIONS D-022–D-024.

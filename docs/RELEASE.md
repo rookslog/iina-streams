@@ -21,19 +21,19 @@ npm run dev:deploy   # runs every JS + Python test, builds Streams Dev, stages i
 npm run dev:link     # one symlink: plugins/local.iina.streams.dev.iinaplugin-dev -> stage/current
 ```
 
-Then, in IINA, choose **Plugin › Reload All Plugins** (or relaunch IINA). In **Settings › Plugins**, enable **Streams Dev** and disable **Streams Beta**, then enter the Twitch Client ID and sign in once from a Streams Dev window.
+Then quit and reopen IINA. In **Settings › Plugins**, enable **Streams Dev** and disable **Streams Beta**, then enter the Twitch Client ID and sign in once from a Streams Dev window.
 
 For each change:
 
 1. Commit. A build from uncommitted work is stamped `.dirty` and `dev:status` reports it as not matching HEAD.
 2. `npm run dev:deploy`. If any test fails, the stage is left untouched.
-3. In IINA, choose **Plugin › Reload All Plugins**, then open a fresh Streams window. Check the version in Settings › Plugins: it names the commit you are running.
+3. Quit and reopen IINA (⌘Q), then open a Streams window. Check the version in Settings › Plugins: it names the commit you are running.
 
 Other commands: `npm run dev:status` (link, enabled flag, staged commit vs this worktree's HEAD), `npm run dev:rollback` (swap back to the previous staged build), `npm run dev:unlink`.
 
 The stage lives at `~/Library/Application Support/iina-streams-dev/{current,previous}`. It is outside every worktree, so any worktree can deploy without relinking. `scripts/dev.py` never enables, reloads, launches or quits IINA, and it refuses to touch any link, folder or identity it did not create.
 
-**What Reload All Plugins does.** This is read from IINA 1.5.1 source (`AppDelegate.reloadAllPlugins`, `MenuController.updatePluginMenu`) and not yet observed natively. It re-scans the plugins folder, rebuilds **every** plugin's global and per-player instances in **every** open window, then re-emits window-loaded, mpv-initialized and file-loaded. IINA notes that this re-emission is not exhaustive. It is a full plugin restart, not hot reload. Streams windows opened before the reload belong to the discarded global instance, so open a new one to test. *Native confirmation of this loop is the first open item in the roadmap.*
+**Do not use Plugin › Reload All Plugins.** On 2026-11-22 it crashed IINA 1.5.1 (observed: crash report `IINA-2026-11-22-005118.ips`, an `EXC_BREAKPOINT` trap in IINA's `JavascriptAPISidebarView.loadFile`, called from a plugin event handler that `reloadAllPlugins` re-emitted). Which plugin made the call is unconfirmed: Streams Beta and the built-in OpenSubtitles plugin both load a sidebar on window-loaded. The likely cause is a weak, force-unwrapped reference in that function, but that is inferred from source. Relaunching IINA is the reload path. macOS's "Reopen" after a crash does not restore stream windows, which the plugin creates itself.
 
 ## Branches and CI
 
@@ -58,6 +58,6 @@ Policy D-020 as corrected by D-021: the source version is the *next* release (no
 
 ## Rollback
 
-- **Dev:** `npm run dev:rollback` swaps in the previous staged build. `npm run dev:unlink` removes only this tool's link. Reload All Plugins afterwards.
+- **Dev:** `npm run dev:rollback` swaps in the previous staged build. `npm run dev:unlink` removes only this tool's link. Relaunch IINA afterwards.
 - **Beta:** reinstall the previous archive. CI artifacts are kept per commit, and local builds stay in `dist/beta/`.
 - **Stable:** IINA keeps no backup when updating. Before installing a new stable build, copy `~/Library/Application Support/com.colliderli.iina/plugins/local.iina.streams.iinaplugin` aside. Stable deployment requires the user's explicit approval each time.

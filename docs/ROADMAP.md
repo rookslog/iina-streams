@@ -1,15 +1,17 @@
 # Roadmap
 
-One line per release. Each item lives in a GitHub issue, and each release is a [milestone](https://github.com/rookslog/iina-streams/milestones). Open an issue for detail; open [design/ROADMAP-RATIONALE-2026-11-22.md](design/ROADMAP-RATIONALE-2026-11-22.md) for why the plan is shaped this way.
+One line per release. Each item lives in a GitHub issue, and each release is a [milestone](https://github.com/rookslog/iina-streams/milestones). Open an issue for detail. Why the plan is shaped this way: [design/USER-JOURNEYS-2026-11-22.md](design/USER-JOURNEYS-2026-11-22.md) (journeys and the launch plan, D-026) and [design/ROADMAP-RATIONALE-2026-11-22.md](design/ROADMAP-RATIONALE-2026-11-22.md) (through 0.5.5).
 
 | Release | Theme | Issues |
 | --- | --- | --- |
 | [0.5.4](https://github.com/rookslog/iina-streams/milestone/1) | A loop you can trust; first GitHub Release | VOD chat #11 · dev workflow #5 · shortcut #4 · sign-in #7 · UI text #9 · live timestamps #10 · cleanup #12 · test shim #13 · release #14 · install-local footgun #21 · oldest-Python CI #22 · built-in Client ID #8 |
 | [0.5.5](https://github.com/rookslog/iina-streams/milestone/2) | Chat on your timeline | delay modes #2 · click-to-calibrate #28 · latency spike #16 · reduce video lag #31 · VOD test fixtures #17 · readability #23 · swallowed errors #24 |
-| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | An overlay you can shape | resize and drag #1 · host probe and pointer tests #18 · panel design review #20 |
-| [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | Participate | send chat #3 · Auto sync if #16 passes |
+| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | Find what to watch | Following list #30 · offline VOD picker #32 · open from the browser #35 · official emotes and badges #34 |
+| [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | **Public launch** (Reddit) | UI overhaul: panel #20, overlay #1, pointer tests #18 · works out of the box #36 (spike #37) · launch kit #38 |
+| [0.7.0](https://github.com/rookslog/iina-streams/milestone/5) | Talk back | send chat #3 · third-party emotes #29 |
+| [0.8.0](https://github.com/rookslog/iina-streams/milestone/6) | More platforms and accounts | accounts #6 · multi-provider #19 · YouTube live chat spike #39 · Kick spike #40 |
 
-**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, multi-provider #19, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, emotes #29, followed channels #30, offline-channel VOD picker #32, QA mode restore or retire #33, URL interception.
+**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, QA mode restore or retire #33.
 
 ## How items get here
 

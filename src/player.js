@@ -21,6 +21,9 @@ const GO_LIVE_MIN_LEAD_SECONDS=1;
 // Ctrl+Meta+l is IINA 1.5.1's Log Viewer (MainMenu.xib; tests/fixtures/iina-1.5.1/mainmenu-keys.txt),
 // and IINA doesn't reject that clash for plugin items, so Go Live uses G.
 const GO_LIVE_KEY='Ctrl+Meta+g';
+// A Go Live seek must leave the player at most this far behind live, else Go Live reloads. Twitch's
+// floor on this path is 6-8 s (spike #16), so 12 s allows one segment of slack above it.
+const GO_LIVE_REACH_SECONDS=12;
 
 const DEFAULT_VIEW={
  presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,
@@ -733,7 +736,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed||!sourceActive||source.kind!=='twitch-live'||goLiveBusy)return;
   const target=liveClockRunning?liveClock.goLiveTarget():null;
   const position=mpv.getNumber('time-pos');
-  if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS){
+  // Seek only when it reaches the edge. Observed in IINA 1.5.1 (2026-11-22): after a pause, mpv's cache
+  // stops short of live, so cache-end - 2 landed 13 s short (-28 s to -15 s). A reload joins at the edge.
+  const behind=behindLive();
+  const reachesEdge=behind!==null&&behind-(target-position)<=GO_LIVE_REACH_SECONDS;
+  if(Number.isFinite(target)&&Number.isFinite(position)&&target-position>GO_LIVE_MIN_LEAD_SECONDS&&reachesEdge){
    mpv.command('seek',[String(target),'absolute']);
    mpv.set('pause',false);
    trace('go-live',{action:'seek'});

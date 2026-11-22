@@ -23,6 +23,6 @@ The source is a scripted extraction of `ui/sidebar.html`, `ui/sidebar.js`, `ui/o
 | Seconds added to video time to find the original chat | Chat offset tooltip | **keep (on demand)** | Already a tooltip |
 | Setup steps: Open Twitch Developer Console, the three steps, Client ID, Continue | auth setup sheet | **keep** | The user asked for guidance here; it shows only when no Client ID exists |
 | Quality, Chat, Text size, Spacing, Timestamps, Glass opacity, Snap corner, Display, Playback | labels | **keep** | Names |
-| Sign in with Twitch, Sign out, Try again, Use a different Client ID, Copy code & open Twitch, Import archive…, Fetch replay, Resume replay, Reset appearance & position, First message | buttons | **keep** | Actions. Grouping and placement belong to #20 |
+| Sign in with Twitch, Sign out, Try again, Use a different Client ID, Approve on Twitch, Import archive…, Fetch replay, Resume replay, Reset appearance & position, First message | buttons | **keep** | Actions. Grouping and placement belong to #20 |
 
 **Not in scope here:** layout, hierarchy, and which controls belong in the panel at all (#20).

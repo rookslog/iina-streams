@@ -9,11 +9,28 @@ const DEFAULT_MODE = 'auto';
 const MANUAL_DELAY_MAX_SECONDS = 120;
 const FINE_TUNE_LIMIT_SECONDS = 10;
 const STEP_SECONDS = 0.5;
-// While playing, Auto's reveal cutoff advances at most this many times as far as the playhead
-// (v0.5.5 review r3 #2), so a corrected offset catches up gradually and a discontinuous one cannot jump it.
+// v0.5.5 class A (docs/design/V055-CLASS-REPAIR-2026-11-22.md, "Class A: Auto chat timing", invariants A1-A7).
+// While playing, Auto's reveal cutoff advances at most this many times the playhead's progress (A1), so a
+// corrected offset catches up gradually and a discontinuous one cannot jump it.
 const AUTO_CATCH_UP_RATE = 1.5;
-// After a timeline change, two consecutive confident offsets within this many seconds of each other are
-// adopted outright (v0.5.5 review r4 #2).
+// J, the jitter tolerance (A2): a playhead that wanders up to J either side of where it stopped makes no
+// progress. Forward, the playhead must pass J beyond where progress was last counted (the anchor) for the
+// movement to count, and then the whole distance counts; backward, the anchor follows only past 2J, the full
+// width of that wander, so a wandering playhead cannot ratchet it. The reviewer's stall probe moved 1 ms; mpv's
+// real stall jitter is unmeasured. 0.2 s is 200 times that probe, and below the 0.25 s steps of the round-4 and
+// round-5 probes, which are playback. At 1x the playhead passes it within two or three of the player's 100 ms
+// reveal timers. Counting from the anchor rather than per sample keeps progress independent of how often the
+// player samples (A5).
+const PLAYHEAD_JITTER_SECONDS = 0.2;
+// P, the progress a rebase needs after its mapping is corroborated (A4). Five times J: a stall adds at most one
+// counted step, the playback still due from before it plus up to J of wander, so a stall cannot supply it. One
+// second is the player's status tick, so at 1x a corroborated mapping is adopted about 1 s after corroboration,
+// at any sampling cadence, while the clamp alone would take 2 s per second of gap.
+const REBASE_PROGRESS_SECONDS = 1;
+// Playhead differences are of floats such as 487.85 - 487.65; a microsecond absorbs their rounding error.
+const ROUNDING_SECONDS = 1e-6;
+// Two confident offsets from distinct estimator updates within this many seconds of each other corroborate a
+// mapping (A4; v0.5.5 review r4 #2).
 const MAPPING_AGREEMENT_SECONDS = 1;
 
 function roundToStep(value) {
@@ -68,18 +85,25 @@ function createChatTiming(options = {}) {
   // The last confident offset from the raw mpv timeline to epoch seconds, or null before the first one
   // or after the file timeline changed (v0.5.5 review r2 #2).
   let lastConfidentOffset = null;
-  // The reveal cutoff last returned and the playhead it was sampled at, {cutoffMs, timePos}, or null before
-  // the first sample. Every mode records it, so Auto starts from the cutoff in use. timePos is null after a
-  // resync: the next sample re-anchors it (v0.5.5 review r3 #2, r4 #2).
-  let heldCutoff = null;
-  // True from a resync (and at the start) until a mapping is adopted: the fallback before it can hold
-  // a stale delay, such as the one from before a Go Live reload.
+  // The reveal cutoff last returned, in epoch ms, or null before the first sample. Every mode records it, so
+  // Auto starts from the cutoff in use, and a resync keeps it (A7).
+  let heldCutoffMs = null;
+  // The anchor: the playhead, in seconds, up to which progress has been counted, or null after a resync, when the
+  // next sample re-anchors it (A7). Every mode records it.
+  let anchorTimePos = null;
+  // Whether the previous sample was paused, and its wall time in ms (null before the first). An interval between
+  // samples is playback unless both ends are paused.
+  let previousPaused = false;
+  let previousNowMs = null;
+  // True from a resync (and at the start) until a mapping is adopted: the fallback before it can hold a stale
+  // delay, such as the one from before a Go Live reload.
   let awaitingMapping = true;
-  // While awaiting, the last confident sample, {offset, timePos, estimateId}, which the next one must agree with.
+  // While awaiting, the last confident sample's {offset, estimateId}, which the next distinct update must agree
+  // with, or null.
   let candidate = null;
-  // While awaiting, whether the run ending at the candidate is corroborated: two distinct estimator updates
-  // agreed, possibly while stalled. It permits no rebase by itself (v0.5.5 review r5 #3).
-  let corroborated = false;
+  // While awaiting, the progress in seconds counted since the mapping was corroborated, or null while it is not
+  // corroborated (A4).
+  let progressSinceCorroboration = null;
 
   /** @returns {{mode: string, manualDelay: number, fineTune: number}} a copy of the settings */
   function settings() {
@@ -153,20 +177,19 @@ function createChatTiming(options = {}) {
   }
 
   /**
-   * The chat send time, in epoch ms, up to which rows show now (v0.5.5 review r3 #2, r4 #2). Live and Manual
-   * reveal by wall clock less their delay. Auto's target is autoClockMs, or without a mapping the wall clock
-   * less effective().delay; its cutoff then
-   * - never advances while the playhead does not (paused, stalled or buffering);
-   * - while playing, advances at most AUTO_CATCH_UP_RATE times the playhead's advance since the last sample.
-   *   A seek's jump counts as advance, so within one file the cutoff follows a seek: the playhead-to-chat
-   *   offset does not change across it. A jump made while paused counts once playing resumes;
-   * - follows a lower target at once (rows already shown stay shown: see reveal);
-   * - after a resync, keeps its value and adopts a mapping outright only on a tick whose playhead advanced,
-   *   once two consecutive confident samples from distinct estimator updates agreed within
-   *   MAPPING_AGREEMENT_SECONDS (corroboration, which may happen while stalled) and that tick's own sample
-   *   is confident and still agrees; the clamp applies until then, and from then on (v0.5.5 review r5 #3).
-   *   A confident sample from the candidate's own update (estimateId) neither confirms nor breaks the run.
-   *   Without an estimateId every sample is distinct. A sample that is not confident always breaks it.
+   * The chat send time, in epoch ms, up to which rows show now. Live and Manual reveal by wall clock less their
+   * delay. Auto's target is autoClockMs, or without a mapping the wall clock less effective().delay. Auto's
+   * cutoff follows the invariants of v0.5.5 class A (docs/design/V055-CLASS-REPAIR-2026-11-22.md):
+   * - A1: it advances at most AUTO_CATCH_UP_RATE times the playhead's progress, a forward seek's jump included;
+   *   a rebase is the only exception;
+   * - A2: without progress it does not advance. Progress is counted from the anchor, not from the last sample,
+   *   and movement within PLAYHEAD_JITTER_SECONDS of the anchor counts as none (see countProgress);
+   * - A3: it follows a lower target at once (rows already shown stay shown: see reveal);
+   * - A4: a rebase, adopting the target outright, needs a corroborated mapping (two confident samples from
+   *   distinct estimator updates agreeing within MAPPING_AGREEMENT_SECONDS), then REBASE_PROGRESS_SECONDS of
+   *   progress accumulated since corroboration, on samples that are all confident;
+   * - A7: after a resync it keeps its value and awaits a mapping; until A4 is met it moves only within A1.
+   * A seek is not a resync: within one file the playhead-to-chat offset does not change across it.
    * Call it whether or not chat is on, so the cutoff is held across a pause.
    * @param {{nowMs: number, timePos: number|null, paused: boolean, offset: number|null, behindLive: number|null,
    *   estimateId?: number}} reading estimateId identifies the estimator update the offset comes from
@@ -177,124 +200,130 @@ function createChatTiming(options = {}) {
     const wallClockMs = nowMs - effective(behindLive).delay * 1000;
     const playhead = isFiniteNumber(timePos) ? timePos : null;
     if (state.mode !== 'auto') {
-      heldCutoff = {cutoffMs: wallClockMs, timePos: playhead};
+      heldCutoffMs = wallClockMs;
+      anchorTimePos = playhead;
+      previousPaused = !!paused;
+      previousNowMs = nowMs;
       return wallClockMs;
     }
     const target = mapped === null ? wallClockMs : mapped;
     const confidentOffset = mapped !== null && isFiniteNumber(offset) ? offset : null;
     const estimate = {offset: confidentOffset, id: isFiniteNumber(estimateId) ? estimateId : null};
-    return holdCutoff(target, playhead, !!paused, estimate);
+    return holdCutoff(target, {timePos: playhead, paused: !!paused, nowMs}, estimate);
   }
 
-  function holdCutoff(target, timePos, paused, estimate) {
-    const confidentOffset = estimate.offset;
+  function holdCutoff(target, playhead, estimate) {
     // The very first sample has no cutoff to hold, so it takes its target; a confident one is the mapping.
     // A resync never clears the cutoff, so this runs once per timing.
-    if (heldCutoff === null) {
-      heldCutoff = {cutoffMs: target, timePos};
-      if (confidentOffset !== null) {
-        awaitingMapping = false;
-      }
-      noteCandidate(timePos, estimate);
+    if (heldCutoffMs === null) {
+      heldCutoffMs = target;
+      anchorTimePos = playhead.timePos;
+      previousPaused = playhead.paused;
+      previousNowMs = playhead.nowMs;
+      awaitingMapping = estimate.offset === null;
       return target;
     }
-    const advance = playheadAdvance(timePos, paused);
-    if (awaitingMapping) {
-      noteCorroboration(timePos, paused, estimate);
-    }
+    const progress = countProgress(playhead);
     let cutoffMs;
-    // Corroboration is confidence, not permission: the rebase also needs the playhead to move on this tick.
-    if (awaitingMapping && corroborated && advance > 0) {
+    if (awaitingMapping && rebaseDue(estimate, progress)) {
       awaitingMapping = false;
       candidate = null;
-      corroborated = false;
+      progressSinceCorroboration = null;
       cutoffMs = target;
     } else {
-      const ceiling = heldCutoff.cutoffMs + AUTO_CATCH_UP_RATE * advance * 1000;
-      cutoffMs = Math.min(target, ceiling);
-      noteCandidate(timePos, estimate);
+      const ceilingMs = heldCutoffMs + AUTO_CATCH_UP_RATE * progress * 1000;
+      cutoffMs = Math.min(target, ceilingMs);
     }
-    heldCutoff = {cutoffMs, timePos: nextAnchor(timePos, paused)};
+    heldCutoffMs = cutoffMs;
     return cutoffMs;
   }
 
-  // Seconds the playhead advanced since the anchor, or 0 while paused or without a playhead.
-  function playheadAdvance(timePos, paused) {
-    if (paused || timePos === null || heldCutoff.timePos === null) {
+  // The progress in seconds this sample adds, measured from the anchor rather than from the last sample, so that
+  // it does not depend on how often the player samples (A5). Movement within PLAYHEAD_JITTER_SECONDS ahead of the
+  // anchor, or within twice that behind it, counts as none and leaves the anchor (A2). Further ahead, the whole
+  // distance counts and the anchor moves to it. Further behind (a backward seek), the anchor moves back and
+  // nothing counts.
+  // An interval counts as playback unless the player was paused at both ends: the player samples on a pause
+  // change, so movement up to a pause was playback. On the sample at a pause no more than the wall time since
+  // the previous sample counts; the rest is a jump made while paused, and counts once playing resumes.
+  function countProgress({timePos, paused, nowMs}) {
+    const pausedThroughout = paused && previousPaused;
+    const pausing = paused && !previousPaused;
+    const elapsedSeconds = previousNowMs === null ? 0 : Math.max(0, (nowMs - previousNowMs) / 1000);
+    previousPaused = paused;
+    previousNowMs = nowMs;
+    if (timePos === null) {
       return 0;
     }
-    return Math.max(0, timePos - heldCutoff.timePos);
+    if (anchorTimePos === null) {
+      anchorTimePos = timePos;
+      return 0;
+    }
+    const moved = timePos - anchorTimePos;
+    // A movement of exactly J (or 2J back) is within it; ROUNDING_SECONDS keeps a rounding error from deciding.
+    if (moved < -(2 * PLAYHEAD_JITTER_SECONDS + ROUNDING_SECONDS)) {
+      anchorTimePos = timePos;
+      return 0;
+    }
+    if (moved <= PLAYHEAD_JITTER_SECONDS + ROUNDING_SECONDS || pausedThroughout) {
+      return 0;
+    }
+    if (pausing && moved > elapsedSeconds) {
+      anchorTimePos += elapsedSeconds;
+      return elapsedSeconds;
+    }
+    anchorTimePos = timePos;
+    return moved;
   }
 
-  // While paused the anchor only moves back, so a jump made while paused counts once playing resumes, and a
-  // backward one does not hold the cutoff until the playhead passes the old anchor again.
-  function nextAnchor(timePos, paused) {
-    if (timePos === null) {
-      return heldCutoff.timePos;
-    }
-    if (paused && heldCutoff.timePos !== null) {
-      return Math.min(heldCutoff.timePos, timePos);
-    }
-    return timePos;
-  }
-
-  // A sample that is not confident breaks the corroboration; a reread of the candidate's update leaves it;
-  // a sample from a new update sets it to whether it corroborates the candidate.
-  function noteCorroboration(timePos, paused, estimate) {
-    if (estimate.offset === null || timePos === null) {
-      corroborated = false;
-      return;
-    }
-    if (sameUpdate(estimate)) {
-      return;
-    }
-    corroborated = corroborates(paused, estimate);
-  }
-
-  // Whether this sample and the candidate are both confident, come from distinct estimator updates and agree
-  // on the offset, while playing. The playhead need not have moved between them (v0.5.5 review r5 #3).
-  function corroborates(paused, estimate) {
-    if (paused || estimate.offset === null || candidate === null) {
+  // While awaiting a mapping: whether this sample completes A4. A sample without confidence breaks the run. A
+  // sample that rereads the candidate's estimator update neither confirms nor breaks it. A new update that
+  // agrees with the candidate corroborates the mapping, or keeps it corroborated; one that disagrees starts
+  // over. Progress counts toward P only on samples after the corroborating one.
+  function rebaseDue(estimate, progress) {
+    if (estimate.offset === null) {
+      candidate = null;
+      progressSinceCorroboration = null;
       return false;
     }
-    if (sameUpdate(estimate)) {
+    if (!rereadsCandidate(estimate)) {
+      const agrees = candidate !== null && Math.abs(estimate.offset - candidate.offset) <= MAPPING_AGREEMENT_SECONDS;
+      candidate = {offset: estimate.offset, estimateId: estimate.id};
+      if (!agrees) {
+        progressSinceCorroboration = null;
+        return false;
+      }
+      if (progressSinceCorroboration === null) {
+        progressSinceCorroboration = 0;
+        return false;
+      }
+    }
+    if (progressSinceCorroboration === null) {
       return false;
     }
-    return Math.abs(estimate.offset - candidate.offset) <= MAPPING_AGREEMENT_SECONDS;
+    progressSinceCorroboration += progress;
+    // The sum of several steps can fall a rounding error short of P.
+    return progressSinceCorroboration >= REBASE_PROGRESS_SECONDS - ROUNDING_SECONDS;
   }
 
-  // A confident sample that rereads the candidate's estimator update (v0.5.5 review r4 #2).
-  function sameUpdate(estimate) {
-    if (candidate === null || estimate.offset === null || estimate.id === null) {
+  // A confident sample that rereads the candidate's estimator update (v0.5.5 review r4 #2). Without an
+  // estimateId every sample is a distinct update.
+  function rereadsCandidate(estimate) {
+    if (candidate === null || estimate.id === null) {
       return false;
     }
     return estimate.id === candidate.estimateId;
   }
 
-  // While awaiting, a confident sample from a new update becomes the candidate; a reread of the candidate's
-  // update leaves it; a sample that is not confident breaks the run.
-  function noteCandidate(timePos, estimate) {
-    if (!awaitingMapping || sameUpdate(estimate)) {
-      return;
-    }
-    if (estimate.offset === null || timePos === null) {
-      candidate = null;
-      return;
-    }
-    candidate = {offset: estimate.offset, timePos, estimateId: estimate.id};
-  }
-
   /**
    * A timeline change (a reload, a new file or a mode change; never a seek): the cutoff keeps its value, the
-   * next sample re-anchors the playhead, and a mapping is awaited (v0.5.5 review r4 #2).
+   * next sample re-anchors the playhead, and a mapping is awaited (A7).
    */
   function resyncCutoff() {
     awaitingMapping = true;
     candidate = null;
-    corroborated = false;
-    if (heldCutoff !== null) {
-      heldCutoff = {cutoffMs: heldCutoff.cutoffMs, timePos: null};
-    }
+    progressSinceCorroboration = null;
+    anchorTimePos = null;
   }
 
   /**

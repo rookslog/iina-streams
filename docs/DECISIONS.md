@@ -108,3 +108,8 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Residual case:** a core created before global loads (another variant's synchronous `forceUpdate`, or enabling the plugin while windows are open) can't reach global until it's reopened.
 - The §A2 design and the A2 tests (branch `fix/a2-adopted-bridge`) are abandoned. The fix is on `release/0.5.5` (r1 #5).
 
+2026-11-22 D-031 CHOSEN (lead, unattended run; reversible; for the operator to confirm in #49): only the **stable** plugin (`local.iina.streams`) adopts windows IINA opened itself (#35). Beta and dev adopt only in QA builds, or with `adoptNativeWindows: true` in their settings.
+- **Why:** IINA loads every enabled plugin into native cores (`PlayerCore.swift` L367–374). With stable and beta or dev enabled together, each claims the same load, resolves it, and opens controls (v0.5.5 release review r1 #12). There's no cross-plugin lock in the plugin API.
+- **Cost:** a beta tester who installs only beta doesn't get adoption unless they set the flag. There's no UI for it yet.
+- **What would flip it:** a shared claim mechanism, such as an mpv property every variant can set and read, or making beta the only adopter while it's installed.
+

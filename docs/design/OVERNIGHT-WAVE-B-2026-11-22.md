@@ -68,3 +68,31 @@ Spike #37 ([SPIKE-37-OUT-OF-THE-BOX-2026-11-22.md](SPIKE-37-OUT-OF-THE-BOX-2026-
 - a 2 s timeout becomes the network error.
 
 **Owns:** new `src/twitch-playback.js`, new `tests/twitch-playback.test.js` and fixtures. Nothing else.
+
+---
+
+## B6 — Twitch API client for Following and recent VODs (#30, #32, step 1)
+
+**Design.** A new file `src/twitch-helix.js`, using the user's existing login (Bearer token plus the Client-ID it was issued to) through an injected `http`. Every header and param is a string. Functions:
+- `followedLive({userID})` calls `GET https://api.twitch.tv/helix/streams/followed?user_id=…&first=100` and follows `pagination.cursor`. It returns `[{login, name, title, game, viewers, startedAt, thumbnail}]`, sorted by viewers.
+- `recentVODs({login})` calls `GET /helix/users?login=…` for the id, then `GET /helix/videos?user_id=…&type=archive&first=10`. It returns `[{id, title, createdAt, duration, url}]`. `url` is `https://www.twitch.tv/videos/<id>`, which `Sources.parse` accepts.
+
+Errors:
+- a 401 whose message names a missing scope becomes `NEEDS_PERMISSION`. The followed endpoint needs `user:read:follows`; today's login has only `chat:read`.
+- any other 401 becomes `SIGNED_OUT`;
+- a 429 becomes `RATE_LIMITED`, carrying `Ratelimit-Reset`;
+- a network failure becomes `NETWORK`;
+- an unexpected shape becomes `MALFORMED`.
+
+Never log the token.
+
+**Tests,** with hand-written fixtures shaped like Twitch's documented responses and labelled as documented, not recorded:
+- request URL, headers and params, all strings, with `Authorization: Bearer <token>` and `Client-Id`;
+- pagination across two pages;
+- the sort order;
+- the mapping for an empty list;
+- `recentVODs` builds its URLs with `Sources.parse` and checks they round-trip;
+- each error mapping;
+- no log line contains the token.
+
+**Owns:** new `src/twitch-helix.js`, new `tests/twitch-helix.test.js` and `tests/fixtures/twitch-helix/**`. Nothing else.

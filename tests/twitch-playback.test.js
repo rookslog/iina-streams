@@ -190,7 +190,7 @@ test('a stalled usher request becomes NETWORK at two seconds', {timeout: 1000}, 
   await new Promise(setImmediate); // Let the token response reach the pending usher request.
   assert.deepEqual(calls.map(call => call.method), ['POST', 'GET']);
   t.mock.timers.tick(1999);
-  assert.equal(await Promise.race([result, new Promise(setImmediate)]), undefined);
+  assert.equal(await Promise.race([result, new Promise(resolve => setImmediate(resolve))]), undefined);
   t.mock.timers.tick(1);
   assert.equal(await result, 'NETWORK');
 });
@@ -219,6 +219,7 @@ test('success and failure logs omit tokens, signatures, and the usher query', as
     assert.ok(!line.includes(TOKEN) && !line.includes(encodeURIComponent(TOKEN)), 'logged a playback token');
     assert.ok(!line.includes(SIGNATURE) && !line.includes(encodeURIComponent(SIGNATURE)), 'logged a signature');
     assert.ok(!line.includes(sentQuery) && !line.includes(echoedQuery), 'logged an usher query');
-    assert.ok(!/[?&](?:sig|token|nauthsig|nauth|p|allow_source|fast_bread)=/.test(line), 'logged an usher query parameter');
+    const queryParameter = /[?&](?:sig|token|nauthsig|nauth|p|allow_source|fast_bread)=/;
+    assert.ok(!queryParameter.test(line), 'logged an usher query parameter');
   }
 });

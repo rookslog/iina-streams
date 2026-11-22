@@ -425,3 +425,31 @@ Routing:
 - with a saved login, turning chat on connects live chat;
 - sign-in from an adopted window shows the device code in that window;
 - closing the window, then opening another adopted window, works.
+
+---
+
+## B6b — Offline channel offers its recent broadcasts (#32), per D-030
+
+**Why.** Typing a channel that isn't live gives a dead end today. `src/resolve.js` maps `OFFLINE` to the helper's generic `UNAVAILABLE`. Real-source check (lead, 10:10, signed out, public web Client-ID as in `src/twitch-playback.js`): GQL `user(login){videos(first:N, type:ARCHIVE, sort:TIME){edges{node{id title createdAt lengthSeconds}}}}` returned 5 archives for a live channel, and `user: null` for an unknown login. No sign-in is needed, so this works in managed and adopted windows alike, and needs no global round trip.
+
+**Design.**
+- **New `src/twitch-vods.js`:** `recentArchives({login}, {http, log, limit = 10})` makes one GQL POST with a plain-object body `{query}`, as for the title lookup (`iina.http` casts data to `[String:Any]`). It returns `{ok:true, vods:[{id, title, createdAt, lengthSeconds, url}]}`, where `url` is `https://www.twitch.tv/videos/<id>` and must round-trip through `Sources.parse` to kind `twitch-vod`. Failures:
+  - `{ok:false, code:'NOT_FOUND'}` when the user is null;
+  - `NETWORK` on a transport failure or non-2xx;
+  - `MALFORMED` on an unexpected shape.
+
+  No thumbnails in v1: the current broadcast's preview host isn't the CDN that the CSP allows. Never log URLs, and never log the query's login together with anything identifying the user.
+- **`src/resolve.js`:** a definitive `OFFLINE` keeps the helper-compatible `{ok:false, error:{code:'UNAVAILABLE', …}}` and adds `error.reason:'offline'`. `NOT_FOUND` and `RESTRICTED` are unchanged.
+- **`src/player.js`:** when a `twitch-live` load fails with `reason:'offline'`, call `recentArchives({login: source.id})` once per load and send `offlineVods: {state:'loading'|'ready'|'none'|'error', items}` in the sidebar state. A source change or close cancels it, and a stale result is ignored.
+- **`ui/sidebar.*`:** in that error state, replace the error line with a list of up to 10 rows: title (one line, ellipsized), short date, and length as `h:mm:ss`. Show a spinner while loading. Keep the plain error line for `none` or `error`. Clicking a row posts the existing `open {input: url}`, the same path as the + field, so it opens a managed window. Signifiers, not prose: no "Recent broadcasts" heading beyond a single short label.
+
+**Tests.**
+- **`twitch-vods`:** request shape (POST, a plain-object body, string headers, the Client-ID); the mapping; `limit`; user null → `NOT_FOUND`; non-2xx → `NETWORK`; a bad shape → `MALFORMED`; the URL round-trips through `Sources.parse`; no log argument contains a URL.
+- **resolve:** `OFFLINE` → `UNAVAILABLE` with `reason:'offline'`, and still no helper call.
+- **player (shim):**
+  - an offline live load fetches once and publishes `loading` then `ready`;
+  - a stale result after a source change is ignored;
+  - VOD and YouTube sources never fetch.
+- **sidebar:** rows render as text only (no `innerHTML` with titles); a click posts `open` with the VOD URL; and the `none` and `error` states.
+
+**Owns:** new `src/twitch-vods.js`, `src/resolve.js` (the reason field), `src/player.js` (the offline branch), `ui/sidebar.*` (the list), and new `tests/b6b-*.test.js`. It waits until `src/player.js` is free: after C3b, D1 and A2.

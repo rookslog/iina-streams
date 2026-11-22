@@ -92,3 +92,10 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **What would flip it:** if a future IINA sets `parentAPI` for every core, or exposes the core label to plugins, drop the mailbox, or drop the handshake.
 - Design: `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md` §A2.
 
+2026-11-22 D-030 CHOSEN (lead, unattended run; reversible; for the operator to confirm in #49): an offline channel's recent broadcasts (#32) come from Twitch's **public GQL** (`user.videos`, type ARCHIVE), signed out, called from the player. They do not come from the Helix client (B6 step 1), which needs the user's token from global.
+- **Why:** a real-source check (10:10) returned archives with no sign-in. That works for signed-out users and in adopted windows (#56), and needs no global round trip. The GQL path and its Client-ID are already used for playback (`src/twitch-playback.js`).
+- **Cost:** GQL is Twitch's private API; the schema can change without notice. The playback path already carries that risk, and a failure degrades to today's offline error.
+- **The Helix client stays for #30** (Following), which needs the `user:read:follows` scope and the operator's approval.
+- **What would flip it:** GQL rejecting the public Client-ID for this query, or an operator preference for documented APIs only.
+- Design: `docs/design/OVERNIGHT-WAVE-B-2026-11-22.md` §B6b.
+

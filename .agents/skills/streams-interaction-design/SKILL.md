@@ -5,7 +5,7 @@ description: Use for IINA Streams sidebar, floating chat, direct manipulation, v
 
 # IINA Streams interaction design
 
-Read the original operator feedback in `docs/commission/HANDOFF-SOL61-HIGH-2026-11-09.md`; inspect the actual running UI and the code paths before proposing an answer.
+Read the original operator feedback in `docs/archive/commission/HANDOFF-SOL61-HIGH-2026-11-09.md`; inspect the actual running UI and the code paths before proposing an answer.
 
 Relevant standards:
 - Local Apple Design skill: `/Users/rookslog/.agents/skills/apple-design-skill/SKILL.md`; read the applicable macOS, pointer, drag/drop, accessibility, settings and material references rather than all HIG files.

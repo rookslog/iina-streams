@@ -11,8 +11,6 @@ dist/
 *.key
 *.pem
 *.token
-releases/*
-!releases/.gitkeep
 evidence/raw/*
 recordings/
 

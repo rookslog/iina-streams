@@ -1,7 +1,7 @@
 'use strict';
 
 // #51: Go Live resumes playback, and the sidebar pill is "live" only when the player says it is at the
-// live edge (cache end within 4 s of the playhead), not when behindLive is small. Twitch's floor on this
+// live edge (cache end within 8 s of the playhead), not when behindLive is small. Twitch's floor on this
 // path is 6-8 s behind live, so behindLive alone never reads as live. Synthetic sources only.
 
 const test = require('node:test');
@@ -93,9 +93,9 @@ test('Go Live unpauses after the reload fallback', async t => {
   assert.equal(pauseWrites(shim).at(-1), false);
 });
 
-test('the player publishes atLiveEdge from cache end minus playhead, at most 4 s', async t => {
+test('the player publishes atLiveEdge from cache end minus playhead, at most 8 s', async t => {
   const published = [];
-  for (const [timePos, cacheEnd] of [[78, 82], [77.9, 82], [40, 82]]) {
+  for (const [timePos, cacheEnd] of [[74, 82], [73.9, 82], [40, 82]]) {
     const {shim, load} = playerFixture(t, {behind: 7, timePos, cacheEnd});
     await load();
     shim.emit('mpv.pause.changed');

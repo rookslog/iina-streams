@@ -595,7 +595,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  // At the live edge means Go Live cannot gain anything: the cache end is within LIVE_EDGE_GAP_SECONDS of
  // the playhead. Twitch's floor on this path is 6-8 s behind live, so behindLive alone never reads as live.
- const LIVE_EDGE_GAP_SECONDS=4;
+ // 8 s, not 4: mpv's steady buffer ahead on this path is 5.2-5.7 s (spike #16 section 1, plain URL), plus one
+ // 2 s segment of jitter. After a 20 s pause the gap is about 25 s, so that still reads as behind (lead review).
+ const LIVE_EDGE_GAP_SECONDS=8;
 
  function atLiveEdge(){
   if(behindLive()===null)return false;

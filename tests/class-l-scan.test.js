@@ -188,3 +188,170 @@ test('class L scan: the Auto sampling call sites survive the restructure', () =>
   assert.match(body('sampleCutoff'), /estimateId:estimator\.updates\(\)/, '4. a distinct estimateId on every call');
   assert.doesNotMatch(body('newActivation'), /createEstimator\(/, '4. one estimator per window, never restarted');
 });
+
+// ---- Class L pass 2: ownership of the on_load continuation and of the resolver's loss signal ----
+
+const RESOLVER = join(__dirname, '../src/resolve.js');
+
+// The body of the function `name` in `code`, or null.
+function functionBody(code, name) {
+  const at = code.search(new RegExp('\\bfunction ' + name + '\\('));
+  if (at < 0) return null;
+  return code.slice(at, closingBrace(code, code.indexOf('{', at)));
+}
+
+// Problems with how run() continues on_load hooks and starts resolves: [] when every hook continuation belongs to
+// authority.onLoad and every resolve carries its activation's signal.
+function playerOwnership(source) {
+  const body = runBody(codeOnly(source), []);
+  const problems = [];
+  if (!/\bconst onLoadHook=authority\.onLoad\(loadHookBody\);/.test(body)) {
+    problems.push('onLoadHook is not authority.onLoad(loadHookBody)');
+  }
+  if (!/\bregisterLoadHook\(onLoadHook\)/.test(body)) problems.push('registerLoadHook is not given onLoadHook');
+  if (/\bnext\(/.test(body)) problems.push('run() calls a hook continuation itself');
+  const resolves = [...body.matchAll(/\bservices\.resolve\(/g)].length;
+  const resolver = functionBody(body, 'resolveFor') || '';
+  if (resolves !== 1 || !/services\.resolve\(source,quality,a\.signal\)/.test(resolver)) {
+    problems.push('services.resolve is called other than once, in resolveFor, with the activation\'s signal');
+  }
+  for (const call of body.matchAll(/\bresolveFor\(([^,()]*),/g)) {
+    if (call[1] !== 'act' && call[1] !== 'a') problems.push('resolveFor is given ' + call[1] + ', not an activation');
+  }
+  return problems;
+}
+
+// Problems with how src/resolve.js starts its stages: [] when every HTTP request goes through gatedHttp and every
+// helper launch through launchHelper, each checking the signal first.
+function resolverOwnership(source) {
+  const code = codeOnly(source);
+  const problems = [];
+  const launcher = functionBody(code, 'launchHelper');
+  const gate = functionBody(code, 'gatedHttp');
+  if (!launcher || !/^function launchHelper\([^)]*\)\s*\{\s*stopIfLost\(signal\);/.test(launcher)) {
+    problems.push('launchHelper does not check the signal first');
+  }
+  if (!gate || !/stopIfLost\(signal\);\s*return http\[method\]\(/.test(gate)) {
+    problems.push('gatedHttp does not check the signal before each request');
+  }
+  const outsideLauncher = launcher ? code.replace(launcher, '') : code;
+  const helperCalls = [...outsideLauncher.matchAll(/\bhelperResolve\(/g)].length;
+  if (helperCalls) problems.push('helperResolve is called outside launchHelper');
+  // `http` outside the gate: only createResolver's parameter and the gated argument to resolveTwitch.
+  const outsideGate = gate ? code.replace(gate, '') : code;
+  const uses = [...outsideGate.matchAll(/(?<![\w.'"])http\b(?!\s*:)/g)].map(match => {
+    return outsideGate.slice(Math.max(0, match.index - 16), match.index + 20).replace(/\s+/g, ' ');
+  });
+  const allowed = use => /gatedHttp\(http, signal\)/.test(use) || /resolveTwitch, http, helperResolve/.test(use);
+  for (const use of uses) if (!allowed(use)) problems.push('raw http use: ' + use);
+  if (!/resolveTwitch\(request, \{http: gatedHttp\(http, signal\)/.test(code)) {
+    problems.push('resolveTwitch is not given the gated http');
+  }
+  return problems;
+}
+
+test('class L2 scan: run() continues on_load hooks only through authority.onLoad, and resolves carry a signal',
+  () => {
+    const problems = playerOwnership(fs.readFileSync(PLAYER, 'utf8'));
+    assert.deepEqual(problems, []);
+  });
+
+test('class L2 scan: src/resolve.js starts every request and helper launch through its gates', () => {
+  const problems = resolverOwnership(fs.readFileSync(RESOLVER, 'utf8'));
+  assert.deepEqual(problems, []);
+});
+
+test('class L2 scan: the ownership rules see a bypass (positive control)', () => {
+  const player = fs.readFileSync(PLAYER, 'utf8');
+  const resolver = fs.readFileSync(RESOLVER, 'utf8');
+  const variants = [
+    ['player', player.replace('resolve:q=>a.wait(resolveFor(a,q)),', 'resolve:q=>a.wait(services.resolve(source,q)),')],
+    ['player', player.replace('registerLoadHook(onLoadHook);', 'registerLoadHook(next=>{next();});')],
+    ['player', player.replace('resolveFor(act,\'auto720\')', 'resolveFor(previous,\'auto720\')')],
+    ['resolver', resolver.replace('return launchHelper(source, quality, signal, code);',
+      'return helperResolve(source, quality);')],
+    ['resolver', resolver.replace('{http: gatedHttp(http, signal), log', '{http, log')],
+    ['resolver', resolver.replace(/(function launchHelper\([^)]*\) \{\n)\s*stopIfLost\(signal\);\n/, '$1')]
+  ];
+  for (const [file, variant] of variants) {
+    const original = file === 'player' ? player : resolver;
+    assert.notEqual(variant, original, 'precondition: the bypass was applied');
+    const problems = file === 'player' ? playerOwnership(variant) : resolverOwnership(variant);
+    assert.ok(problems.length > 0, 'a ' + file + ' bypass went unseen');
+  }
+});
+
+// ---- Class L pass 2: every continuation after an await re-checks its activation (L5) ----
+
+const CONTINUES = /^\s*if\(!act\.continues\([^;]*\)\)return\b/;
+
+// The index of the `;` ending the statement that contains `from`, at bracket depth 0.
+function statementEnd(code, from) {
+  let depth = 0;
+  for (let i = from; i < code.length; i++) {
+    const c = code[i];
+    if ('([{'.includes(c)) depth++;
+    else if (')]}'.includes(c)) depth--;
+    else if (c === ';' && depth === 0) return i;
+    if (depth < 0) return i;
+  }
+  return code.length;
+}
+
+// The index of the `{` that opens the block closed by the `}` at `close`.
+function openingBrace(code, close) {
+  let depth = 0;
+  for (let i = close; i >= 0; i--) {
+    if (code[i] === '}') depth++;
+    else if (code[i] === '{' && --depth === 0) return i;
+  }
+  throw new Error('unbalanced braces');
+}
+
+// [{line, what}] for every await in run() not followed by the check, and every catch block of a try that awaits
+// whose first statement is not the check.
+function uncheckedContinuations(source) {
+  const code = codeOnly(source);
+  const start = code.indexOf('function run(');
+  const body = runBody(code, []);
+  const lineOf = index => code.slice(0, start + index).split('\n').length;
+  const found = [];
+  for (const match of body.matchAll(/\bawait\s+/g)) {
+    const end = statementEnd(body, match.index + match[0].length);
+    if (!CONTINUES.test(body.slice(end + 1))) found.push({line: lineOf(match.index), what: 'await'});
+  }
+  for (const match of body.matchAll(/\}\s*catch\s*\([^)]*\)\s*\{/g)) {
+    const open = openingBrace(body, match.index);
+    if (!/\btry\s*$/.test(body.slice(0, open))) continue;
+    if (!/\bawait\b/.test(body.slice(open, match.index))) continue;
+    if (!CONTINUES.test(body.slice(match.index + match[0].length))) {
+      found.push({line: lineOf(match.index), what: 'catch'});
+    }
+  }
+  return found;
+}
+
+test('class L2 scan: every await in run(), and every catch it can resume in, re-checks the activation first', () => {
+  const found = uncheckedContinuations(fs.readFileSync(PLAYER, 'utf8'));
+  assert.deepEqual(found, [], found.map(f => `src/player.js:${f.line} ${f.what} without act.continues`).join('\n'));
+});
+
+test('class L2 scan: the continuation rule sees a missing check (positive control)', () => {
+  const sample = [
+    'function run(){',
+    ' async function a(){const x=await act.wait(p);send(x);}',
+    ' async function b(){const x=await act.wait(p);',
+    '  if(!act.continues(x,late))return false;',
+    '  send(x);}',
+    ' async function c(){try{await act.wait(q({a:1,b:[2]}));if(!act.continues())return;}catch(e){send(e);}}',
+    ' async function d(){try{await act.wait(q);if(!act.continues())return;}catch(e){if(!act.continues())return;}}',
+    ' function e(){try{f();}catch(_){send();}}',
+    '}'
+  ].join('\n');
+  assert.deepEqual(uncheckedContinuations(sample).map(f => f.what + '@' + f.line), ['await@2', 'catch@6']);
+  const player = fs.readFileSync(PLAYER, 'utf8');
+  const removed = player.replace("result=await act.wait(resolveFor(act,'auto720'));\n   if(!act.continues())return;",
+    "result=await act.wait(resolveFor(act,'auto720'));");
+  assert.notEqual(removed, player, 'precondition: the check was removed');
+  assert.equal(uncheckedContinuations(removed).length, 1, 'a check removed from the player is seen');
+});

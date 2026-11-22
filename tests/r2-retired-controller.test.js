@@ -30,7 +30,7 @@ function nativeCore() {
   const services = {
     readSettings() {
       if (control.failSettings) throw new Error('Synthetic settings failure');
-      return {chatEnabled: false};
+      return {chatEnabled: false, adoptNativeWindows: true};
     },
     saveSettings: value => saves.push(value),
     async resolve(source) {

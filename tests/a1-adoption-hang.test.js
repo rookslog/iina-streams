@@ -28,7 +28,8 @@ function adoptedWindow({qa = false, resolve} = {}) {
   // windowLoaded defaults to true in the shim: the window is already loaded when adoption starts.
   const shim = createIina({label: '', mpv: {path: vodURL, 'stream-open-filename': vodURL}});
   assert.equal(shim.iina.core.window.loaded, true, 'precondition: the window is loaded before adoption');
-  const services = {readSettings: () => ({chatEnabled: false}), resolve};
+  // v0.5.5 descope: adoption runs only when opted in (or in QA).
+  const services = {readSettings: () => ({chatEnabled: false, adoptNativeWindows: true}), resolve};
   assert.equal(start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified', qa}, services), null);
   return shim;
 }
@@ -172,7 +173,9 @@ test('a throw while reading the loading path passes the file through instead of 
 
 test('a file that is not adopted arms no timer', async t => {
   const shim = createIina({label: '', mpv: {path: '/Users/x/movie.mkv'}});
-  start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'}, {resolve: async () => assert.fail('no resolve')});
+  // v0.5.5 descope: adoption runs only when opted in.
+  start(shim.iina, {identifier: 'local.iina.streams', variant: 'unified'},
+    {readSettings: () => ({adoptNativeWindows: true}), resolve: async () => assert.fail('no resolve')});
   const realSetTimeout = globalThis.setTimeout;
   let armed = 0;
   globalThis.setTimeout = (...args) => {

@@ -10,7 +10,8 @@
 //     of that view and throws when the window is not loaded (sidebar: JavascriptAPISidebarView.swift).
 //   - postMessage payloads must be JSON-serializable; undefined, functions and native objects throw.
 //   - utils.keychainRead/keychainWrite store per plugin identifier as "<identifier> - <service>"
-//     (JavascriptAPIUtils.swift). The `keyChainRead` spelling is opt-in (see `keychainSpelling`).
+//     (JavascriptAPIUtils.swift). Writing '' over an existing item returns true but keeps the old value
+//     (macOS SecItemUpdate, observed 2026-11-22), so '' never erases a saved secret. The `keyChainRead` spelling is opt-in (see `keychainSpelling`).
 //   - utils.exec rejects a non-string-array args value (JavascriptAPIUtils.swift).
 //   - event.on validates the event name syntax (JavascriptAPIEvent.swift).
 //   - one-shot timers stay registered after they fire until they are cleared (src/timers.js).
@@ -470,6 +471,9 @@ function createIina(options = {}) {
     keychainControl.writes.push({service, name, value});
     if (typeof service !== 'string' || typeof name !== 'string' || typeof value !== 'string') throw new TypeError('IINA contract: keychain service, name and password must be strings');
     if (service === '') return false;
+    // Observed host behaviour (macOS SecItemUpdate probe, 2026-11-22; IINA KeychainAccess.write updates an
+    // existing item): an empty password is accepted but the old contents are kept. Erasing needs a non-empty value.
+    if (value === '' && keychainStore.get(identifier, service, name) !== undefined) return true;
     keychainStore.set(identifier, service, name, value);
     return true;
   };

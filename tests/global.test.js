@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const Sources = require('../src/source.js');
-const {TwitchAuth} = require('../src/auth.js');
+const {TwitchAuth, SIGNED_OUT} = require('../src/auth.js');
 const {createIina} = require('./support/iina-shim.js');
 const scriptPath = path.join(__dirname, '../global.js');
 const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -205,7 +205,7 @@ test('an unrelated sender cannot forget the candidate shared authorization', asy
   await r.handlers.get('auth-forget')({}, '1-unrelated-plugin');
   assert.equal(r.keychainWrites.length, 0); assert.equal(r.httpCalls.length, 0);
   await r.handlers.get('auth-forget')({}, r.label());
-  assert.equal(r.keychainWrites.length, 1); assert.equal(r.keychainWrites[0].value, '');
+  assert.equal(r.keychainWrites.length, 1); assert.equal(r.keychainWrites[0].value, SIGNED_OUT);
 });
 
 test('deferred credentials are discarded if the child opts out or closes before delivery', async () => {

@@ -1,7 +1,8 @@
 "use strict";
 const test=require('node:test');const assert=require('node:assert/strict');
-const {TwitchAuth}=require('../src/auth.js');
-function make(responses=[],initialSaved=null){const calls=[],timers=[],states=[],ready=[],writes=[];let saved=initialSaved,reads=0;const auth=new TwitchAuth({request:async(path,method,form,headers)=>{calls.push({path,method,form,headers});return responses.shift();},read:()=>{reads++;return saved;},write:v=>{saved=v;writes.push(v);return true;},setTimer:(fn,ms)=>{const t={fn,ms,cancelled:false};timers.push(t);return t;},clearTimer:t=>{t.cancelled=true;},now:()=>0,onState:s=>states.push(s),onReady:c=>ready.push(c),onStop:()=>ready.push(null)});return{auth,calls,timers,states,ready,writes,saved:()=>saved,readCount:()=>reads};}
+const {TwitchAuth,SIGNED_OUT}=require('../src/auth.js');
+const noGrant=v=>{if(v===null||v==='')return true;const o=JSON.parse(v);return !o.access_token&&!o.refresh_token;};
+function make(responses=[],initialSaved=null){const calls=[],timers=[],states=[],ready=[],writes=[];let saved=initialSaved,reads=0;const auth=new TwitchAuth({request:async(path,method,form,headers)=>{calls.push({path,method,form,headers});return responses.shift();},read:()=>{reads++;return saved;},write:v=>{writes.push(v);if(v===''&&saved)return true;/* macOS SecItemUpdate keeps old data on an empty write */saved=v;return true;},setTimer:(fn,ms)=>{const t={fn,ms,cancelled:false};timers.push(t);return t;},clearTimer:t=>{t.cancelled=true;},now:()=>0,onState:s=>states.push(s),onReady:c=>ready.push(c),onStop:()=>ready.push(null)});return{auth,calls,timers,states,ready,writes,saved:()=>saved,readCount:()=>reads};}
 function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;});return{promise,resolve};}
 test('loading and stopping auth does not read secrets, contact Twitch, or schedule work',()=>{const r=make();r.auth.stop();assert.equal(r.calls.length,0);assert.equal(r.readCount(),0);assert.equal(r.timers.length,0);assert.equal(r.auth.snapshot().phase,'off');});
 test('missing client ID is a concrete setup state with no network request',async()=>{const r=make();await r.auth.connect('');assert.equal(r.calls.length,0);assert.equal(r.auth.snapshot().phase,'needs-client');});
@@ -41,7 +42,7 @@ test('explicit Forget after Off clears the saved grant before revoking its acces
  r.auth.stop();assert.equal(r.readCount(),0);
  const forgetting=r.auth.forget();
  assert.equal(r.readCount(),1,'only explicit Forget may recover the saved grant after Off');
- assert.equal(r.saved(),'','Keychain must be cleared before the revoke request settles');
+ assert.ok(noGrant(r.saved()),'Keychain must be cleared before the revoke request settles');
  assert.deepEqual(r.calls,[{path:'/revoke',method:'POST',form:{client_id:client,token},headers:{}}]);
  pending.resolve({status:200,data:{}});const result=await forgetting;
  assert.deepEqual(result,{removed:true,revoked:true,stale:false});
@@ -57,7 +58,7 @@ test('late Forget success or failure cannot erase or stop a newly authorized con
    {status:200,data:{access_token:newToken,refresh_token:'s'.repeat(30)}},validation],
    JSON.stringify({clientID:client,access_token:oldToken,refresh_token:'r'.repeat(30)}));
   await r.auth.connect(client);assert.equal(r.auth.snapshot().phase,'ready');
-  const forgetting=r.auth.forget();assert.equal(r.saved(),'');
+  const forgetting=r.auth.forget();assert.ok(noGrant(r.saved()));
   await r.auth.connect(client);await r.timers.at(-1).fn();
   assert.equal(r.auth.snapshot().phase,'ready');assert.equal(JSON.parse(r.saved()).access_token,newToken);
   const stateCount=r.states.length,writeCount=r.writes.length,stopCount=r.ready.filter(x=>x===null).length;
@@ -73,7 +74,7 @@ test('Forget invalidates an outstanding cached-token validation',async()=>{
  const r=make([pending.promise,{status:200,data:{}}],JSON.stringify({clientID:client,access_token:'x'.repeat(30)}));
  const connecting=r.auth.connect(client);const result=await r.auth.forget();
  pending.resolve({status:200,data:{client_id:client,login:'reader',scopes:['chat:read'],expires_in:14400}});
- assert.equal(await connecting,false);assert.equal(r.ready.filter(Boolean).length,0);assert.equal(r.saved(),'');
+ assert.equal(await connecting,false);assert.equal(r.ready.filter(Boolean).length,0);assert.ok(noGrant(r.saved()));
  assert.deepEqual(result,{removed:true,revoked:true,stale:false});assert.equal(r.auth.snapshot().phase,'off');
 });
 test('Forget reports storage and revocation uncertainty without exposing saved data',async()=>{
@@ -87,4 +88,19 @@ test('Forget reports storage and revocation uncertainty without exposing saved d
  const unknown=await unreadable.auth.forget();
  assert.deepEqual(unknown,{removed:true,revoked:false,stale:false});assert.equal(unreadable.calls.length,0);
  assert.match(unreadable.auth.snapshot().message,/revocation.*confirmed/i);assert.equal(JSON.stringify(unreadable.states).includes('private-value'),false);
+});
+test('Sign out then Sign in asks Twitch again instead of silently reusing the old login',async()=>{
+ const client='a'.repeat(30);
+ const r=make([{status:200,data:{}},{status:200,data:{device_code:'dev',user_code:'WXYZ',verification_uri:'https://www.twitch.tv/activate'}}],
+  JSON.stringify({clientID:client,access_token:'x'.repeat(30),refresh_token:'r'.repeat(30)}));
+ assert.deepEqual(await r.auth.forget(),{removed:true,revoked:true,stale:false});
+ assert.equal(r.saved(),SIGNED_OUT);
+ await r.auth.connect(client);
+ assert.deepEqual(r.calls.map(c=>c.path),['/revoke','/device'],'no /validate or /token refresh with the signed-out grant');
+ assert.equal(r.auth.snapshot().phase,'waiting');r.auth.stop();
+});
+test('a second Sign out finds nothing to revoke and reports no uncertainty',async()=>{
+ const r=make([],SIGNED_OUT);
+ assert.deepEqual(await r.auth.forget(),{removed:true,revoked:true,stale:false});
+ assert.equal(r.calls.length,0);assert.equal(r.auth.snapshot().message,'');
 });

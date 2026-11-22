@@ -9,6 +9,8 @@ function clamp(n,low,high,fallback){n=Number(n);return Number.isFinite(n)?Math.m
 function viewSettings(value,variant){const v=value||{};const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));return{presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:(variant==='focus'?'overlay':'sidebar'),fontSize:clamp(v.fontSize,12,24,14),opacity:clamp(v.opacity,0,0.9,0.58),lines:Math.round(clamp(v.lines,2,12,6)),spacing,timestamps:!!v.timestamps,x:clamp(v.x,0,1,1),y:clamp(v.y,0,1,0),width:Math.round(clamp(v.width,220,1200,340)),height:Math.round(clamp(v.height,100,1200,260)),density:spacing<=2?'compact':'comfortable',editing:false};}
 // Open Twitch's activation page by itself only after an explicit Sign in click, once per code.
 function shouldAutoOpen(data,armed){return !!armed&&!!data&&data.phase==='waiting'&&/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(data.verificationURI||'');}
+// Normalized chat message. `time` is media time (replay); `sentAt` is the provider's send time in epoch ms (live, from tmi-sent-ts).
+function safeMessage(m){return{id:String(m.id||'').slice(0,160),time:Number(m.time||m.t)||0,sentAt:Number(m.timestampMs||m.sentAt)||0,author:String(m.author||'').slice(0,80),text:String(m.text||'').slice(0,2000),color:/^#[0-9a-f]{6}$/i.test(m.color||'')?m.color:'',kind:String(m.kind||'message')};}
 function start(host,config,services){var autoOpen=false;
  const label=host.global.getLabel()||'';
  const identity=Sources.fromLabel(label);
@@ -71,7 +73,6 @@ function start(host,config,services){var autoOpen=false;
   sidebar.onMessage('forget-auth',()=>{chatOff();app.postMessage('auth-forget',{});});
   if(config.qa)sidebar.onMessage('qa-result',data=>trace('ui-result',data));
  }
- function safeMessage(m){return{id:String(m.id||'').slice(0,160),time:Number(m.time||m.t)||0,author:String(m.author||'').slice(0,80),text:String(m.text||'').slice(0,2000),color:/^#[0-9a-f]{6}$/i.test(m.color||'')?m.color:'',kind:String(m.kind||'message')};}
  function showSidebar(){
   controlsDesired=true;
   if(closed||!windowLoaded)return;
@@ -343,4 +344,4 @@ function start(host,config,services){var autoOpen=false;
  if(windowLoaded)showSidebar();
  return{snapshot,showSidebar,hideSidebar,chatOff,setView,importArchive,resumeReplay,tick,changeQuality:q=>player.change(q),qaCommand:(name,data)=>{if(config.qa&&sidebarReady)postSidebar('qa-action',{name,data});},overlayCommand:(name,data)=>{if(config.qa&&overlayReady)postOverlay('qa-action',{name,data});},trace,_authCallbacks:authCallbacks};
 }
-module.exports={start,viewSettings,shouldAutoOpen};
+module.exports={start,viewSettings,shouldAutoOpen,safeMessage};

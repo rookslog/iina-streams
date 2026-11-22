@@ -80,7 +80,7 @@
     if(s.view.timestamps){
      const ts=document.createElement('span');
      ts.className='msg-time';
-     ts.textContent=formatTime(m.time,replay);
+     ts.textContent=formatTime(replay?m.time:(m.sentAt||m.time),replay);
      row.appendChild(ts);
     }
     const author=document.createElement('span');

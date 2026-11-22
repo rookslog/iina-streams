@@ -17,6 +17,9 @@
 - **Fixed at the root after six review rounds** (see the review record's Recurrence triage, and `docs/design/V055-CLASS-REPAIR-2026-11-22.md`):
   - **A window that switches to another file stops acting for its stream at once, and stays inactive, as in 0.5.4.** To watch the stream again, open it through Open Stream. Late quality changes, Go Live reloads, timers and sign-in steps from the old load can no longer touch the new one. Replay chat from before the switch does not carry over.
   - **Auto chat timing follows the video's actual progress.** Chat holds while the video is paused or stalled, and normally runs no faster than 1.5x the video. Once two delay estimates agree after real playback, it may jump to the agreed timing in one step.
+  - **Closing a window mid-load is safe.** Every load continues exactly once, and after the window closes or loads another file nothing acts for it: no player command, chat request or download (class L pass 2, after clearance 1).
+  - **A stream lookup stops when its window loads another file,** and helpers already running for it are cancelled.
+- **Fewer IINA crashes from chat pages, we hope (#60):** every message listener is now held by the plugin itself. IINA 1.5.1 crashes when a page posts to a listener it has lost; this removes one way it can lose one. Not yet confirmed over long viewing.
 - **Release review fixes (rounds 1–5; see `docs/reviews/2026-11-22-v0.5.5-release-review.md`):**
   - **Windows IINA opened itself sign in to chat (#56).** Observed natively. Streams no longer creates IINA's first window during startup, and those windows get the same session checks as Streams' own.
   - **One owner adopts IINA's windows (D-031, amended by D-033).** No variant adopts by default in 0.5.5; any variant adopts in QA mode or with `adoptNativeWindows: true` in its `settings.json`.

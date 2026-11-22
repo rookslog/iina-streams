@@ -44,7 +44,7 @@ function liveWindow(t) {
       return {
         ok: true, title: 'Live', live: true, quality: actual,
         // A distinct URL per resolve, so the polled playlist names the file that loaded.
-        mediaURL: `https://media.invalid/${actual}-${resolves.length}.m3u8`,
+        mediaURL: `https://video-weaver.ttvnw.net/${actual}-${resolves.length}.m3u8`,
         formats: [{id: '720p60', label: '720p60'}, {id: '360p30', label: '360p30'}]
       };
     }
@@ -102,7 +102,7 @@ test('r1 #9: a second Go Live and a quality change before file-loaded issue no s
   await w.fileLoaded(replacement);
   w.shim.timers.advance(2500);
   await settle();
-  assert.equal(w.polled(), 'https://media.invalid/720p60-2.m3u8', 'the clock follows the replacement');
+  assert.equal(w.polled(), 'https://video-weaver.ttvnw.net/720p60-2.m3u8', 'the clock follows the replacement');
   assert.equal(w.controller.snapshot().phase, 'playing');
 
   await w.goLive();
@@ -113,7 +113,7 @@ test('r1 #9: a reload from stopped playback plays, and the clock restarts on the
   const w = await playing(t);
   w.shim.timers.advance(2500);
   await settle();
-  assert.equal(w.polled(), 'https://media.invalid/720p60-1.m3u8', 'precondition: the first playlist is polled');
+  assert.equal(w.polled(), 'https://video-weaver.ttvnw.net/720p60-1.m3u8', 'precondition: the first playlist is polled');
   w.shim.emit('mpv.end-file');
   assert.equal(w.controller.snapshot().phase, 'stopped', 'precondition: playback stopped');
 
@@ -125,7 +125,7 @@ test('r1 #9: a reload from stopped playback plays, and the clock restarts on the
   assert.equal(w.controller.snapshot().phase, 'playing', 'the phase follows the file that loaded');
   w.shim.timers.advance(2500);
   await settle();
-  assert.equal(w.polled(), 'https://media.invalid/720p60-2.m3u8', 'the clock restarts on the replacement');
+  assert.equal(w.polled(), 'https://video-weaver.ttvnw.net/720p60-2.m3u8', 'the clock restarts on the replacement');
 });
 
 test('r1 #9: a replacement that fails after its hook clears busy, and the next Go Live reloads', async t => {
@@ -181,5 +181,5 @@ test('r1 #9: a replacement that loads after the timeout still ends playing, with
   assert.equal(snapshot.error, '');
   w.shim.timers.advance(2500);
   await settle();
-  assert.equal(w.polled(), 'https://media.invalid/720p60-2.m3u8', 'the clock follows the late file');
+  assert.equal(w.polled(), 'https://video-weaver.ttvnw.net/720p60-2.m3u8', 'the clock follows the late file');
 });

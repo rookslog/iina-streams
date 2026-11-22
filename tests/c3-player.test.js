@@ -19,7 +19,7 @@ const requireFromPlayer = createRequire(playerPath);
 const liveSource = Sources.parse('fixture_c3_live');
 const vodSource = Sources.parse('https://www.twitch.tv/videos/99999999999999999999');
 const signature = 'fake-c3-signature';
-const mediaURL = quality => `https://media.invalid/${quality}.m3u8?sig=${signature}`;
+const mediaURL = quality => `https://video-weaver.ttvnw.net/${quality}.m3u8?sig=${signature}`;
 const playlist = [
   '#EXTM3U',
   '#EXT-X-PROGRAM-DATE-TIME:2026-01-01T00:00:00Z',

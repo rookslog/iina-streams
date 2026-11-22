@@ -38,7 +38,7 @@ test('a poll is skipped while a playlist request is outstanding, until it is old
     intervalMs: 2000,
     staleMs: 10000,
   });
-  clock.start('https://example.invalid/v.m3u8?sig=FAKE');
+  clock.start('https://video-weaver.ttvnw.net/v.m3u8?sig=FAKE');
   assert.equal(requests.length, 1);
   for (let tick = 0; tick < 4; tick += 1) {
     clockMs += 2000;

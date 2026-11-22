@@ -27,8 +27,19 @@ const GO_LIVE_REACH_SECONDS=12;
 
 const DEFAULT_VIEW={
  presentation:'sidebar',fontSize:14,opacity:0.58,lines:6,spacing:4,timestamps:false,timestampSeconds:false,
- x:1,y:0,width:340,height:260,density:'comfortable',editing:false
+ x:1,y:0,width:340,height:260,density:'comfortable',editing:false,columnWidth:320
 };
+// Chat beside the video (D-028): the overlay docks a column of this width at the right edge.
+const COLUMN_WIDTH_MIN=240;
+const COLUMN_WIDTH_MAX=480;
+const COLUMN_WIDTH_DEFAULT=320;
+// The mpv option that reserves the column's share of the window (IINA 1.5.1 allow-list, AppData.swift L245).
+const MARGIN_OPTION='video-margin-ratio-right';
+// The picture keeps at least this share of the window, whatever the column and window widths.
+const MARGIN_RATIO_MAX=0.8;
+const PRESENTATIONS=['sidebar','overlay','beside'];
+// Leaving beside shrinks the window back only if its width is still the widened width, within this many points.
+const WIDTH_TOLERANCE=1;
 
 function clamp(n,low,high,fallback){
  n=Number(n);
@@ -43,7 +54,7 @@ function viewSettings(value){
  const v=value||{};
  const spacing=Math.round(clamp(v.spacing,2,10,v.density==='compact'?2:4));
  return{
-  presentation:['sidebar','overlay'].includes(v.presentation)?v.presentation:'sidebar',
+  presentation:PRESENTATIONS.includes(v.presentation)?v.presentation:'sidebar',
   fontSize:clamp(v.fontSize,12,24,14),
   opacity:clamp(v.opacity,0,0.9,0.58),
   lines:Math.round(clamp(v.lines,2,12,6)),
@@ -55,7 +66,8 @@ function viewSettings(value){
   width:Math.round(clamp(v.width,220,1200,340)),
   height:Math.round(clamp(v.height,100,1200,260)),
   density:spacing<=2?'compact':'comfortable',
-  editing:false
+  editing:false,
+  columnWidth:Math.round(clamp(v.columnWidth,COLUMN_WIDTH_MIN,COLUMN_WIDTH_MAX,COLUMN_WIDTH_DEFAULT))
  };
 }
 
@@ -279,6 +291,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // messages (not yet due) are capped at LIVE_PENDING_CAP and revealed ones at LIVE_REVEALED_CAP. The timer
  // is for the next held message.
  let liveInbox=[],revealTimer=null,revealDueMs=null,goLiveBusy=false;
+ // Chat beside the video: whether the margin is applied, the ratio and column width last applied, and the
+ // widening to undo ({original, target, width}), or null.
+ let besideActive=false,besideMargin=0,besideColumnWidth=null,besideWiden=null;
  // Go Live's reload replaces the playing file, and mpv ends that file first. Playback.ended() would read that
  // as a stop, since Playback does not know about this reload, so the player skips that one end-file.
  let reloadReplacing=false;
@@ -342,14 +357,27 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function send(){
   if(closed)return;
+  syncBeside();
   const s=snapshot();
   liveStatusKey=liveStatusKeyOf(s.behindLive,s.chatTiming,s.atLiveEdge);
-  if(overlayReady)postOverlay('state',{view:s.view,messages:s.messages,chat:s.chat,qa:s.qa});
+  if(overlayReady)postOverlay('state',overlayState(s));
   if(sidebarReady&&sidebarVisible){
    try{
     postSidebar('state',s);
    }catch(_){}
   }
+ }
+
+ // The overlay's copy of the state. layout 'column' docks chat beside the video; canGoLive shows its Go Live button.
+ function overlayState(s){
+  return{
+   view:s.view,
+   messages:s.messages,
+   chat:s.chat,
+   qa:s.qa,
+   layout:s.view.presentation==='beside'?'column':'float',
+   canGoLive:source.kind==='twitch-live'
+  };
  }
 
  // ---- Sidebar messages ----
@@ -502,8 +530,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(view.presentation==='sidebar'&&chat.mode==='live')chatOff();
  }
 
+ // Over Video and Beside Video both draw chat in the overlay.
+ function chatOnVideo(){
+  return view.presentation==='overlay'||view.presentation==='beside';
+ }
+
  function overlayNeeded(){
-  return chat.mode==='live'||view.presentation==='overlay'&&chat.mode!=='off';
+  return chat.mode==='live'||chatOnVideo()&&chat.mode!=='off';
  }
 
  function stopLiveTransport(){
@@ -531,7 +564,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    overlay.loadFile('ui/overlay.html');
    return;
   }
-  overlay.setClickable(view.presentation==='overlay');
+  overlay.setClickable(chatOnVideo());
   overlay.setOpacity(1);
   overlay.show();
   send();
@@ -552,6 +585,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   overlay.onMessage('geometry',g=>setView({x:g&&g.x,y:g&&g.y,width:g&&g.width,height:g&&g.height}));
   overlay.onMessage('position',p=>setView({x:p&&p.x,y:p&&p.y}));
   overlay.onMessage('position-done',()=>setView({editing:false}));
+  // The docked column's drag handle, and its Go Live and Hide Chat buttons (#47, #52).
+  overlay.onMessage('view',onOverlayView);
+  overlay.onMessage('go-live',()=>goLive());
+  overlay.onMessage('chat-off',onChatOffRequest);
   if(config.qa)overlay.onMessage('qa-result',d=>trace('overlay-ui-result',d));
   postOverlay('hello',{});
  }
@@ -877,6 +914,122 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   send();
  }
 
+ // The overlay may change only the column width, and only to a number: a missing width would reset it to 320.
+ function onOverlayView(data){
+  const width=Number(data&&data.columnWidth);
+  if(Number.isFinite(width))setView({columnWidth:width});
+ }
+
+ // ---- Chat beside the video (D-028, #47) ----
+ // While beside is active, the mpv right margin reserves the column's share of the window, so the picture
+ // shrinks to the left of the overlay's column. In windowed mode the window widens once by the column width;
+ // leaving shrinks it back only if the user has not resized it since. Fullscreen uses the margin alone.
+ // Every exit (another presentation, chat off, deactivation, window close) reaches leaveBeside through send(),
+ // since each one ends chat or changes the view and then sends state before the player closes.
+
+ function besideWanted(){
+  return!closed&&sourceActive&&windowLoaded&&view.presentation==='beside'&&chat.mode!=='off';
+ }
+
+ function syncBeside(){
+  const wanted=besideWanted();
+  if(wanted&&!besideActive){
+   enterBeside();
+  }else if(!wanted&&besideActive){
+   leaveBeside();
+  }else if(wanted&&view.columnWidth!==besideColumnWidth){
+   updateBesideMargin();
+  }
+ }
+
+ function enterBeside(){
+  besideActive=true;
+  if(!core.window.fullscreen)widenWindow();
+  updateBesideMargin();
+  trace('beside-enter',{fullscreen:!!core.window.fullscreen,widened:!!besideWiden});
+ }
+
+ function leaveBeside(){
+  besideActive=false;
+  besideColumnWidth=null;
+  setBesideMargin(0);
+  restoreWindow();
+  trace('beside-leave');
+ }
+
+ // Recomputes the margin from the current window width: after entering, a column-width change, a window
+ // resize, IINA's re-fit after a video-size change, or a fullscreen change.
+ function updateBesideMargin(){
+  const frame=windowFrame();
+  if(!frame||frame.width<=0)return;
+  besideColumnWidth=view.columnWidth;
+  setBesideMargin(Math.min(MARGIN_RATIO_MAX,view.columnWidth/frame.width));
+ }
+
+ function setBesideMargin(ratio){
+  if(ratio===besideMargin)return;
+  besideMargin=ratio;
+  mpv.set(MARGIN_OPTION,ratio);
+ }
+
+ // core.window.frame is the AppKit frame in screen points, origin bottom-left (JavascriptAPICore.swift L242).
+ function windowFrame(){
+  const frame=core.window.frame;
+  if(!usableFrame(frame)||!Number.isFinite(frame.x)||!Number.isFinite(frame.y))return null;
+  return{x:frame.x,y:frame.y,width:frame.width,height:frame.height};
+ }
+
+ // IINA 1.5.1's screens list gives each screen's full frame, not its visible frame (JavascriptAPICore.swift
+ // L254-L266), so the widened window is kept within the full frame of the window's screen.
+ function screenFrame(){
+  const screens=Array.isArray(core.window.screens)?core.window.screens:[];
+  const screen=screens.find(item=>item&&item.current)||screens.find(item=>item&&item.main);
+  return screen&&usableFrame(screen.frame)?screen.frame:null;
+ }
+
+ function widenedFrame(frame,extra){
+  const screen=screenFrame();
+  let width=frame.width+extra;
+  let x=frame.x;
+  if(screen){
+   width=Math.min(width,screen.width);
+   const right=screen.x+screen.width;
+   if(x+width>right)x=Math.max(screen.x,right-width);
+  }
+  return{x,y:frame.y,width,height:frame.height};
+ }
+
+ function widenWindow(){
+  const frame=windowFrame();
+  if(!frame)return;
+  const target=widenedFrame(frame,view.columnWidth);
+  if(target.width<=frame.width)return;
+  Reflect.set(core.window,'frame',target);
+  // Remember the width the window actually took: AppKit may round it.
+  const after=windowFrame();
+  besideWiden={original:frame,target,width:after?after.width:target.width};
+ }
+
+ function restoreWindow(){
+  const widen=besideWiden;
+  besideWiden=null;
+  if(!widen||core.window.fullscreen)return;
+  const frame=windowFrame();
+  if(!frame||Math.abs(frame.width-widen.width)>WIDTH_TOLERANCE)return;
+  // Undo only the width, and any shift the screen edge forced; keep a move the user made.
+  Reflect.set(core.window,'frame',{
+   x:frame.x+widen.original.x-widen.target.x,
+   y:frame.y,
+   width:widen.original.width,
+   height:frame.height
+  });
+ }
+
+ // iina.window-resized carries the new frame (EventController.swift L34, MainWindowController.swift L1973).
+ function onWindowResized(){
+  if(besideActive)updateBesideMargin();
+ }
+
  // ---- Chat modes ----
 
  function stopReplay(){
@@ -935,7 +1088,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   chat.mode='replay';
   chat.state='ready';
   timeObserver=event.on('mpv.time-pos.changed',()=>tick(false));
-  if(view.presentation==='overlay')ensureOverlay();
+  if(chatOnVideo())ensureOverlay();
   tick(true);
   send();
  }
@@ -1253,8 +1406,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return frame&&Number.isFinite(frame.width)&&Number.isFinite(frame.height);
  }
 
+ // IINA re-fits the window after a video-size change (EventController.swift L32, MainWindowController.swift L2609).
  function onWindowSizeAdjusted(){
   trace('native-size-adjusted',{frame:core.window.frame});
+  if(besideActive)updateBesideMargin();
   if(restoration&&restoration.loaded){
    restoration.sized=true;
    restoration.lastSizeAt=Date.now();
@@ -1426,7 +1581,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   send();
  }
 
+ // iina.window-fs.changed fires once a transition completes (EventController.swift L35; MainWindowController.swift L1575 on entry, L1726 on exit).
  function onFullscreenChanged(){
+  if(besideActive)updateBesideMargin();
   send();
   trace('fullscreen',{fullscreen:core.window.fullscreen});
  }
@@ -1545,6 +1702,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  on('iina.plugin-overlay-loaded',onOverlayLoaded);
  on('iina.window-size-adjusted',onWindowSizeAdjusted);
+ on('iina.window-resized',onWindowResized);
  registerLoadHook(onLoadHook);
  on('iina.window-loaded',onWindowLoaded);
  on('iina.file-loaded',onFileLoaded);
@@ -1575,9 +1733,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   else if(source.kind==='twitch-live'&&chat.mode==='off')app.postMessage('auth-probe',{});
  }
 
- // Beside Video is D1's presentation (D-028), not built yet: listed and inert until D1 adds it. Its action is
- // a no-op because a submenu's NSMenu keeps AppKit auto-enabling (IINA turns that off only for the top-level
- // plugin menu, MenuController.swift), so enabled:false alone may not grey it out.
  function chatMenu(){
   const parent=menu.item('Chat',null);
   const children=[
@@ -1585,7 +1740,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    menu.item('Turn Chat Off',onChatOffRequest),
    menu.item('In Sidebar',()=>setView({presentation:'sidebar'})),
    menu.item('Over Video',()=>setView({presentation:'overlay'})),
-   menu.item('Beside Video',()=>{},{enabled:false})
+   menu.item('Beside Video',()=>setView({presentation:'beside'}))
   ];
   for(const child of children)parent.addSubMenuItem(child);
   return parent;

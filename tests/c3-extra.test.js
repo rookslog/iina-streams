@@ -320,11 +320,11 @@ test('#28: chat-calibrate is ignored outside Manual', async t => {
   assert.deepEqual(settings.readSettings().chatTiming, {mode: 'auto', manualDelay: 4}, 'nothing saved');
 });
 
-test('menu: Beside Video waits for D1, and Go Live is disabled outside Twitch live', t => {
+test('menu: Beside Video is enabled (D1), and Go Live is disabled outside Twitch live', t => {
   const live = playerFixture(t);
   const [, liveGo, liveChat] = live.shim.menu.items;
   assert.equal(liveGo.enabled, true);
-  assert.equal(liveChat.items.find(item => item.title === 'Beside Video').enabled, false);
+  assert.equal(liveChat.items.find(item => item.title === 'Beside Video').enabled, true);
   const vod = playerFixture(t, {source: vodSource});
   assert.equal(vod.shim.menu.items[1].enabled, false);
 });

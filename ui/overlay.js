@@ -3,7 +3,15 @@
  const panel=document.getElementById('panel');
  const messages=document.getElementById('messages');
  const resizeHandle=document.getElementById('resize-handle');
+ const columnHandle=document.getElementById('column-handle');
+ const columnTools=document.getElementById('column-tools');
+ const goLiveButton=document.getElementById('go-live');
+ const hideChatButton=document.getElementById('hide-chat');
  let state=null,drag=null,resize=null,following=true,signature='';
+ // A drag of the docked column's left edge: {x, width} at mousedown. The width posts on mouseup.
+ let columnDrag=null;
+ // The player clamps columnWidth to the same range (viewSettings in src/player.js).
+ const COLUMN_MIN=240,COLUMN_MAX=480,COLUMN_DEFAULT=320,COLUMN_KEY_STEP=20;
  const SNAP_THRESHOLD=14,MIN_W=220,MIN_H=100;
  const FALLBACK_COLORS=['#8ab9ff','#ff9e80','#80cbc4','#ce93d8','#ffd54f','#a5d6a7','#f48fb1','#90caf9'];
  const post=(n,d)=>iina.postMessage(n,d||{});
@@ -58,8 +66,31 @@
   return{maxX:Math.max(0,innerWidth-w),maxY:Math.max(0,innerHeight-h)};
  }
 
+ // layout 'column' is Beside Video: chat docked at the right edge, full height (#47).
+ function columnLayout(s){
+  return!!s&&s.layout==='column';
+ }
+
+ function columnWidth(){
+  const width=Number(state&&state.view&&state.view.columnWidth)||COLUMN_DEFAULT;
+  return Math.max(COLUMN_MIN,Math.min(COLUMN_MAX,innerWidth,width));
+ }
+
+ function positionColumn(){
+  const width=columnWidth();
+  panel.style.width=width+'px';
+  panel.style.height=innerHeight+'px';
+  panel.style.left=Math.max(0,innerWidth-width)+'px';
+  panel.style.top='0px';
+ }
+
  function position(){
   if(!state)return;
+  if(columnLayout(state)){
+   positionColumn();
+   if(following)messages.scrollTop=messages.scrollHeight;
+   return;
+  }
   const sz=clampedSize();
   panel.style.width=sz.w+'px';
   panel.style.height=sz.h+'px';
@@ -76,6 +107,7 @@
  }
 
  function keepLocalGeometry(s){
+  if(columnDrag&&state)s.view.columnWidth=state.view.columnWidth;
   if(!(drag||resize)||!state)return;
   s.view.x=state.view.x;
   s.view.y=state.view.y;
@@ -104,7 +136,7 @@
 
  // Loading is shown, not narrated (#9): a quiet indicator while chat connects or loads; nothing once idle.
  function appendLoadingIndicator(s){
-  if(s.view.presentation!=='overlay'||messages.children.length||!s.chat||s.chat.mode==='off')return;
+  if(s.view.presentation!=='overlay'&&!columnLayout(s)||messages.children.length||!s.chat||s.chat.mode==='off')return;
   if(!['authorizing','waiting','connecting','authenticating','joining','reconnecting','fetching','importing'].includes(s.chat.state))return;
   const spinner=document.createElement('div');
   spinner.className='loading';
@@ -115,7 +147,7 @@
  }
 
  function renderMessages(s){
-  const list=s.view.presentation==='overlay'?(s.messages||[]):[];
+  const list=chatOnVideo(s)?(s.messages||[]):[];
   const replay=s.chat&&s.chat.mode==='replay';
   const sig=list.map(m=>m.id+':'+m.time+':'+m.text).join('|')+'|ts='+!!s.view.timestamps+!!s.view.timestampSeconds+
    '|r='+!!replay+'|st='+(s.chat&&s.chat.state);
@@ -129,15 +161,31 @@
   else messages.scrollTop=prevTop;
  }
 
+ function chatOnVideo(s){
+  return s.view.presentation==='overlay'||columnLayout(s);
+ }
+
+ function renderColumn(s){
+  const column=columnLayout(s);
+  document.body.setAttribute('data-layout',column?'column':'float');
+  columnHandle.hidden=!column;
+  columnTools.hidden=!column;
+  goLiveButton.hidden=!s.canGoLive;
+  columnHandle.setAttribute('aria-valuenow',String(columnWidth()));
+  columnHandle.setAttribute('aria-valuemin',String(COLUMN_MIN));
+  columnHandle.setAttribute('aria-valuemax',String(COLUMN_MAX));
+ }
+
  function render(s){
   keepLocalGeometry(s);
   state=s;
+  renderColumn(s);
   panel.style.setProperty('--opacity',s.view.opacity);
   panel.style.setProperty('--size',s.view.fontSize+'px');
   panel.style.setProperty('--msg-gap',(s.view.spacing||4)+'px');
   renderMessages(s);
   markClickable();
-  panel.hidden=s.view.presentation!=='overlay'||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
+  panel.hidden=!chatOnVideo(s)||(!messages.children.length&&(!s.chat||s.chat.mode==='off'));
   position();
  }
 
@@ -158,14 +206,52 @@
 
  panel.addEventListener('mousedown',e=>{
   if(!state||e.button!==0)return;
+  // The docked column does not move. Keep focus with the player, so Space still pauses after a click here.
+  if(columnLayout(state)){
+   e.preventDefault();
+   return;
+  }
   if(e.target===resizeHandle)return;
   e.preventDefault();
   drag={x:e.clientX,y:e.clientY,left:panel.offsetLeft,top:panel.offsetTop};
   panel.classList.add('dragging');
  });
 
+ // The column's left edge widens the column as it moves left.
+ columnHandle.addEventListener('mousedown',e=>{
+  if(!state||e.button!==0||!columnLayout(state))return;
+  e.preventDefault();
+  e.stopPropagation();
+  columnDrag={x:e.clientX,width:columnWidth()};
+  panel.classList.add('column-resizing');
+ });
+
+ function dragColumn(e){
+  const width=columnDrag.width+columnDrag.x-e.clientX;
+  state.view.columnWidth=Math.round(Math.max(COLUMN_MIN,Math.min(COLUMN_MAX,innerWidth,width)));
+  positionColumn();
+ }
+
+ function postColumnWidth(width){
+  post('view',{columnWidth:width});
+ }
+
+ columnHandle.addEventListener('keydown',e=>{
+  if(!state||!columnLayout(state))return;
+  const step=e.key==='ArrowLeft'?COLUMN_KEY_STEP:e.key==='ArrowRight'?-COLUMN_KEY_STEP:0;
+  if(!step)return;
+  e.preventDefault();
+  e.stopPropagation();
+  postColumnWidth(Math.max(COLUMN_MIN,Math.min(COLUMN_MAX,columnWidth()+step)));
+ });
+
+ goLiveButton.addEventListener('click',()=>post('go-live',{}));
+ hideChatButton.addEventListener('click',()=>post('chat-off',{}));
+
  window.addEventListener('mousemove',e=>{
-  if(drag&&state){
+  if(columnDrag&&state){
+   dragColumn(e);
+  }else if(drag&&state){
    const sz=clampedSize();
    const g=geometry(sz.w,sz.h);
    const rawX=Math.max(0,Math.min(g.maxX,drag.left+e.clientX-drag.x));
@@ -193,6 +279,11 @@
  });
 
  function finishMouse(){
+  if(columnDrag){
+   columnDrag=null;
+   panel.classList.remove('column-resizing');
+   if(state)postColumnWidth(columnWidth());
+  }
   if(drag){
    drag=null;
    panel.classList.remove('dragging','snapped');
@@ -217,7 +308,7 @@
  const MOVE_KEYS={ArrowLeft:[-.05,0],ArrowRight:[.05,0],ArrowUp:[0,-.05],ArrowDown:[0,.05]};
 
  function onPanelKey(e){
-  if(!state)return;
+  if(!state||columnLayout(state))return;
   if(e.shiftKey){
    resizeByKey(e);
    return;

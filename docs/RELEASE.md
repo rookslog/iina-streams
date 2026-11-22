@@ -83,7 +83,7 @@ Policy D-020 as corrected by D-021: the source version is the *next* release (no
 6. Install or update through IINA and smoke-test it.
 7. On `beta`, set the next target version (for example 0.5.5) so beta and dev builds stop stamping the released number.
 
-**State on 2026-11-22:** [v0.5.4](https://github.com/rookslog/iina-streams/releases/tag/v0.5.4) is the first published GitHub Release, with its `.iinaplgz` asset; `main` was pushed after the asset existed. (The earlier `v0.5.3` tag CI run failed in the Python suite and never released.)
+**State on 2026-11-22:** [v0.5.4](https://github.com/rookslog/iina-streams/releases/tag/v0.5.4) is the first published GitHub Release, with its `.iinaplgz` asset; `main` was pushed after the asset existed. At 17:02 the operator updated an installed 0.5.3 to 0.5.4 through IINA's own update. Observed: the installed `Info.json` reads `0.5.4`, `ghVersion` 3. This is the first observed run of step 6's update path. (The earlier `v0.5.3` tag CI run failed in the Python suite and never released.)
 
 ## Rollback
 

@@ -6,12 +6,14 @@ One line per release. Each item lives in a GitHub issue, and each release is a [
 | --- | --- | --- |
 | [0.5.4](https://github.com/rookslog/iina-streams/milestone/1) | A loop you can trust; first GitHub Release | VOD chat #11 · dev workflow #5 · shortcut #4 · sign-in #7 · UI text #9 · live timestamps #10 · cleanup #12 · test shim #13 · release #14 · install-local footgun #21 · oldest-Python CI #22 · built-in Client ID #8 |
 | [0.5.5](https://github.com/rookslog/iina-streams/milestone/2) | Chat on your timeline | delay modes #2 · click-to-calibrate #28 · latency spike #16 · reduce video lag #31 · VOD test fixtures #17 · readability #23 · swallowed errors #24 |
-| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | Find what to watch | Following list #30 · offline VOD picker #32 · open from the browser #35 · official emotes and badges #34 |
-| [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | **Public launch** (Reddit) | UI overhaul: panel #20, overlay #1, pointer tests #18 · works out of the box #36 (spike #37) · launch kit #38 |
-| [0.7.0](https://github.com/rookslog/iina-streams/milestone/5) | Talk back | send chat #3 · third-party emotes #29 |
-| [0.8.0](https://github.com/rookslog/iina-streams/milestone/6) | More platforms and accounts | accounts #6 · multi-provider #19 · YouTube live chat spike #39 · Kick spike #40 |
+| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | Find what to watch | Following list #30 · offline VOD picker #32 · open from the browser #35 · official emotes and badges #34 · watch history and controls #73 · typing suggestions #74 · signed-in VOD list through Twitch's documented API #75 |
+| [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | **Public launch** (Reddit) | UI overhaul: panel #20, overlay #1, pointer tests #18 · works out of the box #36 (spike #37) · launch kit #38 · People screen #76 · listening mode #77 |
+| [0.7.0](https://github.com/rookslog/iina-streams/milestone/5) | Talk back | send chat #3 · third-party emotes #29 · VOD resume #78 · stream end #79 |
+| [0.8.0](https://github.com/rookslog/iina-streams/milestone/6) | More platforms and accounts | accounts #6 · multi-provider #19 · YouTube live chat spike #39 · Kick spike #40 · creator records #80 · merged chat #81 |
 
-**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, QA mode restore or retire #33.
+The 0.6.0 launch is undated (D-035), and the finding-and-watching plan is [design/FINDING-AND-WATCHING-SPEC-2026-11-22.md](design/FINDING-AND-WATCHING-SPEC-2026-11-22.md).
+
+**Parents:** account and sign-in #6 (#7, #8, #3, #19), chat timing #2 (#16, #10), overlay #1 (#18). **Backlog (no milestone):** Reload All Plugins crash #15, resource measurement #25, undocumented VOD GraphQL #26, CI maintenance #27, QA mode restore or retire #33, category browsing #68, chat-activity strip #69, late joiner #70, multi-view #71, live-while-open notices #72.
 
 ## How items get here
 

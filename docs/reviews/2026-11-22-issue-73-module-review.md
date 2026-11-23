@@ -44,7 +44,7 @@ At `bae776d`, `node --test tests/history.test.js` passed **9/9**, and the scoped
 - **P2 — Retry tests still miss state loss.** [tests/history.test.js:349](/Users/rookslog/Development/iina-streams-wt/h73/tests/history.test.js:349) stayed green when failed forget, clear and pause calls rolled back their in-memory changes. The suite also missed skipping retries on no-op `record` or `finish`, and accepting invalid stored timestamps.
 
 **Closed:** Readable newer schemas stay read-only; loaded visits sort and clamp as specified in isolation; Unicode word starts and the dense helper are fixed. The tests rejected every mutation explicitly listed in round 1. `node --test tests/history.test.js` passed **18/18**; the scoped diff check passed. Wiring and native IINA were out of scope.
-## Lead disposition after the final clearance (23:50)
+## Lead disposition after the final clearance (23:42)
 
 Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as #67).
 
@@ -60,4 +60,4 @@ Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as 
   - a no-op `record` or `finish` doesn't skip a pending retry;
   - invalid stored timestamps are rejected on load.
 
-- **Lead decision (23:58), on the targeted pass:** a history file that can't be read (an I/O failure, not a parse failure) blocks history until it can be read; nothing falls back to backup-and-replace. Losing new history is better than overwriting a file we can't read. The wiring records "history unavailable" in Streams' diagnostics (`@data/beta-global.json`), so it is visible.
+- **Lead decision (23:46), on the targeted pass:** a history file that can't be read (an I/O failure, not a parse failure) blocks history until it can be read; nothing falls back to backup-and-replace. Losing new history is better than overwriting a file we can't read. The wiring records "history unavailable" in Streams' diagnostics (`@data/beta-global.json`), so it is visible.

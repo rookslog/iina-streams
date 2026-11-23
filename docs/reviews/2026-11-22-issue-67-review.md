@@ -67,7 +67,7 @@ Branch `fix/67-offline-fallthrough` (0f518cb, 648905c, 342658c, on beta 11c0d62)
 - **P2 · Fixture — The requested guards work, but timer attribution is too broad.** Probes independently rejected lowercase `authorization` and an armed 1.5 s deadline. [tests/support/live-check.js:73](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/tests/support/live-check.js:73) also accepted an unrelated zero-delay timer as the missing handoff, fired it, and excluded it from legacy timer assertions.
 
 **D-offline and A-auth are closed:** only anonymous GQL `stream:null` with no `errors` is offline; no Helix or viewer credential is used, so the late authenticated follow-up is gone. `npm test`: **843 passed**. Native IINA was not exercised.
-## Lead disposition after the final clearance (23:45)
+## Lead disposition after the final clearance (23:39)
 
 - **D-offline and A-auth:** closed.
 - **The three surviving P1s are fixed under the 0.5.5 precedent:** a targeted fix, then a narrow Codex check limited to these findings (as with the 0.5.5 narrow check, bd0f96a). They are mechanical applications of the written invariants, not a new design.

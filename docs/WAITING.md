@@ -60,11 +60,12 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Recommendation:** the gate ignores its second run. It stays correct whichever copies a session loads. The lead's attempt to edit settings was blocked by Claude Code's permission check, so this needs your yes.
 - **What your answer changes:** the doubled messages, and the gate's log counts.
 
-### W-7. Change the output style so replies stop using unexplained labels
-- **What it is:** a change to the "scan-first" style (`~/.claude/output-styles/scan-first.md`). It applies in every project.
-- **How it arose:** your feedback on 2026-11-22, plus 10 earlier signals on the same problem (bare labels, missing context).
-- **Proposal:** in chat, 2026-11-22 ~19:20.
-- **What your answer changes:** how every reply, in every project, presents pending items and coined terms.
+### W-7. Output style: trial a revised style in two projects
+- **What it is:** the review session found that the global "scan-first" style has **never been loaded**. Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
+- **The proposal:** `docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md`. Its two decisions start at "Decisions for you":
+  - **D1:** trial the revised draft for a week in `iina-streams` and `sonic-affinity-lab`, as an uncommitted local setting (recommended), committed, globally, or not at all;
+  - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it.
+- **What your answer changes:** how replies read to you in those two projects for a week, and later everywhere.
 
 ## Answered
 

@@ -66,25 +66,6 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Proposal:** in chat, 2026-11-22 ~19:20.
 - **What your answer changes:** how every reply, in every project, presents pending items and coined terms.
 
-### W-8. How Streams helps you find what to watch, across platforms
-- **What it is:** the model behind suggestions as you type, "who's on", multiple platforms and merged chat. It sets whether Streams is organised around the **people you watch** or around each platform's own pages, and how much undocumented-API risk the product carries.
-- **How it arose:** your requests on 2026-11-22 for suggestions as you type, the Twitch-style "likely to watch" ordering, YouTube/Kick, creators who use different names on each platform, and merged chats. Research: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md`. Its "what you're really after" table is at line 28; the options and recommendation are at line 238.
-- **Options:**
-  - **A. People-first:** your own viewing history plus creator records you can edit (linking one person's accounts across platforms) rank everything, and each platform adds search, live status, VODs and chat where it can;
-  - **B. Mirror each platform:** copy each platform's own pages and recommendations through their private interfaces;
-  - **C. Documented APIs only;**
-  - **D. Defer:** just Following (#30) and the offline VOD list (#32).
-- **Recommendation:** A. Most opens are you reopening someone you already watch, and your history answers that instantly, signed in or out, with no cookies. Twitch's own "likely to watch" ordering isn't available to outside apps anyway.
-  - **Updated 21:30 (rewritten after your question):** Streams' own ranking decides the order, signed in or out. Signing in **adds** Twitch's data as extra inputs: your follows (live and offline), live status, viewers, titles and games, search while typing, popular now. So signed in is always at least as good as signed out. That Twitch data comes through Twitch's official app API, not the internal twitch.tv website interface (W-9). The only thing that choice gives up is Twitch's own sidebar order, which puts sponsored channels first; you don't want that, and the research found no sign an outside app can get it anyway (`docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`). It also gives up suggestions from Twitch search for people who aren't signed in; they get suggestions from their history.
-- **What it rests on:** most of what you open are repeat visits to a small set of people. This is unmeasured.
-- **What would flip it:** if you mostly want to discover new channels, B; if you'd rather use only documented APIs, C.
-- **Platform facts that constrain it:**
-  - Twitch search and popular lists work only when you're signed in, through the documented API;
-  - Kick chat needs a server we'd host;
-  - YouTube live chat has a daily quota;
-  - no public service links one creator's accounts across platforms.
-- **What your answer changes:** what 0.5.6 builds (suggestions from history and Following), and the shape of 0.6.0's People view and 0.8.0's platforms.
-
 ### W-9. Streams' Twitch playback uses an interface Twitch's developer agreement excludes
 - **What it is:** Twitch documents no way to get a playable stream address. Streams, like Streamlink and yt-dlp, gets one from the undocumented interface twitch.tv itself uses ("GQL"), and lists an offline channel's VODs the same way (D-030). Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
 - **How it arose:** the follows research read the agreement for the first time on 2026-11-22: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`, section Q4. The lead checked the quote against the page. D-030 (chosen by the lead during the unattended run) already uses GQL for offline VODs, pending your confirmation in #49.
@@ -118,5 +99,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** detector findings that are mostly web conventions IINA's look rightly overrides (then skip it), or findings about contrast, cramped spacing or missing states (then the reviewer install).
 
 ## Answered
+
+- **W-8, discovery model** (2026-11-22, ~21:30): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

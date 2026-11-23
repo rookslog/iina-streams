@@ -170,6 +170,15 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
   The lead's "panel covers the chat" line was wrong: the plugin panel opens on the left, and the chat column on the right. **Next:** one revised structure (A's list, continue watching, a channel view, far less text), drawn under the text rule now in the project design skill. No pick is needed until it's ready.
 - **Update 2026-11-23 02:20:** round 2 is ready: one revised layout, [revised/index.html](design/finding-2026-11-22/plugin-sidebar/revised/index.html). It has continue watching, a channel view with VOD thumbnails, VOD search, sort and filter, and far less text. Every visible string is listed with its class in [DONE.md](design/finding-2026-11-22/plugin-sidebar/DONE.md). **Needed now:** keep it, or say what to change.
+- **Update 2026-11-23 (operator, on round 2):** rejected. In their words:
+  - "we need a better way of splitting between live and offline";
+  - "not 100% sure of showing the thumbnails in this already overcrowded space";
+  - "I don't necessarily like the UI, the spacing and stuff when we click in";
+  - "the search bar should be like above all the channels, because we're searching through channels in that search bar, not through VODs";
+  - "maybe we put Continue Watching at the bottom";
+  - "what are these… weird collapsible menus like history, forget Ohnepixel? This is all terrible."
+
+  **Next:** an independent Impeccable critique, run as a check of the Impeccable setup too (the reviewer isn't told these complaints, to see whether the critique finds them). Then one round at real fidelity. No pick is needed until then.
 
 ## Answered
 

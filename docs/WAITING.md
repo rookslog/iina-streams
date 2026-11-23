@@ -122,14 +122,14 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 ### W-15. Grow the plan: a fuller dashboard and a stream switcher in the sidebar (amends D-035)
 - **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:
   - a **dashboard** like "a miniature version of the Twitch website that's more fully featured": search across VODs, categories, live channels;
-  - a **switcher in the sidebar** that changes the stream in the *same* window instead of opening another.
+  - a **switcher in the plugin sidebar** that changes the stream in the *same* window instead of opening another.
 
   It's yours because it changes what 0.6.0 promises, and its order.
 - **What's possible (checked):**
   - Twitch's documented API offers category search, top categories by viewers, and live streams filtered by category. None is personalised; checked against Twitch's API index only.
   - Twitch's own "recommended categories" need your twitch.tv login, which D-034 makes a separate decision.
   - "Categories you watch" can come from Streams' own history, if each visit also stores the category. Today's history design doesn't store it ([TESTS.md](design/finding-2026-11-22/history/TESTS.md), "What's stored").
-  - IINA 1.5.1 gives a plugin one sidebar view that it can show and hide (`JavascriptAPISidebarView.swift`: `show`, `hide`, `loadFile`). So the chat and a switcher would share Streams' one sidebar page, as two sections.
+  - Per W-16 (answered): the switcher, VODs and quality live in the plugin sidebar, the panel that slides in over the video and is closed again, and chat leaves it.
   - **Switching streams in the same window** is exactly what D-033 switched off for 0.5.5, "a window whose player loads a different file stays inactive", because of two serious review findings. D-033 plans to restore it in 0.5.6. The switcher depends on that.
 - **Options:**
 
@@ -147,22 +147,9 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - #76 (People or dashboard), a new switcher issue, and #73's stored fields;
   - the spec, §2 and §6.
 
-### W-16. Where chat lives if the sidebar becomes a switcher
-- **What it is:** chat currently has three places: IINA's sidebar (the default for everyone, `presentation:'sidebar'` in `src/player.js`), beside the video, and over the video. If the sidebar also switches streams, you asked whether chat should leave the sidebar. It's yours because it changes every user's default.
-- **Options:**
-
-  | Option | What it buys | What it costs |
-  |---|---|---|
-  | **Keep all three; the sidebar page shows chat and the switcher as two sections** | Nobody loses their setup | A busier sidebar |
-  | **Remove sidebar chat; keep beside and over the video** | The sidebar is only for switching | Changes the default for every 0.5.4 user; "beside" is unreleased 0.5.6 work and hasn't passed in IINA yet |
-  | **Decide after "beside" ships and the design questions in #82 are answered** | Evidence first | It waits |
-- **Recommendation:** decide after. "Chat beside the video" hasn't shipped or passed in IINA yet. The hide-chat design was called "not intuitive" (root's handoff), and #82 asks why the design checks missed that. A new chat layout should come after those answers.
-- **What it rests on:** moving everyone's default chat place is expensive to undo, so it should rest on IINA evidence.
-- **What would flip it:** "beside" proving clearly better in IINA, in which case removing sidebar chat becomes the simpler product.
-- **What your answer changes:** the 0.6.0 overhaul's chat design, and the default setting.
-
 ## Answered
 
+- **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar, the panel that slides in over the left of the video from the plugin button. That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.
 - **W-12, Open Stream design** (2026-11-23, operator after trying both mocks in Safari): **A's quick list, one fixed height that scrolls**, no "why it's here" text, and no "your people" label. Typing searches the list. VODs must be reachable for live people too: mock A expands only offline rows (`a.js:112`), so this needs changing. B's list-and-detail ideas move to the bigger dashboard, and a jump links the two. The operator's words: "I'd also keep it to a fixed height that scrolls"; "the quick list doesn't have a 'your people' indicator, which I like". Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md).
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
 - **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in [AGENTS.md](../AGENTS.md).

@@ -45,6 +45,18 @@ web
   | Taking over versus IINA as usual | Streams on every stream | IINA for everything else | Adopt every stream by default, with a setting to turn it off; never touch local files |
   | Signed in versus signed out | Richer with an account | Complete without one | Signed out is a full experience; signing in adds to it |
   | Familiar versus better | Twitch's layout, which people know | "Go beyond the browser" | Borrow Twitch's information (live first, viewers); use Mac conventions for interaction |
+- **How we prioritize and exclude** (draft for the operator to correct, 2026-11-23):
+  - **A floor owed to every viewer, whatever the priority:**
+    - keyboard and VoiceOver reach everything (J10);
+    - nothing is tracked beyond the Mac (J19);
+    - everything works without signing in;
+    - there is always a way back from an error;
+    - no dark patterns or sponsored order.
+
+    Prioritizing only orders what sits above the floor.
+  - **Defaults for the primary viewer, depth for the others:** everyday users get the defaults. Other needs are met in layers (Settings, menus, the dashboard) rather than dropped.
+  - **Excluding is explicit:** each exclusion records who loses, what they fall back on (for example, several IINA windows for multi-view, J16), and what evidence would bring it back. Exclusions stay visible in the decision log, so they can be revisited, not forgotten.
+  - **Degrade, don't dead-end:** a viewer whose need isn't served still gets a workable path.
 - **Journeys:**
   - approved in D-026: J1–J10 (`docs/design/USER-JOURNEYS-2026-11-22.md`), mainly J1 a stranger, J2 the daily viewer, J4 the catch-up viewer, and J10 keyboard and VoiceOver;
   - approved in D-035: J11 the background listener, J12 the long-VOD viewer, J14 the viewer at stream end, and J19 the privacy-minded viewer.

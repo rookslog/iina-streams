@@ -20,10 +20,16 @@
 //   change is a no-op that writes and backs up nothing;
 // - loaded visits are sorted by time, loaded durations are capped at 12 hours, and a loaded visit in the
 //   future counts as now;
-// - a finish identical to the last one applied (same person, same time) is a retry and does nothing.
+// - a visit is finished by its handle, not by person: record() returns {provider, login, at} for the visit
+//   it opened (null when ignored), and finish(handle, at) closes exactly that visit. Finishing a visit that is
+//   already closed, or that does not exist, changes nothing, so an identical retry is harmless and two windows
+//   of one person closing in the same second each close their own visit. The handle holds no secret and
+//   survives a reload; the caller keeps it from player start to close. (Two visits of one person opened in the
+//   same second share a handle: each finish still closes one open visit of that second.)
 //
-// record, finish, forget, clear and setPaused return true when the change is in the file (for forget, clear
-// and setPaused also when it already was), and false when it was ignored or the write failed.
+// finish, forget, clear and setPaused return true when the change is in the file (for forget, clear and
+// setPaused also when it already was), and false when it was ignored or the write failed. record returns its
+// handle even when the write failed: the visit is kept in memory and the next call retries the write.
 //
 // Storage contract: read(path) returns text or null when the file is missing (it may throw);
 // write(path, text); backup(from, to) copies the original bytes. `at` and now() are Unix seconds.
@@ -276,8 +282,6 @@ function createHistory({storage, now}) {
   let needsBackup = loaded.damaged;
   // True while memory holds a change the file does not. Any later call retries the write.
   let unsaved = false;
-  // The last finish that closed a visit, so an identical retry can be told from a new finish.
-  let lastFinish = null;
 
   function findPerson(provider, login) {
     return people.find(person => person.provider === provider && person.login === login) || null;
@@ -325,14 +329,14 @@ function createHistory({storage, now}) {
     }
   }
 
-  // Adds the visit in memory. Returns true when one was added.
+  // Adds the visit in memory. Returns its handle, or null when nothing was added.
   function addVisit(input) {
     if (paused || readOnly || !input) {
-      return false;
+      return null;
     }
     const identity = cleanIdentity(input);
     if (identity === null || !isFiniteNumber(input.at)) {
-      return false;
+      return null;
     }
 
     const visit = input.offline === true
@@ -351,26 +355,26 @@ function createHistory({storage, now}) {
     person.visits = person.visits.slice(-MAX_VISITS_PER_PERSON);
 
     evictLowestScore(person);
-    lastFinish = null;
     unsaved = true;
-    return true;
+    return Object.freeze({provider: identity.provider, login: identity.login, at: input.at});
   }
 
-  // record({provider, login, displayName, at, offline?}): one visit. Offline opens are stored closed with
-  // zero seconds and keep their interest after a reload.
+  // record({provider, login, displayName, at, offline?}): one visit. Returns the visit's handle, or null when
+  // ignored (paused, read-only, unsafe identity, bad time). Offline opens are stored closed with zero seconds
+  // and keep their interest after a reload.
   function record(input) {
-    const added = addVisit(input);
-    const saved = flush();
-    return added && saved;
+    const handle = addVisit(input);
+    flush();
+    return handle;
   }
 
-  // Closes the newest open visit in memory. Returns 'closed', 'repeat' (identical to the last finish) or
-  // 'ignored' (paused, read-only, bad input, unknown person or no open visit).
-  function closeVisit(input) {
-    if (paused || readOnly || !input || !isFiniteNumber(input.at)) {
+  // Closes the visit a handle names. Returns 'closed', 'already' (the visit exists but is closed) or
+  // 'ignored' (paused, read-only, bad input, or no such visit).
+  function closeVisit(handle, at) {
+    if (paused || readOnly || !handle || !isFiniteNumber(at) || !isFiniteNumber(handle.at)) {
       return 'ignored';
     }
-    const identity = cleanIdentity(input);
+    const identity = cleanIdentity(handle);
     if (identity === null) {
       return 'ignored';
     }
@@ -378,25 +382,23 @@ function createHistory({storage, now}) {
     if (person === null) {
       return 'ignored';
     }
-    const key = personKey(person.provider, person.login);
-    if (lastFinish !== null && lastFinish.key === key && lastFinish.at === input.at) {
-      return 'repeat';
-    }
-    const open = person.visits.filter(visit => visit.seconds === null);
-    if (open.length === 0) {
+    const sameTime = person.visits.filter(visit => visit.at === handle.at);
+    if (sameTime.length === 0) {
       return 'ignored';
     }
-    const visit = open[open.length - 1];
-    visit.seconds = Math.min(MAX_VISIT_SECONDS, Math.max(0, input.at - visit.at));
-    lastFinish = {key, at: input.at};
+    const visit = sameTime.find(candidate => candidate.seconds === null);
+    if (visit === undefined) {
+      return 'already';
+    }
+    visit.seconds = Math.min(MAX_VISIT_SECONDS, Math.max(0, at - visit.at));
     unsaved = true;
     return 'closed';
   }
 
-  // finish({provider, login, at}): closes the newest open visit. No open visit, or an identical repeat of the
-  // last finish, changes nothing.
-  function finish(input) {
-    const outcome = closeVisit(input);
+  // finish(handle, at): closes the visit record() returned the handle for. A visit that is already closed, or
+  // not found, is left alone.
+  function finish(handle, at) {
+    const outcome = closeVisit(handle, at);
     const saved = flush();
     return outcome !== 'ignored' && saved;
   }
@@ -442,7 +444,6 @@ function createHistory({storage, now}) {
       const remaining = people.filter(person => !(person.provider === input.provider && person.login === login));
       if (remaining.length !== people.length) {
         people = remaining;
-        lastFinish = null;
         unsaved = true;
       }
     }
@@ -452,7 +453,6 @@ function createHistory({storage, now}) {
   function clear() {
     if (!readOnly) {
       people = [];
-      lastFinish = null;
       unsaved = true;
     }
     return flush();

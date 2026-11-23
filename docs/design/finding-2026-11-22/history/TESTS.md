@@ -18,8 +18,10 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 - never a URL, title, token, signature or query string.
 
 1. **Record and merge.** `record({provider:'twitch', login:'Ohnepixel', displayName, at})` stores login `ohnepixel` (lowercased). A second record for the same provider and login appends a visit; it never creates a second person.
-2. **Duration.** `finish({provider, login, at})` sets the newest open visit's `seconds` = `at − visit.at`, capped at 12 h. A `finish` with no open visit is a no-op.
-   - Amended 2026-11-22 round 2 (lead): a `finish` identical to the last one applied (same person, same `at`) is a retry and is also a no-op; it doesn't close the person's other open visit. A `finish` with a non-finite or non-number `at` is ignored.
+2. **Duration.** `record(...)` returns a visit handle `{provider, login, at}`, or `null` when the record is ignored. `finish(handle, at)` sets that visit's `seconds` = `at − visit.at`, capped at 12 h.
+   - Finishing a visit that is already closed, or doesn't exist, is a no-op, so an identical retry does nothing.
+   - Amended 2026-11-22 round 2b (lead): `finish` closes the visit its handle names, not "the newest open visit of the person" and not "the same as the last finish". Two windows of one person closing in the same second each close their own visit. (Two visits opened in the same second share a handle; each finish still closes one of them.)
+   - A `finish` with a non-finite or non-number `at` is ignored. The handle holds no secret, and the caller keeps it from player start to close.
 3. **Frecency** (how often and how recently). Score = Σ over visits of an age weight:
 
    | Visit age | Weight |
@@ -56,7 +58,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - Amended 2026-11-22 round 2 (lead):
      - **The version is checked before the shape.** A newer file with any layout (`{version: 2, people: {}}`) is read-only: nothing is written and nothing is backed up. Only a file with no usable version, or a v1 file with the wrong shape, is "corrupt".
      - **Loaded data is normalised:** visits sorted by time, durations capped at 12 h, a visit in the future counted as now.
-     - **A failed write** doesn't throw. The change stays in memory, and every mutating call (`record`, `finish`, `forget`, `clear`, `setPaused`) returns whether it is in the file. The next call, including an identical retry, writes again. After a failed backup the unreadable original is never overwritten.
+     - **A failed write** doesn't throw. The change stays in memory, and `finish`, `forget`, `clear` and `setPaused` return whether the change is in the file (`record` still returns its handle). The next call, including an identical retry, writes again. After a failed backup the unreadable original is never overwritten.
      - **Pause** writes only when its stored value changes.
 9. **Privacy guard.**
    - **Login, an allowlist** (amended 2026-11-22 round 2, lead): a Twitch login matches `^[a-z0-9_]{1,25}$` after lowercasing; a YouTube channel id matches `^UC[A-Za-z0-9_-]{22}$`. Anything else (an address, a URL, a bare token) is rejected.

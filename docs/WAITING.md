@@ -26,12 +26,12 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 ### W-3. Release 0.5.5
 - **What it is:** tag `v0.5.5`. GitHub then publishes the release, and anyone who installed Streams from GitHub gets an update offer in IINA.
-- **How it arose:** the 0.5.5 code is finished and passed its final review: `docs/reviews/2026-11-22-v0.5.5-release-review.md`, sections "Clearance 2" and "Narrow check".
+- **How it arose:** the 0.5.5 code is finished and passed its final review: [docs/reviews/2026-11-22-v0.5.5-release-review.md](reviews/2026-11-22-v0.5.5-release-review.md), sections "Clearance 2" and "Narrow check".
 - **Still to do first:**
   - the IINA checks listed in the same review file, under "Native acceptance for 0.5.5";
   - W-1;
   - W-2.
-- **Recommendation:** release once those are done. Steps are in `docs/RELEASE.md`, "Releasing vX.Y.Z".
+- **Recommendation:** release once those are done. Steps are in [docs/RELEASE.md](RELEASE.md), "Releasing vX.Y.Z".
 - **What your answer changes:** a public release; this one is yours alone.
 
 ### W-4. Report IINA's crash bug to the IINA project
@@ -46,7 +46,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 ### W-5. A separate test account so the lead's tests never touch your IINA
 - **What it is:** a second macOS user on this Mac, where the lead runs IINA tests over ssh. Your IINA, plugin switches and Twitch sign-in are never touched, and a test crash can't kill your stream.
-- **How it arose:** today you had to hand IINA over, and switch plugins by hand, for every test. Scoping: `docs/design/TEST-MACHINE-2026-11-22.md`.
+- **How it arose:** today you had to hand IINA over, and switch plugins by hand, for every test. Scoping: [docs/design/TEST-MACHINE-2026-11-22.md](design/TEST-MACHINE-2026-11-22.md).
 - **What it needs from you:** about 15 minutes. Your admin password to create the user, one login as that user, and later a Twitch sign-in for it.
 - **Recommendation:** before the 0.6.0 Reddit launch, not tonight.
 - **What your answer changes:** whether native testing stops interrupting you.
@@ -62,7 +62,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 ### W-7. Output style: trial a revised style in two projects
 - **What it is:** the review session found that the global "scan-first" style **isn't loaded** (checked 2026-11-22; whether it ever loaded before is unchecked, so not "never"). Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
-- **The proposal:** `docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md`. Its decisions start at "Decisions for you":
+- **The proposal:** [docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md](design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md). Its decisions start at "Decisions for you":
   - **D1, answered:** see the update below;
   - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it;
   - **D3:** your global decision rule asks for all five decision points in chat when a decision is asked, which you rejected on 2026-11-22. I recommend amending it to one line plus a link to the waiting entry.
@@ -79,9 +79,9 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 ### W-12. Open Stream with suggestions: pick the design direction and the window's sizing
 - **What it is:** which mock becomes the Open Stream window with suggestions (#74) and the person row shared with the People screen (#76), and whether the window stays one fixed size or hugs its results. It's yours because it's how the product looks and feels every day.
 - **How it arose:**
-  - the designer's two mocks: `docs/design/finding-2026-11-22/open-stream/direction-a/index.html` (A, Quick list) and `direction-b/index.html` (B, List and detail);
-  - their comparison in the same folder's `README.md`;
-  - the independent review: `REVIEW.md` in the same folder.
+  - the designer's two mocks: [docs/design/finding-2026-11-22/open-stream/direction-a/index.html](design/finding-2026-11-22/open-stream/direction-a/index.html) (A, Quick list) and [direction-b/index.html](design/finding-2026-11-22/open-stream/direction-b/index.html) (B, List and detail);
+  - their comparison: [README.md](design/finding-2026-11-22/open-stream/README.md);
+  - the independent review: [REVIEW.md](design/finding-2026-11-22/open-stream/REVIEW.md).
 - **Options:**
 
   | Option | What it buys | What it costs |
@@ -104,7 +104,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - loading a huge history file is slow;
   - one return value is inconsistent.
 
-  Details: `docs/reviews/2026-11-22-issue-73-module-review.md`, the "Narrow check" section at the end. The fixes are being made on the branch now.
+  Details: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), the "Narrow check" section at the end. The fixes are being made on the branch now.
 - **Options:**
 
   | Option | What it buys | What it costs |
@@ -116,11 +116,11 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** the five findings are mechanical, not a sign the design is wrong.
 - **What would flip it:** if that check finds anything new, park the module and step back on the storage design.
 - **What your answer changes:** when history is wired in, and so when #74 can start.
-- **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: `docs/reviews/2026-11-22-issue-73-module-review.md`, last section.
+- **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), last section.
 
 ### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
 - **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.
-- **How it arose:** five Codex reviews tonight. The record, verbatim: `docs/reviews/2026-11-22-issue-67-review.md`. Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.
+- **How it arose:** five Codex reviews tonight. The record, verbatim: [docs/reviews/2026-11-22-issue-67-review.md](reviews/2026-11-22-issue-67-review.md). Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.
 - **The remaining edge cases, in plain words:**
   - an offline answer arriving at the same moment as the 1.5 s timeout opens a player instead of the VOD list, which is today's behaviour;
   - a VOD list arriving in the same instant you edit the text can overwrite your edit;
@@ -141,8 +141,8 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 ## Answered
 
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
-- **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in `AGENTS.md`.
+- **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in [AGENTS.md](../AGENTS.md).
 - **W-11, release mapping** (2026-11-22, 21:25): **D-035**, option A. If the history and suggestions work is sized over 6 hours, the People screen's build moves after launch without asking again.
-- **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
+- **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: [docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md](design/DISCOVERY-AND-PLATFORMS-2026-11-22.md) §6–§8.
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

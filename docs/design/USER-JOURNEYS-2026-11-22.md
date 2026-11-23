@@ -21,7 +21,7 @@ Facts are labelled. "Observed" means checked on this Mac on 2026-11-22. Everythi
 | J9 | **Multi-platform, multi-account** | YouTube / Kick / several accounts → one place | Twitch only for live chat. One account. | Provider seams (#19 rule), an account switcher, then YouTube live chat and Kick. Feasibility is unchecked: YouTube API quota per Google project; Kick's official API and chat. | #19, #6, #39, #40 |
 | J10 | **Keyboard / VoiceOver / reduced motion** | Any journey without a pointer | Partly covered. Never audited end to end. | Acceptance criteria inside the overhaul. | #20 |
 
-## Proposed journeys, not yet approved (2026-11-22, ~21:00)
+## Proposed journeys, not yet approved (2026-11-22, 20:13)
 
 The operator asked: "are there any other user situations… user desires… we might want to support?" "Code" means checked by searching this repo on 2026-11-22; everything else is a proposal, or marked unchecked or inferred.
 

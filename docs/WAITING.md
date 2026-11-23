@@ -1,6 +1,6 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:30.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:15.
 
 ## Open
 
@@ -72,7 +72,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - **offline VOD list:** D-030 (`src/twitch-vods.js`);
   - **VOD chat replay:** `VideoCommentsByOffsetOrCursor` (`helpers/acquire.py`; #26).
 
-  All three send twitch.tv's own public client ID, with no viewer token and no cookies. *Corrected 21:45: this item first named only playback and VOD lists.* Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
+  All three send twitch.tv's own public client ID, with no viewer token and no cookies. *Corrected 21:05: this item first named only playback and VOD lists.* Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
 - **How it arose:** the follows research read the agreement for the first time on 2026-11-22: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`, section Q4. The lead checked the quote against the page. D-030 (chosen by the lead during the unattended run) already uses GQL for offline VODs, pending your confirmation in #49.
 - **Options:**
   - **keep today's uses, add no new ones:** playback, offline VODs and VOD chat replay stay; follows, search and popular use the documented API;
@@ -103,8 +103,25 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** a web-design reviewer's findings carry over to web pages that live inside a native macOS player. Impeccable's native modes cover iOS and Android, not macOS (README), so its defaults are web taste. Native IINA remains the proof.
 - **What would flip it:** detector findings that are mostly web conventions IINA's look rightly overrides (then skip it), or findings about contrast, cramped spacing or missing states (then the reviewer install).
 
+### W-11. Fit the finding-and-watching work onto the releases
+- **What it is:** where history, suggestions as you type, the People screen, listening, resume and stream end go among 0.5.6–0.8.0. It's yours because it trades launch scope against what a stranger finds on day one, and because it approves journeys J11 (background listening), J12 (long VODs), J14 (stream end) and J19 (history privacy), which you haven't approved yet. Full proposal: `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` §6.
+- **How it arose:** you asked on 2026-11-22 for the whole proposal, phased alongside the releases. Spec: `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` (phases §5, release mapping §6).
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  | --- | --- | --- |
+  | **A. Spec mapping:** history and suggestions in 0.5.6; People screen and listening in 0.6.0; resume and stream end in 0.7.0; platforms in 0.8.0 | Typing names, your main complaint, is fixed before launch; launch screenshots show the People screen; ranking has history by launch day | 0.5.6 grows by two issues; two re-sign-ins (0.5.6, 0.7.0) |
+  | **B. People screen after launch:** history and suggestions in 0.5.6; People screen in 0.7.0 | Smaller launch overhaul | The overhaul is designed twice; launch shows no "what's on" view |
+  | **C. Ask for the write scope in 0.5.6** too, on top of A | One re-sign-in instead of two | Asks for a write permission a release before anything uses it |
+  | **D. Keep ROADMAP as is:** 0.5.6 keeps only the Following list (#30), the offline VOD picker (#32), opening from the browser (#35) and emotes (#34); everything else unscheduled | No scope growth | No history, so no ranking data when People ships; typing whole names stays at launch |
+
+- **Recommendation:** A. History has to start recording before ranking can use it, and suggestions are small once history exists; the People screen belongs in the overhaul because the overhaul designs every surface at once (D-026).
+- **What it rests on:** history and suggestions are small enough to land in 0.5.6 without pushing the 0.6.0 launch back, because the Helix client and the Open Stream window already exist. Inferred; nobody has sized the two new issues.
+- **What would flip it:** if sizing the two issues shows they'd delay the launch, choose B and ship suggestions alone in 0.5.6. If you'd rather sign in once than keep least privilege, choose C. Test: the lead sizes both issues from their tests before 0.5.6 starts.
+- **What your answer changes:** ROADMAP rows 0.5.6–0.8.0, eight new issues (five backlog ones later), J11/J12/J14/J19 status, D-026's not-in-scope line (search), and a new D-034.
+
 ## Answered
 
-- **W-8, discovery model** (2026-11-22, ~21:30): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
+- **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

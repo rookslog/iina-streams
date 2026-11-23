@@ -77,13 +77,13 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
   | Option | What it buys | What it costs |
   |---|---|---|
-  | **Hybrid of A, hugging its results, top edge pinned** (like Spotlight) | A's compact one-line rows; the window is as big as its content | Needs IINA to let Streams read or keep the window's top position; unchecked |
+  | **Hybrid of A, hugging its results, top edge pinned** (like Spotlight) | A's compact one-line rows; the window is as big as its content | IINA 1.5.1 can't read the window's position, so the top edge moves unless an unchecked web-view trick works |
   | **Hybrid of A, one fixed size** | The field and rows never move; the simplest build | Empty space when there are few matches |
   | **B, fixed size, fixed per the review** | A detail pane per person | Busier, more text; two review majors to fix |
   | **Decide after a native test** | Evidence first | The design round waits |
-- **Recommendation:** the hybrid of A, hugging its results with the top edge pinned if IINA allows it, otherwise one fixed size. This is the reviewer's pick. It matches the macOS search-window convention and your minimize-UI-text preference.
-- **What it rests on:** IINA 1.5.1 lets the plugin keep the window's top edge in place while it resizes, by reading the window's frame or remembering the position the plugin set. Unchecked; the review read only `setFrame`.
-- **What would flip it:** if IINA can't pin the top edge, one fixed size. Test: the lead's native check from review finding 1.
+- **Recommendation (updated after checking IINA's source):** the hybrid of A, **one fixed size**. IINA 1.5.1's plugin window API can set the window's frame but has no way to read it (`setFrame` exists; there is no frame getter in `JavascriptAPIStandaloneWindow.swift` at tag v1.5.1, lines 14–24 and 144–157, read by the lead). A plugin therefore can't keep the top edge in place after you've moved the window: every resize grows from the bottom-left corner, and the field jumps. Today's Open Stream window already resizes when it shows offline broadcasts, so it has this jump now.
+- **What it rests on:** a fixed size with empty space looks acceptable to you. That's a taste question, which is why it's yours.
+- **What would flip it:** if you'd rather it hug its results, one unchecked route remains: the page reads its own screen position (`window.screenY` inside IINA's web view) and passes it to `setFrame`. If a native test shows that works, the hugging option comes back.
 - **What your answer changes:** the second design round (the hybrid drawn, with the review's fixes), then the #74 build.
 
 ## Answered

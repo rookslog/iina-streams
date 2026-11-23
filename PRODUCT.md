@@ -39,6 +39,16 @@ Success means a usable native IINA streaming and chat experience, judged in IINA
 - **Typical session (INFERRED from J2 and J4).** The viewer presses ⌃⌘O, types a few letters of a name or pastes a URL, presses Return, and watches. An offline channel offers its recent broadcasts instead.
 - **Tools beside it.** Streamlink and yt-dlp (installed with Homebrew), python3, Twitch's documented API (Helix), and twitch.tv's internal interface (GQL), the latter used anonymously only (D-034).
 
+## Surfaces in IINA (where each piece of Streams appears)
+Checked 2026-11-23 against IINA 1.5.1's source and the operator's own IINA settings (`defaults read com.colliderli.iina`). Re-check after an IINA update.
+- **The plugin panel** (IINA's plugin sidebar: one puzzle-piece tab per plugin, opened from the plugin button) slides in over the **left** of the video. `sidebarPluginsDisplayAtLeading` defaults to `true`, and the operator keeps the default. It is 360 pt wide by default (`leadingSidebarWidth`; the operator's is 359), resizable from 300 to 500 pt. With IINA's Edge-to-Edge Video turned off, it sits beside the video instead of over it. **Planned use** (WAITING W-16): the mini dashboard, VODs and quality. Chat leaves it.
+- **IINA's own panels are separate.** Video, Audio and Subtitles (plus layout) form a panel on the **right** (`sidebarSettingsDisplayAtLeading: false`). Playlist and chapters form a panel on the left (`sidebarPlaylistDisplayAtLeading: true`). Whether the playlist and plugin panels can be open together is unchecked.
+- **The overlay** is a transparent page over the video. It holds the floating glass chat box (a CSS backdrop blur, `ui/overlay.css`) and the side chat column ("beside"), which shrinks the picture from the **right** (`video-margin-ratio-right`).
+- **Open Stream** is a standalone window, 380 px wide, sized from `global.js` with `setFrame`. IINA has no frame getter.
+- **The Streams menu** is IINA's plugin menu for Streams.
+
+**When the operator describes their own IINA, that's an observation.** Find the setting that explains it, and never "correct" it from a screenshot or a source default.
+
 ## Capabilities and Constraints
 - **Twitch data sources (D-034).** Helix, the documented API with the viewer's token, comes first. GQL, twitch.tv's internal interface, is allowed where Helix can't deliver, including for new features. It is called anonymously with twitch.tv's public web client ID, never with the viewer's token or cookies.
 - **Release plan (D-035).**

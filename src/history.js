@@ -13,7 +13,8 @@
 //
 // Choices beyond the test design (accepted by the lead, 2026-11-22):
 // - the person just recorded is never the one evicted at the bound (otherwise a full history could never
-//   admit anyone new). A file with more than 500 people is trimmed by score on load, in memory only;
+//   admit anyone new). A file with more than 500 people is trimmed by score on load, in memory only
+//   (one sort, so a huge file opens quickly);
 // - a storage error never throws. The change stays in memory and the store stays "unsaved": the next
 //   mutating call retries the write (query never writes), and the call that made the change returns false.
 //   Nothing is overwritten after a failed backup;
@@ -25,7 +26,10 @@
 //   change is a no-op that writes and backs up nothing;
 // - loaded visits are sorted by time, loaded durations are capped at 12 hours, and a loaded visit in the
 //   future counts as now;
-// - every visit has an id, a stored number that only grows (a file without ids gets them, in time order).
+// - every visit has an id, a stored number that only grows (a file without ids gets them, in time order),
+//   and the file keeps the next id to hand out (`nextId`), so forgetting the newest visit never lets its id
+//   come back. Near Number.MAX_SAFE_INTEGER the closed visits are renumbered from 1 (open visits keep their
+//   ids, so their handles keep working; handles of closed visits are void);
 //   record() returns the handle {provider, login, id} for the visit it opened (null when ignored), and
 //   finish(handle, at) closes exactly that visit. Finishing a visit that is already closed, or that does not
 //   exist, changes nothing, so an identical retry is harmless, two windows of one person each close their
@@ -35,6 +39,11 @@
 // finish, forget, clear and setPaused return true when the change is in the file (for forget, clear and
 // setPaused also when it already was), and false when it was ignored or the write failed. record returns its
 // handle even when the write failed: the visit is kept in memory and the next mutating call retries the write.
+// record's `null` is its "false": it means the record was ignored (paused, read-only, unavailable, unsafe
+// identity or bad time).
+//
+// A file with more than 500 people is trimmed on load in memory only. The trimmed people stay in the file
+// until the next write, and forget() of one of them rewrites the file without them.
 //
 // Storage contract: read(path) returns text or null when the file is missing (it may throw);
 // write(path, text); backup(from, to) copies the original bytes. `at` and now() are Unix seconds.
@@ -44,6 +53,8 @@ const BACKUP_FILE = HISTORY_FILE + '.bad';
 const FORMAT_VERSION = 1;
 
 const MAX_PEOPLE = 500;
+// Visit ids are renumbered this long before they could leave the safe integer range.
+const ID_RENUMBER_MARGIN = 100;
 const MAX_VISITS_PER_PERSON = 10;
 const MAX_VISIT_SECONDS = 12 * 60 * 60;
 // A visit that ended sooner than this is an accidental open, not interest.
@@ -154,16 +165,31 @@ function cleanStoredPerson(raw, nowSeconds) {
   return {...identity, visits};
 }
 
-// Gives every visit without a usable id (or with an id its person already uses) the next number. Returns the
-// highest id in use. Visits are in time order, so a file without ids gets ids in time order.
-function assignVisitIds(people) {
-  let highest = 0;
+// Gives every visit without a usable id (or with an id its person already uses) the next number. `floor` is
+// the highest id handed out before (from the file's nextId). Returns the highest id in use. Visits are in time
+// order, so a file without ids gets ids in time order. If the numbers would run past the safe integers, every
+// visit is numbered afresh: nothing holds a handle at load time.
+function assignVisitIds(people, floor) {
+  let highest = floor;
+  let missing = 0;
   for (const person of people) {
+    const used = new Set();
     for (const visit of person.visits) {
-      if (visit.id !== null) {
+      if (visit.id === null || used.has(visit.id)) {
+        missing += 1;
+      } else {
         highest = Math.max(highest, visit.id);
+        used.add(visit.id);
       }
     }
+  }
+  if (highest + missing > Number.MAX_SAFE_INTEGER) {
+    for (const person of people) {
+      for (const visit of person.visits) {
+        visit.id = null;
+      }
+    }
+    highest = 0;
   }
   for (const person of people) {
     const used = new Set();
@@ -238,6 +264,13 @@ function matchRank(person, needle) {
   return null;
 }
 
+function compareNumbers(a, b) {
+  if (a < b) {
+    return -1;
+  }
+  return a > b ? 1 : 0;
+}
+
 function compareText(a, b) {
   if (a < b) {
     return -1;
@@ -304,7 +337,8 @@ function loadFile(storage, nowSeconds) {
       people.push(person);
     }
   }
-  const lastId = assignVisitIds(people);
+  const storedLast = Number.isSafeInteger(data.nextId) && data.nextId >= 1 ? data.nextId - 1 : 0;
+  const lastId = assignVisitIds(people, storedLast);
   return {...empty, people, paused: data.paused === true, readOnly: newer, lastId};
 }
 
@@ -316,6 +350,8 @@ function createHistory({storage, now}) {
   // True after a read that threw: nothing is known about the file, so nothing may be written over it.
   let unavailable = false;
   let lastId = 0;
+  // People the last load trimmed. The file still holds them until the next write.
+  let trimmedKeys = new Set();
   // True while memory holds a change the file does not. The next mutating call retries the write.
   let unsaved = false;
 
@@ -326,7 +362,26 @@ function createHistory({storage, now}) {
     needsBackup = loaded.damaged;
     unavailable = loaded.unavailable;
     lastId = loaded.lastId;
-    evictLowestScore(null);
+    trimOversizedLoad();
+  }
+
+  // A file with more than MAX_PEOPLE people keeps the strongest. One sort, weakest first: lowest score, then
+  // oldest last visit, then file order (the same order evictLowestScore would pick one at a time).
+  function trimOversizedLoad() {
+    trimmedKeys = new Set();
+    if (people.length <= MAX_PEOPLE) {
+      return;
+    }
+    const nowSeconds = now();
+    const entries = people.map(person => ({
+      person, score: scorePerson(person, nowSeconds), newest: newestVisitAt(person),
+    }));
+    entries.sort((a, b) => compareNumbers(a.score, b.score) || compareNumbers(a.newest, b.newest));
+    const evicted = new Set(entries.slice(0, people.length - MAX_PEOPLE).map(entry => entry.person));
+    for (const person of evicted) {
+      trimmedKeys.add(personKey(person.provider, person.login));
+    }
+    people = people.filter(person => !evicted.has(person));
   }
 
   // Retries the read while the store is unavailable. Returns false while it still is.
@@ -356,8 +411,10 @@ function createHistory({storage, now}) {
         storage.backup(HISTORY_FILE, BACKUP_FILE);
         needsBackup = false;
       }
-      storage.write(HISTORY_FILE, JSON.stringify({version: FORMAT_VERSION, paused, people}));
+      const nextId = Math.min(lastId + 1, Number.MAX_SAFE_INTEGER);
+      storage.write(HISTORY_FILE, JSON.stringify({version: FORMAT_VERSION, paused, nextId, people}));
       unsaved = false;
+      trimmedKeys = new Set();
       return true;
     } catch (error) {
       // Storage trouble must not break playback. The change stays in memory and is retried on the next call;
@@ -385,6 +442,42 @@ function createHistory({storage, now}) {
     }
   }
 
+  // The next id for a new visit of `person`: it grows, and the person doesn't already use it.
+  function takeNextId(person) {
+    if (lastId >= Number.MAX_SAFE_INTEGER - ID_RENUMBER_MARGIN) {
+      renumberClosedVisits();
+    }
+    do {
+      lastId += 1;
+    } while (person.visits.some(visit => visit.id === lastId));
+    return lastId;
+  }
+
+  // Ids are about to run out. Closed visits are numbered again from 1, in their old order, skipping any id an
+  // open visit of the same person holds. Open visits keep their ids, so their handles keep working.
+  function renumberClosedVisits() {
+    const closed = [];
+    for (const person of people) {
+      for (const visit of person.visits) {
+        if (visit.seconds !== null) {
+          closed.push({person, visit, oldId: visit.id});
+        }
+      }
+    }
+    closed.sort((a, b) => compareNumbers(a.oldId, b.oldId));
+    for (const entry of closed) {
+      entry.visit.id = null;
+    }
+    lastId = 0;
+    for (const entry of closed) {
+      do {
+        lastId += 1;
+      } while (entry.person.visits.some(visit => visit.id === lastId));
+      entry.visit.id = lastId;
+    }
+    unsaved = true;
+  }
+
   // Adds the visit in memory. Returns its handle, or null when nothing was added.
   function addVisit(input) {
     if (paused || readOnly || !input) {
@@ -395,11 +488,6 @@ function createHistory({storage, now}) {
       return null;
     }
 
-    lastId += 1;
-    const visit = input.offline === true
-      ? {id: lastId, at: input.at, seconds: 0, offline: true}
-      : {id: lastId, at: input.at, seconds: null};
-
     let person = findPerson(identity.provider, identity.login);
     if (person === null) {
       person = {...identity, visits: []};
@@ -407,6 +495,10 @@ function createHistory({storage, now}) {
     } else {
       person.displayName = identity.displayName;
     }
+    const id = takeNextId(person);
+    const visit = input.offline === true
+      ? {id, at: input.at, seconds: 0, offline: true}
+      : {id, at: input.at, seconds: null};
     person.visits.push(visit);
     person.visits.sort((a, b) => a.at - b.at);
     person.visits = person.visits.slice(-MAX_VISITS_PER_PERSON);
@@ -508,8 +600,11 @@ function createHistory({storage, now}) {
     if (!readOnly && known) {
       const login = normalizeLogin(input.provider, input.login);
       const remaining = people.filter(person => !(person.provider === input.provider && person.login === login));
-      if (remaining.length !== people.length) {
+      const key = personKey(input.provider, login);
+      // A person the load trimmed is gone from memory but still in the file: forgetting rewrites the file.
+      if (remaining.length !== people.length || trimmedKeys.has(key)) {
         people = remaining;
+        trimmedKeys.delete(key);
         unsaved = true;
       }
     }

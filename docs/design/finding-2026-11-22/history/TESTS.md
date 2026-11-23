@@ -22,6 +22,10 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - Finishing a visit that is already closed, or doesn't exist, is a no-op, so an identical retry does nothing.
    - Amended 2026-11-22 round 2b (lead): `finish` closes the visit its handle names, not "the newest open visit of the person" and not "the same as the last finish". Two windows of one person closing in the same second each close their own visit.
    - Amended 2026-11-22 round 3 (lead): every visit has a stored `id` that only grows, and the handle carries the id, not the time. So a clock that moves backwards can't orphan a handle, and two visits opened in the same second are closed independently, also across a retry after a failed write. A file without ids gets them in time order.
+   - Amended 2026-11-22 round 4 (lead):
+     - **`null` is `record`'s false:** it means the record was ignored (paused, read-only, unavailable, unsafe identity or bad time). `finish`, `forget`, `clear` and `setPaused` return `false` instead.
+     - **The next id is stored** in the file (`nextId`), so forgetting the newest visit and reopening never lets its id, or a stale handle, come back.
+     - **Ids stay in range:** near `Number.MAX_SAFE_INTEGER`, closed visits are renumbered from 1; open visits keep their ids, so their handles keep working (handles of closed visits are void). A file whose ids can't be extended is numbered afresh on load.
    - A `finish` with a non-finite or non-number `at` is ignored. The handle holds no secret, and the caller keeps it from player start to close.
 3. **Frecency** (how often and how recently). Score = Σ over visits of an age weight:
 
@@ -42,6 +46,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 4. **Bound.** At most 500 people. Recording a 501st evicts the lowest score; ties go to the oldest last visit.
    - Amended 2026-11-22 round 2 (lead): the person just recorded is never the one evicted. Otherwise a full history of strong regulars could never admit anyone new.
    - Amended 2026-11-22 round 3 (lead): a file with more than 500 people is trimmed by score on load, in memory only. Nothing is written until the next mutating call.
+   - Amended 2026-11-22 round 4 (lead): the trim is one sort (a 10,000-person file opens in well under 200 ms), and `forget` of a person the trim removed also removes them from the file; the trimmed logins are kept until the next write.
 5. **Query, for #74.** `query('oh')`:
    - matches are case-insensitive prefix matches of `login` or `displayName`, then word-start matches inside `displayName`;
    - prefix matches come before word-start matches; within each group, by score; then by newest visit; then by login;

@@ -4,32 +4,37 @@
 // Pure: storage and the clock are injected, nothing here does I/O of its own or logs a name.
 // Test design: docs/design/finding-2026-11-22/history/TESTS.md (items 1-9).
 //
-// Privacy: a person is {provider, login, displayName, visits}; a visit is {at, seconds} plus offline:true
-// for an offline open. No URL, title, token, signature or query string is ever kept. The login is an
-// allowlist (a Twitch login or a YouTube channel id, nothing else), the display name is bounded and may not
-// hold URL characters, and every other input field is ignored.
+// Privacy: a person is {provider, login, displayName, visits}; a visit is {id, at, seconds} plus offline:true
+// for an offline open. The module stores only identity fields that pass its allowlists, and never playback
+// metadata: no URL, title, token, signature or query string. The login is an allowlist (a Twitch login or a
+// YouTube channel id, nothing else), the display name is bounded and may not hold URL characters, and every
+// other input field is ignored. It checks format, not provenance: the caller must pass identity that came
+// from a resolved Twitch user or a YouTube channel record, never text taken from a URL, token or playlist.
 //
 // Choices beyond the test design (accepted by the lead, 2026-11-22):
 // - the person just recorded is never the one evicted at the bound (otherwise a full history could never
-//   admit anyone new);
-// - a storage error never throws. The change stays in memory and the store stays "unsaved": the next call
-//   to any method retries the write, and the call that made the change returns false. Nothing is
-//   overwritten after a failed backup;
-// - a file that cannot be used (bad JSON, no version, no people array) is treated as corrupt;
+//   admit anyone new). A file with more than 500 people is trimmed by score on load, in memory only;
+// - a storage error never throws. The change stays in memory and the store stays "unsaved": the next
+//   mutating call retries the write (query never writes), and the call that made the change returns false.
+//   Nothing is overwritten after a failed backup;
+// - a file that cannot be parsed (bad JSON, no version, no people array) is treated as corrupt: backed up,
+//   then replaced on the next write. A file that cannot be READ (the read throws) makes the store
+//   unavailable: every mutation first retries the read, then returns false and writes nothing while it still
+//   fails, so a file that could not be read is never overwritten;
 // - a file with a newer version is read-only, checked before its shape: it loads for query, and every
 //   change is a no-op that writes and backs up nothing;
 // - loaded visits are sorted by time, loaded durations are capped at 12 hours, and a loaded visit in the
 //   future counts as now;
-// - a visit is finished by its handle, not by person: record() returns {provider, login, at} for the visit
-//   it opened (null when ignored), and finish(handle, at) closes exactly that visit. Finishing a visit that is
-//   already closed, or that does not exist, changes nothing, so an identical retry is harmless and two windows
-//   of one person closing in the same second each close their own visit. The handle holds no secret and
-//   survives a reload; the caller keeps it from player start to close. (Two visits of one person opened in the
-//   same second share a handle: each finish still closes one open visit of that second.)
+// - every visit has an id, a stored number that only grows (a file without ids gets them, in time order).
+//   record() returns the handle {provider, login, id} for the visit it opened (null when ignored), and
+//   finish(handle, at) closes exactly that visit. Finishing a visit that is already closed, or that does not
+//   exist, changes nothing, so an identical retry is harmless, two windows of one person each close their
+//   own visit even in the same second, and a clock that moves backwards cannot orphan a handle. The handle
+//   holds no secret and survives a reload; the caller keeps it from player start to close.
 //
 // finish, forget, clear and setPaused return true when the change is in the file (for forget, clear and
 // setPaused also when it already was), and false when it was ignored or the write failed. record returns its
-// handle even when the write failed: the visit is kept in memory and the next call retries the write.
+// handle even when the write failed: the visit is kept in memory and the next mutating call retries the write.
 //
 // Storage contract: read(path) returns text or null when the file is missing (it may throw);
 // write(path, text); backup(from, to) copies the original bytes. `at` and now() are Unix seconds.
@@ -124,7 +129,9 @@ function cleanStoredVisit(raw, nowSeconds) {
     return null;
   }
   const seconds = open ? null : Math.min(raw.seconds, MAX_VISIT_SECONDS);
-  const visit = {at: Math.min(raw.at, nowSeconds), seconds};
+  // A missing or unusable id is null here and assigned once the whole file is known.
+  const id = Number.isSafeInteger(raw.id) && raw.id > 0 ? raw.id : null;
+  const visit = {id, at: Math.min(raw.at, nowSeconds), seconds};
   if (raw.offline === true) {
     visit.offline = true;
   }
@@ -144,7 +151,32 @@ function cleanStoredPerson(raw, nowSeconds) {
     }
   }
   visits.sort((a, b) => a.at - b.at);
-  return {...identity, visits: visits.slice(-MAX_VISITS_PER_PERSON)};
+  return {...identity, visits};
+}
+
+// Gives every visit without a usable id (or with an id its person already uses) the next number. Returns the
+// highest id in use. Visits are in time order, so a file without ids gets ids in time order.
+function assignVisitIds(people) {
+  let highest = 0;
+  for (const person of people) {
+    for (const visit of person.visits) {
+      if (visit.id !== null) {
+        highest = Math.max(highest, visit.id);
+      }
+    }
+  }
+  for (const person of people) {
+    const used = new Set();
+    for (const visit of person.visits) {
+      if (visit.id === null || used.has(visit.id)) {
+        highest += 1;
+        visit.id = highest;
+      }
+      used.add(visit.id);
+    }
+    person.visits = person.visits.slice(-MAX_VISITS_PER_PERSON);
+  }
+  return highest;
 }
 
 function ageWeight(age) {
@@ -229,12 +261,13 @@ function compareByInterest(a, b) {
 // Loads the file. Result: {people, paused, readOnly, damaged}. `damaged` means the file existed but could not
 // be used, so the original must be backed up before anything overwrites it.
 function loadFile(storage, nowSeconds) {
-  const empty = {people: [], paused: false, readOnly: false, damaged: false};
+  const empty = {people: [], paused: false, readOnly: false, damaged: false, unavailable: false, lastId: 0};
   let text;
   try {
     text = storage.read(HISTORY_FILE);
   } catch (error) {
-    return {...empty, damaged: true};
+    // The file may be fine; it just could not be read. Never treat it as empty and overwrite it.
+    return {...empty, unavailable: true};
   }
   if (text === null || text === undefined) {
     return empty;
@@ -271,17 +304,40 @@ function loadFile(storage, nowSeconds) {
       people.push(person);
     }
   }
-  return {people, paused: data.paused === true, readOnly: newer, damaged: false};
+  const lastId = assignVisitIds(people);
+  return {...empty, people, paused: data.paused === true, readOnly: newer, lastId};
 }
 
 function createHistory({storage, now}) {
-  const loaded = loadFile(storage, now());
-  let people = loaded.people;
-  let paused = loaded.paused;
-  const readOnly = loaded.readOnly;
-  let needsBackup = loaded.damaged;
-  // True while memory holds a change the file does not. Any later call retries the write.
+  let people = [];
+  let paused = false;
+  let readOnly = false;
+  let needsBackup = false;
+  // True after a read that threw: nothing is known about the file, so nothing may be written over it.
+  let unavailable = false;
+  let lastId = 0;
+  // True while memory holds a change the file does not. The next mutating call retries the write.
   let unsaved = false;
+
+  function adopt(loaded) {
+    people = loaded.people;
+    paused = loaded.paused;
+    readOnly = loaded.readOnly;
+    needsBackup = loaded.damaged;
+    unavailable = loaded.unavailable;
+    lastId = loaded.lastId;
+    evictLowestScore(null);
+  }
+
+  // Retries the read while the store is unavailable. Returns false while it still is.
+  function available() {
+    if (unavailable) {
+      adopt(loadFile(storage, now()));
+    }
+    return !unavailable;
+  }
+
+  adopt(loadFile(storage, now()));
 
   function findPerson(provider, login) {
     return people.find(person => person.provider === provider && person.login === login) || null;
@@ -339,9 +395,10 @@ function createHistory({storage, now}) {
       return null;
     }
 
+    lastId += 1;
     const visit = input.offline === true
-      ? {at: input.at, seconds: 0, offline: true}
-      : {at: input.at, seconds: null};
+      ? {id: lastId, at: input.at, seconds: 0, offline: true}
+      : {id: lastId, at: input.at, seconds: null};
 
     let person = findPerson(identity.provider, identity.login);
     if (person === null) {
@@ -356,13 +413,16 @@ function createHistory({storage, now}) {
 
     evictLowestScore(person);
     unsaved = true;
-    return Object.freeze({provider: identity.provider, login: identity.login, at: input.at});
+    return Object.freeze({provider: identity.provider, login: identity.login, id: visit.id});
   }
 
   // record({provider, login, displayName, at, offline?}): one visit. Returns the visit's handle, or null when
   // ignored (paused, read-only, unsafe identity, bad time). Offline opens are stored closed with zero seconds
   // and keep their interest after a reload.
   function record(input) {
+    if (!available()) {
+      return null;
+    }
     const handle = addVisit(input);
     flush();
     return handle;
@@ -371,7 +431,7 @@ function createHistory({storage, now}) {
   // Closes the visit a handle names. Returns 'closed', 'already' (the visit exists but is closed) or
   // 'ignored' (paused, read-only, bad input, or no such visit).
   function closeVisit(handle, at) {
-    if (paused || readOnly || !handle || !isFiniteNumber(at) || !isFiniteNumber(handle.at)) {
+    if (paused || readOnly || !handle || !isFiniteNumber(at) || !Number.isSafeInteger(handle.id)) {
       return 'ignored';
     }
     const identity = cleanIdentity(handle);
@@ -379,15 +439,11 @@ function createHistory({storage, now}) {
       return 'ignored';
     }
     const person = findPerson(identity.provider, identity.login);
-    if (person === null) {
-      return 'ignored';
-    }
-    const sameTime = person.visits.filter(visit => visit.at === handle.at);
-    if (sameTime.length === 0) {
-      return 'ignored';
-    }
-    const visit = sameTime.find(candidate => candidate.seconds === null);
+    const visit = person === null ? undefined : person.visits.find(candidate => candidate.id === handle.id);
     if (visit === undefined) {
+      return 'ignored';
+    }
+    if (visit.seconds !== null) {
       return 'already';
     }
     visit.seconds = Math.min(MAX_VISIT_SECONDS, Math.max(0, at - visit.at));
@@ -398,6 +454,9 @@ function createHistory({storage, now}) {
   // finish(handle, at): closes the visit record() returned the handle for. A visit that is already closed, or
   // not found, is left alone.
   function finish(handle, at) {
+    if (!available()) {
+      return false;
+    }
     const outcome = closeVisit(handle, at);
     const saved = flush();
     return outcome !== 'ignored' && saved;
@@ -406,6 +465,7 @@ function createHistory({storage, now}) {
   // query(text, {provider}?): people whose login or display name starts with the text, then those with a
   // later word in the display name that starts with it. Each result is a copy of the person plus `score`.
   function query(text, options = {}) {
+    available();
     const needle = typeof text === 'string' ? text.trim().toLowerCase() : '';
     const nowSeconds = now();
     const groups = [[], []];
@@ -428,6 +488,9 @@ function createHistory({storage, now}) {
 
   // Writes only when the stored value changes.
   function setPaused(value) {
+    if (!available()) {
+      return false;
+    }
     const next = value === true;
     if (!readOnly && next !== paused) {
       paused = next;
@@ -438,6 +501,9 @@ function createHistory({storage, now}) {
 
   // Forget and clear still work while paused: they only remove data.
   function forget(input) {
+    if (!available()) {
+      return false;
+    }
     const known = input && PROVIDERS.includes(input.provider) && typeof input.login === 'string';
     if (!readOnly && known) {
       const login = normalizeLogin(input.provider, input.login);
@@ -451,6 +517,9 @@ function createHistory({storage, now}) {
   }
 
   function clear() {
+    if (!available()) {
+      return false;
+    }
     if (!readOnly) {
       people = [];
       unsaved = true;

@@ -26,10 +26,11 @@
 //   change is a no-op that writes and backs up nothing;
 // - loaded visits are sorted by time, loaded durations are capped at 12 hours, and a loaded visit in the
 //   future counts as now;
-// - every visit has an id, a stored number that only grows (a file without ids gets them, in time order),
-//   and the file keeps the next id to hand out (`nextId`), so forgetting the newest visit never lets its id
-//   come back. Near Number.MAX_SAFE_INTEGER the closed visits are renumbered from 1 (open visits keep their
-//   ids, so their handles keep working; handles of closed visits are void);
+// - every visit has an id, a whole number from 1 to MAX_VISIT_ID (2^31) that only grows, and the file keeps
+//   the next id to hand out (`nextId`), so forgetting the newest visit never lets its id come back. A file
+//   without ids (an older one) gets them from nextId upward, in time order. An id or nextId that is not a
+//   whole number, is below 1 or is above the bound makes the file corrupt (backed up, then replaced). There
+//   is no renumbering: at the bound record() returns null and writes nothing;
 //   record() returns the handle {provider, login, id} for the visit it opened (null when ignored), and
 //   finish(handle, at) closes exactly that visit. Finishing a visit that is already closed, or that does not
 //   exist, changes nothing, so an identical retry is harmless, two windows of one person each close their
@@ -53,8 +54,8 @@ const BACKUP_FILE = HISTORY_FILE + '.bad';
 const FORMAT_VERSION = 1;
 
 const MAX_PEOPLE = 500;
-// Visit ids are renumbered this long before they could leave the safe integer range.
-const ID_RENUMBER_MARGIN = 100;
+// The largest visit id. At two billion visits the history stops recording rather than renumber.
+const MAX_VISIT_ID = 2 ** 31;
 const MAX_VISITS_PER_PERSON = 10;
 const MAX_VISIT_SECONDS = 12 * 60 * 60;
 // A visit that ended sooner than this is an accidental open, not interest.
@@ -129,9 +130,16 @@ function personKey(provider, login) {
   return provider + '\n' + login;
 }
 
+function isValidVisitId(value) {
+  return Number.isInteger(value) && value >= 1 && value <= MAX_VISIT_ID;
+}
+
+// Thrown while reading a file that this code owns but cannot trust (for example an id outside its bounds).
+class CorruptHistory extends Error {}
+
 // Returns a clean visit from stored data, or null. Unknown fields are dropped. A visit in the future (clock
 // skew) counts as now, and a duration is capped like finish() caps it.
-function cleanStoredVisit(raw, nowSeconds) {
+function cleanStoredVisit(raw, nowSeconds, strict) {
   if (!raw || !isFiniteNumber(raw.at)) {
     return null;
   }
@@ -140,8 +148,14 @@ function cleanStoredVisit(raw, nowSeconds) {
     return null;
   }
   const seconds = open ? null : Math.min(raw.seconds, MAX_VISIT_SECONDS);
-  // A missing or unusable id is null here and assigned once the whole file is known.
-  const id = Number.isSafeInteger(raw.id) && raw.id > 0 ? raw.id : null;
+  // A missing id is null here and assigned once the whole file is known. Any other id must be a whole number
+  // from 1 to MAX_VISIT_ID. In a file this code owns, anything else makes the file corrupt; a newer file is
+  // read-only and only shown, so it is never judged.
+  const missing = raw.id === undefined || raw.id === null;
+  if (!missing && !isValidVisitId(raw.id) && strict) {
+    throw new CorruptHistory();
+  }
+  const id = !missing && isValidVisitId(raw.id) ? raw.id : null;
   const visit = {id, at: Math.min(raw.at, nowSeconds), seconds};
   if (raw.offline === true) {
     visit.offline = true;
@@ -149,14 +163,14 @@ function cleanStoredVisit(raw, nowSeconds) {
   return visit;
 }
 
-function cleanStoredPerson(raw, nowSeconds) {
+function cleanStoredPerson(raw, nowSeconds, strict) {
   const identity = cleanIdentity(raw);
   if (!identity || !Array.isArray(raw.visits)) {
     return null;
   }
   const visits = [];
   for (const rawVisit of raw.visits) {
-    const visit = cleanStoredVisit(rawVisit, nowSeconds);
+    const visit = cleanStoredVisit(rawVisit, nowSeconds, strict);
     if (visit !== null) {
       visits.push(visit);
     }
@@ -165,41 +179,33 @@ function cleanStoredPerson(raw, nowSeconds) {
   return {...identity, visits};
 }
 
-// Gives every visit without a usable id (or with an id its person already uses) the next number. `floor` is
-// the highest id handed out before (from the file's nextId). Returns the highest id in use. Visits are in time
-// order, so a file without ids gets ids in time order. If the numbers would run past the safe integers, every
-// visit is numbered afresh: nothing holds a handle at load time.
-function assignVisitIds(people, floor) {
+// Gives every visit without an id (or with an id its person already uses) the next number, from `floor`
+// upward, in time order. `floor` is the highest id handed out before (from the file's nextId). Returns the
+// highest id in use. In a file this code owns, running past MAX_VISIT_ID makes the file corrupt.
+function assignVisitIds(people, floor, strict) {
   let highest = floor;
-  let missing = 0;
+  const needing = [];
   for (const person of people) {
     const used = new Set();
     for (const visit of person.visits) {
       if (visit.id === null || used.has(visit.id)) {
-        missing += 1;
+        needing.push(visit);
       } else {
         highest = Math.max(highest, visit.id);
         used.add(visit.id);
       }
     }
   }
-  if (highest + missing > Number.MAX_SAFE_INTEGER) {
-    for (const person of people) {
-      for (const visit of person.visits) {
-        visit.id = null;
-      }
-    }
-    highest = 0;
+  if (strict && highest + needing.length > MAX_VISIT_ID) {
+    throw new CorruptHistory();
+  }
+  // Array.prototype.sort is stable: visits at one time keep file order.
+  needing.sort((a, b) => a.at - b.at);
+  for (const visit of needing) {
+    highest += 1;
+    visit.id = highest;
   }
   for (const person of people) {
-    const used = new Set();
-    for (const visit of person.visits) {
-      if (visit.id === null || used.has(visit.id)) {
-        highest += 1;
-        visit.id = highest;
-      }
-      used.add(visit.id);
-    }
     person.visits = person.visits.slice(-MAX_VISITS_PER_PERSON);
   }
   return highest;
@@ -323,11 +329,24 @@ function loadFile(storage, nowSeconds) {
     return {...empty, damaged: true};
   }
 
+  try {
+    return readPeople(data, newer, nowSeconds, empty);
+  } catch (error) {
+    if (error instanceof CorruptHistory) {
+      return {...empty, damaged: true};
+    }
+    throw error;
+  }
+}
+
+// The part of loadFile that may find the file corrupt (and throws CorruptHistory).
+function readPeople(data, newer, nowSeconds, empty) {
+  const strict = !newer;
   const people = [];
   const seen = new Set();
   const rawPeople = Array.isArray(data.people) ? data.people : [];
   for (const raw of rawPeople) {
-    const person = cleanStoredPerson(raw, nowSeconds);
+    const person = cleanStoredPerson(raw, nowSeconds, strict);
     if (person === null) {
       continue;
     }
@@ -337,8 +356,16 @@ function loadFile(storage, nowSeconds) {
       people.push(person);
     }
   }
-  const storedLast = Number.isSafeInteger(data.nextId) && data.nextId >= 1 ? data.nextId - 1 : 0;
-  const lastId = assignVisitIds(people, storedLast);
+  // nextId is the id after the last one handed out; it is at most MAX_VISIT_ID + 1 once the bound is reached.
+  let storedLast = 0;
+  if (data.nextId !== undefined) {
+    const valid = Number.isInteger(data.nextId) && data.nextId >= 1 && data.nextId <= MAX_VISIT_ID + 1;
+    if (!valid && strict) {
+      throw new CorruptHistory();
+    }
+    storedLast = valid ? data.nextId - 1 : 0;
+  }
+  const lastId = assignVisitIds(people, storedLast, strict);
   return {...empty, people, paused: data.paused === true, readOnly: newer, lastId};
 }
 
@@ -411,7 +438,7 @@ function createHistory({storage, now}) {
         storage.backup(HISTORY_FILE, BACKUP_FILE);
         needsBackup = false;
       }
-      const nextId = Math.min(lastId + 1, Number.MAX_SAFE_INTEGER);
+      const nextId = lastId + 1;
       storage.write(HISTORY_FILE, JSON.stringify({version: FORMAT_VERSION, paused, nextId, people}));
       unsaved = false;
       trimmedKeys = new Set();
@@ -442,42 +469,6 @@ function createHistory({storage, now}) {
     }
   }
 
-  // The next id for a new visit of `person`: it grows, and the person doesn't already use it.
-  function takeNextId(person) {
-    if (lastId >= Number.MAX_SAFE_INTEGER - ID_RENUMBER_MARGIN) {
-      renumberClosedVisits();
-    }
-    do {
-      lastId += 1;
-    } while (person.visits.some(visit => visit.id === lastId));
-    return lastId;
-  }
-
-  // Ids are about to run out. Closed visits are numbered again from 1, in their old order, skipping any id an
-  // open visit of the same person holds. Open visits keep their ids, so their handles keep working.
-  function renumberClosedVisits() {
-    const closed = [];
-    for (const person of people) {
-      for (const visit of person.visits) {
-        if (visit.seconds !== null) {
-          closed.push({person, visit, oldId: visit.id});
-        }
-      }
-    }
-    closed.sort((a, b) => compareNumbers(a.oldId, b.oldId));
-    for (const entry of closed) {
-      entry.visit.id = null;
-    }
-    lastId = 0;
-    for (const entry of closed) {
-      do {
-        lastId += 1;
-      } while (entry.person.visits.some(visit => visit.id === lastId));
-      entry.visit.id = lastId;
-    }
-    unsaved = true;
-  }
-
   // Adds the visit in memory. Returns its handle, or null when nothing was added.
   function addVisit(input) {
     if (paused || readOnly || !input) {
@@ -485,6 +476,10 @@ function createHistory({storage, now}) {
     }
     const identity = cleanIdentity(input);
     if (identity === null || !isFiniteNumber(input.at)) {
+      return null;
+    }
+    // Every id is above all the ids in use, so a new one is unique for its person. At the bound: no record.
+    if (lastId >= MAX_VISIT_ID) {
       return null;
     }
 
@@ -495,7 +490,8 @@ function createHistory({storage, now}) {
     } else {
       person.displayName = identity.displayName;
     }
-    const id = takeNextId(person);
+    lastId += 1;
+    const id = lastId;
     const visit = input.offline === true
       ? {id, at: input.at, seconds: 0, offline: true}
       : {id, at: input.at, seconds: null};
@@ -509,8 +505,8 @@ function createHistory({storage, now}) {
   }
 
   // record({provider, login, displayName, at, offline?}): one visit. Returns the visit's handle, or null when
-  // ignored (paused, read-only, unsafe identity, bad time). Offline opens are stored closed with zero seconds
-  // and keep their interest after a reload.
+  // ignored (paused, read-only, unavailable, unsafe identity, bad time, or the id bound reached). Offline opens
+  // are stored closed with zero seconds and keep their interest after a reload.
   function record(input) {
     if (!available()) {
       return null;

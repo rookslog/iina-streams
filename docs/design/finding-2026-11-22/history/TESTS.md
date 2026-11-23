@@ -25,7 +25,8 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - Amended 2026-11-22 round 4 (lead):
      - **`null` is `record`'s false:** it means the record was ignored (paused, read-only, unavailable, unsafe identity or bad time). `finish`, `forget`, `clear` and `setPaused` return `false` instead.
      - **The next id is stored** in the file (`nextId`), so forgetting the newest visit and reopening never lets its id, or a stale handle, come back.
-     - **Ids stay in range:** near `Number.MAX_SAFE_INTEGER`, closed visits are renumbered from 1; open visits keep their ids, so their handles keep working (handles of closed visits are void). A file whose ids can't be extended is numbered afresh on load.
+     - **Ids are bounded, and nothing is renumbered** (step-back, lead): an id is a whole number from 1 to 2^31. An id, or a `nextId` (at most 2^31 + 1), that isn't one makes the file corrupt: it is backed up to `.bad` and history starts empty. A newer file is never judged by its ids. At the bound `record` returns `null` and writes nothing; `finish`, `forget`, `clear` and pause still work.
+     - **Ids a file lacks** (an older file) are given from `nextId` upward, in time order across the file.
    - A `finish` with a non-finite or non-number `at` is ignored. The handle holds no secret, and the caller keeps it from player start to close.
 3. **Frecency** (how often and how recently). Score = Σ over visits of an age weight:
 
@@ -59,7 +60,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - Both write to storage immediately.
 8. **Persistence.**
    - It loads from the injected storage (in production, `@data/history.json`).
-   - **Corrupt file** (it parses badly, or has no usable version or shape): it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
+   - **Corrupt file** (it parses badly, has no usable version or shape, or has an id or `nextId` out of bounds): it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
    - **Unknown fields:** ignored.
    - **Version:** the file has a `version`; a newer version than the code knows means read-only, with no overwrite.
    - Amended 2026-11-22 round 2 (lead):

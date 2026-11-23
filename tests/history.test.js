@@ -478,8 +478,9 @@ test('r2-5. loaded visits are sorted, durations capped, future times clamped, an
   ]);
   assert.deepEqual(ranks(history, 'ohnepixel'), [['ohnepixel', 300]], 'a future visit weighs as today, not more');
 
-  // Ids are given in time order: ohnepixel has 1-3, so the older unsorted visit is 4 and the newer is 5.
-  history.finish({...twitch('unsorted'), id: 4}, NOW);
+  // Visits without ids get them in time order across the file: ohnepixel's 3 days ago and 1 day ago are 1 and 2,
+  // then the unsorted person's older visit is 3 and newer is 4, then ohnepixel's visit that counts as now is 5.
+  history.finish({...twitch('unsorted'), id: 3}, NOW);
   assert.deepEqual(disk.snapshot().people[1].visits, [
     {at: NOW - 3600, seconds: 3600}, {at: NOW - 60, seconds: null},
   ], 'the visit the handle names is finished, whatever its place in the file');
@@ -626,11 +627,11 @@ test('r3-3. visit ids are stored, only grow, and are given in time order to a fi
 
   const legacy = openHistory(fakeDisk(snapshot([{...OHNE, visits: [
     {at: NOW - 10, seconds: 5}, {at: NOW - 30, seconds: 5}, {at: NOW - 20, id: 9, seconds: 5},
-    {at: NOW - 15, id: 9, seconds: 5}, {at: NOW - 25, id: -3, seconds: 5}, {at: NOW - 5, id: '2', seconds: 5},
+    {at: NOW - 15, id: 9, seconds: 5}, {at: NOW - 25, seconds: 5},
   ]}])));
   const loaded = legacy.query('')[0].visits.map(({id, at}) => [at - NOW, id]);
-  assert.deepEqual(loaded, [[-30, 10], [-25, 11], [-20, 9], [-15, 12], [-10, 13], [-5, 14]],
-    'a kept id stays, a missing, unusable or repeated one gets the next number in time order');
+  assert.deepEqual(loaded, [[-30, 10], [-25, 11], [-20, 9], [-15, 12], [-10, 13]],
+    'a kept id stays; a missing or repeated one gets the next number, in time order');
 });
 
 test('r3-4. a handle still closes its visit when the clock has gone backwards', () => {
@@ -761,14 +762,22 @@ test('r4-1. the next id is stored, so forgetting the newest visit never lets its
   assert.equal(reopened.finish(fresh, NOW), true);
 });
 
-test('r4-2. the stored next id is a floor; a file without one, or with a bad one, falls back to the highest id', () => {
+test('r4-2. the stored next id is a floor for ids a file lacks, and a file without one uses its highest id', () => {
   const visit = {id: 7, at: NOW - 60, seconds: 60};
-  for (const nextId of [undefined, 'x', -4, 0, 1.5, null, 3]) {
-    const file = JSON.stringify({version: 1, paused: false, nextId, people: [{...OHNE, visits: [visit]}]});
-    assert.equal(openHistory(fakeDisk(file)).record({...twitch('another'), at: NOW}).id, 8, 'nextId ' + nextId);
-  }
-  const file = JSON.stringify({version: 1, paused: false, nextId: 50, people: [{...OHNE, visits: [visit]}]});
-  assert.equal(openHistory(fakeDisk(file)).record({...twitch('another'), at: NOW}).id, 50);
+  const bare = {at: NOW - 30, seconds: 30};
+  const file = nextId => JSON.stringify({version: 1, paused: false, nextId,
+    people: [{...OHNE, visits: [visit, bare]}]});
+
+  const without = openHistory(fakeDisk(file(undefined)));
+  assert.deepEqual(without.query('')[0].visits.map(({id}) => id), [7, 8]);
+  assert.equal(without.record({...twitch('another'), at: NOW}).id, 9);
+
+  const lower = openHistory(fakeDisk(file(3)));
+  assert.deepEqual(lower.query('')[0].visits.map(({id}) => id), [7, 8], 'a lower nextId does not lower the floor');
+
+  const higher = openHistory(fakeDisk(file(50)));
+  assert.deepEqual(higher.query('')[0].visits.map(({id}) => id), [7, 50], 'missing ids start at nextId');
+  assert.equal(higher.record({...twitch('another'), at: NOW}).id, 51);
 });
 
 test('r4-3. forgetting a person the load trimmed also removes them from the file', () => {
@@ -797,44 +806,6 @@ test('r4-3. forgetting a person the load trimmed also removes them from the file
   faults.write = false;
   assert.equal(retried.forget(twitch('weak')), true);
   assert.ok(!failing.snapshot().people.some(({login}) => login === 'weak'));
-});
-
-test('r4-4. at the safe-integer limit, closed visits are renumbered and open ones keep their ids', () => {
-  const limit = Number.MAX_SAFE_INTEGER;
-  const disk = fakeDisk(snapshot([
-    {...OHNE, visits: [{id: limit - 1, at: NOW - 300, seconds: 60}, {id: limit, at: NOW - 100, seconds: null}]},
-    {...twitch('other'), visits: [{id: 1, at: NOW - 200, seconds: 5}, {id: 2, at: NOW - 150, seconds: null}]},
-  ]));
-  const history = openHistory(disk);
-  const openHandle = {...OHNE, id: limit};
-  const otherOpen = {...twitch('other'), id: 2};
-
-  const fresh = history.record({...OHNE, at: NOW - 10});
-  assert.ok(Number.isSafeInteger(fresh.id) && fresh.id > 0 && fresh.id < 100, 'a small id, not past the limit');
-  assert.notEqual(fresh.id, limit);
-  const ids = disk.rawSnapshot().people[0].visits.map(({id}) => id);
-  assert.equal(new Set(ids).size, ids.length, 'ids stay unique for the person');
-  assert.ok(ids.every(Number.isSafeInteger));
-
-  assert.equal(history.finish(openHandle, NOW), true, 'the open visit\'s handle still works');
-  assert.equal(history.finish(otherOpen, NOW), true);
-  assert.equal(history.finish(fresh, NOW + 5), true);
-  assert.deepEqual(visitsOf(history, 'ohnepixel'), [
-    {at: NOW - 300, seconds: 60}, {at: NOW - 100, seconds: 100}, {at: NOW - 10, seconds: 15},
-  ]);
-  const next = history.record({...OHNE, at: NOW + 10});
-  assert.ok(next.id > fresh.id, 'ids grow again after the renumbering');
-  const nextIds = disk.rawSnapshot().people[0].visits.map(({id}) => id);
-  assert.equal(new Set(nextIds).size, nextIds.length);
-});
-
-test('r4-5. a file whose ids cannot be extended is numbered afresh on load', () => {
-  const limit = Number.MAX_SAFE_INTEGER;
-  const history = openHistory(fakeDisk(snapshot([{...OHNE, visits: [
-    {id: limit, at: NOW - 300, seconds: 60}, {at: NOW - 200, seconds: 60}, {at: NOW - 100, seconds: null},
-  ]}])));
-  const ids = history.query('')[0].visits.map(({id}) => id);
-  assert.deepEqual(ids, [1, 2, 3]);
 });
 
 test('r4-6. a 10,000-person file is trimmed to the 500 strongest by one sort, quickly', () => {
@@ -870,22 +841,120 @@ test('r4-7. record returns null, the sentinel for ignored, in every case where i
   assert.equal(open().record({...OHNE, at: NOW}), null, 'unavailable');
 });
 
-test('r4-8. after a renumbering, no person gets two visits with one id', () => {
-  const limit = Number.MAX_SAFE_INTEGER;
-  const disk = fakeDisk(snapshot([
-    {...OHNE, visits: [{id: 1, at: NOW - 300, seconds: null}, {id: limit, at: NOW - 200, seconds: 60}]},
-    {...twitch('other'), visits: [{id: 4, at: NOW - 300, seconds: null}]},
-  ]));
+// Round 5 (step-back, lead): ids are bounded at 2^31 and nothing is renumbered.
+
+const BOUND = 2 ** 31;
+
+test('r5-1. an id, or a nextId, that is not a whole number from 1 to 2^31 makes the file corrupt', () => {
+  const visit = id => ({id, at: NOW - 60, seconds: 60});
+  const withVisitId = id => JSON.stringify({version: 1, paused: false, people: [{...OHNE, visits: [visit(id)]}]});
+  const withNextId = nextId => JSON.stringify({version: 1, paused: false, nextId, people: []});
+  const bad = [
+    withVisitId(0), withVisitId(-1), withVisitId(1.5), withVisitId('3'), withVisitId(true), withVisitId([]),
+    withVisitId({}), withVisitId(BOUND + 1), withVisitId(2 ** 53), withVisitId(Number.MAX_SAFE_INTEGER),
+    withVisitId(null).replace('"id":null', '"id":1e999'),
+    withNextId(0), withNextId(-4), withNextId(1.5), withNextId('x'), withNextId(null), withNextId(BOUND + 2),
+    withNextId(2 ** 53),
+  ];
+  for (const raw of bad) {
+    const disk = fakeDisk(raw);
+    const history = openHistory(disk);
+    assert.deepEqual(history.query(''), [], raw);
+    assert.deepEqual(disk.changes, [], 'reading writes nothing');
+    const handle = history.record({...OHNE, at: NOW});
+    assert.equal(handle.id, 1, 'history starts empty: ' + raw);
+    assert.equal(disk.files.get(BACKUP), raw, 'the file is kept as .bad: ' + raw);
+    assert.deepEqual(disk.changes.slice(0, 2), [['backup', FILE, BACKUP], ['write', FILE]]);
+  }
+
+  const fine = [withVisitId(1), withVisitId(BOUND), withNextId(1), withNextId(BOUND), withNextId(BOUND + 1)];
+  for (const raw of fine) {
+    const disk = fakeDisk(raw);
+    openHistory(disk).query('');
+    assert.equal(disk.files.has(BACKUP), false, raw);
+  }
+  assert.equal(openHistory(fakeDisk(withVisitId(BOUND))).query('').length, 1);
+});
+
+test('r5-2. a newer file is never judged by its ids: it stays read-only, with no backup', () => {
+  const raw = JSON.stringify({version: 2, nextId: -1, people: [
+    {...OHNE, visits: [{id: -5, at: NOW - 60, seconds: 60}, {id: 2 ** 60, at: NOW - 30, seconds: 30}]},
+  ]});
+  const disk = fakeDisk(raw);
   const history = openHistory(disk);
 
-  const first = history.record({...OHNE, at: NOW - 10});
-  const second = history.record({...twitch('other'), at: NOW - 10});
+  assert.equal(history.query('').length, 1);
+  assert.equal(history.record({...twitch('another'), at: NOW}), null);
+  assert.equal(disk.files.get(FILE), raw);
+  assert.equal(disk.files.has(BACKUP), false);
+  assert.deepEqual(disk.changes, []);
+});
 
-  const idsOf = login => disk.rawSnapshot().people.find(person => person.login === login).visits.map(({id}) => id);
-  assert.deepEqual(idsOf('ohnepixel'), [1, 2, 3], 'the closed visit skips the open visit\'s id 1');
-  assert.equal(first.id, 3);
-  assert.deepEqual(idsOf('other'), [4, 5], 'the new visit skips the open visit\'s id 4');
-  assert.equal(second.id, 5);
-  assert.equal(history.finish({...twitch('other'), id: 4}, NOW), true);
-  assert.deepEqual(visitsOf(history, 'other'), [{at: NOW - 300, seconds: 300}, {at: NOW - 10, seconds: null}]);
+test('r5-3. at the bound record returns null and writes nothing; the last id is handed out first', () => {
+  for (const raw of [
+    JSON.stringify({version: 1, paused: false, people: [{...OHNE, visits: [{id: BOUND, at: NOW - 60, seconds: 60}]}]}),
+    JSON.stringify({version: 1, paused: false, nextId: BOUND + 1, people: []}),
+  ]) {
+    const disk = fakeDisk(raw);
+    const history = openHistory(disk);
+    assert.equal(history.record({...twitch('another'), at: NOW}), null);
+    assert.equal(history.record({...OHNE, at: NOW}), null);
+    assert.equal(disk.files.get(FILE), raw, 'nothing written');
+    assert.deepEqual(disk.changes, []);
+    assert.equal(history.forget(twitch('another')), true, 'other calls still work');
+  }
+
+  const disk = fakeDisk(JSON.stringify({version: 1, paused: false, nextId: BOUND, people: []}));
+  const history = openHistory(disk);
+  const last = history.record({...OHNE, at: NOW});
+  assert.notEqual(last, null, 'the last id is still handed out');
+  assert.equal(last.id, BOUND);
+  assert.equal(disk.rawSnapshot().nextId, BOUND + 1);
+  const writes = disk.changes.length;
+  assert.equal(history.record({...twitch('another'), at: NOW}), null);
+  assert.equal(disk.changes.length, writes);
+  assert.equal(openHistory(disk).record({...twitch('another'), at: NOW}), null, 'and after a reload');
+  assert.equal(history.finish(last, NOW + 1), true, 'finishing still works at the bound');
+});
+
+test('r5-4. ids a file lacks are given from nextId upward in time order, across people', () => {
+  const raw = JSON.stringify({version: 1, paused: false, nextId: 20, people: [
+    {...twitch('later'), visits: [{at: NOW - 10, seconds: 60}, {at: NOW - 40, seconds: 60}]},
+    {...twitch('earlier'), visits: [{at: NOW - 30, seconds: 60}, {id: 5, at: NOW - 20, seconds: 60}]},
+  ]});
+  const history = openHistory(fakeDisk(raw));
+
+  const idsByLogin = Object.fromEntries(history.query('').map(({login, visits}) => [login, visits.map(({id}) => id)]));
+  // Missing ids in time order: later@-40 gets 20, earlier@-30 gets 21, later@-10 gets 22. The id 5 stays.
+  assert.deepEqual(idsByLogin, {later: [20, 22], earlier: [21, 5]});
+});
+
+test('r5-5. a handle from before a reopen closes nothing once its visit is gone', () => {
+  const disk = fakeDisk();
+  const history = openHistory(disk);
+  const stale = history.record({...OHNE, at: NOW - 100});
+  history.forget(OHNE);
+
+  const reopened = openHistory(disk);
+  const fresh = reopened.record({...OHNE, at: NOW - 50});
+  assert.notEqual(fresh.id, stale.id);
+  assert.equal(reopened.finish(stale, NOW), false);
+  assert.deepEqual(visitsOf(reopened, 'ohnepixel'), [{at: NOW - 50, seconds: null}]);
+  assert.equal(reopened.finish(fresh, NOW), true);
+});
+
+test('r5-6. a file whose missing ids cannot be given without passing the bound is corrupt', () => {
+  const raw = JSON.stringify({version: 1, paused: false, people: [{...OHNE, visits: [
+    {id: BOUND, at: NOW - 60, seconds: 60}, {at: NOW - 30, seconds: 30},
+  ]}]});
+  const disk = fakeDisk(raw);
+
+  assert.deepEqual(openHistory(disk).query(''), []);
+  openHistory(disk).record({...OHNE, at: NOW});
+  assert.equal(disk.files.get(BACKUP), raw);
+
+  const fits = JSON.stringify({version: 1, paused: false, people: [{...OHNE, visits: [
+    {id: BOUND - 1, at: NOW - 60, seconds: 60}, {at: NOW - 30, seconds: 30},
+  ]}]});
+  assert.deepEqual(openHistory(fakeDisk(fits)).query('')[0].visits.map(({id}) => id), [BOUND - 1, BOUND]);
 });

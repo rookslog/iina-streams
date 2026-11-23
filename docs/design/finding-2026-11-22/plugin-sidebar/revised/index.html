@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar, revised</title>
+<link rel="stylesheet" href="../lowfi.css">
+<link rel="stylesheet" href="revised.css">
+</head>
+<body>
+<div class="page">
+  <section class="panel" aria-label="Streams">
+    <div class="iina" aria-hidden="true"><span class="tab on" title="Streams"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M6 1.5a1.6 1.6 0 0 1 1.6 1.6V4H11a1 1 0 0 1 1 1v3.4h.9a1.6 1.6 0 1 1 0 3.2H12V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3.4h.9a1.6 1.6 0 1 0 0-3.2H1V5a1 1 0 0 1 1-1h2.4v-.9A1.6 1.6 0 0 1 6 1.5Z"/></svg></span><span class="tab" title="Another plugin"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M6 1.5a1.6 1.6 0 0 1 1.6 1.6V4H11a1 1 0 0 1 1 1v3.4h.9a1.6 1.6 0 1 1 0 3.2H12V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3.4h.9a1.6 1.6 0 1 0 0-3.2H1V5a1 1 0 0 1 1-1h2.4v-.9A1.6 1.6 0 0 1 6 1.5Z"/></svg></span><span class="chev">‹</span></div>
+
+    <!-- List view -->
+    <div class="pinned top" id="list-top">
+      <details class="card playing-card" style="margin:0 0 8px">
+        <summary class="playing" id="playing"></summary>
+        <div class="line">
+          <select class="grow" aria-label="Quality" title="Quality"><option>1080p60</option><option>720p60</option><option>480p</option><option>Audio only</option></select>
+          <button class="ico" type="button" title="Reload" aria-label="Reload"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </details>
+      <div class="field"><input type="search" id="q" placeholder="Search" aria-label="Search channels"><span class="count" id="q-count" hidden></span></div>
+    </div>
+    <div class="scroll" id="list-view">
+      <div id="results" class="card" hidden aria-label="Search results"></div>
+      <div id="lists">
+        <section class="card" aria-labelledby="h-cont"><h2 class="head" id="h-cont">Continue watching</h2><div id="cont"></div></section>
+        <section class="card" aria-labelledby="h-live"><h2 class="head" id="h-live">Live</h2><div id="live"></div></section>
+        <section class="card" aria-labelledby="h-off"><h2 class="head" id="h-off">Offline</h2><div id="off"></div></section>
+
+        <details class="card group"><summary><span class="grow" style="flex:1">Chat</span>
+          <input class="switch" type="checkbox" checked aria-label="Show chat" title="Show chat" onclick="event.stopPropagation()"></summary>
+          <div class="line">
+            <div class="tabs grow" role="radiogroup" aria-label="Chat placement" style="margin:0">
+              <button type="button" role="radio" aria-checked="true" aria-selected="true">Beside</button>
+              <button type="button" role="radio" aria-checked="false">Over</button>
+            </div>
+          </div>
+          <div class="line">
+            <button class="ico" type="button" aria-label="Smaller text" title="Smaller text"><svg viewBox="0 0 16 16"><path d="M4 8h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <span class="meta" title="Text size">14</span>
+            <button class="ico" type="button" aria-label="Larger text" title="Larger text"><svg viewBox="0 0 16 16"><path d="M4 8h8M8 4v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <span class="grow"></span>
+            <button class="btn" type="button">Import…</button>
+          </div>
+        </details>
+        <details class="card group"><summary><span class="grow" style="flex:1">Twitch</span></summary>
+          <div class="line"><span class="grow">you_handle</span><button class="btn" type="button">Sign out</button></div>
+        </details>
+        <details class="card group"><summary><span class="grow" style="flex:1">History</span>
+          <input class="switch" type="checkbox" checked aria-label="Record history" title="Record history" onclick="event.stopPropagation()"></summary>
+          <div class="line"><button class="btn" type="button" id="forget">Forget Ohnepixel</button><span class="grow"></span><button class="btn" type="button">Delete all…</button></div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Channel view: replaces the list until Back -->
+    <div class="pinned top" id="chan-top" hidden>
+      <div class="chan-head">
+        <button class="ico" type="button" id="back" aria-label="Back" title="Back"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <h2 id="chan-name"></h2>
+      </div>
+      <div class="field"><input type="search" id="vq" placeholder="Search" aria-label="Search VODs"><span class="count" id="vq-count" hidden></span></div>
+      <div class="tools">
+        <select id="sort" aria-label="Sort" title="Sort"><option value="time">Newest</option><option value="views">Most viewed</option></select>
+        <select id="type" aria-label="Type" title="Type"><option value="all">All</option><option value="archive">Broadcasts</option><option value="highlight">Highlights</option><option value="upload">Uploads</option></select>
+      </div>
+    </div>
+    <div class="scroll" id="chan-view" hidden>
+      <div id="chan-live"></div>
+      <div class="card" id="chan-vods" aria-label="VODs"></div>
+    </div>
+  </section>
+
+  <div class="notes">
+    <h1>Revised: one list, then a channel</h1>
+    <p class="width-switch">Width: <button type="button" data-width="360" aria-pressed="true">360 pt</button> <button type="button" data-width="300" aria-pressed="false">300 pt</button></p>
+    <ul>
+      <li>List: playing (tap for quality and reload), search, Continue watching, Live, Offline, then Chat, Twitch, History.</li>
+      <li>Click or Return on a person opens their channel: live stream on top if live, then VODs. Search, sort and type now apply to their VODs. Back or Escape returns.</li>
+      <li>Blue bar: progress. Blue dot: new since your last visit.</li>
+      <li>Every string on the panel is listed in <a href="../DONE.md">DONE.md</a> with its class.</li>
+    </ul>
+    <p class="status" id="status" role="status"></p>
+  </div>
+</div>
+<script src="../../open-stream/sample-data.js"></script>
+<script src="../lowfi.js"></script>
+<script>
+(function () {
+  const L = window.LowFi, D = L.D;
+  const NOW = Date.parse("2026-11-22T22:00:00-05:00"), day = 86400000;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const hue = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+
+  // Sample VODs per channel: type, views, progress (0–1, or null if never started), when last watched.
+  // Invented. A VOD with progress 1 is finished and drops out of Continue watching.
+  const V = (title, ago, seconds, type, views, progress, watchedAgo) =>
+    ({ title, at: NOW - ago * day, seconds, type, views, progress: progress ?? null, watchedAt: watchedAgo == null ? null : NOW - watchedAgo * day });
+  const VODS = {
+    ohnepixel: [
+      V("Major day 3 watch party", 1, 21400, "archive", 412000, 0.18, 0.5),
+      V("Blue gem reaction", 2, 94, "highlight", 980000),
+      V("Trade-ups until 3 a.m.", 3, 16200, "archive", 288000),
+      V("Inventory review with chat", 5, 11800, "archive", 251000, 1, 4),
+      V("How I value a knife", 8, 1260, "upload", 640000),
+      V("Case opening marathon", 12, 25200, "archive", 530000, 0.63, 9)
+    ],
+    mira_plays: [V("Silksong attempt 13", 1, 12900, "archive", 21000), V("No-hit Lace", 3, 210, "highlight", 54000)],
+    kestrel_vt: [V("Character sheets, part 2", 2, 9300, "archive", 88000, 0.35, 2)],
+    ohayo_nori: (D.people.find(p => p.login === "ohayo_nori").vods || []).map((v, i) =>
+      Object.assign({ type: "archive", views: 4200 - i * 600, progress: i === 3 ? 0.42 : null, watchedAt: i === 3 ? NOW - 1 * day : null }, v)),
+    sable_rr: [V("Rhythm game requests", 1, 7260, "archive", 3100)],
+    ohana_vee: [V("Pottery and podcasts", 5, 8100, "archive", 900)],
+    lumen_ash: []
+  };
+  // When you last opened each channel's view (for the "new" dot).
+  const LAST_VISIT = { ohnepixel: NOW - 2.5 * day, ohayo_nori: NOW - 5 * day };
+  const NOW_PLAYING = L.byLogin("ohnepixel");
+
+  const status = t => { document.getElementById("status").textContent = t; };
+
+  function thumb(v, w) {
+    const prog = v.progress && v.progress < 1 ? `<span class="prog" aria-hidden="true"><i style="width:${v.progress * 100}%"></i></span>` : "";
+    return `<span class="thumb" style="--tint:hsl(${hue(v.title)} 18% 30%)${w ? ";width:" + w : ""}"><span class="len">${D.length(v.seconds)}</span>${prog}</span>`;
+  }
+
+  function vodButton(v, owner, showOwner) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "vod";
+    const isNew = !showOwner && LAST_VISIT[owner.login] && v.at > LAST_VISIT[owner.login];
+    const pct = v.progress && v.progress < 1 ? ", " + Math.round(v.progress * 100) + " percent watched" : "";
+    b.setAttribute("aria-label", (showOwner ? owner.name + ", " : "") + v.title + ", " + D.date(v.at) + ", " + D.length(v.seconds) + pct + (isNew ? ", new" : ""));
+    b.innerHTML = thumb(v) + `<span style="min-width:0"><span class="t">${isNew ? '<span class="newdot" title="New"></span>' : ""}${showOwner ? `<span class="who">${esc(owner.name)}</span>` : ""}<span>${esc(v.title)}</span></span><span class="d">${D.date(v.at)}</span></span>`;
+    b.addEventListener("click", () => status(v.progress && v.progress < 1 ? "Would resume " + owner.name + "'s VOD where you stopped." : "Would switch to " + owner.name + "'s VOD, with chat replay."));
+    return b;
+  }
+
+  // The person row, without reason text. Click or Return opens the channel view.
+  function personRow(p) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "go";
+        b.setAttribute("aria-label", D.spoken(p));
+    const sub = p.state === "live" ? p.category + " · " + p.title : ((VODS[p.login] || [])[0] || {}).title || "";
+    const meta = p.state === "live" ? D.compact(p.viewers) : p.state === "offline" ? D.ago(p.lastLive) : "";
+    b.innerHTML = `<span class="av ${p.state}" aria-hidden="true">${esc(p.name[0].toUpperCase())}</span><span class="nm">${esc(p.name)}</span><span class="sub">${esc(sub)}</span><span class="meta">${meta}</span>`;
+    b.addEventListener("click", () => openChannel(p));
+    const wrap = document.createElement("div");
+    wrap.className = "person";
+    wrap.style.gridTemplateColumns = "minmax(0, 1fr)";
+    wrap.append(b);
+    return wrap;
+  }
+
+  // ----- List view -----
+  document.getElementById("playing").innerHTML = `<span class="pill">LIVE</span><b class="grow" style="flex:1">${esc(NOW_PLAYING.name)}</b><span class="meta">${D.compact(NOW_PLAYING.viewers)}</span>`;
+
+  // Continue watching: started, unfinished, newest-watched first, no age cutoff, a few only.
+  const started = [];
+  Object.entries(VODS).forEach(([login, list]) => list.forEach(v => { if (v.progress && v.progress < 1) started.push({ v, owner: L.byLogin(login) }); }));
+  started.sort((a, b) => b.v.watchedAt - a.v.watchedAt).slice(0, 4).forEach(s => document.getElementById("cont").append(vodButton(s.v, s.owner, true)));
+
+  function capped(host, list, n) {
+    list.slice(0, n).forEach(p => host.append(personRow(p)));
+    if (list.length > n) {
+      const more = document.createElement("button");
+      more.type = "button"; more.className = "more"; more.textContent = "Show more";
+      more.addEventListener("click", () => { list.slice(n).forEach(p => host.insertBefore(personRow(p), more)); more.remove(); });
+      host.append(more);
+    }
+  }
+  const ppl = L.people(true);
+  capped(document.getElementById("live"), ppl.live, 5);
+  capped(document.getElementById("off"), ppl.rest, 3);
+
+  const q = document.getElementById("q"), results = document.getElementById("results"), lists = document.getElementById("lists"), qc = document.getElementById("q-count");
+  q.addEventListener("input", () => {
+    const term = q.value.trim(), hits = L.search(term);
+    results.replaceChildren(...hits.map(personRow));
+    results.hidden = !term; lists.hidden = !!term;
+    qc.hidden = !term; qc.textContent = hits.length;
+  });
+
+  // ----- Channel view -----
+  const els = id => document.getElementById(id);
+  let current = null;
+  function openChannel(p) {
+    current = p;
+    els("list-top").hidden = els("list-view").hidden = true;
+    els("chan-top").hidden = els("chan-view").hidden = false;
+    els("chan-name").textContent = p.name;
+    els("vq").value = ""; els("sort").value = "time"; els("type").value = "all";
+    const live = els("chan-live");
+    live.replaceChildren();
+    if (p.state === "live") {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "live-now";
+      b.setAttribute("aria-label", D.spoken(p) + ", " + p.title);
+      b.innerHTML = `<span class="thumb" style="--tint:hsl(${hue(p.login)} 25% 32%)"><span class="pill">LIVE</span></span><span style="min-width:0"><span class="ttl">${esc(p.title)}</span><span class="d" style="display:block;margin-top:3px">${esc(p.category)}</span><span class="meta">${D.compact(p.viewers)}</span></span>`;
+      b.addEventListener("click", () => status("Would switch this window to " + p.name + " live."));
+      live.append(b);
+    }
+    renderVods();
+    els("back").focus();
+  }
+  function renderVods() {
+    const term = els("vq").value.trim().toLowerCase(), sort = els("sort").value, type = els("type").value;
+    let list = (VODS[current.login] || []).filter(v => (type === "all" || v.type === type) && (!term || v.title.toLowerCase().includes(term)));
+    list = list.slice().sort((a, b) => sort === "views" ? b.views - a.views : b.at - a.at);
+    els("chan-vods").replaceChildren(...list.map(v => vodButton(v, current, false)));
+    els("vq-count").hidden = !term; els("vq-count").textContent = list.length;
+  }
+  ["vq", "sort", "type"].forEach(id => els(id).addEventListener(id === "vq" ? "input" : "change", renderVods));
+  function back() {
+    els("chan-top").hidden = els("chan-view").hidden = true;
+    els("list-top").hidden = els("list-view").hidden = false;
+    q.focus();
+  }
+  els("back").addEventListener("click", back);
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (!els("chan-view").hidden) { if (els("vq").value) { els("vq").value = ""; renderVods(); } else back(); }
+    else if (q.value) { q.value = ""; q.dispatchEvent(new Event("input")); }
+  });
+  L.widthSwitch();
+  if (location.hash === "#channel") openChannel(NOW_PLAYING);
+  if (location.hash === "#offline") openChannel(L.byLogin("ohayo_nori"));
+})();
+</script>
+</body>
+</html>

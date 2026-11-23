@@ -2,6 +2,8 @@
 
 **Status:** structure only, for the operator to pick from in Safari. There is no styling effort and nothing is built. Task: [BRIEF.md](BRIEF.md), at commit `0466ca4`.
 
+**Round 2 (2026-11-23):** one revised structure replaces these three: [revised/index.html](revised/index.html). It starts from A, adds Continue watching and a channel view, and cuts text per the operator's rule. Its strings are listed in [DONE.md](DONE.md). The three below are kept as round 1.
+
 **Evidence level:** static HTML with sample data and no network. Nothing ran in IINA.
 
 **Open them:**
@@ -46,6 +48,6 @@ Each page draws the panel at 360 pt, with a 300 pt switch, and its notes say wha
 - **Untested:** keyboard order beyond the browser defaults, and VoiceOver.
 
 ## Lead corrections (2026-11-23)
-- **The wrong IINA panel:** the dashed strip draws IINA's Video, Audio and Subtitles tabs. The plugin panel is a separate panel, on the left by default, with one tab per plugin. The error came from the brief, not the designer.
+- **The wrong IINA panel** (fixed 2026-11-23): the dashed strip first drew IINA's Video, Audio and Subtitles tabs. It now draws the plugin panel's own strip, one puzzle-piece tab per plugin, with the collapse chevron. The plugin panel sits on the left by default.
 - **"The chat column" above is wrong at IINA's defaults.** The plugin panel opens on the left and the chat column on the right, so they don't overlap.
 - **Too much text** (operator): for example "Reload stream" beside a reload button. The text rule is now in `.agents/skills/streams-interaction-design/SKILL.md`; round 2 is in the brief.

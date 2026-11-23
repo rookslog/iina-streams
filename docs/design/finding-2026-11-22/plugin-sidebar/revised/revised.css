@@ -1,0 +1,38 @@
+/* Round 2 additions to ../lowfi.css. Still low fidelity. */
+.ico { width: 26px; height: 24px; display: inline-grid; place-items: center; border: 0; background: none; color: var(--dim); border-radius: 6px; padding: 0; }
+.ico:hover { background: var(--hover); color: var(--fg); }
+.ico svg { width: 15px; height: 15px; }
+.playing { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 4px; }
+.playing > summary { display: flex; align-items: center; gap: 8px; list-style: none; flex: 1; min-width: 0; cursor: default; }
+.playing > summary::-webkit-details-marker { display: none; }
+.card > summary.playing, .card.group > summary { font-size: 13px; font-weight: 400; color: var(--fg); margin: 2px 4px; }
+.card > summary.playing::before, .card.group > summary::before { color: var(--dim); font-size: 10px; }
+.field { position: relative; }
+.field .count { position: absolute; right: 8px; top: 6px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.head { font-size: 11px; font-weight: 600; color: var(--dim); margin: 2px 4px 4px; }
+
+/* VOD rows: a 16:9 thumbnail carrying the length, then title and date; progress under the thumbnail. */
+.vod { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; width: 100%; border: 0; background: none; text-align: left; padding: 4px; border-radius: 6px; }
+.vod:hover { background: var(--hover); }
+.thumb { position: relative; width: 64px; height: 36px; border-radius: 4px; background: var(--tint, #444); overflow: hidden; }
+.thumb .len { position: absolute; right: 2px; bottom: 2px; font-size: 9.5px; padding: 0 3px; border-radius: 3px; background: rgba(0, 0, 0, .7); color: #fff; font-variant-numeric: tabular-nums; }
+.thumb .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .25); }
+.thumb .prog > i { display: block; height: 100%; background: var(--accent); }
+.vod .t { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.vod .t > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vod .who { font-weight: 600; }
+.newdot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.vod .d { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* Channel view. */
+.chan-head { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+.chan-head h2 { font-size: 15px; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-now { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 9px; width: 100%; border: 0; background: var(--card); border-radius: 9px; padding: 6px; text-align: left; margin-bottom: 10px; }
+.live-now:hover { background: var(--hover); }
+.live-now .thumb { width: 128px; height: 72px; }
+.live-now .thumb .pill { position: absolute; left: 4px; top: 4px; }
+.live-now .ttl { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tools { display: flex; gap: 6px; margin: 8px 0; }
+.tools select { flex: 1; min-width: 0; font-size: 12px; }
+.group > summary { display: flex; align-items: center; gap: 6px; }
+.switch { width: 28px; height: 16px; accent-color: var(--accent); }

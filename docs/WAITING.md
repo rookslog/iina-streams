@@ -108,6 +108,26 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** if that check finds anything new, park the module and step back on the storage design.
 - **What your answer changes:** when history is wired in, and so when #74 can start.
 
+### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
+- **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.
+- **How it arose:** five Codex reviews tonight. The record, verbatim: `docs/reviews/2026-11-22-issue-67-review.md`. Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.
+- **The remaining edge cases, in plain words:**
+  - an offline answer arriving at the same moment as the 1.5 s timeout opens a player instead of the VOD list, which is today's behaviour;
+  - a VOD list arriving in the same instant you edit the text can overwrite your edit;
+  - Codex flags that a timer is started from a network callback; IINA's own source hands timers to the main thread, so the lead reads this as safe (inferred);
+  - one test helper can misattribute a timer.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Merge; file the edge cases as one issue; check in IINA** | The error panel is gone for the common case now | The rare races stay until fixed |
+  | **One more targeted pass first** | Fewer known edge cases | Each pass so far has surfaced new, smaller ones |
+  | **Park** | No risk added to `beta` | The error panel stays |
+- **Recommendation:** merge, file the edge cases, and check it in IINA when you hand it over. Every remaining case is no worse than `beta` today, and the next real evidence has to come from IINA, not another review.
+- **What it rests on:** none of the edge cases can make IINA hang or crash. The timer point is the one to confirm in IINA.
+- **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
+- **What your answer changes:** whether the fix is in your next Streams Beta refresh.
+
 ## Answered
 
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.

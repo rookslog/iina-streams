@@ -76,3 +76,25 @@ Branch `fix/67-offline-fallthrough` (0f518cb, 648905c, 342658c, on beta 11c0d62)
   - **F-session, draft:** any edit to the form's text (not only a submit) invalidates pending replies for the old session.
   - **P2 fixture:** `live-check.js` attributes only the check's own handoff timer, by identity, not any zero-delay timer.
 - **If the narrow check doesn't close all three,** #67 is parked and goes to the operator, per D-032 rule 4.
+
+## Narrow check (verbatim; Codex gpt-6.2-sol xhigh, finished 23:51, on 3cfe7fd)
+
+**NOT CLOSED** — 81 focused tests passed; native IINA was not exercised.
+
+1. **CLOSED — H-main fallback:** [global.js:317](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:317) defers all interface work to the timer callback. No interface call remains in the scoped HTTP continuations.
+2. **NOT CLOSED — H-main deadline:** `clearTimeout` moved to main, but both HTTP replies still arm the handoff at [src/twitch-vods.js:78](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:78), updating the JS timer map at [src/timers.js:17](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/timers.js:17) in the HTTP continuation. [IINA defers native registration to main](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPolyfill.swift#L35-L46).
+3. **CLOSED — F-session draft:** [global.js:272](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:272) advances the session on `open-edit`, fencing replies still pending in global. It cannot retract a prefill already posted to WebKit.
+4. **NOT CLOSED — P2 fixture:** [tests/support/live-check.js:68](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/tests/support/live-check.js:68) still infers ownership from timing. A mutation probe got it to fire and classify an unrelated timer as the missing handoff.
+
+**New regressions reproduced in the shim:**
+
+- [global.js:317](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:317) — A queued `source-offline` report can overwrite a draft edited after the report arrived but before its timer runs.
+- [src/twitch-vods.js:76](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:76) — An offline reply that arrives before the deadline can now lose if the deadline callback runs before the handoff. The result becomes `unknown` and opens a player.
+## Lead disposition
+
+Per D-032 rule 4, this goes to the operator: `docs/WAITING.md` W-14. Lead reading of the residuals:
+
+- **Arming a timer from an HTTP continuation:** IINA's `createTimer` is designed for this; native registration is dispatched to main (`JavascriptPolyfill.swift:41`). The JS-side map is guarded by JavaScriptCore's API lock. INFERRED, not a demonstrated hazard.
+- **Deadline-versus-handoff race:** the result becomes "unknown", which opens a player and falls back to today's in-player offline path. No worse than beta.
+- **A queued report over a just-edited draft:** a window of one timer turn; cosmetic.
+- **Fixture attribution:** a test-quality gap, not product behaviour.

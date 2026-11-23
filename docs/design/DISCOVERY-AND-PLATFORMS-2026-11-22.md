@@ -293,7 +293,7 @@ The operator's direction: **signed in is the default experience.** Signed-out us
    - Lead's view: offer it later, only as an explicit, local-only import, filtered to twitch.tv, youtube.com and kick.com addresses, with a clear disclosure. Chrome first; Safari only if a less invasive route exists.
    - A browser extension that records visits to those sites only (item 4) would be cleaner than reading a whole history file.
 4. **Opening from the browser.**
-   - **This mostly exists already.** The "Open in IINA" browser extension hands the page address to IINA. When IINA opens a Twitch or YouTube address, Streams can take over that window ("adoption", #35): chat, quality and replay. #56 records it working natively.
+   - **This mostly exists already.** The "Open in IINA" browser extension hands the page address to IINA. When IINA opens a Twitch or YouTube address, Streams can take over that window ("adoption", #35): chat, quality and replay. Adoption was observed natively on 2026-11-22 for a URL opened in IINA itself (#56), with two open bugs: errors don't show, and live-chat sign-in is blocked in adopted windows. INFERRED, untested: the "Open in IINA" extension's hand-off reaches the same path, because it asks IINA to open the page address.
    - In 0.5.5 adoption is **off by default** (D-033). It can be turned on with `adoptNativeWindows: true`, and it's planned on by default in 0.5.6.
    - So the operator's "Open in IINA" redirect needs no new extension: it's the adoption path.
    - A Streams-specific extension could add what adoption can't know: the VOD timestamp the viewer was at, the channel's live state, and a "watched" signal for item 1. Backlog, after 0.6.0.

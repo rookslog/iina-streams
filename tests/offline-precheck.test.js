@@ -1,15 +1,22 @@
 'use strict';
 
-// #67 round 2 (docs/reviews/2026-11-22-issue-67-review.md, lead disposition): global checks a Twitch channel
-// before it creates a player, with one small request. Offline: the Open Stream window lists the recent broadcasts
-// and no player is created. Live, an unknown channel, or a check that failed or took over 1.5 s: the player is
-// created as before, and resolves on its own. VOD and YouTube inputs are not checked.
-// Residual race: a channel that goes offline after the check keeps the in-player path (source-offline).
+// #67 (docs/reviews/2026-11-22-issue-67-review.md): global checks a Twitch channel before it creates a player.
+// Round 3 tests the five written invariants of the step-back after round 2:
+//   H-main      an interface call (createPlayerInstance, standaloneWindow.*) that follows an iina.http reply runs
+//               in a timer callback, never in the reply's own continuation. IINA v1.5.1 runs a plugin timer
+//               callback on the main thread (JavascriptPolyfill.swift createTimer / callJSCallback), while an
+//               iina.http promise settles from Just's completion handler (JavascriptAPIHttp.swift request). In this
+//               shim a timer callback is a fake-timer fire, so "no interface call before the timer turn" is the check.
+//   D-offline   'offline' only for anonymous GQL user{stream} = null with no `errors`; anything else creates the player.
+//   F-session   every update to the shared Open Stream form is dropped once that form session has moved on; separate
+//               opens stay independent.
+//   U-feedback  the form stays open, with the existing loading signifier, until a player exists or the list shows.
+//   A-auth      the check sends no viewer credential, signed in or not.
+// Residual race: a channel that goes offline after a live check keeps the in-player path (source-offline).
 //
-// The real global.js and src/twitch-vods.js run in the IINA shim; only Twitch's HTTP replies are a double, routed
-// by request: the signed-out GQL user(login){stream{id}} POST and the archives POST. The signed-in path (Helix
-// Get Streams, src/twitch-helix.js) is driven through channelStatus with credentials at the end of this file.
-// Reply shapes are hand-written from the queries and the Twitch API reference, not captured.
+// The real global.js, src/twitch-vods.js and the IINA shim; only Twitch's HTTP replies are a double. Status replies
+// are held until the test answers them; archive replies answer at once. Reply shapes are hand-written from the
+// query and the GraphQL response format (data plus optional errors), not captured.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,7 +28,10 @@ const {createIina} = require('./support/iina-shim.js');
 const config = {identifier: 'local.iina.streams.precheck-test', variant: 'unified'};
 const LOGIN = 'fixture_channel';
 const LIVE = Sources.parse(LOGIN);
+const VOD_URL = 'https://www.twitch.tv/videos/1234567890';
 const UNAVAILABLE = {statusCode: 503, reason: 'Service Unavailable', text: ''};
+const STREAM_QUERY = 'stream{id}';
+const UI_CALL = /^(global\.createPlayerInstance|standaloneWindow\.)/;
 const settle = async () => {
   for (let round = 0; round < 5; round++) await new Promise(resolve => setImmediate(resolve));
 };
@@ -34,35 +44,48 @@ function archives(count) {
   return {statusCode: 200, data: {data: {user: {videos: {edges}}}}};
 }
 
-// Replies to the signed-out stream query, by mode.
-const STREAM_REPLIES = {
-  live: () => Promise.resolve({statusCode: 200, data: {data: {user: {stream: {id: '42'}}}}}),
-  offline: () => Promise.resolve({statusCode: 200, data: {data: {user: {stream: null}}}}),
-  'no-user': () => Promise.resolve({statusCode: 200, data: {data: {user: null}}}),
-  down: () => Promise.reject(UNAVAILABLE),
-  transport: () => Promise.reject(new Error('transport')),
-  hang: () => new Promise(() => {}),
+const STATUS = {
+  live: {ok: true, value: {statusCode: 200, data: {data: {user: {stream: {id: '42'}}}}}},
+  offline: {ok: true, value: {statusCode: 200, data: {data: {user: {stream: null}}}}},
+  'offline-with-errors': {ok: true, value: {statusCode: 200, data: {
+    data: {user: {stream: null}}, errors: [{message: 'service timeout', path: ['user', 'stream']}],
+  }}},
+  'no-user': {ok: true, value: {statusCode: 200, data: {data: {user: null}}}},
+  malformed: {ok: true, value: {statusCode: 200, data: {data: {}}}},
+  down: {ok: false, value: UNAVAILABLE},
+  transport: {ok: false, value: new Error('transport')},
 };
 
-// iina.http-shaped, recording {method, url, query} for every request.
-function twitchHttp(mode) {
+// iina.http-shaped. Status queries are held: answer(kind) settles the oldest unanswered one.
+function twitchHttp() {
   const calls = [];
+  const held = [];
   function post(url, options) {
     const query = String(options && options.data && options.data.query || '');
-    calls.push({method: 'POST', url, query});
-    if (query.includes('stream{id}')) return STREAM_REPLIES[mode]();
-    return Promise.resolve(archives(1));
+    calls.push({method: 'POST', url, query, headers: Object.assign({}, options && options.headers)});
+    if (!query.includes(STREAM_QUERY)) return Promise.resolve(archives(1));
+    return new Promise((resolve, reject) => held.push({resolve, reject}));
   }
-  function get(url) {
-    calls.push({method: 'GET', url});
+  function get(url, options) {
+    calls.push({method: 'GET', url, headers: Object.assign({}, options && options.headers)});
     return Promise.reject(UNAVAILABLE);
   }
-  return {calls, api: {get, post}};
+  function answer(kind) {
+    const request = held.shift();
+    assert.ok(request, 'fixture: a status request is waiting');
+    const reply = STATUS[kind];
+    if (reply.ok) request.resolve(reply.value);
+    else request.reject(reply.value);
+  }
+  return {calls, held, answer, api: {get, post}};
 }
 
-function loadGlobal(mode) {
+function loadGlobal(options = {}) {
   const shim = createIina({role: 'global', identifier: config.identifier});
-  const http = twitchHttp(mode);
+  if (options.savedLogin) {
+    shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(options.savedLogin));
+  }
+  const http = options.http || twitchHttp();
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -73,200 +96,269 @@ function loadGlobal(mode) {
     ['./src/bridge.js', require('../src/bridge.js')],
     ['./src/listeners.js', require('../src/listeners.js')],
   ]);
-  const iina = Object.assign({}, shim.iina, {http: http.api});
   const context = shim.runScript(path.join(__dirname, '../global.js'), {
-    globals: {iina},
+    globals: {iina: Object.assign({}, shim.iina, {http: http.api})},
     require(name) {
       if (!modules.has(name)) throw new Error('Unexpected module ' + name);
       return modules.get(name);
     },
   });
   const win = shim.standaloneWindow;
-  function lists() {
-    return win.posts.filter(post => post.name === 'offline-vods')
-      .map(post => JSON.parse(decodeURIComponent(post.data.encoded)));
-  }
-  const streamChecks = () => http.calls.filter(call => call.query && call.query.includes('stream{id}'));
-  return {shim, context, win, http, lists, streamChecks, opens: () => shim.global.opens};
+  const fixture = {shim, context, win, http, opens: () => shim.global.opens};
+  fixture.lists = () => win.posts.filter(post => post.name === 'offline-vods')
+    .map(post => JSON.parse(decodeURIComponent(post.data.encoded)));
+  fixture.statusChecks = () => http.calls.filter(call => call.query && call.query.includes(STREAM_QUERY));
+  fixture.mark = () => ({log: shim.log.length, timers: shim.timers.all.length, posts: win.posts.length});
+  fixture.uiCallsSince = at => shim.log.slice(at.log).map(call => call.api).filter(api => UI_CALL.test(api));
+  // Timers armed since `at` that are still armed, or fired and never cleared (IINA keeps those registered).
+  fixture.timersLeftSince = at => shim.timers.all.slice(at.timers)
+    .filter(timer => !timer.cancelled);
+  fixture.postsSince = at => win.posts.slice(at.posts).map(post => post.name);
+  return fixture;
 }
 
-async function submit(fixture, input) {
+// Opens the Open Stream form and lets its page report ready.
+function openForm(fixture) {
   fixture.context.openStream();
   fixture.win.send('open-ready', {});
-  fixture.win.send('open-stream', {input});
-  await settle();
-  fixture.win.send('open-ready', {});
-  await settle();
 }
 
-test('#67 an offline channel creates no player and lists its broadcasts', async () => {
+// A reply's own continuation runs in promise jobs; a timer turn is the main thread. Answers the status check, then
+// runs main-thread turns until none is left (an offline answer's turn starts the archive lookup, whose reply has a
+// turn of its own). Returns the interface calls made in promise jobs, outside any turn: H-main wants none.
+async function replyThenMainTurn(fixture, kind) {
+  let at = fixture.mark();
+  fixture.http.answer(kind);
+  const offMain = [];
+  for (let turn = 0; turn < 4; turn++) {
+    await settle();
+    offMain.push(...fixture.uiCallsSince(at));
+    fixture.shim.timers.flush(0);
+    at = fixture.mark();
+  }
+  return offMain;
+}
+
+function assertAnonymous(fixture) {
+  for (const call of fixture.http.calls) {
+    assert.equal(call.headers.Authorization, undefined, `no Authorization header on ${call.url}`);
+    assert.ok(!call.url.startsWith('https://api.twitch.tv/'), `no Helix request: ${call.url}`);
+  }
+}
+
+test('#67 U-feedback + H-main: an offline channel keeps the form open while checking, then lists, with no player', async () => {
   for (const input of [LOGIN, 'https://www.twitch.tv/' + LOGIN]) {
-    const fixture = loadGlobal('offline');
-    await submit(fixture, input);
-    assert.equal(fixture.streamChecks().length, 1, 'one status request');
+    const fixture = loadGlobal();
+    openForm(fixture);
+    const at = fixture.mark();
+    fixture.win.send('open-stream', {input});
+    await settle();
+    assert.equal(fixture.win.visible, true, 'U-feedback: the form stays open while checking');
+    assert.deepEqual(fixture.lists().at(-1), {state: 'loading'}, 'U-feedback: the existing loading signifier shows');
+    assert.equal(fixture.statusChecks().length, 1, 'one status request');
+
+    const offMain = await replyThenMainTurn(fixture, 'offline');
+    assert.deepEqual(offMain, [], 'H-main: no interface call in the reply continuation');
     assert.deepEqual(fixture.opens(), [], `${input}: no player is created`);
-    assert.equal(fixture.win.visible, true, 'the Open Stream window shows');
-    assert.deepEqual(fixture.win.posts.find(post => post.name === 'prefill').data, {input: LOGIN});
+    assert.equal(fixture.win.visible, true);
+    assert.deepEqual(fixture.win.posts.filter(post => post.name === 'prefill').at(-1).data, {input: LOGIN});
     assert.equal(fixture.lists().at(-1).state, 'ready', 'the recent broadcasts are listed');
-    assert.equal(fixture.lists().at(-1).items.length, 1);
+    assert.deepEqual(fixture.timersLeftSince(at), [], 'no timer is left armed or registered');
+    assertAnonymous(fixture);
   }
 });
 
-test('#67 a live channel creates the player as before, after one status request', async () => {
-  const fixture = loadGlobal('live');
-  await submit(fixture, LOGIN);
-  assert.equal(fixture.streamChecks().length, 1, 'one status request');
-  assert.deepEqual(fixture.http.calls.filter(call => call.method === 'GET'), [], 'no playback token or usher fetch');
+test('#67 U-feedback + H-main: a live channel keeps the form open until its player exists', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  const at = fixture.mark();
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  assert.equal(fixture.win.visible, true, 'still checking');
+  assert.deepEqual(fixture.opens(), []);
+
+  const offMain = await replyThenMainTurn(fixture, 'live');
+  assert.deepEqual(offMain, [], 'H-main: no interface call in the reply continuation');
   assert.equal(fixture.opens().length, 1, 'one player');
   assert.equal(fixture.opens()[0].url, LIVE.url);
   assert.equal(fixture.opens()[0].label, Sources.label(LIVE, config.variant));
-  assert.deepEqual(fixture.lists(), [], 'no broadcast list');
+  assert.equal(fixture.win.visible, false, 'the form closes once the player exists');
+  assert.ok(fixture.lists().every(list => list.state === 'loading'), 'no broadcast list, only the checking state');
+  assert.deepEqual(fixture.timersLeftSince(at), []);
+  assertAnonymous(fixture);
 });
 
-test('#67 an unknown channel or a failed check still creates the player', async () => {
-  for (const mode of ['no-user', 'down', 'transport']) {
-    const fixture = loadGlobal(mode);
-    fixture.context.openStream(LOGIN);
+test('#67 D-offline: only a clean stream:null is offline; errors, no user, failures and odd replies open the player', async () => {
+  for (const kind of ['offline-with-errors', 'no-user', 'malformed', 'down', 'transport']) {
+    const fixture = loadGlobal();
+    openForm(fixture);
+    const at = fixture.mark();
+    fixture.win.send('open-stream', {input: LOGIN});
     await settle();
-    assert.equal(fixture.streamChecks().length, 1, 'precondition: the check ran');
-    assert.equal(fixture.opens().length, 1, `${mode}: the player opens`);
-    assert.deepEqual(fixture.lists(), []);
+    const offMain = await replyThenMainTurn(fixture, kind);
+    assert.deepEqual(offMain, [], `${kind}: H-main`);
+    assert.equal(fixture.opens().length, 1, `${kind}: the player opens`);
+    assert.equal(fixture.win.visible, false, `${kind}: the form closes`);
+    assert.ok(!fixture.postsSince(at).includes('prefill'), `${kind}: no broadcast list`);
+    assert.deepEqual(fixture.timersLeftSince(at), [], `${kind}: no timer left`);
   }
 });
 
-test('#67 a check with no answer within 1.5 s creates the player', async () => {
-  const fixture = loadGlobal('hang');
-  fixture.context.openStream(LOGIN);
+test('#67 a check with no answer within 1.5 s opens the player, and the late answer changes nothing', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  const at = fixture.mark();
+  fixture.win.send('open-stream', {input: LOGIN});
   await settle();
   fixture.shim.timers.advance(1499);
   await settle();
+  fixture.shim.timers.flush(0);
   assert.equal(fixture.opens().length, 0, 'still waiting at 1499 ms');
   fixture.shim.timers.advance(1);
   await settle();
+  fixture.shim.timers.flush(0);
+  await settle();
   assert.equal(fixture.opens().length, 1, 'the player opens at 1500 ms');
+  assert.equal(fixture.win.visible, false);
+  await replyThenMainTurn(fixture, 'offline');
+  assert.equal(fixture.opens().length, 1, 'a late offline answer opens nothing more');
+  assert.equal(fixture.win.loads.length, 1, 'and shows no list');
+  assert.deepEqual(fixture.timersLeftSince(at), []);
+});
+
+test('#67 F-session: a late offline answer does not overwrite a reopened form', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-cancel', {});
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: 'not a stream ::'});
+  await settle();
+  const at = fixture.mark();
+  await replyThenMainTurn(fixture, 'offline');
+  assert.deepEqual(fixture.postsSince(at), [], 'nothing reaches the newer form');
+  assert.deepEqual(fixture.opens(), [], 'and no player opens');
+  assert.equal(fixture.win.visible, true);
+});
+
+test('#67 F-session: an invalid submit in the same form outdates an earlier channel\'s offline answer', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-stream', {input: 'not a stream ::'});
+  await settle();
+  const at = fixture.mark();
+  await replyThenMainTurn(fixture, 'offline');
+  assert.deepEqual(fixture.postsSince(at), [], 'the earlier channel neither prefills nor lists');
+  assert.equal(fixture.win.loads.length, 1, 'nor reloads the form');
+  assert.deepEqual(fixture.opens(), []);
+  assert.equal(fixture.win.visible, true);
+});
+
+test('#67 F-session: a late live answer still opens its player but leaves a newer form alone', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-cancel', {});
+  openForm(fixture);
+  const at = fixture.mark();
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 1, 'separate opens stay independent');
+  assert.equal(fixture.win.visible, true, 'the newer form is not closed');
+  assert.deepEqual(fixture.postsSince(at), []);
+});
+
+test('#67 F-session: a second submit in the same form supersedes the first one\'s form updates', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-stream', {input: VOD_URL});
+  await settle();
+  assert.equal(fixture.opens().length, 1, 'the VOD opens at once');
+  assert.equal(fixture.win.visible, false);
+  const at = fixture.mark();
+  await replyThenMainTurn(fixture, 'offline');
+  assert.deepEqual(fixture.postsSince(at), [], 'the earlier channel\'s list does not appear');
+  assert.equal(fixture.win.loads.length, 1, 'and the form is not reopened');
+});
+
+test('#67 a sidebar open of an offline channel lists its broadcasts in the Open Stream window', async () => {
+  const fixture = loadGlobal();
+  fixture.shim.global.send('open', {input: LOGIN}, '0');
+  await settle();
+  assert.deepEqual(fixture.opens(), []);
+  const offMain = await replyThenMainTurn(fixture, 'offline');
+  assert.deepEqual(offMain, [], 'H-main');
+  assert.equal(fixture.win.visible, true);
+  fixture.win.send('open-ready', {});
+  await settle();
+  assert.equal(fixture.lists().at(-1).state, 'ready');
+  assert.deepEqual(fixture.opens(), []);
 });
 
 test('#67 VOD and YouTube inputs open a player at once, with no check', async () => {
-  for (const input of ['https://www.twitch.tv/videos/1234567890', 'https://youtu.be/abcdefghijk']) {
-    const fixture = loadGlobal('offline');
+  for (const input of [VOD_URL, 'https://youtu.be/abcdefghijk']) {
+    const fixture = loadGlobal();
     fixture.context.openStream(input);
     assert.equal(fixture.opens().length, 1, `${input}: the player opens synchronously`);
     await settle();
     assert.deepEqual(fixture.http.calls, [], `${input}: no live check`);
-    assert.deepEqual(fixture.lists(), []);
   }
 });
 
-test('#67 an offline answer for an older input does not cover a newer one', async () => {
-  const fixture = loadGlobal('offline');
-  fixture.context.openStream(LOGIN);
-  fixture.context.openStream('https://youtu.be/abcdefghijk');
-  await settle();
-  assert.equal(fixture.opens().length, 1, 'only the YouTube player');
-  assert.equal(fixture.win.loads.length, 0, 'the stale offline answer opens no window');
-});
-
 test('#67 residual race: a channel that goes offline after a live check still lists through source-offline', async () => {
-  const fixture = loadGlobal('live');
+  const fixture = loadGlobal();
   fixture.context.openStream(LOGIN);
   await settle();
+  await replyThenMainTurn(fixture, 'live');
   assert.equal(fixture.opens().length, 1, 'precondition: the live check created player 1');
   await fixture.shim.global.send('source-offline', {login: LOGIN}, '1-' + config.identifier);
   await settle();
   fixture.win.send('open-ready', {});
   await settle();
+  fixture.shim.timers.flush(0);
+  await settle();
   assert.equal(fixture.lists().at(-1).state, 'ready', 'the in-player path still lists the broadcasts');
 });
 
-// ---- signed in: Helix Get Streams (D-034) ----
-
-const CREDENTIALS = {token: 'fixture-token', clientID: 'fixture-client', login: 'viewer'};
-
-// Helix replies by path: /streams lists `streams`, /users lists `users`.
-function helixHttp({streams, users, fail}) {
-  const calls = [];
-  function get(url, options) {
-    calls.push({method: 'GET', url, params: options && options.params, auth: options && options.headers.Authorization});
-    if (fail) return Promise.reject(fail);
-    if (url.endsWith('/streams')) return Promise.resolve({statusCode: 200, data: {data: streams}});
-    if (url.endsWith('/users')) return Promise.resolve({statusCode: 200, data: {data: users}});
-    return Promise.reject(UNAVAILABLE);
-  }
-  function post(url) {
-    calls.push({method: 'POST', url});
-    return Promise.reject(UNAVAILABLE);
-  }
-  return {calls, api: {get, post}};
-}
-
-test('#67 signed in, the check uses Helix Get Streams with the viewer token and never GQL', async () => {
-  const cases = [
-    [{streams: [{id: '42', user_login: LOGIN}], users: []}, 'live', 1],
-    [{streams: [], users: [{id: '7', login: LOGIN}]}, 'offline', 2],
-    [{streams: [], users: []}, 'unknown', 2],
-    [{fail: {statusCode: 401, reason: 'Unauthorized', text: ''}}, 'unknown', 1],
-  ];
-  for (const [reply, expected, requests] of cases) {
-    const http = helixHttp(reply);
-    const status = await channelStatus({login: LOGIN}, {http: http.api, credentials: CREDENTIALS});
-    assert.equal(status, expected, JSON.stringify(reply));
-    assert.equal(http.calls.length, requests);
-    assert.deepEqual(http.calls.filter(call => call.method === 'POST'), [], 'no GQL when signed in');
-    assert.equal(http.calls[0].url, 'https://api.twitch.tv/helix/streams');
-    assert.deepEqual(http.calls[0].params, {user_login: LOGIN});
-    assert.equal(http.calls[0].auth, 'Bearer fixture-token');
-  }
-});
-
-test('#67 global signed in with a saved login checks through Helix with that login\'s token', async () => {
-  const shim = createIina({role: 'global', identifier: config.identifier});
+test('#67 A-auth: signed in with a saved login, the check is still anonymous GQL', async () => {
   const saved = {clientID: 'c'.repeat(30), access_token: 'saved-precheck-token', refresh_token: 'saved-precheck-refresh'};
-  shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(saved));
-  const calls = [];
+  const base = twitchHttp();
   const validated = {statusCode: 200, data: {client_id: saved.clientID, login: 'reader', scopes: ['chat:read'], expires_in: 5000}};
-  const http = {
-    get(url, options) {
-      calls.push({method: 'GET', url, auth: options && options.headers && options.headers.Authorization});
-      if (url.endsWith('/oauth2/validate')) return Promise.resolve(validated);
-      if (url.endsWith('/helix/streams')) return Promise.resolve({statusCode: 200, data: {data: []}});
-      if (url.endsWith('/helix/users')) return Promise.resolve({statusCode: 200, data: {data: [{id: '7'}]}});
-      return Promise.reject(UNAVAILABLE);
-    },
-    post(url, options) {
-      calls.push({method: 'POST', url, query: options && options.data && options.data.query});
-      return Promise.resolve(archives(1));
-    },
-  };
-  const modules = new Map([
-    ['./config.js', config], ['./src/source.js', Sources], ['./src/auth.js', require('../src/auth.js')],
-    ['./src/timers.js', require('../src/timers.js')], ['./src/twitch-app.js', {clientID: ''}],
-    ['./src/twitch-vods.js', require('../src/twitch-vods.js')], ['./src/bridge.js', require('../src/bridge.js')],
-    ['./src/listeners.js', require('../src/listeners.js')],
-  ]);
-  shim.runScript(path.join(__dirname, '../global.js'), {
-    globals: {iina: Object.assign({}, shim.iina, {http})},
-    require: name => modules.get(name),
-  });
-  await shim.global.send('auth-connect', {}, '0');
+  const http = Object.assign({}, base, {api: {
+    post: base.api.post,
+    get: (url, options) => (url.endsWith('/oauth2/validate') ? Promise.resolve(validated) : base.api.get(url, options)),
+  }});
+  const fixture = loadGlobal({savedLogin: saved, http});
+  await fixture.shim.global.send('auth-connect', {}, '0');
   await settle();
-  shim.timers.flush(0);
-  assert.ok(shim.global.posts.some(post => post.name === 'auth-ready'), 'precondition: global holds credentials');
-  const before = calls.length;
-  shim.global.send('open', {input: LOGIN}, '0');
+  fixture.shim.timers.flush(0);
+  assert.ok(fixture.shim.global.posts.some(post => post.name === 'auth-ready'), 'precondition: global holds credentials');
+  const before = base.calls.length;
+  fixture.shim.global.send('open', {input: LOGIN}, '0');
   await settle();
-  const check = calls.slice(before);
-  assert.equal(check[0].url, 'https://api.twitch.tv/helix/streams', 'Helix first, not GQL');
-  assert.equal(check[0].auth, 'Bearer saved-precheck-token');
-  assert.ok(!check.some(call => call.query && call.query.includes('stream{id}')), 'no GQL status query');
-  assert.deepEqual(shim.global.opens, [], 'offline: no player');
+  const check = base.calls.slice(before);
+  assert.equal(check.length, 1, 'one request');
+  assert.equal(check[0].url, 'https://gql.twitch.tv/gql');
+  assert.equal(check[0].headers.Authorization, undefined, 'no viewer credential');
+  assert.ok(!check[0].query.includes('saved-precheck-token'));
 });
 
-test('#67 signed out, or with an empty token, the check is one anonymous GQL request', async () => {
-  for (const credentials of [null, {token: '', clientID: 'fixture-client'}]) {
-    const http = twitchHttp('offline');
-    const status = await channelStatus({login: LOGIN}, {http: http.api, credentials});
-    assert.equal(status, 'offline');
+test('#67 channelStatus: one anonymous GQL request; offline only for stream:null without errors', async () => {
+  const cases = [['live', 'live'], ['offline', 'offline'], ['offline-with-errors', 'unknown'], ['no-user', 'unknown'],
+    ['malformed', 'unknown'], ['down', 'unknown'], ['transport', 'unknown']];
+  for (const [kind, expected] of cases) {
+    const http = twitchHttp();
+    const pending = channelStatus({login: LOGIN}, {http: http.api, credentials: {token: 'x', clientID: 'y'}});
+    await settle();
+    http.answer(kind);
+    assert.equal(await pending, expected, kind);
     assert.equal(http.calls.length, 1);
     assert.equal(http.calls[0].url, 'https://gql.twitch.tv/gql');
+    assert.equal(http.calls[0].headers.Authorization, undefined);
   }
 });

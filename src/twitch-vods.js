@@ -10,8 +10,6 @@
 // so the body is a plain {query} object and every header value is a string (see src/twitch-playback.js).
 // Nothing here logs a URL, a title or the login; a log line carries only the failure code.
 
-const {createHelix} = require('./twitch-helix.js');
-
 const GQL_URL = 'https://gql.twitch.tv/gql';
 const WEB_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Public web client id, as in src/twitch-playback.js.
 const DEFAULT_LIMIT = 10;
@@ -151,14 +149,17 @@ async function recentArchives(request, deps) {
 
 // Whether a channel is live, asked by global before it creates a player for the channel.
 //
-//   channelStatus({login}, {http, credentials, setTimeout, clearTimeout}) -> 'live' | 'offline' | 'unknown'
+//   channelStatus({login}, {http, setTimeout, clearTimeout}) -> 'live' | 'offline' | 'unknown'
 //
-// Signed in (credentials {token, clientID}): Helix Get Streams (D-034, src/twitch-helix.js streamStatus).
-// Signed out: one anonymous GQL query, user(login){stream{id}}, with the public web client id, like archivesQuery.
-// 'unknown' covers no such channel, any failure and no answer within STATUS_TIMEOUT_MS, so the caller creates the
-// player as before. It never rejects, and nothing is logged.
+// One anonymous GQL query, user(login){stream{id}}, with the public web client id and no viewer credential, like
+// archivesQuery. Helix Get Streams cannot decide this: it omits discovery-restricted live streams (Twitch API
+// reference, Get Streams), so D-034 allows GQL here. 'offline' only when the answer positively says so: user.stream
+// is null and the reply carries no `errors` (a GraphQL field error also nulls the field). 'unknown' covers no such
+// channel, any error, an odd reply and no answer within STATUS_TIMEOUT_MS, so the caller creates the player as
+// before. It never rejects, and nothing is logged. A request still in flight at the deadline is not cancelled
+// (iina.http has no abort); its late answer is ignored.
 async function channelStatus(request, deps) {
-  const {http, credentials} = deps || {};
+  const {http} = deps || {};
   const setTimer = deps && deps.setTimeout || setTimeout;
   const clearTimer = deps && deps.clearTimeout || clearTimeout;
   const login = request && request.login;
@@ -170,23 +171,13 @@ async function channelStatus(request, deps) {
     timer = setTimer(() => resolve('unknown'), STATUS_TIMEOUT_MS);
   });
   const check = Promise.resolve()
-    .then(() => (signedIn(credentials) ? helixStatus(http, credentials, login) : gqlStatus(http, login)))
+    .then(() => gqlStatus(http, login))
     .catch(() => 'unknown');
   try {
     return await Promise.race([check, expired]);
   } finally {
     clearTimer(timer);
   }
-}
-
-function signedIn(credentials) {
-  return !!credentials && typeof credentials.token === 'string' && credentials.token !== ''
-    && typeof credentials.clientID === 'string' && credentials.clientID !== '';
-}
-
-function helixStatus(http, credentials, login) {
-  const helix = createHelix({http, clientID: credentials.clientID, token: credentials.token});
-  return helix.streamStatus({login});
 }
 
 // The login is validated against LOGIN_PATTERN before this, so JSON.stringify quoting is safe.
@@ -200,7 +191,10 @@ async function gqlStatus(http, login) {
     return 'unknown';
   }
   const body = bodyOf(response);
-  const user = body && body.data && body.data.user;
+  if (!body || Object.hasOwn(body, 'errors')) {
+    return 'unknown';
+  }
+  const user = body.data && body.data.user;
   if (!user || typeof user !== 'object' || !Object.hasOwn(user, 'stream')) {
     return 'unknown';
   }

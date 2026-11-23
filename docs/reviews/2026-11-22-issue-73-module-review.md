@@ -61,3 +61,28 @@ Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as 
   - invalid stored timestamps are rejected on load.
 
 - **Lead decision (23:46), on the targeted pass:** a history file that can't be read (an I/O failure, not a parse failure) blocks history until it can be read; nothing falls back to backup-and-replace. Losing new history is better than overwriting a file we can't read. The wiring records "history unavailable" in Streams' diagnostics (`@data/beta-global.json`), so it is visible.
+
+## Narrow check (verbatim; Codex gpt-6.2-sol xhigh, finished 23:49, on 777052a)
+
+**NOT CLOSED** at `777052a`.
+
+1. **CLOSED** — [TESTS.md:74](/Users/rookslog/Development/iina-streams-wt/h73/docs/design/finding-2026-11-22/history/TESTS.md:74) narrows the module claim to format checks and leaves provenance to wiring.
+2. **NOT CLOSED as written** — Mutators retry the read and write nothing while unavailable; `query` never writes. But [`record()`](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:423) returns its existing `null` sentinel, not `false`.
+3. **NOT CLOSED** — Clock rollback and same-second retries pass, but [the write omits the ID counter](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:359). After forgetting the highest-ID visit and reopening, its stale handle can close a new visit.
+4. **CLOSED** — Load trims to 500 by score without writing.
+5. **CLOSED** — `node --test tests/history.test.js` passed 27/27; the new tests caught all six targeted retry and timestamp mutations.
+
+**Other new regressions**
+
+- [src/history.js:510](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:510) — Forgetting a channel trimmed on load returns `true` without deleting it from disk. It can reappear after scores change and the store is reopened.
+- [src/history.js:398](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:398) — A stored `Number.MAX_SAFE_INTEGER` ID makes subsequent records return duplicate IDs that `finish()` rejects.
+- [src/history.js:371](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:371) — Load trimming rescans the list for each eviction. A 10,000-person fixture took 2.4 s to open versus 6 ms at `8f83b2c`.
+## Lead disposition
+
+- Per D-032 rule 4, the surviving findings go to the operator, as `docs/WAITING.md` W-13. **The merge is held**; fixing on the branch is reversible, so it goes ahead.
+- **The fixes:**
+  - the next-id counter is persisted in the file;
+  - forgetting a person trimmed on load also removes them from the file (and the trim keeps the evicted logins until the next write);
+  - ids are bounded: at the safe-integer limit, renumber in order;
+  - the trim is O(n log n), by sorting once;
+  - `record` keeps `null` for "ignored"; TESTS.md is amended to say that `null` is its false.

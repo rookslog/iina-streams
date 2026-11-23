@@ -86,6 +86,28 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** if you'd rather it hug its results, one unchecked route remains: the page reads its own screen position (`window.screenY` inside IINA's web view) and passes it to `setFrame`. If a native test shows that works, the hugging option comes back.
 - **What your answer changes:** the second design round (the hybrid drawn, with the review's fixes), then the #74 build.
 
+### W-13. Merge the watch-history module (#73) after its last fixes, or hold it
+- **What it is:** whether the history module may merge into `beta` once its last small fixes pass their tests, or must wait for another Codex check. It's yours because our review rule (D-032 rule 4) sends any finding that survives the final review to you.
+- **How it arose:** Codex's narrow check of the module, on a branch not yet in `beta`, found five small problems:
+  - the visit counter isn't saved;
+  - forgetting a channel trimmed on load doesn't remove it from disk;
+  - an extreme visit number breaks closing visits;
+  - loading a huge history file is slow;
+  - one return value is inconsistent.
+
+  Details: `docs/reviews/2026-11-22-issue-73-module-review.md`, the "Narrow check" section at the end. The fixes are being made on the branch now.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Merge once the fixes pass tests and the lead's review** | History wiring and typing suggestions (#74) can start | Nobody independent checks these last fixes |
+  | **One more narrow Codex check, then merge** | An independent check of the last fixes | About 15 minutes more |
+  | **Hold** until you look | Nothing changes | #73's wiring and #74 wait |
+- **Recommendation:** one more narrow Codex check, then merge. It's cheap, and it keeps "the fix author never closes its own gate".
+- **What it rests on:** the five findings are mechanical, not a sign the design is wrong.
+- **What would flip it:** if that check finds anything new, park the module and step back on the storage design.
+- **What your answer changes:** when history is wired in, and so when #74 can start.
+
 ## Answered
 
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.

@@ -176,8 +176,8 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
-// openRun is the Open Stream form's session (F-session, #67). A submit, a newer source-offline, a fresh page or a
-// close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
+// openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
+// source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
 let openRun=0,openPageReady=false,openQueue=[];
 
@@ -257,6 +257,7 @@ function showOpenWindow(){
  listen(openWindow,'standaloneWindow','open-stream',onOpenWindowSubmit);
  listen(openWindow,'standaloneWindow','open-cancel',closeOpenWindow);
  listen(openWindow,'standaloneWindow','open-ready',onOpenPageReady);
+ listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
  openWindow.open();
@@ -265,6 +266,11 @@ function showOpenWindow(){
 function closeOpenWindow(){
  openRun++;
  openWindow.close();
+}
+
+// F-session (#67): an edit of the field is a new draft, so a check started for the old text cannot overwrite it.
+function onOpenEdit(){
+ openRun++;
 }
 
 // A submit starts a new form session, so a check from an earlier submit cannot update the form (F-session).
@@ -300,12 +306,19 @@ const OFFLINE_ROW_HEIGHT=28;
 const recentOffline=new Map();
 
 // A managed player or an adopted window may report; neither lookup registers the label.
+// H-main (#67): a player's message reaches this handler through IINA's synchronous message bridge, off the main
+// thread, so the window, the list and the repeat bookkeeping run on a main-thread turn (onMainThread).
 function onSourceOffline(data,label){
  const managedID=targetID(label);
  const sender=managedID!==null?managedID:adoptedLabel(label);
  if(sender===null)return;
  const login=offlineLogin(data);
- if(login===null||recentOffline.has(login))return;
+ if(login===null)return;
+ onMainThread(()=>showReportedOffline(login));
+}
+
+function showReportedOffline(login){
+ if(recentOffline.has(login))return;
  recentOffline.set(login,timers.setTimeout(()=>recentOffline.delete(login),OFFLINE_REPEAT_MS));
  showOfflineVods(login);
 }
@@ -325,7 +338,7 @@ async function showOfflineVods(login){
  postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1);
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
- const result=await recentArchives({login},{http});
+ const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>showArchives(run,result));
 }

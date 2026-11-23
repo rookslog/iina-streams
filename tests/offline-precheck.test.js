@@ -23,7 +23,9 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Sources = require('../src/source.js');
 const {channelStatus} = require('../src/twitch-vods.js');
-const {createIina} = require('./support/iina-shim.js');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const {createIina, createWebViewIina} = require('./support/iina-shim.js');
 
 const config = {identifier: 'local.iina.streams.precheck-test', variant: 'unified'};
 const LOGIN = 'fixture_channel';
@@ -130,13 +132,21 @@ async function replyThenMainTurn(fixture, kind) {
   let at = fixture.mark();
   fixture.http.answer(kind);
   const offMain = [];
-  for (let turn = 0; turn < 4; turn++) {
+  for (let turn = 0; turn < 6; turn++) {
     await settle();
     offMain.push(...fixture.uiCallsSince(at));
     fixture.shim.timers.flush(0);
     at = fixture.mark();
   }
   return offMain;
+}
+
+// Runs main-thread turns (0 ms timers) and their promise jobs until none is left.
+async function mainTurns(fixture) {
+  for (let turn = 0; turn < 6; turn++) {
+    fixture.shim.timers.flush(0);
+    await settle();
+  }
 }
 
 function assertAnonymous(fixture) {
@@ -257,6 +267,65 @@ test('#67 F-session: an invalid submit in the same form outdates an earlier chan
   assert.equal(fixture.win.visible, true);
 });
 
+test('#67 F-session: editing the field after a submit outdates the earlier channel\'s late offline answer', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  // The page posts open-edit on every input event (ui/open.js onInput; see the page test below).
+  fixture.win.send('open-edit', {});
+  const at = fixture.mark();
+  await replyThenMainTurn(fixture, 'offline');
+  assert.deepEqual(fixture.postsSince(at), [], 'the draft is neither prefilled over nor given a list');
+  assert.equal(fixture.win.loads.length, 1);
+  assert.deepEqual(fixture.opens(), []);
+});
+
+test('#67 F-session: the Open Stream page reports every edit of its field as open-edit', () => {
+  const page = createWebViewIina();
+  const target = () => {
+    const listeners = new Map();
+    return {
+      addEventListener: (name, fn) => listeners.set(name, (listeners.get(name) || []).concat(fn)),
+      dispatch: (name, event) => (listeners.get(name) || []).forEach(fn => fn(event)),
+      setAttribute() {}, removeAttribute() {}, focus() {}, value: '',
+    };
+  };
+  const elements = {'open-form': target(), 'open-input': target()};
+  const document = Object.assign(target(), {getElementById: id => elements[id] || null});
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../ui/open.js'), 'utf8'),
+    {document, window: target(), iina: page.iina}, {filename: 'open.js'});
+  elements['open-input'].value = 'other_channel';
+  elements['open-input'].dispatch('input', {target: elements['open-input']});
+  assert.deepEqual(page.messages('open-edit'), [{name: 'open-edit', data: {}}]);
+});
+
+test('#67 H-main deadline: no timer is cleared in a reply continuation, only on the turn after it', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  const deadline = fixture.shim.timers.all.find(timer => timer.delay === 1500);
+  assert.ok(deadline, 'precondition: the check armed its deadline');
+  const cleared = fixture.shim.timers.cleared.length;
+  fixture.http.answer('offline');
+  await settle();
+  assert.equal(fixture.shim.timers.cleared.length, cleared, 'no clearTimeout in the status reply continuation');
+  assert.equal(deadline.cancelled, false);
+  fixture.shim.timers.flush(0);
+  assert.equal(deadline.cancelled, true, 'the main-thread turn clears the deadline');
+  await settle();
+  fixture.shim.timers.flush(0);
+  // The offline turn has started the archive lookup; its reply is answered at once.
+  const archiveDeadline = fixture.shim.timers.all.find(timer => timer.delay === 5000);
+  assert.ok(archiveDeadline, 'precondition: the archive lookup armed its deadline');
+  const beforeArchive = fixture.shim.timers.cleared.length;
+  await settle();
+  assert.equal(fixture.shim.timers.cleared.length, beforeArchive, 'no clearTimeout in the archive reply continuation');
+  fixture.shim.timers.flush(0);
+  assert.equal(archiveDeadline.cancelled, true, 'the archive deadline is cleared on the turn after its reply');
+});
+
 test('#67 F-session: a late live answer still opens its player but leaves a newer form alone', async () => {
   const fixture = loadGlobal();
   openForm(fixture);
@@ -310,18 +379,20 @@ test('#67 VOD and YouTube inputs open a player at once, with no check', async ()
   }
 });
 
-test('#67 residual race: a channel that goes offline after a live check still lists through source-offline', async () => {
+test('#67 H-main fallback + residual race: source-offline opens the window only on a timer turn, and still lists', async () => {
   const fixture = loadGlobal();
   fixture.context.openStream(LOGIN);
   await settle();
   await replyThenMainTurn(fixture, 'live');
   assert.equal(fixture.opens().length, 1, 'precondition: the live check created player 1');
+  const at = fixture.mark();
   await fixture.shim.global.send('source-offline', {login: LOGIN}, '1-' + config.identifier);
   await settle();
+  assert.deepEqual(fixture.uiCallsSince(at), [], 'H-main: the message handler itself opens no window');
+  await mainTurns(fixture);
+  assert.equal(fixture.win.visible, true, 'the window opens on a main-thread turn');
   fixture.win.send('open-ready', {});
-  await settle();
-  fixture.shim.timers.flush(0);
-  await settle();
+  await mainTurns(fixture);
   assert.equal(fixture.lists().at(-1).state, 'ready', 'the in-player path still lists the broadcasts');
 });
 

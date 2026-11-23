@@ -19,12 +19,14 @@ const config = {identifier: 'local.iina.streams.b6c-test', variant: 'unified'};
 const LOGIN = 'fixture_offline';
 const MANAGED = '1-' + config.identifier;
 const immediate = () => new Promise(resolve => setImmediate(resolve));
-// #67 H-main: global shows an archive reply on a main-thread turn (a 0 ms timer), so settling also runs the 0 ms
-// timers of the globals this file loaded.
+// #67 H-main: global handles source-offline, the archive reply's deadline and the list on main-thread turns (0 ms
+// timers), so settling also runs the 0 ms timers of the globals this file loaded, until none is left.
 const shims = [];
 const settle = async () => {
-  await immediate();
-  for (const shim of shims) shim.timers.flush(0);
+  for (let turn = 0; turn < 6; turn++) {
+    await immediate();
+    for (const shim of shims) shim.timers.flush(0);
+  }
   await immediate();
 };
 

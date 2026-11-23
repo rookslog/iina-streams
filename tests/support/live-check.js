@@ -1,16 +1,18 @@
 'use strict';
 
 // #67: global checks a Twitch channel with one anonymous GQL request, user(login){stream{id}}, before it creates the
-// channel's player (src/twitch-vods.js channelStatus), and makes the player on a main-thread timer turn after the
-// reply (global.js onMainThread). So a channel open is asynchronous. Harnesses written before the check call
-// routeLiveCheck(shim) before running global.js and settleOpens() after an open:
-//   - the status request is answered here (live by default) and recorded in `checks`; every other request still
-//     reaches the shim's own HTTP double, so those harnesses' traffic assertions count everything but this request;
-//   - settleOpens fires each answered check's 0 ms main-thread turn (the first 0 ms timer armed after the check's
-//     own deadline timer) unless the harness already flushed it, and nothing else.
-// The route also audits what it hides: it fails on an Authorization header, and settleOpens fails if a check's
-// 1.5 s deadline timer is still armed or registered after its answer. Tests of the check itself are in
-// tests/offline-precheck.test.js.
+// channel's player (src/twitch-vods.js channelStatus). The reply's continuation only arms a 0 ms handoff timer; on
+// that main-thread turn the deadline is cleared and the answer delivered, and global then makes the player on a
+// further main-thread turn (global.js onMainThread). So a channel open is asynchronous. Harnesses written before the
+// check call routeLiveCheck(shim) before running global.js and settleOpens() after an open:
+//   - the status request is held here and recorded in `checks`; every other request still reaches the shim's own
+//     HTTP double, so those harnesses' traffic assertions count everything but this request;
+//   - settleOpens answers each held check (live by default) and runs exactly the turns that answer causes. A turn is
+//     attributed by identity: it is the one 0 ms timer armed while that check's previous step ran (its reply's
+//     promise jobs, then its handoff turn), with nothing else running. Any other count fails the fixture.
+// The route also audits what it hides: it fails on an Authorization header, on a deadline timer that is cleared
+// before the handoff turn (a clearTimeout off IINA's main thread), and on a deadline still armed after it.
+// Tests of the check itself are in tests/offline-precheck.test.js.
 
 const assert = require('node:assert/strict');
 
@@ -30,23 +32,30 @@ function isStatusCheck(url, options) {
   return url === 'https://gql.twitch.tv/gql' && typeof query === 'string' && STREAM_QUERY.test(query);
 }
 
-// Returns the recorded checks. `checks.isCheckTimer(timer)` is true for a check's deadline timer and its main-thread
-// turn, so a harness that counts timers keeps counting only the ones it was written for.
+// Returns the recorded checks. `checks.isCheckTimer(timer)` is true for a check's deadline and its two turns, so a
+// harness that counts timers keeps counting only the ones it was written for.
 function routeLiveCheck(shim, status = 'live') {
   const http = shim.iina.http;
   const checks = [];
   const post = (url, options) => {
     if (!isStatusCheck(url, options)) return http.post(url, options);
-    // Recorded here and asserted in settleOpens: a throw here would only make the check 'unknown'.
     const headers = options.headers || {};
-    const authorized = Object.keys(headers).some(name => name.toLowerCase() === 'authorization');
-    const deadline = shim.timers.all.at(-1);
-    checks.push({url, query: options.data.query, deadline, authorized, finished: false});
-    return Promise.resolve(REPLIES[status]);
+    const check = {
+      url,
+      query: options.data.query,
+      // Recorded here and asserted in settleOpens: a throw here would only make the check 'unknown'.
+      authorized: Object.keys(headers).some(name => name.toLowerCase() === 'authorization'),
+      deadline: shim.timers.all.at(-1),
+      turns: [],
+      answered: false,
+    };
+    checks.push(check);
+    return new Promise(resolve => {
+      check.answer = () => resolve(REPLIES[status]);
+    });
   };
   shim.iina.http = Object.assign({}, http, {post});
-  checks.turns = [];
-  checks.isCheckTimer = timer => checks.some(check => check.deadline === timer) || checks.turns.includes(timer);
+  checks.isCheckTimer = timer => checks.some(check => check.deadline === timer || check.turns.includes(timer));
   routed.push({shim, checks});
   return checks;
 }
@@ -55,28 +64,34 @@ async function rounds() {
   for (let round = 0; round < 5; round++) await new Promise(resolve => setImmediate(resolve));
 }
 
-// Lets each answered status check finish: its reply's promise jobs, then its main-thread turn. The turns are the
-// 0 ms timers armed after the earliest unfinished check's deadline timer; they are fired in order, once, unless the
-// harness already flushed them. Nothing armed before that deadline is touched.
+// Runs `step`, lets its promise jobs finish, and returns the one 0 ms timer armed meanwhile.
+async function turnArmedBy(shim, step, what) {
+  const start = shim.timers.all.length;
+  step();
+  await rounds();
+  const armed = shim.timers.all.slice(start).filter(timer => timer.delay === 0);
+  assert.equal(armed.length, 1, `live-check fixture: exactly one 0 ms turn is armed by ${what}`);
+  return armed[0];
+}
+
+// Answers every held status check and runs the turns its answer causes, one check at a time.
 async function settleOpens() {
   await rounds();
   for (const {shim, checks} of routed) {
-    const open = checks.filter(check => !check.finished);
-    if (!open.length) continue;
-    for (const check of open) {
+    for (const check of checks) {
+      if (check.answered) continue;
+      check.answered = true;
       assert.equal(check.authorized, false, 'live-check fixture: the status request must carry no Authorization header');
       assert.ok(check.deadline && check.deadline.delay === CHECK_TIMEOUT_MS,
         'live-check fixture: the deadline timer is the newest timer when the request is sent');
-      assert.equal(check.deadline.cancelled, true, 'live-check fixture: the deadline timer is cleared after the answer');
+      const handoff = await turnArmedBy(shim, check.answer, 'the reply');
+      assert.equal(check.deadline.cancelled, false, 'live-check fixture: no clearTimeout before the main-thread turn');
+      check.turns.push(handoff);
+      const finish = await turnArmedBy(shim, () => shim.timers.fire(handoff), 'the handoff turn');
+      assert.equal(check.deadline.cancelled, true, 'live-check fixture: the handoff turn clears the deadline');
+      check.turns.push(finish);
+      shim.timers.fire(finish);
     }
-    const start = shim.timers.all.indexOf(open[0].deadline) + 1;
-    const turns = shim.timers.all.slice(start).filter(timer => timer.delay === 0);
-    assert.ok(turns.length >= open.length, 'live-check fixture: each answer schedules its main-thread turn');
-    for (const turn of turns) {
-      if (!checks.turns.includes(turn)) checks.turns.push(turn);
-      if (!turn.fired && !turn.cancelled) shim.timers.fire(turn);
-    }
-    for (const check of open) check.finished = true;
   }
   await rounds();
 }

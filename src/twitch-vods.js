@@ -2,7 +2,7 @@
 
 // Recent broadcasts of a Twitch channel (B6b, D-030), from Twitch's public GQL, signed out.
 //
-//   recentArchives({login}, {http, log, limit = 10})
+//   recentArchives({login}, {http, log, limit = 10, setTimeout, clearTimeout})
 //     -> {ok: true, vods: [{id, title, createdAt, lengthSeconds, url}]} | {ok: false, code}
 //
 // `code` is NOT_FOUND (no such user), NETWORK (transport failure, non-2xx or timeout) or MALFORMED.
@@ -54,16 +54,46 @@ function requestHeaders() {
   return {'Client-ID': WEB_CLIENT_ID, 'Content-Type': 'application/json'};
 }
 
-async function postWithTimeout(http, options) {
-  let timer;
-  const expired = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('timeout')), REQUEST_TIMEOUT_MS);
+// H-main (#67): races start() against a deadline with every timer call on IINA's main thread. iina.http settles
+// off the main thread (JavascriptAPIHttp.swift request, IINA v1.5.1), and IINA's timer registry is a plain
+// dictionary that clearTimeout changes on the calling thread (JavascriptPolyfill.swift removeTimer). A timer
+// callback runs on the main thread (createTimer schedules the Timer through DispatchQueue.main.async). So the
+// reply's continuation only arms a 0 ms handoff timer (creating one is safe from any thread: createTimer itself
+// hops to main), and the handoff, on the main thread, clears the deadline and settles. The deadline settles with
+// `onTimeout` from its own callback. Resolves to {value} or {error}; it settles exactly once and never rejects.
+function raceOnMain(start, ms, onTimeout, timers) {
+  const setTimer = timers && timers.setTimeout || setTimeout;
+  const clearTimer = timers && timers.clearTimeout || clearTimeout;
+  return new Promise(resolve => {
+    let settled = false;
+    const settle = outcome => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(outcome);
+    };
+    const deadline = setTimer(() => settle(onTimeout), ms);
+    const handOff = outcome => {
+      setTimer(() => {
+        if (settled) {
+          return;
+        }
+        clearTimer(deadline);
+        settle(outcome);
+      }, 0);
+    };
+    Promise.resolve().then(start).then(value => handOff({value}), error => handOff({error}));
   });
-  try {
-    return await Promise.race([Promise.resolve().then(() => http.post(GQL_URL, options)), expired]);
-  } finally {
-    clearTimeout(timer);
+}
+
+async function postWithTimeout(http, options, timers) {
+  const outcome = await raceOnMain(() => http.post(GQL_URL, options), REQUEST_TIMEOUT_MS,
+    {error: new Error('timeout')}, timers);
+  if (outcome.error) {
+    throw outcome.error;
   }
+  return outcome.value;
 }
 
 function bodyOf(response) {
@@ -123,6 +153,7 @@ function isSuccess(response) {
 
 async function recentArchives(request, deps) {
   const {http, log, limit = DEFAULT_LIMIT} = deps || {};
+  const timers = {setTimeout: deps && deps.setTimeout, clearTimeout: deps && deps.clearTimeout};
   const login = request && request.login;
   if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) {
     return failure('NOT_FOUND');
@@ -133,7 +164,7 @@ async function recentArchives(request, deps) {
   };
   let result;
   try {
-    const response = await postWithTimeout(http, options);
+    const response = await postWithTimeout(http, options, timers);
     result = isSuccess(response) ? readArchives(response) : failure('NETWORK');
   } catch (_) {
     // A rejection is the response object (non-2xx) or a transport Error; neither is read or logged.
@@ -160,24 +191,13 @@ async function recentArchives(request, deps) {
 // (iina.http has no abort); its late answer is ignored.
 async function channelStatus(request, deps) {
   const {http} = deps || {};
-  const setTimer = deps && deps.setTimeout || setTimeout;
-  const clearTimer = deps && deps.clearTimeout || clearTimeout;
+  const timers = {setTimeout: deps && deps.setTimeout, clearTimeout: deps && deps.clearTimeout};
   const login = request && request.login;
   if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) {
     return 'unknown';
   }
-  let timer;
-  const expired = new Promise(resolve => {
-    timer = setTimer(() => resolve('unknown'), STATUS_TIMEOUT_MS);
-  });
-  const check = Promise.resolve()
-    .then(() => gqlStatus(http, login))
-    .catch(() => 'unknown');
-  try {
-    return await Promise.race([check, expired]);
-  } finally {
-    clearTimer(timer);
-  }
+  const outcome = await raceOnMain(() => gqlStatus(http, login), STATUS_TIMEOUT_MS, {value: 'unknown'}, timers);
+  return outcome.error ? 'unknown' : outcome.value;
 }
 
 // The login is validated against LOGIN_PATTERN before this, so JSON.stringify quoting is safe.

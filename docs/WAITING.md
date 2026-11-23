@@ -5,7 +5,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 ## Open
 
 ### W-1. Watch-test the 0.5.5 build before release (the "soak")
-- **What it is:** watch Twitch with chat in IINA for about 3 hours in total, using **Streams Beta**. That's the copy switched on in IINA → Settings → Plugins; it now holds the 0.5.5 build, `0.5.5-beta+g0805b780`. If IINA doesn't crash, the crash fix probably works.
+- **What it is:** watch Twitch with chat in IINA for about 3 hours in total, using **Streams Beta**. That's the copy switched on in IINA → Settings → Plugins. It now holds `0.5.5-beta+g0805b780`, a build of today's `beta` branch: everything in 0.5.5, plus the 0.5.6 work in progress (chat beside the video, the offline-channel page). A clean soak on it covers the 0.5.5 code too, because `beta` contains all of it; a crash could come from 0.5.6-only code. If IINA doesn't crash, the crash fix probably works.
 - **How it arose:** IINA crashed three times today, after 31, 43 and 65 minutes of ordinary viewing (#60). The 0.5.5 build holds chat's message listeners so IINA can't lose them, which is one of two suspected causes. Our tests can't reproduce the crash, so only real viewing can show whether the fix works.
 - **Options:**
   - about 3 h before tagging;

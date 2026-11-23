@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.5.6-beta (unreleased) — find what to watch
+- **Hiding chat never turns it off (D1c).** The Hide Chat button beside the video, the sidebar's Hide/Show Chat button and Chat › Hide Chat (⌃⌘C) collapse chat. Live chat, replay and Auto timing keep running, and a dot marks new messages. Beside the video, the picture takes the full width while hidden. Only Turn Chat Off stops chat. The sidebar's prose status line and its "Hide inspector" button are gone.
 - **Chat beside the video, polished (#47):** the column's Go Live and Hide Chat buttons sit below IINA's title bar. Chat settings › Display offers **Beside video**. Reconnecting or importing chat no longer makes the window shrink and re-widen. Observed natively, except the reconnect.
 - **An offline channel offers its recent broadcasts (#32, D-030).** When a Twitch channel you open isn't live, the Open Stream window appears with the channel filled in and its 10 most recent broadcasts: title, date and length. Clicking one opens it with replay chat. This works whether IINA or Streams opened the channel, and needs no sign-in (public GQL). Observed natively at 12:36. IINA's own "Cannot open file or stream!" panel still appears behind it.
 

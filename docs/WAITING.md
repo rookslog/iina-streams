@@ -76,26 +76,6 @@ Each item is written once, in full, here. Chat links to an item's line instead o
     - **D3** above.
   - 2026-11-23: a link test in Ovis showed it resolves a link by file name. It asked which `WAITING.md` to open, this one or a worktree copy under `.claude/worktrees/`. The plugin's links will have to avoid that.
 
-### W-12. Open Stream with suggestions: pick the design direction and the window's sizing
-- **What it is:** which mock becomes the Open Stream window with suggestions (#74) and the person row shared with the People screen (#76), and whether the window stays one fixed size or hugs its results. It's yours because it's how the product looks and feels every day.
-- **How it arose:**
-  - the designer's two mocks: [docs/design/finding-2026-11-22/open-stream/direction-a/index.html](design/finding-2026-11-22/open-stream/direction-a/index.html) (A, Quick list) and [direction-b/index.html](design/finding-2026-11-22/open-stream/direction-b/index.html) (B, List and detail);
-  - their comparison: [README.md](design/finding-2026-11-22/open-stream/README.md);
-  - the independent review: [REVIEW.md](design/finding-2026-11-22/open-stream/REVIEW.md).
-- **Options:**
-
-  | Option | What it buys | What it costs |
-  |---|---|---|
-  | **Hybrid of A, hugging its results, top edge pinned** (like Spotlight) | A's compact one-line rows; the window is as big as its content | IINA 1.5.1 can't read the window's position, so the top edge moves unless an unchecked web-view trick works |
-  | **Hybrid of A, one fixed size** | The field and rows never move; the simplest build | Empty space when there are few matches |
-  | **B, fixed size, fixed per the review** | A detail pane per person | Busier, more text; two review majors to fix |
-  | **Decide after a native test** | Evidence first | The design round waits |
-- **Recommendation (updated after checking IINA's source):** the hybrid of A, **one fixed size**. IINA 1.5.1's plugin window API can set the window's frame but has no way to read it (`setFrame` exists; there is no frame getter in `JavascriptAPIStandaloneWindow.swift` at tag v1.5.1, lines 14–24 and 144–157, read by the lead). A plugin therefore can't keep the top edge in place after you've moved the window: every resize grows from the bottom-left corner, and the field jumps. Today's Open Stream window already resizes when it shows offline broadcasts, so it has this jump now.
-- **What it rests on:** a fixed size with empty space looks acceptable to you. That's a taste question, which is why it's yours.
-- **What would flip it:** if you'd rather it hug its results, one unchecked route remains: the page reads its own screen position (`window.screenY` inside IINA's web view) and passes it to `setFrame`. If a native test shows that works, the hugging option comes back.
-- **What your answer changes:** the second design round (the hybrid drawn, with the review's fixes), then the #74 build.
-- **Update 2026-11-23 (operator, after trying both):** direction answered: **A's quick list** for Open Stream, with no "why it's here" text. B's list-and-detail ideas move to the bigger People dashboard (#76). Still open: the window size (fixed height that scrolls, recommended, or growing) and the "your people" versus "Twitch" split. Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md), last section.
-
 ### W-13. Merge the watch-history module (#73) after its last fixes, or hold it
 - **What it is:** whether the history module may merge into `beta` once its last small fixes pass their tests, or must wait for another Codex check. It's yours because our review rule (D-032 rule 4) sends any finding that survives the final review to you.
 - **How it arose:** Codex's narrow check of the module, on a branch not yet in `beta`, found five small problems:
@@ -139,8 +119,51 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
 - **What your answer changes:** whether the fix is in your next Streams Beta refresh.
 
+### W-15. Grow the plan: a fuller dashboard and a stream switcher in the sidebar (amends D-035)
+- **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:
+  - a **dashboard** like "a miniature version of the Twitch website that's more fully featured": search across VODs, categories, live channels;
+  - a **switcher in the sidebar** that changes the stream in the *same* window instead of opening another.
+
+  It's yours because it changes what 0.6.0 promises, and its order.
+- **What's possible (checked):**
+  - Twitch's documented API offers category search, top categories by viewers, and live streams filtered by category. None is personalised; checked against Twitch's API index only.
+  - Twitch's own "recommended categories" need your twitch.tv login, which D-034 makes a separate decision.
+  - "Categories you watch" can come from Streams' own history, if each visit also stores the category. Today's history design doesn't store it ([TESTS.md](design/finding-2026-11-22/history/TESTS.md), "What's stored").
+  - IINA 1.5.1 gives a plugin one sidebar view that it can show and hide (`JavascriptAPISidebarView.swift`: `show`, `hide`, `loadFile`). So the chat and a switcher would share Streams' one sidebar page, as two sections.
+  - **Switching streams in the same window** is exactly what D-033 switched off for 0.5.5, "a window whose player loads a different file stays inactive", because of two serious review findings. D-033 plans to restore it in 0.5.6. The switcher depends on that.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Amend D-035: same-window switching first (0.5.6, as D-033 planned), then the sidebar switcher and a fuller dashboard in 0.6.0** | Switching in place, the way you watch | 0.6.0 grows; the launch moves later |
+  | **Dashboard in 0.6.0 as planned; switcher and VOD and category search after launch** | A sooner launch | You keep using Open Stream to switch until then |
+  | **Defer both until after launch** | The smallest 0.6.0 | The launch shows no dashboard |
+- **Recommendation:** the first option, but in order: restore same-window switching in 0.5.6 with its tests, because both the switcher and adoption need it. Store the category with each visit (a small addition before the history wiring). Design the dashboard and switcher together in the 0.6.0 round.
+- **What it rests on:** same-window switching can be made safe with the class-L rules that already passed review. Unproven until its review.
+- **What would flip it:** if restoring same-window switching takes another multi-round review like tonight's, ship the dashboard first and the switcher after launch.
+- **Naming:** "People" came from the research note's idea that a *person* is the unit across platforms. No other names were weighed. The quick list shows no label, so the name only matters for the dashboard: "Following", "Channels", "Watch" or "Browse" are alternatives.
+- **What your answer changes:**
+  - D-035 and the ROADMAP rows for 0.5.6 and 0.6.0;
+  - #76 (People or dashboard), a new switcher issue, and #73's stored fields;
+  - the spec, §2 and §6.
+
+### W-16. Where chat lives if the sidebar becomes a switcher
+- **What it is:** chat currently has three places: IINA's sidebar (the default for everyone, `presentation:'sidebar'` in `src/player.js`), beside the video, and over the video. If the sidebar also switches streams, you asked whether chat should leave the sidebar. It's yours because it changes every user's default.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Keep all three; the sidebar page shows chat and the switcher as two sections** | Nobody loses their setup | A busier sidebar |
+  | **Remove sidebar chat; keep beside and over the video** | The sidebar is only for switching | Changes the default for every 0.5.4 user; "beside" is unreleased 0.5.6 work and hasn't passed in IINA yet |
+  | **Decide after "beside" ships and the design questions in #82 are answered** | Evidence first | It waits |
+- **Recommendation:** decide after. "Chat beside the video" hasn't shipped or passed in IINA yet. The hide-chat design was called "not intuitive" (root's handoff), and #82 asks why the design checks missed that. A new chat layout should come after those answers.
+- **What it rests on:** moving everyone's default chat place is expensive to undo, so it should rest on IINA evidence.
+- **What would flip it:** "beside" proving clearly better in IINA, in which case removing sidebar chat becomes the simpler product.
+- **What your answer changes:** the 0.6.0 overhaul's chat design, and the default setting.
+
 ## Answered
 
+- **W-12, Open Stream design** (2026-11-23, operator after trying both mocks in Safari): **A's quick list, one fixed height that scrolls**, no "why it's here" text, and no "your people" label. Typing searches the list. VODs must be reachable for live people too: mock A expands only offline rows (`a.js:112`), so this needs changing. B's list-and-detail ideas move to the bigger dashboard, and a jump links the two. The operator's words: "I'd also keep it to a fixed height that scrolls"; "the quick list doesn't have a 'your people' indicator, which I like". Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md).
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
 - **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in [AGENTS.md](../AGENTS.md).
 - **W-11, release mapping** (2026-11-22, 21:25): **D-035**, option A. If the history and suggestions work is sized over 6 hours, the People screen's build moves after launch without asking again.

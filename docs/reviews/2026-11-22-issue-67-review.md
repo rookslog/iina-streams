@@ -56,3 +56,23 @@ Branch `fix/67-offline-fallthrough` (0f518cb, 648905c, 342658c, on beta 11c0d62)
 - **A-auth:** no authenticated request starts after its deadline or after sign-out.
 
 **Decision:** one more round, against these invariants. If IINA v1.5.1 offers no citable main-thread hop, stop the pre-check design and park #67. A native experiment with an in-player alternative would then come first.
+
+## Round 3, final clearance (verbatim; Codex gpt-6.2-sol xhigh, 23:34–23:39, on 8fe2b8d)
+
+**FIX FIRST** — `8fe2b8d` moves the precheck and archive-result UI onto main, but the offline fallback still reaches UI directly from an HTTP continuation.
+
+- **P1 · H-main — The fallback still bypasses main.** If a channel passes the precheck and Usher then returns 404, [src/player.js:2047](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/player.js:2047) posts `source-offline`. [global.js:310](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:310) opens the standalone window immediately. A shim probe reproduced the UI calls before any timer turn; [IINA’s synchronous message bridge](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPIGlobal.swift#L120-L122) leaves the native deadlock risk open.
+- **P1 · H-main — Deadline cleanup also crosses the thread boundary.** A fast reply clears the timer at [src/twitch-vods.js:179](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:179), before the main-thread hop. That can race another timer’s registration in [IINA’s unsynchronized timer dictionary](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPolyfill.swift#L30-L46); it also calls [`Timer.invalidate()` from the wrong thread](https://developer.apple.com/documentation/foundation/timer/invalidate%28%29). This is a source finding, not a reproduced native crash.
+- **P1 · F-session / U-feedback — A late reply can erase a new draft.** The round-2 reopen and invalid-submit cases are closed, and the spinner appears initially. But submitting A and then typing B without pressing Return hides the spinner without invalidating A. A late offline reply overwrites B with A; reproduced through [ui/open.js:98](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/ui/open.js:98) and [global.js:234](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:234).
+- **P2 · Fixture — The requested guards work, but timer attribution is too broad.** Probes independently rejected lowercase `authorization` and an armed 1.5 s deadline. [tests/support/live-check.js:73](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/tests/support/live-check.js:73) also accepted an unrelated zero-delay timer as the missing handoff, fired it, and excluded it from legacy timer assertions.
+
+**D-offline and A-auth are closed:** only anonymous GQL `stream:null` with no `errors` is offline; no Helix or viewer credential is used, so the late authenticated follow-up is gone. `npm test`: **843 passed**. Native IINA was not exercised.
+## Lead disposition after the final clearance (23:45)
+
+- **D-offline and A-auth:** closed.
+- **The three surviving P1s are fixed under the 0.5.5 precedent:** a targeted fix, then a narrow Codex check limited to these findings (as with the 0.5.5 narrow check, bd0f96a). They are mechanical applications of the written invariants, not a new design.
+  - **H-main, fallback:** `onSourceOffline` in global does its interface work in a `setTimeout` turn. This path predates this fix (B6c on beta); the fix extends H-main to it.
+  - **H-main, deadline:** `clearTimeout` and every timer bookkeeping call run inside the main-thread turn, never in the `iina.http` continuation.
+  - **F-session, draft:** any edit to the form's text (not only a submit) invalidates pending replies for the old session.
+  - **P2 fixture:** `live-check.js` attributes only the check's own handoff timer, by identity, not any zero-delay timer.
+- **If the narrow check doesn't close all three,** #67 is parked and goes to the operator, per D-032 rule 4.

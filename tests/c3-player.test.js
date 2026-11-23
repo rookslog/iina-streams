@@ -387,7 +387,7 @@ test('menu has Show Streams, Go Live with Ctrl+Meta+g, and a Chat submenu', t =>
   assert.equal(goLive.keyBinding, 'Ctrl+Meta+g');
   assert.equal(chat.action, null, 'the parent only opens its submenu');
   assert.deepEqual(chat.items.map(item => item.title),
-    ['Import Chat Archive…', 'Turn Chat Off', 'In Sidebar', 'Over Video', 'Beside Video']);
+    ['Hide Chat', 'Import Chat Archive…', 'Turn Chat Off', 'In Sidebar', 'Over Video', 'Beside Video']);
   assert.ok(chat.items.every(item => typeof item.action === 'function'));
   // Lead: Ctrl+Meta+l collided with Log Viewer in the v1.5.1 main-menu fixture; G is free there.
 });

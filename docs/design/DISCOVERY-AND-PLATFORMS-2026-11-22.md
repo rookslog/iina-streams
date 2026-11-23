@@ -278,6 +278,7 @@ The operator's direction: **signed in is the default experience.** Signed-out us
    - **Viewer count is shown beside each person but is not the sort key.**
    - The ranking is explainable: each row can say why it's there, for example "you watch most evenings".
    - INFERRED: in-app history becomes the strongest signal the more someone uses Streams. The operator accepts that trade.
+   - **Streams records no watch history today.** A grep of `src/`, `global.js` and `ui/` on 2026-11-22 finds only chat-message history (`ui/live-history.js`). Lead's recommendation: start recording a local, private history in 0.5.6 (person, platform, when, how long), even before any ranking ships, so the ranking has data on the day it arrives. It's useful under every option in §6.
 2. **Two ways of opening a stream.**
    - **"I know who":** typing completes from frecency first. "O" or "oh" puts OhnePixel at the top if it's the most-watched match, and remote search only fills in after local matches.
    - **"Show me what's on":** an opening view, a home or People screen, for exploring:

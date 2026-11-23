@@ -144,3 +144,14 @@ This is the designer's lean, not a review; an independent reviewer judges the mo
 - **YouTube people.** No live status exists yet (spike #39), so no YouTube row is drawn. Only its mark is defined.
 - **Reason strings** are invented examples. The real ones must come from §3's inputs.
 - **No independent review yet.** That needs `critique` and `audit` by a reviewer who didn't design these, plus `.agents/skills/streams-interaction-design/SKILL.md` (spec §7).
+
+## Operator feedback (2026-11-23, after trying both in Safari)
+
+- **Keep:** A's quick list. An offline person's broadcasts reachable inline is liked.
+- **Drop:** the "why it's here" text ("you watch most evenings"). Not wanted.
+- **Question raised:** the split between "your people" and "Twitch": where do the Twitch rows come from? They are Twitch search results for names you haven't opened or followed. The split and its label need rethinking, or removing.
+- **Scale:** the quick list must scroll, and typing searches it.
+- **Structure wanted:** three layers:
+  1. a quick list;
+  2. Open Stream, the quick list with a text field;
+  3. a bigger dashboard to search and browse: "like a miniature version of the Twitch website that's more fully featured". That is the People screen (#76). B's list-and-detail ideas belong there, not in Open Stream.

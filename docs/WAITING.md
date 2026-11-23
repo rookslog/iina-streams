@@ -94,6 +94,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** a fixed size with empty space looks acceptable to you. That's a taste question, which is why it's yours.
 - **What would flip it:** if you'd rather it hug its results, one unchecked route remains: the page reads its own screen position (`window.screenY` inside IINA's web view) and passes it to `setFrame`. If a native test shows that works, the hugging option comes back.
 - **What your answer changes:** the second design round (the hybrid drawn, with the review's fixes), then the #74 build.
+- **Update 2026-11-23 (operator, after trying both):** direction answered: **A's quick list** for Open Stream, with no "why it's here" text. B's list-and-detail ideas move to the bigger People dashboard (#76). Still open: the window size (fixed height that scrolls, recommended, or growing) and the "your people" versus "Twitch" split. Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md), last section.
 
 ### W-13. Merge the watch-history module (#73) after its last fixes, or hold it
 - **What it is:** whether the history module may merge into `beta` once its last small fixes pass their tests, or must wait for another Codex check. It's yours because our review rule (D-032 rule 4) sends any finding that survives the final review to you.

@@ -264,3 +264,36 @@ D-026's timeline is 0.6.0 tonight and 0.8.0 within a week, so each slot gets onl
 - YouTube developer policy III.E.4.h, verbatim. It governs showing YouTube API data next to other platforms' data.
 - Whether GQL `SearchTray_SearchSuggestions` answers the public web Client-ID with live status: one unauthenticated request.
 - Whether Helix Search Channels accepts our `chat:read` token in practice: one signed-in request, made by the lead under the operator's grant.
+
+## 7. Operator follow-ups (2026-11-22, ~20:40) and the lead's reading
+
+The operator's direction: **signed in is the default experience.** Signed-out users get suggestions from local history only.
+
+1. **Our own ranking ("likely to watch"), using every signal we have.**
+   - **Signals:**
+     - how often and how recently the viewer watches each person *in Streams* (frecency);
+     - live now;
+     - follow date;
+     - new VODs since the viewer last watched.
+   - **Viewer count is shown beside each person but is not the sort key.**
+   - The ranking is explainable: each row can say why it's there, for example "you watch most evenings".
+   - INFERRED: in-app history becomes the strongest signal the more someone uses Streams. The operator accepts that trade.
+2. **Two ways of opening a stream.**
+   - **"I know who":** typing completes from frecency first. "O" or "oh" puts OhnePixel at the top if it's the most-watched match, and remote search only fills in after local matches.
+   - **"Show me what's on":** an opening view, a home or People screen, for exploring:
+     - who you follow, live or offline;
+     - by game or category;
+     - what's popular now;
+     - who has a new VOD;
+     - "did you want to watch XYZ?" suggestions, such as a VOD from someone you usually watch.
+
+   The typing box stays the fastest path. The opening view is the 0.6.0 People screen in §5.
+3. **Importing browser history (optional, opt-in).**
+   - INFERRED, unchecked here: Chrome's history is a SQLite file the user's processes can copy and read. Safari's is under `~/Library/Safari`, which macOS protects, so reading it would need Full Disk Access granted to IINA. That's a large privacy ask.
+   - Lead's view: offer it later, only as an explicit, local-only import, filtered to twitch.tv, youtube.com and kick.com addresses, with a clear disclosure. Chrome first; Safari only if a less invasive route exists.
+   - A browser extension that records visits to those sites only (item 4) would be cleaner than reading a whole history file.
+4. **Opening from the browser.**
+   - **This mostly exists already.** The "Open in IINA" browser extension hands the page address to IINA. When IINA opens a Twitch or YouTube address, Streams can take over that window ("adoption", #35): chat, quality and replay. #56 records it working natively.
+   - In 0.5.5 adoption is **off by default** (D-033). It can be turned on with `adoptNativeWindows: true`, and it's planned on by default in 0.5.6.
+   - So the operator's "Open in IINA" redirect needs no new extension: it's the adoption path.
+   - A Streams-specific extension could add what adoption can't know: the VOD timestamp the viewer was at, the channel's live state, and a "watched" signal for item 1. Backlog, after 0.6.0.

@@ -1,6 +1,6 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:15.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:30.
 
 ## Open
 
@@ -75,7 +75,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - **C. Documented APIs only;**
   - **D. Defer:** just Following (#30) and the offline VOD list (#32).
 - **Recommendation:** A. Most opens are you reopening someone you already watch, and your history answers that instantly, signed in or out, with no cookies. Twitch's own "likely to watch" ordering isn't available to outside apps anyway.
-  - **Updated 21:15:** A, without adding new uses of Twitch's undocumented website interface. Signed in (the default, as you said) uses the documented API: search, live follows, popular. Signed out uses local history. Reason: Twitch's developer agreement, now read, says registered developers use only documented interfaces (W-9). The follows research found no evidence that Twitch's personalised sidebar order is reachable anyway: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`.
+  - **Updated 21:30 (rewritten after your question):** Streams' own ranking decides the order, signed in or out. Signing in **adds** Twitch's data as extra inputs: your follows (live and offline), live status, viewers, titles and games, search while typing, popular now. So signed in is always at least as good as signed out. That Twitch data comes through Twitch's official app API, not the internal twitch.tv website interface (W-9). The only thing that choice gives up is Twitch's own sidebar order, which puts sponsored channels first; you don't want that, and the research found no sign an outside app can get it anyway (`docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`). It also gives up suggestions from Twitch search for people who aren't signed in; they get suggestions from their history.
 - **What it rests on:** most of what you open are repeat visits to a small set of people. This is unmeasured.
 - **What would flip it:** if you mostly want to discover new channels, B; if you'd rather use only documented APIs, C.
 - **Platform facts that constrain it:**

@@ -300,3 +300,10 @@ The operator's direction: **signed in is the default experience.** Signed-out us
    - In 0.5.5 adoption is **off by default** (D-033). It can be turned on with `adoptNativeWindows: true`, and it's planned on by default in 0.5.6.
    - So the operator's "Open in IINA" redirect needs no new extension: it's the adoption path.
    - A Streams-specific extension could add what adoption can't know: the VOD timestamp the viewer was at, the channel's live state, and a "watched" signal for item 1. Backlog, after 0.6.0.
+
+## 8. Operator directions (2026-11-22, ~21:30)
+
+- **No sponsored ordering.** Streams' order never includes paid or sponsored placement, even though twitch.tv's sidebar puts sponsored live channels first.
+- **Signing in must make suggestions better, never worse.** Twitch's documented API data (follows, live status, search, popular, categories) *supplements* Streams' own ranking. It is an extra input, not a replacement for history, pins or preferences. The lead's earlier wording ("signed in, everything uses the documented API") described which interface the data comes through, not what decides the order, and read as a downgrade.
+- **Saved preferences:** pins or favourites, hiding someone, per-channel settings (listening mode, chat placement, quality) and watch history, all stored locally. Anything that would leave the Mac is opt-in; none is planned.
+

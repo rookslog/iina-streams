@@ -106,3 +106,16 @@ Renumbering near `MAX_SAFE_INTEGER` is the source of every remaining finding, an
 - **No renumbering anywhere, at load or at runtime.** At 2^31 the counter refuses: `record` returns `null` and nothing is written. That isn't reachable in practice.
 - **Missing ids on load** (from an older file without them) are assigned from `nextId` upward in time order. Before load there are no live handles to break.
 - Remove the renumbering code and its tests; add tests for the bound.
+
+## Narrow check 3 (verbatim; Codex gpt-6.2-sol xhigh, finished 00:02, on 8f37230)
+
+**NOT CLOSED** — `node --test tests/history.test.js`: 38/38 passed; targeted probes found gaps.
+
+- **NOT CLOSED — Stale handle after reopen.** Normal reopen is fixed, but the new corrupt-file recovery resets the counter to 1. A stale handle can then close a new visit for the same channel. [src/history.js:336](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:336)
+- **CLOSED — Skipping in-use IDs.** The rollover and skip logic is gone; `record()` returns `null` once the last ID is issued.
+- **NOT CLOSED — Load renumbering.** The old overflow path is gone, but load still changes an open visit’s ID if it duplicates an earlier visit’s ID. [src/history.js:191](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:191)
+- **New — Corruption check bypass.** Explicit `id: null` is treated as missing, and invalid IDs on visits with bad timestamps or durations are skipped without a `.bad` backup. [src/history.js:142](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:142)
+## Lead disposition: close the stale-handle class by construction
+
+- **Handles are scoped to one store instance.** Each `createHistory` draws a random instance token, and handles carry it. `finish` with a handle from another instance is a no-op. In production, global holds one store for the IINA session, and handles never outlive their windows. A reopen therefore can never alias a handle, whatever the counter does.
+- **Load is strict:** a duplicate id, an explicit `id: null`, or an invalid id on any visit (including one dropped for a bad timestamp or duration) makes the file corrupt (`.bad`, history starts empty). Load never changes an id.

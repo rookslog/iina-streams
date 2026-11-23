@@ -191,6 +191,16 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
   It also found things the operator didn't raise: what's playing has no home in the panel, blank empty states, a two-click switch, keyboard focus lost, and "Most viewed" against Product Principle 3. **Reading:** the critique judges against the brief, and catches generic failures but not wrong product calls the brief itself made. Fixing the inputs (PRODUCT.md, a DESIGN.md, the brief) comes before the next round.
 - **Update 2026-11-23 (operator, on the comparison above):** the operator's complaints aren't the standard the critique should be scored against: "what gives my complaints authority? … I'm not sovereign." They are evidence that something is wrong, conditioned by the situation: a rough mock read as finished UI, after several misses. The lead's reading is that the complaints and the critique point at one underlying problem from two sides. The panel has no clear main job: thumbnails, settings, history and search all carry the same weight, so "switch channel" doesn't stand out. The next round answers that through hierarchy, not by moving each item where a complaint put it.
+- **Update 2026-11-23 (operator: "what justifies that reading, and what other readings might we have?"):** the lead's hierarchy reading is one of several, held open:
+  1. **Hierarchy:** no clear main job; everything carries the same weight. *For:* the critique found that the heaviest block isn't the main task, and "overcrowded". *Against:* the operator never said switching was hard to find.
+  2. **Scope:** settings, history and account don't belong in a quick panel at all. *For:* "weird collapsible menus… terrible", and "things I want to quickly check". This means removing them, not re-weighting.
+  3. **Fidelity:** a crude browser mock read as finished UI. *For:* "the spacing and stuff". A properly drawn version might be judged differently.
+  4. **Trust:** reactions shaped by a run of lead errors that day (the panel's side, ads, text, who the users are). *For:* the timing. This one measures the process as much as the design.
+  5. **The reference:** Twitch's sidebar was the starting point, but the goal is "beyond the browser". The reference itself may be the wrong model.
+  6. **Thinking aloud:** "maybe… I don't know". The suggestions are probes, not verdicts.
+  7. **About the lead:** the lead favoured reading 1 because it's a design problem it can fix, rather than reading 4, its own errors.
+
+  **Next round:** draw it at real fidelity (tests 3). Show settings both removed from the panel and present at low weight (tests 2 against 1). Try a non-Twitch structure alongside (tests 5).
 
 ## Answered
 

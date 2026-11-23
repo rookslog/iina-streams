@@ -24,6 +24,27 @@ web
   - text that explains: reason text, status sentences, labels that repeat an icon;
   - sponsored ordering;
   - feeling tracked: they can pause or forget history (J19).
+- **Desires, by kind of viewer** (draft for the operator to correct, 2026-11-23; drawn from the journeys and the operator's words):
+  - **The daily viewer** (J2): open who they want in one step, and switch without opening more windows.
+  - **The catch-up viewer** (J4, J12): find a person's VODs, live or not, and resume across sittings, even a week later.
+  - **The background listener** (J11): sound with the least on screen and the least CPU.
+  - **The stranger** (J1): works the first time, with nothing to install or paste and no sign-in needed to start.
+  - **The privacy-minded viewer** (J19): good suggestions without feeling tracked.
+  - **The technical viewer:** depth and control (their own Client ID, logs, settings), out of everyone else's way.
+  - **The keyboard and VoiceOver user** (J10): everything reachable, with state announced.
+  - **Chat-first and video-first viewers:** chat sometimes as important as the picture, sometimes not wanted at all.
+- **Tensions, and how the design responds** (not resolved, responded to):
+
+  | Tension | Pulling one way | Pulling the other | Design response |
+  |---|---|---|---|
+  | Quick open versus browsing | The daily viewer: one step | The explorer: room to look around | Separate surfaces by job: Quick Open and the panel stay quick; browsing lives in the dashboard |
+  | Personal ranking versus privacy | Better order from history | Not feeling tracked | History stays local, with pause and forget in the menu; the order is still good with no history |
+  | Little text versus being understood | The daily viewer: signs, not sentences | The stranger: needs to know what things do | State through signifiers; detail on hover; one action in an empty state, never an explanation |
+  | Simple versus deep | Everyday users | Technical users | Defaults that work; depth only in Settings, never in the panels |
+  | Chat versus a clean picture | Chat-first | Video-first | Chat beside, over or off, switched directly (#85) |
+  | Taking over versus IINA as usual | Streams on every stream | IINA for everything else | Adopt every stream by default, with a setting to turn it off; never touch local files |
+  | Signed in versus signed out | Richer with an account | Complete without one | Signed out is a full experience; signing in adds to it |
+  | Familiar versus better | Twitch's layout, which people know | "Go beyond the browser" | Borrow Twitch's information (live first, viewers); use Mac conventions for interaction |
 - **Journeys:**
   - approved in D-026: J1–J10 (`docs/design/USER-JOURNEYS-2026-11-22.md`), mainly J1 a stranger, J2 the daily viewer, J4 the catch-up viewer, and J10 keyboard and VoiceOver;
   - approved in D-035: J11 the background listener, J12 the long-VOD viewer, J14 the viewer at stream end, and J19 the privacy-minded viewer.
@@ -38,7 +59,7 @@ Success means a usable native IINA streaming and chat experience, judged in IINA
 
 ## Positioning
 - **Better than the browser, not a copy of it** (operator, 2026-11-23): "not just replicate the browser, but go beyond." Why IINA, in their words: lightweight, smoother, hardware decoding, keyboard control, speed for VODs, "a slicker experience overall", and "it kind of prevents ads". IINA has no plugin that gives it a real streaming experience.
-  - **Unchecked, and it could bite:** whether Streams skips Twitch's in-stream ads today. Twitch playback goes straight to Twitch's playlist (`src/twitch-playback.js`, the recipe from Streamlink), and nothing in that code filters ad segments (read). Streamlink itself filters them. Check natively before anyone claims it.
+  - **Ads: observed by the operator** (2026-11-23): Twitch ads don't play in Streams; they've watched it first-hand. *The lead's earlier "unchecked, ads may well play" was an inference from code that overrode their observation, and it was wrong.*
 - **A native player, not a browser tab.** The stream plays in IINA, with chat drawn by the plugin.
 - **The viewer's own ranking.** Who appears first is decided by Streams from local watch history, pins and hides. Twitch data is an extra input when signed in, never a replacement. There is no sponsored or paid ordering (the spec's "Decided" list, `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` §1 and §3).
 - **Local by default.** It runs on the Mac, with no servers of its own and no telemetry. Saved preferences and history stay on the Mac (README, Privacy).

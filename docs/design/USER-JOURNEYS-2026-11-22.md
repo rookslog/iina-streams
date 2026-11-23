@@ -21,6 +21,22 @@ Facts are labelled. "Observed" means checked on this Mac on 2026-11-22. Everythi
 | J9 | **Multi-platform, multi-account** | YouTube / Kick / several accounts → one place | Twitch only for live chat. One account. | Provider seams (#19 rule), an account switcher, then YouTube live chat and Kick. Feasibility is unchecked: YouTube API quota per Google project; Kick's official API and chat. | #19, #6, #39, #40 |
 | J10 | **Keyboard / VoiceOver / reduced motion** | Any journey without a pointer | Partly covered. Never audited end to end. | Acceptance criteria inside the overhaul. | #20 |
 
+## Proposed journeys, not yet approved (2026-11-22, ~21:00)
+
+The operator asked: "are there any other user situations… user desires… we might want to support?" "Code" means checked by searching this repo on 2026-11-22; everything else is a proposal, or marked unchecked or inferred.
+
+| # | Who | Situation | Today | What would serve it | Fit |
+|---|---|---|---|---|---|
+| J11 | **Background listener** | Stream playing while working in other apps (the operator's own habit) | "Audio only" is already in the quality list (code: `src/resolve.js`). Nothing else adapts to listening. | A listening mode: audio only, a small or hidden window, chat optional, remembered per channel. Less bandwidth and power. | 0.5.6–0.6.0 |
+| J12 | **Long-VOD viewer** | Watches an 8-hour broadcast over several sittings | No saved position (code: no resume found). IINA's own resume probably misses, because each VOD address is signed and changes (unchecked). | Remember the position per VOD; a "continue watching" row on the People screen; mark as watched. | 0.6.0 |
+| J13 | **Skimmer** | Wants the best parts of a long VOD | Nothing. | A chat-activity strip on the timeline showing where chat spiked. Chat replay already fetches the messages, so no new requests are needed (inferred). Category changes as chapters (source unchecked). | After 0.6.0 |
+| J14 | **Viewer at stream end** | The live stream they're watching ends | Nothing; no raid handling (code). | Offer to follow the raid to the next channel, open the VOD of what just ended, or show who else is live. | 0.6.0 |
+| J15 | **Late joiner** | Joins a stream two hours in | J5 rewinds only within the live buffer (inferred). | "Start from the beginning", using the in-progress VOD, then "jump to live". | After 0.6.0 |
+| J16 | **Multi-view** | Several points of view on one event (role-play servers, tournaments) | Several IINA windows, each with its own audio (unchecked). | Audio follows the focused window; open a group of channels together. | 0.8.0 or later |
+| J17 | **"Tell me when"** | Wants to know when a favourite goes live or is scheduled | Nothing. | While IINA is open: a notice when a favourite goes live; Twitch schedules on the People screen (Helix schedule endpoint, unchecked). Alerts while IINA is closed stay out of scope. | 0.6.0–0.8.0 |
+| J18 | **Subscriber or Turbo user** | Expects their account's benefits | Streams plays anonymously (code: GQL playback without the viewer's login). Subscriber-only streams and VODs fail as RESTRICTED (code: `src/twitch-playback.js`). Inferred and unchecked: ads play even for subscribers, and channel points and Drops aren't earned, because those are tied to Twitch's own player. | Say so plainly in the README and in the error message. Investigate whether the viewer's own sign-in can unlock subscriber content, and at what terms risk. | README before launch; investigation in 0.6.0 |
+| J19 | **Privacy-minded viewer** | Wants suggestions from history without feeling tracked | No history recorded yet (code). | When watch history ships: pause it, forget one channel, delete everything; all local. This ships with history, not after it. | With watch history |
+
 ## Release plan (proposed)
 
 | Release | Theme | Contents | Advertise? |

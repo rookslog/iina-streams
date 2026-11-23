@@ -119,3 +119,20 @@ Renumbering near `MAX_SAFE_INTEGER` is the source of every remaining finding, an
 
 - **Handles are scoped to one store instance.** Each `createHistory` draws a random instance token, and handles carry it. `finish` with a handle from another instance is a no-op. In production, global holds one store for the IINA session, and handles never outlive their windows. A reopen therefore can never alias a handle, whatever the counter does.
 - **Load is strict:** a duplicate id, an explicit `id: null`, or an invalid id on any visit (including one dropped for a bad timestamp or duration) makes the file corrupt (`.bad`, history starts empty). Load never changes an id.
+
+## Narrow check 4 (verbatim; Codex gpt-6.2-sol xhigh, finished 00:07, on f3c5826)
+
+- **NOT CLOSED — Stale handle after corrupt reset:** Distinct tokens block it, but identical injected random draws let the stale handle close the new visit. [src/history.js:562](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:562)
+- **CLOSED — Duplicate open-visit ID:** Load treats the file as corrupt instead of renumbering the visit. [src/history.js:158](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:158)
+- **CLOSED — Null or invalid IDs on dropped visits:** IDs are checked before any visits or people are dropped. [src/history.js:372](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:372)
+- **New finding — Foreign handles can still write:** `finish()` returns `false` but flushes a pending write. [src/history.js:589](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:589)
+- **Token persistence — No leak:** The token is on the returned handle, not the serialized visit. Targeted writes confirmed it was absent from the JSON. [src/history.js:540](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:540)
+
+`node --test tests/history.test.js`: 44/44 passed.
+## Lead disposition: closed in substance
+
+- **Stale handle after a corrupt reset:** it reproduces only when a test injects identical random draws for two instances. Production uses `Math.random`, so a collision is negligible. Accepted, and noted in the header comment.
+- **A foreign handle flushes a pending write:** this is the documented "next mutating call retries" contract. The foreign visit itself is never changed. Accepted as intended.
+- **Token persistence:** no leak (Codex checked the JSON).
+
+**Evidence for WAITING W-13:** after four narrow checks, nothing open would change behaviour in production. Lead recommendation: merge.

@@ -61,11 +61,20 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** the doubled messages, and the gate's log counts.
 
 ### W-7. Output style: trial a revised style in two projects
-- **What it is:** the review session found that the global "scan-first" style has **never been loaded**. Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
-- **The proposal:** `docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md`. Its two decisions start at "Decisions for you":
-  - **D1:** trial the revised draft for a week in `iina-streams` and `sonic-affinity-lab`, as an uncommitted local setting (recommended), committed, globally, or not at all;
-  - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it.
+- **What it is:** the review session found that the global "scan-first" style **isn't loaded** (checked 2026-11-22; whether it ever loaded before is unchecked, so not "never"). Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
+- **The proposal:** `docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md`. Its decisions start at "Decisions for you":
+  - **D1, answered:** see the update below;
+  - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it;
+  - **D3:** your global decision rule asks for all five decision points in chat when a decision is asked, which you rejected on 2026-11-22. I recommend amending it to one line plus a link to the waiting entry.
 - **What your answer changes:** how replies read to you in those two projects for a week, and later everywhere.
+- **Updates:**
+  - 2026-11-22 22:25 EST: D1 answered, "Yes, switch the trial on." The draft style is installed as local, uncommitted files in both projects, and a fresh session in each quoted it back. It reaches a lead only after a restart.
+  - 2026-11-23: still waiting on you:
+    - **restart** the IINA Streams and sonic-affinity-lab leads, so the style takes effect;
+    - **yes or no to a transcript survey**: count your confused or frustrated messages, reported or not, from the last month's transcripts (about 520,000 tokens of agent reading);
+    - **yes or no to a first plugin build**: auto-linking plus a `/waiting` command, proposal section 6;
+    - **D3** above.
+  - 2026-11-23: a link test in Ovis showed it resolves a link by file name. It asked which `WAITING.md` to open, this one or a worktree copy under `.claude/worktrees/`. The plugin's links will have to avoid that.
 
 ### W-12. Open Stream with suggestions: pick the design direction and the window's sizing
 - **What it is:** which mock becomes the Open Stream window with suggestions (#74) and the person row shared with the People screen (#76), and whether the window stays one fixed size or hugs its results. It's yours because it's how the product looks and feels every day.
@@ -107,6 +116,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** the five findings are mechanical, not a sign the design is wrong.
 - **What would flip it:** if that check finds anything new, park the module and step back on the storage design.
 - **What your answer changes:** when history is wired in, and so when #74 can start.
+- **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: `docs/reviews/2026-11-22-issue-73-module-review.md`, last section.
 
 ### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
 - **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.

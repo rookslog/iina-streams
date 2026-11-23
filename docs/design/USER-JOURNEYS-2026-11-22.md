@@ -1,6 +1,6 @@
 # User journeys and release plan toward a public launch — 2026-11-22
 
-**Status:** APPROVED by the user 2026-11-22 (D-026). It replaces the release slicing in [ROADMAP-RATIONALE-2026-11-22.md](ROADMAP-RATIONALE-2026-11-22.md) from 0.5.6 onward. **Timeline (user):** 0.6.0 and the Reddit launch tonight; 0.8.0 within a few days to a week.
+**Status:** APPROVED by the user 2026-11-22 (D-026). It replaces the release slicing in [ROADMAP-RATIONALE-2026-11-22.md](ROADMAP-RATIONALE-2026-11-22.md) from 0.5.6 onward. **Timeline (user):** 0.6.0 and the Reddit launch undated (D-035; was "tonight"); 0.8.0 within a few days to a week.
 
 **Trigger.** The user plans to advertise Streams on Reddit once a solid release exists, and asked for a plan built on full start-to-end journeys for different users. The bar for the advertised release is a stranger's first ten minutes.
 
@@ -21,7 +21,9 @@ Facts are labelled. "Observed" means checked on this Mac on 2026-11-22. Everythi
 | J9 | **Multi-platform, multi-account** | YouTube / Kick / several accounts → one place | Twitch only for live chat. One account. | Provider seams (#19 rule), an account switcher, then YouTube live chat and Kick. Feasibility is unchecked: YouTube API quota per Google project; Kick's official API and chat. | #19, #6, #39, #40 |
 | J10 | **Keyboard / VoiceOver / reduced motion** | Any journey without a pointer | Partly covered. Never audited end to end. | Acceptance criteria inside the overhaul. | #20 |
 
-## Proposed journeys, not yet approved (2026-11-22, 20:13)
+## Proposed journeys (2026-11-22, 20:13)
+
+**Approved 21:25 (D-035):** J11, J12, J14 and J19. J13 and J15–J18 remain proposals.
 
 The operator asked: "are there any other user situations… user desires… we might want to support?" "Code" means checked by searching this repo on 2026-11-22; everything else is a proposal, or marked unchecked or inferred.
 

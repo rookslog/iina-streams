@@ -21,6 +21,8 @@ Written by a Claude agent (Opus 5.5, high effort as requested by the lead), in a
 
 ## 1. Purpose and status
 
+> **Decided 2026-11-22, 21:25:** W-9 became D-034 (documented API first; the internal interface, used anonymously, where the documented API can't deliver; new uses allowed). Read each "depends on W-9" row with that rule. W-11 became D-035 (option A, with the 6-hour flip), and W-10 Impeccable was approved (detector first, project-only install, no hook).
+
 **Decided** (READ: `docs/WAITING.md`, Answered, W-8; `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §7–§8):
 - **People first** (W-8, answer A). Streams' own ranking decides the order. In the operator's words: "maybe we can have our own kind of customized sort of algorithm".
 - **Signing in supplements, never degrades.** "logging in should give us better recommendations, not worse." Twitch's data is an extra input to Streams' ranking, not a replacement for it.
@@ -126,6 +128,8 @@ INFERRED design, from the operator's directions (READ: DISCOVERY §7 item 1, §8
 **Each row explains itself on demand.** The reason ("you watch most evenings", "new VOD since Tuesday", "followed last week") shows in a tooltip and VoiceOver label, not as permanent text (READ: memory `minimize-ui-text`; the #9 text rule in USER-JOURNEYS).
 
 ## 4. Data sources
+
+> **Decided 2026-11-22, 21:25:** W-9 became D-034 (documented API first; the internal interface, used anonymously, where the documented API can't deliver; new uses allowed). Read each "depends on W-9" row with that rule. W-11 became D-035 (option A, with the 6-hour flip), and W-10 Impeccable was approved (detector first, project-only install, no hook).
 
 The class is one of: **documented** (Helix), **GQL**, **local**, or **other platform**. A row marked **W-9** changes with the answer, and the W-9 option that flips it is named (option names from `docs/WAITING.md` W-9).
 

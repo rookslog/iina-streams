@@ -128,3 +128,25 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Why:** clearance 1 found two Important class-L findings (authority across async boundaries) in exactly these paths: a late quality change replacing a different adopted stream, and the old activation's helpers running on after a fast reopen. Under D-032 rule 4, a class that survives clearance goes to the operator. Descoping returns both paths to 0.5.4's known behaviour, instead of adding state to the release.
 - **Kept and fixed in 0.5.5:** every on_load hook continues exactly once by construction, and the resolver stops at loss (class L pass 2).
 - **What would flip it:** if switching both off had touched as much code as repairing them. 0.5.6 restores both, with the explorer extended to adopted windows and the resolver.
+
+2026-11-22 D-034 DECIDED (operator, answering WAITING W-9): **Twitch data-source rule.** Operator's words: "if we can get a feature that we want through the developer API… let's get it through the developer API. But if we can't, then we need to go the other route as we have done already. So that doesn't necessarily mean no new uses."
+- The documented API (Helix, with the viewer's token) comes first. Where it can't deliver a feature, Streams may use twitch.tv's internal interface (GQL), including for new features.
+- **Boundary:** "as we have done already" means anonymous calls with twitch.tv's public web client ID, never the viewer's token or cookies. Anything needing the viewer's own twitch.tv session (personalised follow order, subscriber-only content, Drops, channel points) is a separate operator decision.
+- **Consequences:**
+  - Signed in, an offline channel's VOD list uses Helix (`recentVODs`, `src/twitch-helix.js`, written but uncalled). Signed out, it keeps GQL (D-030, confirmed by this decision; #49).
+  - Signed-out typing suggestions may use GQL search.
+  - The "no new GQL uses" recommendation (discovery note §6, 2026-11-22 20:15) is reversed.
+- Context: Twitch Developer Services Agreement §XI.I, `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`.
+
+2026-11-22 D-035 DECIDED (operator, answering WAITING W-11, after the lead's advisor was consulted at the operator's request): **finding-and-watching release mapping, option A** of `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` §6.
+- **Mapping:**
+  - 0.5.6: watch history and its controls, and typing suggestions;
+  - 0.6.0: the People screen and listening mode;
+  - 0.7.0: VOD resume and stream end;
+  - 0.8.0: platforms, creator records and merged chat.
+- All screens are designed together with the 0.6.0 overhaul.
+- **Pre-authorized flip:** if history plus suggestions are sized at more than 6 hours of build and review combined, the People screen's *build* moves after launch without another ask. Its design stays in the overhaul.
+- Amends D-026:
+  - the launch date becomes undated (was "tonight");
+  - typing search is in scope (D-026 had excluded search);
+  - journeys J11 (background listening), J12 (long VODs), J14 (stream end) and J19 (history privacy) are approved.

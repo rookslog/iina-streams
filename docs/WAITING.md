@@ -1,6 +1,6 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:15.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:25.
 
 ## Open
 
@@ -66,62 +66,11 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Proposal:** in chat, 2026-11-22 ~19:20.
 - **What your answer changes:** how every reply, in every project, presents pending items and coined terms.
 
-### W-9. Streams' Twitch playback uses an interface Twitch's developer agreement excludes
-- **What it is:** Twitch documents no way to get a playable stream address, an offline channel's VOD list without signing in, or a VOD's chat replay. Streams does all three through the undocumented interface twitch.tv itself uses ("GQL"), as Streamlink does for playback:
-  - **playback:** the `PlaybackAccessToken` request, then Twitch's video server returns the quality list (`src/twitch-playback.js`);
-  - **offline VOD list:** D-030 (`src/twitch-vods.js`);
-  - **VOD chat replay:** `VideoCommentsByOffsetOrCursor` (`helpers/acquire.py`; #26).
-
-  All three send twitch.tv's own public client ID, with no viewer token and no cookies. *Corrected 21:05: this item first named only playback and VOD lists.* Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
-- **How it arose:** the follows research read the agreement for the first time on 2026-11-22: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`, section Q4. The lead checked the quote against the page. D-030 (chosen by the lead during the unattended run) already uses GQL for offline VODs, pending your confirmation in #49.
-- **Options:**
-  - **keep today's uses, add no new ones:** playback, offline VODs and VOD chat replay stay; follows, search and popular use the documented API;
-  - **also move VOD lists to the documented API:** offline VODs only when signed in;
-  - **ask Twitch for written permission** before the Reddit launch;
-  - **no limit:** new features may use GQL too.
-- **Recommendation:** keep today's uses and add no new ones. Playback has no documented alternative, so dropping it means no product; it's the same exposure every Streamlink-based player has. The worst plausible outcome is Twitch revoking Streams' app ID, which breaks sign-in and chat but not playback (inferred). Not adding uses keeps the exposure from growing as Streams goes public.
-- **What it rests on:** Twitch acts against apps that rebuild signed-in features on GQL (logins, follows, channel points), not against players fetching public playback. Inferred from no known action against Streamlink; unchecked.
-- **What would flip it:** evidence that Twitch acted against a Streamlink-style player or its app ID (then ask permission before launch), or a preference for zero exposure (then also move VOD lists).
-- **What your answer changes:** whether 0.5.6's offline VOD list works signed out, and what the README says before launch.
-
-### W-10. Use the Impeccable design tool on Streams' interface
-- **What it is:** Impeccable (https://github.com/pbakaus/impeccable, Apache-2.0) is a design skill for coding agents:
-  - commands such as `shape` (plan the user experience before code), `critique` (a scored usability review), `audit` (accessibility, performance, theming) and `harden` (errors and edge cases);
-  - a 62-rule detector for generic "AI-made" design.
-
-  Installing it runs third-party code from npm, can add a hook and downloads an engine binary, so it's yours to approve.
-- **How it arose:** you asked on 2026-11-22, about designing the discovery and People screens.
-- **Options:**
-  - **detector first:** run `npx impeccable detect` read-only on `ui/` (Open Stream window, sidebar, overlay) and look at what it finds;
-  - **reviewer, this project only:** no hook, no live mode. `shape` for the People screen and listening mode; `critique`, `audit` and `harden` on the existing windows before the 0.6.0 overhaul;
-  - **full install** with the hook and live mode;
-  - **don't.**
-- **Recommendation:** detector first, then reviewer-only if its findings are real problems. Not the full install:
-  - its hook runs even when Claude Code's own commands are denied;
-  - live mode's apply step can run `codex` or `claude` "with approvals, permission checks, and sandboxing off" (README);
-  - this project keeps its skill set narrow (AGENTS.md).
-- **What it rests on:** a web-design reviewer's findings carry over to web pages that live inside a native macOS player. Impeccable's native modes cover iOS and Android, not macOS (README), so its defaults are web taste. Native IINA remains the proof.
-- **What would flip it:** detector findings that are mostly web conventions IINA's look rightly overrides (then skip it), or findings about contrast, cramped spacing or missing states (then the reviewer install).
-
-### W-11. Fit the finding-and-watching work onto the releases
-- **What it is:** where history, suggestions as you type, the People screen, listening, resume and stream end go among 0.5.6–0.8.0. It's yours because it trades launch scope against what a stranger finds on day one, and because it approves journeys J11 (background listening), J12 (long VODs), J14 (stream end) and J19 (history privacy), which you haven't approved yet. Full proposal: `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` §6.
-- **How it arose:** you asked on 2026-11-22 for the whole proposal, phased alongside the releases. Spec: `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` (phases §5, release mapping §6).
-- **Options:**
-
-  | Option | What it buys | What it costs |
-  | --- | --- | --- |
-  | **A. Spec mapping:** history and suggestions in 0.5.6; People screen and listening in 0.6.0; resume and stream end in 0.7.0; platforms in 0.8.0 | Typing names, your main complaint, is fixed before launch; launch screenshots show the People screen; ranking has history by launch day | 0.5.6 grows by two issues; two re-sign-ins (0.5.6, 0.7.0) |
-  | **B. People screen after launch:** history and suggestions in 0.5.6; People screen in 0.7.0 | Smaller launch overhaul | The overhaul is designed twice; launch shows no "what's on" view |
-  | **C. Ask for the write scope in 0.5.6** too, on top of A | One re-sign-in instead of two | Asks for a write permission a release before anything uses it |
-  | **D. Keep ROADMAP as is:** 0.5.6 keeps only the Following list (#30), the offline VOD picker (#32), opening from the browser (#35) and emotes (#34); everything else unscheduled | No scope growth | No history, so no ranking data when People ships; typing whole names stays at launch |
-
-- **Recommendation:** A. History has to start recording before ranking can use it, and suggestions are small once history exists; the People screen belongs in the overhaul because the overhaul designs every surface at once (D-026).
-- **What it rests on:** history and suggestions are small enough to land in 0.5.6 without pushing the 0.6.0 launch back, because the Helix client and the Open Stream window already exist. Inferred; nobody has sized the two new issues.
-- **What would flip it:** if sizing the two issues shows they'd delay the launch, choose B and ship suggestions alone in 0.5.6. If you'd rather sign in once than keep least privilege, choose C. Test: the lead sizes both issues from their tests before 0.5.6 starts.
-- **What your answer changes:** ROADMAP rows 0.5.6–0.8.0, eight new issues (five backlog ones later), J11/J12/J14/J19 status, D-026's not-in-scope line (search), and a new D-034.
-
 ## Answered
 
+- **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
+- **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in `AGENTS.md`.
+- **W-11, release mapping** (2026-11-22, 21:25): **D-035**, option A. If the history and suggestions work is sized over 6 hours, the People screen's build moves after launch without asking again.
 - **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

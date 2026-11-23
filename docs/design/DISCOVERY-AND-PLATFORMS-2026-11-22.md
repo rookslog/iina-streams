@@ -66,7 +66,7 @@ The design gap, then, is a local model of *people the user watches*, not a platf
 - **Twitch's personalised sidebar order:**
   - **Not in Helix.** No endpoint name or one-line description in the reference index mentions recommended, suggested, "for you" or personalised channels; the closest are the followed endpoints, which order by viewers or by follow date (READ: https://dev.twitch.tv/docs/api/reference, index only, relayed by the fetch subagent; longer per-endpoint descriptions were not all opened).
   - **GQL only, and only with a first-party session.** The order would live in GQL operations that twitch.tv sends with the user's own first-party session token, the `auth-token` cookie. An OAuth token from our app would not be accepted there. INFERRED; not tested, and testing it would mean handling that cookie, which §2.3 rules out.
-  - **Terms of service (amended 2026-11-22, 20:15):** the Twitch Developer Services Agreement does load, with `curl --compressed`. Section XI.I, verbatim: "unless you have Twitch’s prior written permission, will only access Program Materials documented on the Twitch Developer Site" (READ: https://legal.twitch.com/legal/developer-agreement/, quote checked by the lead). Whether GQL called with Twitch's own web Client-ID counts as "Program Materials" is an interpretation (INFERRED). Streams' playback and offline VOD lists already use it (`src/twitch-playback.js`, `src/twitch-vods.js`). Details: `TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md` §Q4; decision: `docs/WAITING.md` W-9.
+  - **Terms of service (amended 2026-11-22, 20:15):** the Twitch Developer Services Agreement does load, with `curl --compressed`. Section XI.I, verbatim: "unless you have Twitch’s prior written permission, will only access Program Materials documented on the Twitch Developer Site" (READ: https://legal.twitch.com/legal/developer-agreement/, quote checked by the lead). Whether GQL called with Twitch's own web Client-ID counts as "Program Materials" is an interpretation (INFERRED). Streams' playback and offline VOD lists already use it (`src/twitch-playback.js`, `src/twitch-vods.js`). Details: `TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md` §Q4; decision: D-034 (`docs/DECISIONS.md`).
   - **Risk rating:** moderate for signed-out public reads (D-030's existing risk). High for anything authenticated through GQL. INFERRED.
 
 ### 2.3 Browser cookies: do not read them
@@ -261,7 +261,7 @@ D-026's timeline is 0.6.0 tonight and 0.8.0 within a week, so each slot gets onl
 - **GQL blocked.** If GQL starts rejecting the public web Client-ID, A loses signed-out remote search but keeps its local tier, which is the same as C.
 - **Documented APIs only.** If the operator states that preference, choose C.
 
-**Amended 2026-11-22 (20:15):** the operator made signed-in the default experience, and section XI.I of Twitch's developer agreement is now read (§2.2). The lead's recommendation narrows to A **without new GQL uses**: Helix search, streams and follows when signed in; local history when signed out. Follows research: `TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`. Existing GQL uses (playback, offline VODs) are `docs/WAITING.md` W-9.
+**Amended 2026-11-22 (20:15), then reversed (21:25, D-034):** the 20:15 recommendation of no new GQL uses is reversed by the operator's rule: documented API first, the internal interface where the documented API can't deliver, anonymously. Follows research: `TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`.
 
 ## Sources not read, and what would settle them
 

@@ -59,3 +59,5 @@ Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as 
   - a failed forget, clear or pause keeps its in-memory change and retries;
   - a no-op `record` or `finish` doesn't skip a pending retry;
   - invalid stored timestamps are rejected on load.
+
+- **Lead decision (23:58), on the targeted pass:** a history file that can't be read (an I/O failure, not a parse failure) blocks history until it can be read; nothing falls back to backup-and-replace. Losing new history is better than overwriting a file we can't read. The wiring records "history unavailable" in Streams' diagnostics (`@data/beta-global.json`), so it is visible.

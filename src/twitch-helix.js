@@ -3,9 +3,9 @@
 // Twitch Helix client for the Following list (#30) and a channel's recent VODs (#32).
 //
 //   createHelix({http, clientID, token, log})
-//     -> {followedLive({userID}), recentVODs({login})}
+//     -> {followedLive({userID}), recentVODs({login}), streamStatus({login})}
 //
-// Both methods resolve to arrays, or reject with an Error whose `code` is one of NEEDS_PERMISSION,
+// streamStatus resolves to 'live', 'offline' or 'unknown' (#67). The other two resolve to arrays. All reject with an Error whose `code` is one of NEEDS_PERMISSION,
 // SIGNED_OUT, RATE_LIMITED, NETWORK or MALFORMED. RATE_LIMITED also carries `resetAt`, the raw
 // Ratelimit-Reset header string (a Unix epoch), or '' when the host gave no headers.
 //
@@ -22,6 +22,9 @@
 //     cursor even when no more streams remain (the next page is then empty).
 //   Get Users             https://dev.twitch.tv/docs/api/reference/users#get-users
 //     GET /helix/users?login=, user or app token.
+//   Get Streams           https://dev.twitch.tv/docs/api/reference/streams#get-streams
+//     GET /helix/streams?user_login=, user or app token; lists only live streams, so an offline channel and
+//     an unknown login both give an empty list.
 //   Get Videos            https://dev.twitch.tv/docs/api/reference/videos#get-videos
 //     GET /helix/videos?user_id=&type=archive&first=, user or app token.
 //   Rate limits           https://dev.twitch.tv/docs/api/guide#twitch-rate-limits
@@ -288,6 +291,23 @@ async function recentVODs(config, request) {
   return mapped;
 }
 
+// ---- live status (#67) ----
+
+// 'live' when Get Streams lists the login. An empty list is 'offline' only when Get Users knows the login, so an
+// unknown login stays 'unknown' (Get Streams alone cannot tell the two apart).
+async function streamStatus(config, request) {
+  const login = request && request.login;
+  if (!isString(login) || login === '') {
+    throw new TwitchHelixError('MALFORMED');
+  }
+  const body = await getJSON(config, '/streams', {user_login: login}, 'stream');
+  if (dataArray(body, 'stream', config).length > 0) {
+    return 'live';
+  }
+  const userID = await lookupUserID(config, login);
+  return userID ? 'offline' : 'unknown';
+}
+
 // ---- public ----
 
 function createHelix(options) {
@@ -299,6 +319,7 @@ function createHelix(options) {
   return {
     followedLive: request => followedLive(config, request),
     recentVODs: request => recentVODs(config, request),
+    streamStatus: request => streamStatus(config, request),
   };
 }
 

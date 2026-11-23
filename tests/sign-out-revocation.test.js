@@ -12,7 +12,7 @@ const FIRST_SAVE_FAILS = call => call > 1;
 const savedLogin = bridge => bridge.keychain.get('twitch-readonly', 'oauth');
 
 async function signedIn(options) {
-  const bridge = createBridge(options);
+  const bridge = await createBridge(options);
   await bridge.settle();
   await bridge.click('connect', {clientID: ''});
   await bridge.approve();
@@ -79,7 +79,7 @@ test('Sign out still warns about a dropped session-only grant when an older save
   // The reviewer's probe: an older Keychain grant for another client; a new grant whose save failed; Chat Off;
   // Sign out. Revoking the older grant says nothing about the dropped one, which Twitch still holds.
   const older = {clientID: 'b'.repeat(20), access_token: 'o'.repeat(30), refresh_token: 'p'.repeat(30)};
-  const bridge = createBridge({keychainWrites: FIRST_SAVE_FAILS});
+  const bridge = await createBridge({keychainWrites: FIRST_SAVE_FAILS});
   bridge.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(older));
   await bridge.settle();
   // An empty client ID would reuse the saved grant's client; name the built-in client so the old grant is "another".
@@ -98,7 +98,7 @@ test('Sign out still warns about a dropped session-only grant when an older save
 });
 
 test('control: Sign out with no login at all still reports success', async () => {
-  const bridge = createBridge();
+  const bridge = await createBridge();
   await bridge.settle();
   await bridge.click('forget-auth');
   assert.equal(bridge.revokes.length, 0);

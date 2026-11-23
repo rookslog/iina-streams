@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentArchives}=require('./src/twitch-vods.js');
+const {recentArchives,channelStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
@@ -179,15 +179,42 @@ const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 // openRun fences a pending broadcast lookup (B6c): a newer source-offline, a fresh page or a close advances
 // it. The page receives nothing until it posts open-ready; until then messages wait in openQueue.
 let openRun=0,openPageReady=false,openQueue=[];
+// Advanced by every input that opens something, so an older live check that answers late is superseded (#67).
+let openRequests=0;
 
-// Opens a player for the input. Returns 'opened', 'invalid', or 'blank' when there is nothing to open.
+// Opens the input. Returns 'opened', 'invalid', or 'blank' when there is nothing to open.
 function openInput(input){
  if(typeof input!=='string'||!input.trim())return'blank';
  const source=Sources.parse(input);
  if(!source)return'invalid';
+ const request=++openRequests;
+ if(source.kind==='twitch-live')openWhenLive(source,request);
+ else openPlayer(source);
+ return'opened';
+}
+
+function openPlayer(source){
  const label=Sources.label(source,config.variant);
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label});
- return'opened';
+}
+
+// #67: a Twitch channel is checked before any player exists, because a player whose channel is offline can
+// only hand IINA the channel's page URL, which IINA fails to open with its own error and HTTP Authentication
+// panel (review docs/reviews/2026-11-22-issue-67-review.md). Offline: the recent broadcasts appear in the Open
+// Stream window and no player is created. Live, or a check that failed: the player opens as before.
+// Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
+// path (src/player.js posts source-offline, onSourceOffline below).
+async function openWhenLive(source,request){
+ const deps={http,credentials,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
+ const status=await channelStatus({login:source.id},deps);
+ qaTrace('live-check',{status});
+ if(status!=='offline'){
+  openPlayer(source);
+  return;
+ }
+ // A newer input owns the Open Stream window.
+ if(request!==openRequests)return;
+ showOfflineVods(source.id);
 }
 
 // With no input, show the Open Stream window; otherwise open the input directly.
@@ -241,8 +268,9 @@ function postOpenPage(name,data){
  else openQueue.push({name,data});
 }
 
-// ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. IINA closes a player
-// window once its load fails, so the player only reports the login and this window lists the broadcasts. ----
+// ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. An input is checked
+// before a player is created (#67, openWhenLive); a player whose channel went offline after that check only
+// reports the login, and this window lists the broadcasts. ----
 
 const OFFLINE_REPEAT_MS=10000;
 const OFFLINE_ROWS=10;

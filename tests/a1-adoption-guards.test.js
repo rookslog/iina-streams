@@ -9,6 +9,7 @@ const path = require('node:path');
 const Sources = require('../src/source.js');
 const {start} = require('../src/player.js');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const config = {identifier: 'local.iina.streams.guard-test', variant: 'unified'};
 const twitchURL = 'https://www.twitch.tv/videos/2930971003';
@@ -73,6 +74,8 @@ test('A1 guard: an adopted window forwards open-error from global to its sidebar
 
 function loadGlobal() {
   const shim = createIina({role: 'global', identifier: config.identifier, rejectModalDialogs: true});
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -92,12 +95,13 @@ function loadGlobal() {
   return shim;
 }
 
-test('A1 guard: global answers an adopted window by its IINA label, and ignores foreign labels', () => {
+test('A1 guard: global answers an adopted window by its IINA label, and ignores foreign labels', async () => {
   const shim = loadGlobal();
   // IINA 1.5.1 labels the windows it opens itself "0", "1", ... (PlayerCore.swift).
   shim.global.send('open', {input: 'not a stream'}, '0');
   shim.global.send('open', {input: 'not a stream'}, 'x-other.plugin');
   shim.global.send('open', {input: 'xqc'}, '0');
+  await settleOpens();
   shim.timers.flush(0);
   assert.deepEqual(shim.global.messages('open-error').map(post => post.target), ['0']);
   assert.equal(shim.global.opens.length, 1, 'valid input from an adopted window still opens a stream');

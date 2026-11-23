@@ -10,6 +10,7 @@ const {createRequire} = require('node:module');
 const {join} = require('node:path');
 const {format} = require('node:util');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const SCRIPT = join(__dirname, '../global.js');
 const requireFromGlobal = createRequire(SCRIPT);
@@ -29,6 +30,8 @@ function load(overrides = {}) {
   class CapturedAuth extends TwitchAuth {
     constructor(options) { super(options); auth = this; }
   }
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   shim.runScript(SCRIPT, {
     require(name) {
       if (name === './config.js') return config;
@@ -45,9 +48,10 @@ function load(overrides = {}) {
     to: target => posts.filter(post => post.target === target),
     names: target => posts.filter(post => post.target === target).map(post => post.name),
     managedLabel: id => id + '-' + config.identifier,
-    openManaged(input) {
+    async openManaged(input) {
       shim.menu.items[0].action();
       shim.standaloneWindow.send('open-stream', {input});
+      await settleOpens();
       return shim.global.opens.length;
     }
   };
@@ -186,7 +190,7 @@ test('auth-forget from an adopted label signs out and answers that label', async
   assert.ok(r.posts.every(post => post.target === '7'));
   // forget() stops auth before the audience is cleared, so auth-stop arrives first, as for a managed player.
   const managed = load();
-  managed.openManaged('example');
+  await managed.openManaged('example');
   await managed.send('auth-connect', {}, managed.managedLabel(1));
   managed.flush();
   managed.posts.length = 0;
@@ -196,7 +200,7 @@ test('auth-forget from an adopted label signs out and answers that label', async
   assert.deepEqual(r.names('7'), ['auth-stop', 'auth-forgotten']);
 });
 
-test('invalid open input from an adopted label posts open-error to that label', () => {
+test('invalid open input from an adopted label posts open-error to that label', async () => {
   const r = load();
   r.send('open', {input: 'https://twitch.tv.evil.example/channel'}, '8');
   assert.equal(r.posts.length, 0);
@@ -204,12 +208,13 @@ test('invalid open input from an adopted label posts open-error to that label', 
   assert.deepEqual(r.posts.map(post => [post.target, post.name, post.data]), [['8', 'open-error', '{}']]);
   assert.equal(r.shim.global.opens.length, 0);
   r.send('open', {input: 'somechannel'}, '8');
+  await settleOpens();
   assert.equal(r.shim.global.opens.length, 1, 'valid input from an adopted window opens a managed player');
 });
 
 test('labels that are neither a bare number nor a managed player are ignored', async () => {
   const r = load();
-  r.openManaged('example');
+  await r.openManaged('example');
   const rejected = [null, undefined, 0, 1, {}, '', ' 1', '1 ', '-1', '1-', '1.0', '1e3', '0x1', 'abc', '1234567890',
     '1-other-plugin', '2-' + r.config.identifier, '01-' + r.config.identifier, '0-' + r.config.identifier];
   const timersBefore = r.shim.timers.all.length;
@@ -232,7 +237,7 @@ test('labels that are neither a bare number nor a managed player are ignored', a
 
 test('a bare-number label and a managed id with the same number stay separate', async () => {
   const r = load();
-  r.openManaged('example');
+  await r.openManaged('example');
   await r.send('auth-connect', {}, '1');
   r.flush();
   assert.ok(r.to('1').length > 0);
@@ -243,7 +248,7 @@ test('a bare-number label and a managed id with the same number stay separate', 
   await r.send('auth-connect', {}, r.managedLabel(1));
   r.flush();
   assert.equal(r.posts.length, 0, 'managed player 1 is closed; the adopted label does not revive it');
-  r.openManaged('second');
+  await r.openManaged('second');
   await r.send('auth-connect', {}, r.managedLabel(2));
   r.send('player-closed', {}, '1');
   r.flush();
@@ -253,7 +258,7 @@ test('a bare-number label and a managed id with the same number stay separate', 
 
 test('managed players are still answered at their numeric id', async () => {
   const r = load();
-  r.openManaged('example');
+  await r.openManaged('example');
   await r.send('auth-connect', {}, r.managedLabel(1));
   r.flush();
   assert.ok(r.posts.length > 0);

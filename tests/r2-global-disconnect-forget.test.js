@@ -9,7 +9,7 @@ const REQUESTER = '1-' + IDENTIFIER;
 const BYSTANDER = '77';
 
 async function signedIn(options) {
-  const bridge = createBridge(options);
+  const bridge = await createBridge(options);
   await bridge.settle();
   await bridge.click('connect', {clientID: ''});
   await bridge.approve();

@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Sources = require('../src/source.js');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const config = {identifier: 'local.iina.streams.b6c-test', variant: 'unified'};
 const LOGIN = 'fixture_offline';
@@ -38,6 +39,8 @@ function item(index) {
 
 function loadGlobal(t) {
   const shim = createIina({role: 'global', identifier: config.identifier});
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -86,6 +89,7 @@ function loadGlobal(t) {
 
 async function withManagedPlayer(fixture) {
   await fixture.context.openStream(LOGIN);
+  await settleOpens();
   assert.equal(fixture.shim.global.opens.length, 1, 'fixture: player 1 is managed');
 }
 

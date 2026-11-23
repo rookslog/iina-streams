@@ -18,7 +18,7 @@ const ACTIVATION = 'https://www.twitch.tv/activate?device-code=ABCDEFGH'; // wha
 
 test('a Sign in click leaves the browser alone, even one that still carries the old open flag', async () => {
   for (const payload of [{clientID: ''}, {clientID: '', open: true}]) {
-    const bridge = createBridge();
+    const bridge = await createBridge();
     await bridge.settle();
     await bridge.click('connect', payload);
     assert.equal(bridge.player.snapshot().auth.phase, 'waiting', 'precondition: the code is showing');
@@ -29,7 +29,7 @@ test('a Sign in click leaves the browser alone, even one that still carries the 
 });
 
 test('Approve on Twitch opens the activation page, and only on the click', async () => {
-  const bridge = createBridge();
+  const bridge = await createBridge();
   await bridge.settle();
   await bridge.click('connect', {clientID: ''});
   assert.deepEqual(bridge.opened, []);
@@ -39,7 +39,7 @@ test('Approve on Twitch opens the activation page, and only on the click', async
 });
 
 test('control: Approve on Twitch does nothing before a code is waiting', async () => {
-  const bridge = createBridge();
+  const bridge = await createBridge();
   await bridge.settle();
   await bridge.click('authorize-open');
   assert.deepEqual(bridge.opened, []);

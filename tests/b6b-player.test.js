@@ -3,7 +3,8 @@
 // B6c contract (#32): the player no longer fetches an offline channel's broadcasts. A twitch-live load that
 // fails with {ok: false, error: {code: 'UNAVAILABLE', reason: 'offline'}} posts `source-offline` to global
 // with {login: source.id}, once per load, and makes no HTTP request. Global shows the list in the Open Stream
-// window, because IINA closes a player window whose load failed (native evidence on issue #32).
+// window. Since #67 global checks a channel before creating its player, so this is the residual race: the
+// channel went offline between that check and the load.
 // Exercise the real mpv hook via the shim; only the resolver is a double.
 
 const test = require('node:test');

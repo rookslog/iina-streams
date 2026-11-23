@@ -119,37 +119,37 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
 - **What your answer changes:** whether the fix is in your next Streams Beta refresh.
 
-### W-15. Grow the plan: a fuller dashboard and a stream switcher in the sidebar (amends D-035)
+### W-15. Grow the plan: a fuller dashboard, and a mini dashboard in the plugin sidebar (amends D-035)
 - **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:
   - a **dashboard** like "a miniature version of the Twitch website that's more fully featured": search across VODs, categories, live channels;
-  - a **switcher in the plugin sidebar** that changes the stream in the *same* window instead of opening another.
+  - a **mini dashboard in the plugin sidebar**, like Twitch's own sidebar, to move to another channel or one of its VODs, search and scroll. It changes the stream in the *same* window instead of opening another.
 
   It's yours because it changes what 0.6.0 promises, and its order.
 - **What's possible (checked):**
   - Twitch's documented API offers category search, top categories by viewers, and live streams filtered by category. None is personalised; checked against Twitch's API index only.
   - Twitch's own "recommended categories" need your twitch.tv login, which D-034 makes a separate decision.
   - "Categories you watch" can come from Streams' own history, if each visit also stores the category. Today's history design doesn't store it ([TESTS.md](design/finding-2026-11-22/history/TESTS.md), "What's stored").
-  - Per W-16 (answered): the switcher, VODs and quality live in the plugin sidebar, the panel that slides in over the video and is closed again, and chat leaves it.
-  - **Switching streams in the same window** is exactly what D-033 switched off for 0.5.5, "a window whose player loads a different file stays inactive", because of two serious review findings. D-033 plans to restore it in 0.5.6. The switcher depends on that.
+  - Per W-16 (answered): the mini dashboard, VODs and quality live in the plugin sidebar, the panel that slides in over the video and is closed again, and chat leaves it.
+  - **Switching streams in the same window** is exactly what D-033 switched off for 0.5.5, "a window whose player loads a different file stays inactive", because of two serious review findings. D-033 plans to restore it in 0.5.6. The sidebar's mini dashboard depends on that.
 - **Options:**
 
   | Option | What it buys | What it costs |
   |---|---|---|
-  | **Amend D-035: same-window switching first (0.5.6, as D-033 planned), then the sidebar switcher and a fuller dashboard in 0.6.0** | Switching in place, the way you watch | 0.6.0 grows; the launch moves later |
-  | **Dashboard in 0.6.0 as planned; switcher and VOD and category search after launch** | A sooner launch | You keep using Open Stream to switch until then |
+  | **Amend D-035: same-window switching first (0.5.6, as D-033 planned), then the sidebar's mini dashboard and a fuller dashboard in 0.6.0** | Switching in place, the way you watch | 0.6.0 grows; the launch moves later |
+  | **Dashboard in 0.6.0 as planned; the sidebar's mini dashboard and VOD and category search after launch** | A sooner launch | You keep using Open Stream to switch until then |
   | **Defer both until after launch** | The smallest 0.6.0 | The launch shows no dashboard |
-- **Recommendation:** the first option, but in order: restore same-window switching in 0.5.6 with its tests, because both the switcher and adoption need it. Store the category with each visit (a small addition before the history wiring). Design the dashboard and switcher together in the 0.6.0 round.
+- **Recommendation:** the first option, but in order: restore same-window switching in 0.5.6 with its tests, because both the mini dashboard's channel changes and adoption need it. Store the category with each visit (a small addition before the history wiring). Design the dashboard and the sidebar's mini dashboard together in the 0.6.0 round (design under way: [plugin-sidebar/BRIEF.md](design/finding-2026-11-22/plugin-sidebar/BRIEF.md)).
 - **What it rests on:** same-window switching can be made safe with the class-L rules that already passed review. Unproven until its review.
-- **What would flip it:** if restoring same-window switching takes another multi-round review like tonight's, ship the dashboard first and the switcher after launch.
+- **What would flip it:** if restoring same-window switching takes another multi-round review like tonight's, ship the dashboard first and the sidebar's channel changes after launch.
 - **Naming:** "People" came from the research note's idea that a *person* is the unit across platforms. No other names were weighed. The quick list shows no label, so the name only matters for the dashboard: "Following", "Channels", "Watch" or "Browse" are alternatives.
 - **What your answer changes:**
   - D-035 and the ROADMAP rows for 0.5.6 and 0.6.0;
-  - #76 (People or dashboard), a new switcher issue, and #73's stored fields;
+  - #76 (People or dashboard), a new issue for the sidebar's mini dashboard, and #73's stored fields;
   - the spec, §2 and §6.
 
 ## Answered
 
-- **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar, the panel that slides in over the left of the video from the plugin button. That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.
+- **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **right** side of the video from the plugin button, in the same panel and tab strip as IINA's Video, Audio and Subtitles tabs (seen in the operator's screenshots; IINA's `.plugins` sidebar). *Corrected: this first said "left".* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.
 - **W-12, Open Stream design** (2026-11-23, operator after trying both mocks in Safari): **A's quick list, one fixed height that scrolls**, no "why it's here" text, and no "your people" label. Typing searches the list. VODs must be reachable for live people too: mock A expands only offline rows (`a.js:112`), so this needs changing. B's list-and-detail ideas move to the bigger dashboard, and a jump links the two. The operator's words: "I'd also keep it to a fixed height that scrolls"; "the quick list doesn't have a 'your people' indicator, which I like". Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md).
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
 - **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in [AGENTS.md](../AGENTS.md).

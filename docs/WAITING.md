@@ -66,6 +66,24 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Proposal:** in chat, 2026-11-22 ~19:20.
 - **What your answer changes:** how every reply, in every project, presents pending items and coined terms.
 
+### W-8. How Streams helps you find what to watch, across platforms
+- **What it is:** the model behind suggestions as you type, "who's on", multiple platforms and merged chat. It sets whether Streams is organised around the **people you watch** or around each platform's own pages, and how much undocumented-API risk the product carries.
+- **How it arose:** your requests on 2026-11-22 for suggestions as you type, the Twitch-style "likely to watch" ordering, YouTube/Kick, creators who use different names on each platform, and merged chats. Research: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md`. Its "what you're really after" table is at line 28; the options and recommendation are at line 238.
+- **Options:**
+  - **A. People-first:** your own viewing history plus creator records you can edit (linking one person's accounts across platforms) rank everything, and each platform adds search, live status, VODs and chat where it can;
+  - **B. Mirror each platform:** copy each platform's own pages and recommendations through their private interfaces;
+  - **C. Documented APIs only;**
+  - **D. Defer:** just Following (#30) and the offline VOD list (#32).
+- **Recommendation:** A. Most opens are you reopening someone you already watch, and your history answers that instantly, signed in or out, with no cookies. Twitch's own "likely to watch" ordering isn't available to outside apps anyway.
+- **What it rests on:** most of what you open are repeat visits to a small set of people. This is unmeasured.
+- **What would flip it:** if you mostly want to discover new channels, B; if you'd rather use only documented APIs, C.
+- **Platform facts that constrain it:**
+  - Twitch search and popular lists work only when you're signed in, through the documented API;
+  - Kick chat needs a server we'd host;
+  - YouTube live chat has a daily quota;
+  - no public service links one creator's accounts across platforms.
+- **What your answer changes:** what 0.5.6 builds (suggestions from history and Following), and the shape of 0.6.0's People view and 0.8.0's platforms.
+
 ## Answered
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

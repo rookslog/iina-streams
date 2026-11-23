@@ -67,10 +67,15 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** how every reply, in every project, presents pending items and coined terms.
 
 ### W-9. Streams' Twitch playback uses an interface Twitch's developer agreement excludes
-- **What it is:** Twitch documents no way to get a playable stream address. Streams, like Streamlink and yt-dlp, gets one from the undocumented interface twitch.tv itself uses ("GQL"), and lists an offline channel's VODs the same way (D-030). Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
+- **What it is:** Twitch documents no way to get a playable stream address, an offline channel's VOD list without signing in, or a VOD's chat replay. Streams does all three through the undocumented interface twitch.tv itself uses ("GQL"), as Streamlink does for playback:
+  - **playback:** the `PlaybackAccessToken` request, then Twitch's video server returns the quality list (`src/twitch-playback.js`);
+  - **offline VOD list:** D-030 (`src/twitch-vods.js`);
+  - **VOD chat replay:** `VideoCommentsByOffsetOrCursor` (`helpers/acquire.py`; #26).
+
+  All three send twitch.tv's own public client ID, with no viewer token and no cookies. *Corrected 21:45: this item first named only playback and VOD lists.* Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
 - **How it arose:** the follows research read the agreement for the first time on 2026-11-22: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`, section Q4. The lead checked the quote against the page. D-030 (chosen by the lead during the unattended run) already uses GQL for offline VODs, pending your confirmation in #49.
 - **Options:**
-  - **keep today's uses, add no new ones:** playback and offline VODs stay; follows, search and popular use the documented API;
+  - **keep today's uses, add no new ones:** playback, offline VODs and VOD chat replay stay; follows, search and popular use the documented API;
   - **also move VOD lists to the documented API:** offline VODs only when signed in;
   - **ask Twitch for written permission** before the Reddit launch;
   - **no limit:** new features may use GQL too.

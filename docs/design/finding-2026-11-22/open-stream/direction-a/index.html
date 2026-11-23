@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open Stream: Quick list</title>
+<link rel="stylesheet" href="a.css">
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <div>
+      <h1>Open Stream — A: Quick list</h1>
+      <p>Today's 380 px window, extended. Each person is one 28 px line; the window grows a row at a time, downward, as it does now (<code>global.js</code>, <code>OFFLINE_ROW_HEIGHT</code>). An offline person's broadcasts open inline. Static sample data; nothing here calls the network. The dashed outline marks IINA's title bar, which Streams doesn't draw.</p>
+      <p class="terms"><b>Terms.</b> J1, J2, J4 and J10 are approved user journeys (<code>docs/design/USER-JOURNEYS-2026-11-22.md</code>): J1 a stranger with no history, J2 the daily viewer who knows who they want, J4 the catch-up viewer after a VOD, J10 keyboard and VoiceOver use. D-034 is the decision in <code>docs/DECISIONS.md</code> that Twitch data comes from Helix (Twitch's documented API) first and otherwise from GQL (twitch.tv's internal interface, called anonymously). #74 and #76 are the GitHub issues for these suggestions and for the People screen. Frecency is a score of how often and how recently the viewer opened someone.</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Appearance">
+      <button type="button" data-theme-set="auto" aria-pressed="true">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+
+  <h2>Try it</h2>
+  <p>Type “oh”, use ↑↓, Return, →/← to open or close an offline person's broadcasts, Tab to reach them, ⌘I for why a row is here, and Escape to clear and then close.</p>
+  <div class="try">
+    <div>
+      <div class="win" id="live"></div>
+      <div class="closed" id="closed" hidden><span>Window closed</span><button type="button">Reopen (⌃⌘O)</button></div>
+    </div>
+    <div class="controls">
+      <div class="group"><span>Account</span>
+        <div class="segmented" role="group" aria-label="Account"><button type="button" data-ctl="account" data-val="in">Signed in</button><button type="button" data-ctl="account" data-val="out">Signed out</button></div>
+      </div>
+      <div class="group"><span>Network</span>
+        <div class="segmented" role="group" aria-label="Network"><button type="button" data-ctl="net" data-val="ok">Online</button><button type="button" data-ctl="net" data-val="offline">No connection</button><button type="button" data-ctl="net" data-val="error">Twitch error</button></div>
+      </div>
+      <div class="group"><span>History</span>
+        <div class="segmented" role="group" aria-label="History"><button type="button" data-ctl="history" data-val="yes">Has history</button><button type="button" data-ctl="history" data-val="no">None yet</button></div>
+      </div>
+      <div class="group"><span>Remote</span><button type="button" id="replay" class="segmented" style="padding:2px 10px;min-height:24px">Replay Twitch arrival</button></div>
+      <p class="outcome" id="outcome" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <h2>States</h2>
+  <p>Every window state from the brief, drawn by the same renderer as the live window above.</p>
+  <div class="gallery" id="gallery"></div>
+
+  <h2>The person row</h2>
+  <p>Compact density: avatar or initial with the live dot on it, name, platform mark, one secondary line (category and title when live, newest broadcast when offline), then viewers or time since last live. The reason is never permanent text: it is the tooltip, the VoiceOver description, and the info button (⌘I). Shared with the People screen (#76), which would use this same row.</p>
+  <div class="row-sheet" id="rows"></div>
+
+  <h2>Keyboard and VoiceOver (J10)</h2>
+  <table class="keys">
+    <thead><tr><th>Key</th><th>Does</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Moves the selection through people and, when expanded, their broadcasts. Focus stays in the field (a combobox driving a listbox through <code>aria-activedescendant</code>).</td></tr>
+      <tr><td><kbd>↩</kbd></td><td>Live row: opens with chat. Offline row: opens its broadcasts and selects the newest. Broadcast: plays it with chat replay. URL or typed-name row: opens it.</td></tr>
+      <tr><td><kbd>→</kbd> <kbd>←</kbd></td><td>On an offline row, with the caret at the end of the text: open or close its broadcasts.</td></tr>
+      <tr><td><kbd>Tab</kbd> / <kbd>⇧Tab</kbd></td><td>Into the broadcast list of the selected offline person, and back to that person.</td></tr>
+      <tr><td><kbd>⌘I</kbd></td><td>Shows or hides why the selected row is here.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Closes the reason, then clears the field, then closes the window.</td></tr>
+      <tr><td>VoiceOver</td><td>Each row reads as, for example, “Ohnepixel, live, 12,340 viewers, Counter-Strike, 1 of 6”, with the reason as its description. Position comes from <code>aria-posinset</code>/<code>aria-setsize</code>; groups are “Your People” and “Twitch search”.</td></tr>
+    </tbody>
+  </table>
+</main>
+<script src="../sample-data.js"></script>
+<script src="a.js"></script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open Stream: List and detail</title>
+<link rel="stylesheet" href="b.css">
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <div>
+      <h1>Open Stream — B: List and detail</h1>
+      <p>A wider, fixed frame (600 × 360). The window has two heights only: the field alone, as today, or the full frame, so it never grows row by row. People are two-line rows on the left; the selected person's detail, including why they're here and their recent broadcasts, is on the right, like Spotlight's preview. Static sample data; nothing here calls the network. The dashed outline marks IINA's title bar, which Streams doesn't draw.</p>
+      <p class="terms"><b>Terms.</b> J1, J2, J4 and J10 are approved user journeys (<code>docs/design/USER-JOURNEYS-2026-11-22.md</code>): J1 a stranger with no history, J2 the daily viewer who knows who they want, J4 the catch-up viewer after a VOD, J10 keyboard and VoiceOver use. D-034 is the decision in <code>docs/DECISIONS.md</code> that Twitch data comes from Helix (Twitch's documented API) first and otherwise from GQL (twitch.tv's internal interface, called anonymously). #74 and #76 are the GitHub issues for these suggestions and for the People screen. Frecency is a score of how often and how recently the viewer opened someone.</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Appearance">
+      <button type="button" data-theme-set="auto" aria-pressed="true">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+
+  <h2>Try it</h2>
+  <p>Type “oh”, use ↑↓ (the pane follows the selection), Return to open, Tab or Return on an offline person to reach their broadcasts, ⇧Tab to come back, and Escape to clear and then close. A click selects; a double-click opens.</p>
+  <div class="try">
+    <div>
+      <div class="win" id="live"></div>
+      <div class="closed" id="closed" hidden><span>Window closed</span><button type="button">Reopen (⌃⌘O)</button></div>
+    </div>
+    <div class="controls">
+      <div class="group"><span>Account</span>
+        <div class="segmented" role="group" aria-label="Account"><button type="button" data-ctl="account" data-val="in">Signed in</button><button type="button" data-ctl="account" data-val="out">Signed out</button></div>
+      </div>
+      <div class="group"><span>Network</span>
+        <div class="segmented" role="group" aria-label="Network"><button type="button" data-ctl="net" data-val="ok">Online</button><button type="button" data-ctl="net" data-val="offline">No connection</button><button type="button" data-ctl="net" data-val="error">Twitch error</button></div>
+      </div>
+      <div class="group"><span>History</span>
+        <div class="segmented" role="group" aria-label="History"><button type="button" data-ctl="history" data-val="yes">Has history</button><button type="button" data-ctl="history" data-val="no">None yet</button></div>
+      </div>
+      <div class="group"><span>Remote</span><button type="button" id="replay" class="segmented" style="padding:2px 10px;min-height:24px">Replay Twitch arrival</button></div>
+      <p class="outcome" id="outcome" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <h2>States</h2>
+  <p>Every window state from the brief, drawn by the same renderer as the live window above.</p>
+  <div class="gallery" id="gallery"></div>
+
+  <h2>The person row</h2>
+  <p>Regular density: a 44 px row with avatar or initial carrying the live dot, name and platform mark, viewers when live, and a second line (category and title when live; time since last live and newest broadcast when offline). The reason is the tooltip and VoiceOver description here, and visible text only in the detail pane, once selected. Shared with the People screen (#76), which would use this same row.</p>
+  <div class="row-sheet" id="rows"></div>
+
+  <h2>Keyboard and VoiceOver (J10)</h2>
+  <table class="keys">
+    <thead><tr><th>Key</th><th>Does</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Moves the selection through people; the detail pane follows. Focus stays in the field (a combobox driving a listbox through <code>aria-activedescendant</code>).</td></tr>
+      <tr><td><kbd>↩</kbd></td><td>Live row: opens with chat. Offline row: moves focus into its broadcasts in the pane. Broadcast: plays it with chat replay. URL or typed-name row: opens it.</td></tr>
+      <tr><td><kbd>Tab</kbd> / <kbd>⇧Tab</kbd></td><td>Into the pane's broadcast list (a real focus move, its own listbox), and back to the field.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>From the pane: back to the field. In the field: clears it, then closes the window.</td></tr>
+      <tr><td>Pointer</td><td>Click selects, double-click or the Open button opens, as in a macOS list. Hover only highlights.</td></tr>
+      <tr><td>VoiceOver</td><td>Each row reads as, for example, “Ohnepixel, live, 12,340 viewers, Counter-Strike, 1 of 6”, with the reason as its description. Groups are “Your People” and “Twitch search”; the pane is a region named after the selected person.</td></tr>
+    </tbody>
+  </table>
+</main>
+<script src="../sample-data.js"></script>
+<script src="b.js"></script>
+</body>
+</html>

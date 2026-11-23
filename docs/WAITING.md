@@ -147,6 +147,23 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - #76 (People or dashboard), a new issue for the sidebar's mini dashboard, and #73's stored fields;
   - the spec, §2 and §6.
 
+### W-17. Pick a layout for the plugin sidebar's mini dashboard
+- **What it is:** three rough layouts (structure only, no styling) for the plugin sidebar as a mini dashboard, from the 2026-11-23 design round ([BRIEF.md](design/finding-2026-11-22/plugin-sidebar/BRIEF.md), comparison in [README.md](design/finding-2026-11-22/plugin-sidebar/README.md)). It's yours because it's a judgment about how you use the panel.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **A: one list, like Twitch's sidebar** | Closest to Twitch's sidebar; one scroll; fewest new ideas | Chat and account controls sit at the bottom of a long list |
+  | **B: what's playing first** | Shows at a glance what's playing and how it's set; continue watching is prominent | Quality is always on screen, which you said you don't need; the channel list starts lower |
+  | **C: search and tabs** | The most to browse in 360 pt; a home for categories | Three tabs to learn, and a second place to look (the bottom strip) |
+  | **Mix, or none yet** | Take pieces (for example A plus B's continue watching) | Another rough round |
+- **Recommendation:** A, with B's continue-watching section added above Live.
+- **What it rests on:** you open this panel mostly to switch channel or VOD, and only sometimes for quality or chat.
+- **What would flip it:** if you also open it to check how the stream is set, B. If you want to browse categories here rather than in the bigger dashboard, C.
+- **Also wanted:** strike any of the brief's candidates you don't want in this panel: continue watching, categories, this channel's other VODs, chat on/off and settings, account, history controls.
+- **What your answer changes:** the polished design round, then the build issue for the mini dashboard.
+- **Unchecked in IINA:** with the chat column (D-028) and this panel both open on the right, the panel covers the chat.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **right** side of the video from the plugin button, in the same panel and tab strip as IINA's Video, Audio and Subtitles tabs (seen in the operator's screenshots; IINA's `.plugins` sidebar). *Corrected: this first said "left".* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

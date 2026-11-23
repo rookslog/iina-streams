@@ -169,6 +169,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - less text: "Reload stream" beside a reload button is a redundant label.
 
   The lead's "panel covers the chat" line was wrong: the plugin panel opens on the left, and the chat column on the right. **Next:** one revised structure (A's list, continue watching, a channel view, far less text), drawn under the text rule now in the project design skill. No pick is needed until it's ready.
+- **Update 2026-11-23 02:20:** round 2 is ready: one revised layout, [revised/index.html](design/finding-2026-11-22/plugin-sidebar/revised/index.html). It has continue watching, a channel view with VOD thumbnails, VOD search, sort and filter, and far less text. Every visible string is listed with its class in [DONE.md](design/finding-2026-11-22/plugin-sidebar/DONE.md). **Needed now:** keep it, or say what to change.
 
 ## Answered
 

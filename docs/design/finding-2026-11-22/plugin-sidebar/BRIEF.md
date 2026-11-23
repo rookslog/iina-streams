@@ -11,12 +11,13 @@
 **Reference:** Twitch's own sidebar: followed channels (live first, then "show more"), live channels, and categories.
 
 ## The surface (constraints, read from IINA 1.5.1's source)
-- **Panel:** IINA's plugin tab sits in the same panel and tab strip as IINA's Video, Audio and Subtitles tabs (the operator's screenshots, 2026-11-23). Mock in that card style: rounded grouped cards on a translucent dark material, and the system font.
-- **Side:** the right edge by default. IINA's preference `sidebarSettingsDisplayAtLeading` (default `false`, `Preference.swift`) moves it to the left. The design must not depend on the side.
-- **Width:** 360 pt by default (`trailingSidebarWidth`), and the viewer can resize it from 300 to 500 pt (`SideBar.swift`, `widthRange`). Mock at 360 and check that 300 still works.
+- **Panel:** IINA's own **plugin panel** (one puzzle-piece tab per plugin), which is separate from the Video, Audio and Subtitles panel. *Correction 2026-11-23: this brief first put it in that panel, inferred from the operator's screenshots, which were of the other panel.* The style reference is today's `ui/sidebar.css`.
+- **Side:** the **left** edge by default (`sidebarPluginsDisplayAtLeading: true`, IINA 1.5.1 `Preference.swift`), and the operator's IINA keeps the default. A preference moves it right. The design must not depend on the side.
+- **Width:** 360 pt by default (`leadingSidebarWidth`; the operator's is 359), resizable from 300 to 500 pt (`SideBar.swift`, `widthRange`). Mock at 360 and check that 300 still works.
 - **Over or beside the video:** over the video normally. With IINA's **Edge-to-Edge Video** turned off, IINA puts the panel beside the video and stops hiding it when the video is clicked ([overhaul README](../../overhaul-2026-11-22/README.md)). Both must work.
 - **Collapse:** IINA draws the panel's chevron, so Streams needs no close button of its own (already removed in the overhaul).
-- **The chat column** (D-028) also sits on the right, made by shrinking the picture (`video-margin-ratio-right`). Say what happens when both are open.
+- **The chat column** (D-028) sits on the right, made by shrinking the picture (`video-margin-ratio-right`). At IINA's defaults it doesn't overlap this panel.
+- **Text:** follow "Text on screen" in `.agents/skills/streams-interaction-design/SKILL.md`. Every visible string must be a name, value, action or error.
 
 ## Earlier decisions and feedback on this panel
 - **D-028** (2026-11-22) already moved chat into the overlay, with the picture shrunk, and left the native sidebar for the controls and settings. The overhaul's **direction B, "Stage"** ([direction-b-stage.html](../../overhaul-2026-11-22/direction-b-stage.html)) drew that sidebar as a settings form. Start from it rather than from today's panel.
@@ -60,3 +61,24 @@ The **person row** from the Quick Open brief (`../open-stream/BRIEF.md`, with th
 - Open the plugin sidebar, find a channel or VOD in at most two actions, move to it, close the panel.
 - The video keeps playing until the new stream starts.
 - Keyboard and VoiceOver reach everything.
+
+## Round 2 (2026-11-23, after the operator saw A, B and C)
+**The operator's words:** "if I clicked on it, it would switch and load up… information about their channel… Mainly the VODs"; "when I'm searching, I'm either searching for a channel or, within a channel, I'm searching for a VOD. And I maybe want to filter or sort them"; "I do like the continue watching thing"; "your proposal feels like it has too much text".
+
+**Deliver one revised structure** in `revised/index.html` (not three), plus `DONE.md`. Fix the IINA strip in `lowfi.css` and the pages: draw the plugin panel's own tabs, not Video/Audio/Subtitles.
+1. **The list:** start from A: what's playing, search, then Live and Offline.
+2. **Continue watching:** above Live, a few VODs you started and haven't finished, newest-watched first, **with no age cutoff**, so one from a week ago still shows if it's among the latest. Each shows a progress bar (a signifier, not text). A finished VOD drops out.
+3. **The channel view:** clicking or pressing Return on a person, live or offline, replaces the list with that channel, with a Back control.
+   - Their live stream at the top if they're live.
+   - Their VODs as rows with a small 16:9 thumbnail, length and date. Every VOD you've started shows its progress bar, however long ago, so older ones are found here.
+   - The search field now searches this channel's VODs. Sort and filter are compact controls: newest or most viewed; broadcasts, highlights or uploads.
+   - Optional, if it fits without text: a dot on VODs newer than your last visit.
+4. **Chat settings, account, history:** at the end, as in A, but with no explanatory text.
+5. **Quality:** behind the playing line, as in A.
+6. **In `DONE.md`,** list every visible string with its class (name, value, action or error). Cut anything that fits none of them.
+
+**Data notes, for honesty in the mock:**
+- **Thumbnails:** Twitch's documented videos call returns a `thumbnail_url`, and Streams doesn't fetch it yet. The sidebar page already allows images from Twitch's image host, `static-cdn.jtvnw.net`, for emotes (`ui/sidebar.html`). That host is unchecked against a real VOD response.
+- **Search within a channel's VODs:** filters the fetched list locally. Twitch documents no title search for videos (unchecked; re-check before the build).
+- **Sort and filter:** documented `sort` (time, trending, views) and `type` (archive, highlight, upload) parameters, from Twitch's reference; re-check before the build.
+- **Continue watching and progress** need each VOD and its position stored: that's resume (#78), not watch history (#73).

@@ -44,3 +44,8 @@ Each page draws the panel at 360 pt, with a 300 pt switch, and its notes say wha
 - **Sign-in placement.** It is a filled button wherever it appears (B's Settings, C's menu); in A it would sit in the account group.
 - **Long lists.** The sample has only eight people, so scrolling is barely exercised.
 - **Untested:** keyboard order beyond the browser defaults, and VoiceOver.
+
+## Lead corrections (2026-11-23)
+- **The wrong IINA panel:** the dashed strip draws IINA's Video, Audio and Subtitles tabs. The plugin panel is a separate panel, on the left by default, with one tab per plugin. The error came from the brief, not the designer.
+- **"The chat column" above is wrong at IINA's defaults.** The plugin panel opens on the left and the chat column on the right, so they don't overlap.
+- **Too much text** (operator): for example "Reload stream" beside a reload button. The text rule is now in `.agents/skills/streams-interaction-design/SKILL.md`; round 2 is in the brief.

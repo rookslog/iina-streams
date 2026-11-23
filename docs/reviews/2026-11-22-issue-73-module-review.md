@@ -86,3 +86,23 @@ Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as 
   - ids are bounded: at the safe-integer limit, renumber in order;
   - the trim is O(n log n), by sorting once;
   - `record` keeps `null` for "ignored"; TESTS.md is amended to say that `null` is its false.
+
+## Narrow check 2 (verbatim; Codex gpt-6.2-sol xhigh, finished 23:56, on 2e1633c)
+
+**NOT CLOSED** — `node --test tests/history.test.js` passed 35/35, but targeted probes reproduced two stale-handle failures and one load regression.
+
+- **CLOSED — (2) `record`:** `null` is documented and tested as the ignored-result sentinel.
+- **NOT CLOSED — (3) ID counter:** `nextId` is persisted, but a surviving high open ID triggers another rollover after reopen. A forgotten handle then closes a new visit. [src/history.js:447](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:447)
+- **CLOSED — Forget after trimming:** Forgetting a load-trimmed person removes them from disk, including on retry after a failed write.
+- **NOT CLOSED — `MAX_SAFE_INTEGER`:** IDs stay in range, but skipping IDs currently in use doesn’t void old handles. A retry with a closed visit’s handle closed a new visit after rollover. [src/history.js:471](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:471)
+- **CLOSED — O(n²) trimming:** Load now scores once and sorts once; the 10,000-person test passed.
+
+**New regression — [src/history.js:186](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:186):** With a max ID and a missing ID in the same file, load renumbers open visits too. A live handle that closed the correct visit on `777052a` now closes a different one.
+## Lead step-back (D-032: the stale-handle class recurred)
+
+Renumbering near `MAX_SAFE_INTEGER` is the source of every remaining finding, and it guards a case that real use can't reach: at most 500 × 10 visits are stored, and the counter grows by one per visit. **Simplify:**
+
+- **Ids are bounded at 2^31.** A loaded file with any id, or a `nextId`, that is non-integer, below 1 or above 2^31 is treated as corrupt: it's backed up to `.bad`, and history starts empty.
+- **No renumbering anywhere, at load or at runtime.** At 2^31 the counter refuses: `record` returns `null` and nothing is written. That isn't reachable in practice.
+- **Missing ids on load** (from an older file without them) are assigned from `nextId` upward in time order. Before load there are no live handles to break.
+- Remove the renumbering code and its tests; add tests for the bound.

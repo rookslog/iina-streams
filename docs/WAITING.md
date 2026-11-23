@@ -190,6 +190,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   | Channel view spacing | Partly: controls sit above a card they don't affect. |
 
   It also found things the operator didn't raise: what's playing has no home in the panel, blank empty states, a two-click switch, keyboard focus lost, and "Most viewed" against Product Principle 3. **Reading:** the critique judges against the brief, and catches generic failures but not wrong product calls the brief itself made. Fixing the inputs (PRODUCT.md, a DESIGN.md, the brief) comes before the next round.
+- **Update 2026-11-23 (operator, on the comparison above):** the operator's complaints aren't the standard the critique should be scored against: "what gives my complaints authority? … I'm not sovereign." They are evidence that something is wrong, conditioned by the situation: a rough mock read as finished UI, after several misses. The lead's reading is that the complaints and the critique point at one underlying problem from two sides. The panel has no clear main job: thumbnails, settings, history and search all carry the same weight, so "switch channel" doesn't stand out. The next round answers that through hierarchy, not by moving each item where a complaint put it.
 
 ## Answered
 

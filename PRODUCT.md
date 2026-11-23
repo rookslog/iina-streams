@@ -9,9 +9,10 @@ Written 2026-11-22 by the Open Stream designer from `README.md`, `AGENTS.md`, `d
 web
 
 ## Users
-*Draft 2026-11-23, from the operator's own words in chat that day. Awaiting their confirmation through Impeccable's setup interview. It replaces the first version, which was inferred from docs and listed only J1–J10.*
+*Redrafted 2026-11-23 from the operator's own words, and corrected by them in Impeccable's setup interview the same day. The first version was inferred from docs and listed only J1–J10.*
 
-- **Who:** Mac viewers who would rather watch Twitch in IINA than in a browser tab (YouTube too, other platforms later). The first and main user is the operator, who watches daily. *Open: why IINA rather than the browser, and who else (the Reddit launch audience).*
+- **Who (confirmed by the operator, 2026-11-23):** **everyday Mac users, not technical ones**, "the way Mac tries to develop for people". Technical users get depth, hidden until wanted, and never a worse experience. Twitch first; YouTube and other platforms later. The operator is the first daily user, not the target user.
+  - **Setup is a design problem, not a user trait:** "no one should have to install Streamlink and yt-dlp with Homebrew… and paste client IDs." Today's Homebrew, Python and Streamlink requirement is a defect tracked in #36 (0.6.0). The built-in Twitch Client ID (D-025) already removed the paste step for most viewers.
 - **How they watch** (the operator, 2026-11-23):
   - **One stream at a time.** To change, they switch rather than open another window: "Usually I find myself not wanting to open up multiple streams… I just want to switch to this person."
   - **They usually know who they want:** "I'm thinking of this person and I know they're not online, but I want their VODs. Or even if they are online, you may still want to watch their VODs."
@@ -36,6 +37,8 @@ IINA Streams is an IINA plugin. It opens Twitch live channels, Twitch VODs and Y
 Success means a usable native IINA streaming and chat experience, judged in IINA rather than in a browser or a plan (AGENTS.md).
 
 ## Positioning
+- **Better than the browser, not a copy of it** (operator, 2026-11-23): "not just replicate the browser, but go beyond." Why IINA, in their words: lightweight, smoother, hardware decoding, keyboard control, speed for VODs, "a slicker experience overall", and "it kind of prevents ads". IINA has no plugin that gives it a real streaming experience.
+  - **Unchecked, and it could bite:** whether Streams skips Twitch's in-stream ads today. Twitch playback goes straight to Twitch's playlist (`src/twitch-playback.js`, the recipe from Streamlink), and nothing in that code filters ad segments (read). Streamlink itself filters them. Check natively before anyone claims it.
 - **A native player, not a browser tab.** The stream plays in IINA, with chat drawn by the plugin.
 - **The viewer's own ranking.** Who appears first is decided by Streams from local watch history, pins and hides. Twitch data is an extra input when signed in, never a replacement. There is no sponsored or paid ordering (the spec's "Decided" list, `docs/design/FINDING-AND-WATCHING-SPEC-2026-11-22.md` §1 and §3).
 - **Local by default.** It runs on the Mac, with no servers of its own and no telemetry. Saved preferences and history stay on the Mac (README, Privacy).

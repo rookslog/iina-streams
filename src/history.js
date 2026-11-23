@@ -8,6 +8,13 @@
 // for an offline open. No URL, title, token, signature or query string is ever kept: identity fields that
 // look like part of a URL are rejected, and every other input field is ignored.
 //
+// Choices beyond the test design (accepted by the lead, 2026-11-22):
+// - the person just recorded is never the one evicted at the bound;
+// - storage write and backup errors are swallowed: the in-memory list is kept, and nothing is overwritten
+//   after a failed backup;
+// - a file that cannot be used (bad JSON, no version, no people array) is treated as corrupt;
+// - a file with a newer version is read-only: it loads for query and every change is a no-op.
+//
 // Storage contract: read(path) returns text or null when the file is missing (it may throw);
 // write(path, text); backup(from, to) copies the original bytes. `at` and now() are Unix seconds.
 
@@ -32,16 +39,24 @@ const AGE_WEIGHTS = Object.freeze([
 const OLDER_WEIGHT = 10;
 
 const PROVIDERS = Object.freeze(['twitch', 'youtube']);
-// Characters that appear in URLs and query strings, plus any whitespace.
-const UNSAFE_IDENTITY_PATTERN = /[?/=\s]/;
+// A login or channel id never contains URL characters or whitespace.
+const UNSAFE_LOGIN_PATTERN = /[?/=\s]/;
+// A display name may hold spaces and any Unicode, but not URL characters, a backslash or control characters.
+const UNSAFE_DISPLAY_NAME_PATTERN = /[?/=\\\p{Cc}]/u;
+const MAX_DISPLAY_NAME_LENGTH = 64;
 const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 
 function isFiniteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function isSafeIdentityText(value) {
-  return typeof value === 'string' && value !== '' && !UNSAFE_IDENTITY_PATTERN.test(value);
+function isSafeLogin(value) {
+  return typeof value === 'string' && value !== '' && !UNSAFE_LOGIN_PATTERN.test(value);
+}
+
+function isSafeDisplayName(value) {
+  return typeof value === 'string' && value.trim() !== '' &&
+    value.length <= MAX_DISPLAY_NAME_LENGTH && !UNSAFE_DISPLAY_NAME_PATTERN.test(value);
 }
 
 // Twitch logins are case-insensitive and stored lowercase; YouTube channel IDs are case-sensitive.
@@ -55,13 +70,13 @@ function cleanIdentity(input) {
   if (!input || !PROVIDERS.includes(input.provider)) {
     return null;
   }
-  if (!isSafeIdentityText(input.login)) {
+  if (!isSafeLogin(input.login)) {
     return null;
   }
   const displayName = input.displayName === undefined || input.displayName === null
     ? input.login
     : input.displayName;
-  if (!isSafeIdentityText(displayName)) {
+  if (!isSafeDisplayName(displayName)) {
     return null;
   }
   return {

@@ -51,7 +51,12 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - **Corrupt or unreadable file:** it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
    - **Unknown fields:** ignored.
    - **Version:** the file has a `version`; a newer version than the code knows means read-only, with no overwrite.
-9. **Privacy guard.** A `displayName` or `login` containing `?`, `/`, `=` or whitespace is rejected; nothing is stored. Feed a signed playlist URL in every field: the stored file contains none of it.
+9. **Privacy guard.**
+   - A `login` (or YouTube channel id) containing `?`, `/`, `=` or whitespace is rejected.
+   - A `displayName` containing `?`, `/`, `=`, `\`, a control character, or longer than 64 characters is rejected. Spaces and any other Unicode are allowed ("Linus Tech Tips" records).
+   - An unknown `provider` (anything but `twitch` or `youtube`) is rejected.
+   - A rejected record stores nothing. Feed a signed playlist URL in every field: the stored file contains none of it.
+   - Amended 2026-11-22 (lead): spaces allowed in display names.
 
 ## Wiring in `global.js` (shim tests)
 

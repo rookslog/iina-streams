@@ -268,19 +268,33 @@ test('8. loads v1, ignores unknown fields, recovers bad data, and never overwrit
 test('9. unsafe identity fields are rejected and unknown playback metadata never reaches disk', () => {
   const disk = fakeDisk();
   const history = openHistory(disk);
-  for (const field of ['login', 'displayName']) {
-    for (const ch of ['?', '/', '=', ' ', '\t', '\n']) {
-      history.record({...OHNE, [field]: 'bad' + ch + 'value', at: NOW});
-    }
+  for (const ch of ['?', '/', '=', ' ', '\t', '\n']) {
+    history.record({...OHNE, login: 'bad' + ch + 'value', at: NOW});
   }
+  // Display names may hold spaces, but not URL characters, a backslash, control characters or 65+ characters.
+  for (const ch of ['?', '/', '=', '\\', '\t', '\n', '\u0000']) {
+    history.record({...OHNE, displayName: 'bad' + ch + 'value', at: NOW});
+  }
+  history.record({...OHNE, displayName: 'x'.repeat(65), at: NOW});
+  history.record({...OHNE, displayName: '   ', at: NOW});
+  // An unknown provider is rejected on its own, with an otherwise valid identity.
+  history.record({...OHNE, provider: 'vimeo', at: NOW});
   const signed = 'https://invalid.example/playlist.m3u8?token=fixture-secret&sig=fixture-signature';
   const metadata = {url: signed, mediaURL: signed, title: signed, token: signed, signature: signed, query: signed};
   history.record({provider: signed, login: signed, displayName: signed, at: signed, ...metadata});
+  history.record({...OHNE, displayName: signed, at: NOW});
+  history.record({provider: 'youtube', login: signed, displayName: 'Linus Tech Tips', at: NOW});
   assert.deepEqual(history.query(''), []);
   assert.deepEqual(disk.changes, [], 'reject without storing anything');
 
   history.record({...OHNE, at: NOW, ...metadata});
+  const channel = {provider: 'youtube', login: 'UCaBcD001234567890xyzPQ', displayName: 'Linus Tech Tips'};
+  history.record({...channel, at: NOW, ...metadata});
   assert.deepEqual(disk.snapshot(), {
-    version: 1, paused: false, people: [{...OHNE, visits: [{at: NOW, seconds: null}]}],
+    version: 1, paused: false, people: [
+      {...OHNE, visits: [{at: NOW, seconds: null}]},
+      {...channel, visits: [{at: NOW, seconds: null}]},
+    ],
   });
+  assert.doesNotMatch(disk.files.get(FILE), /fixture-secret|fixture-signature|invalid\.example|https?:/);
 });

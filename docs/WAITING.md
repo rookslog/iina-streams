@@ -179,6 +179,17 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - "what are these… weird collapsible menus like history, forget Ohnepixel? This is all terrible."
 
   **Next:** an independent Impeccable critique, run as a check of the Impeccable setup too (the reviewer isn't told these complaints, to see whether the critique finds them). Then one round at real fidelity. No pick is needed until then.
+- **Update 2026-11-23 02:45: the critique, as a check of the Impeccable setup.** It ran properly: two separate assessment agents, real browser inspection, and no knowledge of the operator's complaints. Score 22/40, "Acceptable"; the operator called the same page "trash". Full report: [CRITIQUE.md](design/finding-2026-11-22/plugin-sidebar/CRITIQUE.md).
+
+  | The operator's complaint | Did the critique find it? |
+  |---|---|
+  | History and "Forget Ohnepixel" groups don't belong | No. It flagged only their place at the bottom; the brief had asked for them, which was the lead's error. |
+  | The search field reads as VOD search | No. It found only the channel view's search problems. |
+  | A better live/offline split | Barely: "the headings repeat the live dot" was a minor point. |
+  | Thumbnails crowd the panel | Partly: Continue watching's thumbnails are the heaviest block. |
+  | Channel view spacing | Partly: controls sit above a card they don't affect. |
+
+  It also found things the operator didn't raise: what's playing has no home in the panel, blank empty states, a two-click switch, keyboard focus lost, and "Most viewed" against Product Principle 3. **Reading:** the critique judges against the brief, and catches generic failures but not wrong product calls the brief itself made. Fixing the inputs (PRODUCT.md, a DESIGN.md, the brief) comes before the next round.
 
 ## Answered
 

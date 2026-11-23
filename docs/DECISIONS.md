@@ -150,3 +150,14 @@ Update this append-only log when actual decisions are made, with evidence and ro
   - the launch date becomes undated (was "tonight");
   - typing search is in scope (D-026 had excluded search);
   - journeys J11 (background listening), J12 (long VODs), J14 (stream end) and J19 (history privacy) are approved.
+
+2026-11-22 D-035 sizing (lead, 22:55; the check D-035 pre-authorized). History and controls (#73) plus typing suggestions (#74) are sized from their likely test lists and the code they touch: `ui/open.js` (119 lines), `global.js` (471), `src/twitch-helix.js` (305), and a new pure `src/history.js` with `@data` storage.
+- **Raw estimate, build plus review plus native check:**
+  - #73: about 3 h (history module, open and close recording, frecency, pause, forget and clear, menu controls);
+  - #74: about 4.5 h (keyboard listbox, local ranking, Helix Search Channels signed in, GQL search signed out per D-034, the stale-result and no-reorder invariants, D-032 review rounds).
+
+  About 7.5 h in total: over the 6 h line.
+- **Calibrated:** today's one measured comparison ran about 3x faster than the lead's estimate (predicted 3–5 h, took 1 h 18 m; signal obs-20261122T225747-4ccc61). That gives about 2.5–4 h: under the line.
+- **Decision:** no flip yet. The People screen's build stays in 0.6.0.
+- **Re-check:** when #73 merges, using its measured time. If #73 took more than 3 h, the flip fires: the People screen's build moves after launch, and its design stays in the overhaul.
+- **Rests on:** one calibration point. INFERRED.

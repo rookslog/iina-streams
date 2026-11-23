@@ -19,6 +19,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 
 1. **Record and merge.** `record({provider:'twitch', login:'Ohnepixel', displayName, at})` stores login `ohnepixel` (lowercased). A second record for the same provider and login appends a visit; it never creates a second person.
 2. **Duration.** `finish({provider, login, at})` sets the newest open visit's `seconds` = `at − visit.at`, capped at 12 h. A `finish` with no open visit is a no-op.
+   - Amended 2026-11-22 round 2 (lead): a `finish` identical to the last one applied (same person, same `at`) is a retry and is also a no-op; it doesn't close the person's other open visit. A `finish` with a non-finite or non-number `at` is ignored.
 3. **Frecency** (how often and how recently). Score = Σ over visits of an age weight:
 
    | Visit age | Weight |
@@ -36,6 +37,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
      - one visit today outranks one visit 20 days ago;
      - a 10-second visit adds nothing.
 4. **Bound.** At most 500 people. Recording a 501st evicts the lowest score; ties go to the oldest last visit.
+   - Amended 2026-11-22 round 2 (lead): the person just recorded is never the one evicted. Otherwise a full history of strong regulars could never admit anyone new.
 5. **Query, for #74.** `query('oh')`:
    - matches are case-insensitive prefix matches of `login` or `displayName`, then word-start matches inside `displayName`;
    - prefix matches come before word-start matches; within each group, by score; then by newest visit; then by login;
@@ -51,12 +53,16 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - **Corrupt or unreadable file:** it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
    - **Unknown fields:** ignored.
    - **Version:** the file has a `version`; a newer version than the code knows means read-only, with no overwrite.
+   - Amended 2026-11-22 round 2 (lead):
+     - **The version is checked before the shape.** A newer file with any layout (`{version: 2, people: {}}`) is read-only: nothing is written and nothing is backed up. Only a file with no usable version, or a v1 file with the wrong shape, is "corrupt".
+     - **Loaded data is normalised:** visits sorted by time, durations capped at 12 h, a visit in the future counted as now.
+     - **A failed write** doesn't throw. The change stays in memory, and every mutating call (`record`, `finish`, `forget`, `clear`, `setPaused`) returns whether it is in the file. The next call, including an identical retry, writes again. After a failed backup the unreadable original is never overwritten.
+     - **Pause** writes only when its stored value changes.
 9. **Privacy guard.**
-   - A `login` (or YouTube channel id) containing `?`, `/`, `=` or whitespace is rejected.
-   - A `displayName` containing `?`, `/`, `=`, `\`, a control character, or longer than 64 characters is rejected. Spaces and any other Unicode are allowed ("Linus Tech Tips" records).
-   - An unknown `provider` (anything but `twitch` or `youtube`) is rejected.
+   - **Login, an allowlist** (amended 2026-11-22 round 2, lead): a Twitch login matches `^[a-z0-9_]{1,25}$` after lowercasing; a YouTube channel id matches `^UC[A-Za-z0-9_-]{22}$`. Anything else (an address, a URL, a bare token) is rejected.
+   - A `displayName` containing `:`, `?`, `/`, `=`, `\`, `&` or a control character, or longer than 64 characters, is rejected. Spaces and any other Unicode are allowed ("Linus Tech Tips" records). (Amended 2026-11-22 (lead): spaces allowed in display names.)
+   - The `provider` must be exactly `twitch` or `youtube`.
    - A rejected record stores nothing. Feed a signed playlist URL in every field: the stored file contains none of it.
-   - Amended 2026-11-22 (lead): spaces allowed in display names.
 
 ## Wiring in `global.js` (shim tests)
 

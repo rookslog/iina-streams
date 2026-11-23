@@ -5,15 +5,25 @@
 // Test design: docs/design/finding-2026-11-22/history/TESTS.md (items 1-9).
 //
 // Privacy: a person is {provider, login, displayName, visits}; a visit is {at, seconds} plus offline:true
-// for an offline open. No URL, title, token, signature or query string is ever kept: identity fields that
-// look like part of a URL are rejected, and every other input field is ignored.
+// for an offline open. No URL, title, token, signature or query string is ever kept. The login is an
+// allowlist (a Twitch login or a YouTube channel id, nothing else), the display name is bounded and may not
+// hold URL characters, and every other input field is ignored.
 //
 // Choices beyond the test design (accepted by the lead, 2026-11-22):
-// - the person just recorded is never the one evicted at the bound;
-// - storage write and backup errors are swallowed: the in-memory list is kept, and nothing is overwritten
-//   after a failed backup;
+// - the person just recorded is never the one evicted at the bound (otherwise a full history could never
+//   admit anyone new);
+// - a storage error never throws. The change stays in memory and the store stays "unsaved": the next call
+//   to any method retries the write, and the call that made the change returns false. Nothing is
+//   overwritten after a failed backup;
 // - a file that cannot be used (bad JSON, no version, no people array) is treated as corrupt;
-// - a file with a newer version is read-only: it loads for query and every change is a no-op.
+// - a file with a newer version is read-only, checked before its shape: it loads for query, and every
+//   change is a no-op that writes and backs up nothing;
+// - loaded visits are sorted by time, loaded durations are capped at 12 hours, and a loaded visit in the
+//   future counts as now;
+// - a finish identical to the last one applied (same person, same time) is a retry and does nothing.
+//
+// record, finish, forget, clear and setPaused return true when the change is in the file (for forget, clear
+// and setPaused also when it already was), and false when it was ignored or the write failed.
 //
 // Storage contract: read(path) returns text or null when the file is missing (it may throw);
 // write(path, text); backup(from, to) copies the original bytes. `at` and now() are Unix seconds.
@@ -39,19 +49,26 @@ const AGE_WEIGHTS = Object.freeze([
 const OLDER_WEIGHT = 10;
 
 const PROVIDERS = Object.freeze(['twitch', 'youtube']);
-// A login or channel id never contains URL characters or whitespace.
-const UNSAFE_LOGIN_PATTERN = /[?/=\s]/;
-// A display name may hold spaces and any Unicode, but not URL characters, a backslash or control characters.
-const UNSAFE_DISPLAY_NAME_PATTERN = /[?/=\\\p{Cc}]/u;
+const TWITCH_LOGIN_PATTERN = /^[A-Za-z0-9_]{1,25}$/;
+const YOUTUBE_CHANNEL_ID_PATTERN = /^UC[A-Za-z0-9_-]{22}$/;
+// A display name may hold spaces and any other Unicode, but not URL characters, a backslash or control characters.
+const UNSAFE_DISPLAY_NAME_PATTERN = /[:?/=\\&\p{Cc}]/u;
 const MAX_DISPLAY_NAME_LENGTH = 64;
-const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+// A word start follows a character that is not part of a word. Marks belong to the letter before them.
+const WORD_CHARACTER = /[\p{L}\p{N}\p{M}]/u;
 
 function isFiniteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function isSafeLogin(value) {
-  return typeof value === 'string' && value !== '' && !UNSAFE_LOGIN_PATTERN.test(value);
+// An allowlist, not a blocklist: only a Twitch login or a YouTube channel id can be an identity, so a URL,
+// an address or a bare token never is one.
+function isSafeLogin(provider, login) {
+  if (typeof login !== 'string') {
+    return false;
+  }
+  const pattern = provider === 'twitch' ? TWITCH_LOGIN_PATTERN : YOUTUBE_CHANNEL_ID_PATTERN;
+  return pattern.test(login);
 }
 
 function isSafeDisplayName(value) {
@@ -70,7 +87,7 @@ function cleanIdentity(input) {
   if (!input || !PROVIDERS.includes(input.provider)) {
     return null;
   }
-  if (!isSafeLogin(input.login)) {
+  if (!isSafeLogin(input.provider, input.login)) {
     return null;
   }
   const displayName = input.displayName === undefined || input.displayName === null
@@ -90,8 +107,9 @@ function personKey(provider, login) {
   return provider + '\n' + login;
 }
 
-// Returns a clean visit from stored data, or null. Unknown fields are dropped.
-function cleanStoredVisit(raw) {
+// Returns a clean visit from stored data, or null. Unknown fields are dropped. A visit in the future (clock
+// skew) counts as now, and a duration is capped like finish() caps it.
+function cleanStoredVisit(raw, nowSeconds) {
   if (!raw || !isFiniteNumber(raw.at)) {
     return null;
   }
@@ -99,19 +117,27 @@ function cleanStoredVisit(raw) {
   if (!open && !(isFiniteNumber(raw.seconds) && raw.seconds >= 0)) {
     return null;
   }
-  const visit = {at: raw.at, seconds: raw.seconds};
+  const seconds = open ? null : Math.min(raw.seconds, MAX_VISIT_SECONDS);
+  const visit = {at: Math.min(raw.at, nowSeconds), seconds};
   if (raw.offline === true) {
     visit.offline = true;
   }
   return visit;
 }
 
-function cleanStoredPerson(raw) {
+function cleanStoredPerson(raw, nowSeconds) {
   const identity = cleanIdentity(raw);
   if (!identity || !Array.isArray(raw.visits)) {
     return null;
   }
-  const visits = raw.visits.map(cleanStoredVisit).filter(visit => visit !== null);
+  const visits = [];
+  for (const rawVisit of raw.visits) {
+    const visit = cleanStoredVisit(rawVisit, nowSeconds);
+    if (visit !== null) {
+      visits.push(visit);
+    }
+  }
+  visits.sort((a, b) => a.at - b.at);
   return {...identity, visits: visits.slice(-MAX_VISITS_PER_PERSON)};
 }
 
@@ -153,18 +179,23 @@ function copyPerson(person) {
 }
 
 // Where the query matches a person: 0 = prefix of login or display name, 1 = start of a later word in the
-// display name (after any character that is not a letter or digit), null = no match.
+// display name (after any character that is not a letter, digit or mark), null = no match.
 function matchRank(person, needle) {
   const login = person.login.toLowerCase();
   const name = person.displayName.toLowerCase();
   if (login.startsWith(needle) || name.startsWith(needle)) {
     return 0;
   }
-  for (let i = 1; i < name.length; i++) {
-    const startsWord = !LETTER_OR_DIGIT.test(name[i - 1]);
-    if (startsWord && name.startsWith(needle, i)) {
+  // Walk code points, not UTF-16 units, so half of a surrogate pair is never taken for a separator.
+  let previous = null;
+  let offset = 0;
+  for (const character of name) {
+    const startsWord = previous !== null && !WORD_CHARACTER.test(previous);
+    if (startsWord && name.startsWith(needle, offset)) {
       return 1;
     }
+    previous = character;
+    offset += character.length;
   }
   return null;
 }
@@ -191,7 +222,7 @@ function compareByInterest(a, b) {
 
 // Loads the file. Result: {people, paused, readOnly, damaged}. `damaged` means the file existed but could not
 // be used, so the original must be backed up before anything overwrites it.
-function loadFile(storage) {
+function loadFile(storage, nowSeconds) {
   const empty = {people: [], paused: false, readOnly: false, damaged: false};
   let text;
   try {
@@ -209,16 +240,22 @@ function loadFile(storage) {
   } catch (error) {
     return {...empty, damaged: true};
   }
-  const looksValid = data && typeof data === 'object' && Number.isInteger(data.version) &&
-    data.version >= 1 && Array.isArray(data.people);
-  if (!looksValid) {
+  if (!data || typeof data !== 'object' || typeof data.version !== 'number') {
+    return {...empty, damaged: true};
+  }
+  // The version comes before the shape: a newer file may lay its data out differently, and it must never
+  // be mistaken for a damaged one (which would be backed up and overwritten).
+  const newer = data.version > FORMAT_VERSION;
+  const knownShape = data.version >= 1 && Array.isArray(data.people);
+  if (!newer && !knownShape) {
     return {...empty, damaged: true};
   }
 
   const people = [];
   const seen = new Set();
-  for (const raw of data.people) {
-    const person = cleanStoredPerson(raw);
+  const rawPeople = Array.isArray(data.people) ? data.people : [];
+  for (const raw of rawPeople) {
+    const person = cleanStoredPerson(raw, nowSeconds);
     if (person === null) {
       continue;
     }
@@ -228,29 +265,31 @@ function loadFile(storage) {
       people.push(person);
     }
   }
-  return {
-    people,
-    paused: data.paused === true,
-    // A newer version than this code knows: show what we can, never overwrite it.
-    readOnly: data.version > FORMAT_VERSION,
-    damaged: false,
-  };
+  return {people, paused: data.paused === true, readOnly: newer, damaged: false};
 }
 
 function createHistory({storage, now}) {
-  const loaded = loadFile(storage);
+  const loaded = loadFile(storage, now());
   let people = loaded.people;
   let paused = loaded.paused;
   const readOnly = loaded.readOnly;
   let needsBackup = loaded.damaged;
+  // True while memory holds a change the file does not. Any later call retries the write.
+  let unsaved = false;
+  // The last finish that closed a visit, so an identical retry can be told from a new finish.
+  let lastFinish = null;
 
   function findPerson(provider, login) {
     return people.find(person => person.provider === provider && person.login === login) || null;
   }
 
-  function save() {
+  // Writes any unsaved change. Returns true when the file is current, false when it is not or cannot be.
+  function flush() {
     if (readOnly) {
-      return;
+      return false;
+    }
+    if (!unsaved) {
+      return true;
     }
     try {
       if (needsBackup) {
@@ -258,9 +297,12 @@ function createHistory({storage, now}) {
         needsBackup = false;
       }
       storage.write(HISTORY_FILE, JSON.stringify({version: FORMAT_VERSION, paused, people}));
+      unsaved = false;
+      return true;
     } catch (error) {
-      // Storage trouble must not break playback; the in-memory list stays usable.
-      // If the backup failed, the unreadable original is left alone (never overwritten unbacked).
+      // Storage trouble must not break playback. The change stays in memory and is retried on the next call;
+      // after a failed backup the unreadable original is never overwritten.
+      return false;
     }
   }
 
@@ -283,15 +325,14 @@ function createHistory({storage, now}) {
     }
   }
 
-  // record({provider, login, displayName, at, offline?}): one visit. Offline opens are stored closed with
-  // zero seconds and keep their interest after a reload.
-  function record(input) {
+  // Adds the visit in memory. Returns true when one was added.
+  function addVisit(input) {
     if (paused || readOnly || !input) {
-      return;
+      return false;
     }
     const identity = cleanIdentity(input);
     if (identity === null || !isFiniteNumber(input.at)) {
-      return;
+      return false;
     }
 
     const visit = input.offline === true
@@ -310,29 +351,54 @@ function createHistory({storage, now}) {
     person.visits = person.visits.slice(-MAX_VISITS_PER_PERSON);
 
     evictLowestScore(person);
-    save();
+    lastFinish = null;
+    unsaved = true;
+    return true;
   }
 
-  // finish({provider, login, at}): closes the newest open visit. No open visit means nothing changes.
-  function finish(input) {
+  // record({provider, login, displayName, at, offline?}): one visit. Offline opens are stored closed with
+  // zero seconds and keep their interest after a reload.
+  function record(input) {
+    const added = addVisit(input);
+    const saved = flush();
+    return added && saved;
+  }
+
+  // Closes the newest open visit in memory. Returns 'closed', 'repeat' (identical to the last finish) or
+  // 'ignored' (paused, read-only, bad input, unknown person or no open visit).
+  function closeVisit(input) {
     if (paused || readOnly || !input || !isFiniteNumber(input.at)) {
-      return;
+      return 'ignored';
     }
     const identity = cleanIdentity(input);
     if (identity === null) {
-      return;
+      return 'ignored';
     }
     const person = findPerson(identity.provider, identity.login);
     if (person === null) {
-      return;
+      return 'ignored';
+    }
+    const key = personKey(person.provider, person.login);
+    if (lastFinish !== null && lastFinish.key === key && lastFinish.at === input.at) {
+      return 'repeat';
     }
     const open = person.visits.filter(visit => visit.seconds === null);
     if (open.length === 0) {
-      return;
+      return 'ignored';
     }
     const visit = open[open.length - 1];
     visit.seconds = Math.min(MAX_VISIT_SECONDS, Math.max(0, input.at - visit.at));
-    save();
+    lastFinish = {key, at: input.at};
+    unsaved = true;
+    return 'closed';
+  }
+
+  // finish({provider, login, at}): closes the newest open visit. No open visit, or an identical repeat of the
+  // last finish, changes nothing.
+  function finish(input) {
+    const outcome = closeVisit(input);
+    const saved = flush();
+    return outcome !== 'ignored' && saved;
   }
 
   // query(text, {provider}?): people whose login or display name starts with the text, then those with a
@@ -358,34 +424,38 @@ function createHistory({storage, now}) {
     return ordered.map(({person, score}) => ({...copyPerson(person), score}));
   }
 
+  // Writes only when the stored value changes.
   function setPaused(value) {
     const next = value === true;
-    if (readOnly || next === paused) {
-      return;
+    if (!readOnly && next !== paused) {
+      paused = next;
+      unsaved = true;
     }
-    paused = next;
-    save();
+    return flush();
   }
 
   // Forget and clear still work while paused: they only remove data.
   function forget(input) {
-    if (readOnly || !input || !PROVIDERS.includes(input.provider) || typeof input.login !== 'string') {
-      return;
+    const known = input && PROVIDERS.includes(input.provider) && typeof input.login === 'string';
+    if (!readOnly && known) {
+      const login = normalizeLogin(input.provider, input.login);
+      const remaining = people.filter(person => !(person.provider === input.provider && person.login === login));
+      if (remaining.length !== people.length) {
+        people = remaining;
+        lastFinish = null;
+        unsaved = true;
+      }
     }
-    const login = normalizeLogin(input.provider, input.login);
-    const before = people.length;
-    people = people.filter(person => !(person.provider === input.provider && person.login === login));
-    if (people.length !== before) {
-      save();
-    }
+    return flush();
   }
 
   function clear() {
-    if (readOnly) {
-      return;
+    if (!readOnly) {
+      people = [];
+      lastFinish = null;
+      unsaved = true;
     }
-    people = [];
-    save();
+    return flush();
   }
 
   return {

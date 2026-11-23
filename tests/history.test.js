@@ -20,6 +20,8 @@ const BACKUP = FILE + '.bad';
 const NOW = 1800000000;
 const DAY = 24 * 60 * 60;
 const OHNE = {provider: 'twitch', login: 'ohnepixel', displayName: 'Ohnepixel'};
+// A YouTube channel id is "UC" and 22 more characters (round 2: logins are an allowlist).
+const CHANNEL_ID = 'UCaBcD0123456789xyzPQrst';
 
 // Surface the missing module once, not one loader error per test or a file-level abort.
 let historyModule, missingHistory;
@@ -65,7 +67,10 @@ function openHistory(disk = fakeDisk()) {
 
 const snapshot = (people, paused = false) => JSON.stringify({version: 1, paused, people});
 const twitch = (login, displayName = login) => ({provider: 'twitch', login, displayName});
-const ranks = (history, text = '', options) => history.query(text, options).map(({login, score}) => [login, score]);
+function ranks(history, text = '', options) {
+  const people = history.query(text, options);
+  return people.map(person => [person.login, person.score]);
+}
 
 function watch(history, person, at, seconds = 60) {
   history.record({...person, at});
@@ -133,6 +138,8 @@ test('3. frecency favors recent visits and ignores accidental opens after they f
     assert.deepEqual(ranks(history, login), [[login, score]], 'open visit at age ' + age);
   }
 
+  watch(history, twitch('almost'), NOW - 30, 29);
+  assert.deepEqual(ranks(history, 'almost'), [['almost', 0]], 'a 29 second visit is an accidental open');
   watch(history, twitch('threshold'), NOW - 30, 30);
   watch(history, twitch('instant'), NOW, 0);
   assert.deepEqual(ranks(history, 'threshold'), [['threshold', 100]]);
@@ -174,16 +181,16 @@ test('5. query ranks prefixes before display-name word starts, with score, recen
   watch(history, twitch('dj', 'DJ-Ohne'), NOW - 60);
   watch(history, twitch('mc', 'MC-Ohne'), NOW - 30, 30);
   watch(history, twitch('choir', 'ChOhr'), NOW - DAY); // substring, not a word start
-  watch(history, {provider: 'youtube', login: 'UCaBcD001234567890xyzPQ', displayName: 'OhTube'}, NOW - 50, 50);
+  watch(history, {provider: 'youtube', login: CHANNEL_ID, displayName: 'OhTube'}, NOW - 50, 50);
 
   assert.deepEqual(history.query('oH').map(({login}) => login), [
-    'ohrepeat', 'UCaBcD001234567890xyzPQ', 'alpha', 'zulu', 'oholder', 'ohlow', 'dj', 'mc',
+    'ohrepeat', CHANNEL_ID, 'alpha', 'zulu', 'oholder', 'ohlow', 'dj', 'mc',
   ]);
   assert.deepEqual(ranks(history, 'OH', {provider: 'twitch'}), [
     ['ohrepeat', 200], ['alpha', 100], ['zulu', 100], ['oholder', 100], ['ohlow', 50],
     ['dj', 200], ['mc', 100],
   ]);
-  assert.deepEqual(ranks(history, 'oh', {provider: 'youtube'}), [['UCaBcD001234567890xyzPQ', 100]]);
+  assert.deepEqual(ranks(history, 'oh', {provider: 'youtube'}), [[CHANNEL_ID, 100]]);
   assert.deepEqual(ranks(history)[0], ['dj', 200], 'an empty query ranks by score alone first');
 });
 
@@ -216,12 +223,12 @@ test('7. forget and clear write immediately while paused; forget is provider sco
   const disk = fakeDisk();
   const history = openHistory(disk);
   history.record({...OHNE, at: NOW});
-  history.record({...OHNE, provider: 'youtube', at: NOW});
+  history.record({...OHNE, provider: 'youtube', login: CHANNEL_ID, at: NOW});
   history.setPaused(true);
 
   history.forget({provider: 'twitch', login: 'OHNEPIXEL'});
   assert.deepEqual(disk.snapshot().people.map(({provider, login}) => [provider, login]), [
-    ['youtube', 'ohnepixel'],
+    ['youtube', CHANNEL_ID],
   ]);
   assert.deepEqual(openHistory(disk).query('').map(({provider}) => provider), ['youtube']);
 
@@ -272,8 +279,23 @@ test('9. unsafe identity fields are rejected and unknown playback metadata never
     history.record({...OHNE, login: 'bad' + ch + 'value', at: NOW});
   }
   // Display names may hold spaces, but not URL characters, a backslash, control characters or 65+ characters.
-  for (const ch of ['?', '/', '=', '\\', '\t', '\n', '\u0000']) {
+  for (const ch of ['?', '/', '=', '\\', '&', ':', '\t', '\n', '\u0000']) {
     history.record({...OHNE, displayName: 'bad' + ch + 'value', at: NOW});
+  }
+  // Round 2: a login is an allowlist. Twitch: 1-25 of a-z, 0-9, _. YouTube: "UC" plus 22 of A-Z, a-z, 0-9, _, -.
+  const badLogins = [
+    ['twitch', 'mailto:fixture@example.invalid'], ['twitch', 'a'.repeat(26)], ['twitch', 'ohne-pixel'],
+    ['twitch', 'ohne.pixel'], ['twitch', ''], ['twitch', CHANNEL_ID + '.'],
+    ['youtube', 'ohnepixel'], ['youtube', CHANNEL_ID.slice(1)], ['youtube', CHANNEL_ID + 'x'],
+    ['youtube', 'UC' + 'a'.repeat(21) + '.'], ['youtube', 'uc' + CHANNEL_ID.slice(2)],
+  ];
+  for (const [provider, login] of badLogins) {
+    history.record({provider, login, displayName: 'Nobody', at: NOW});
+  }
+  // Providers match exactly.
+  for (const provider of ['Twitch', 'TWITCH', 'YouTube', 'YOUTUBE', ' twitch', 'youtube ']) {
+    history.record({...OHNE, provider, at: NOW});
+    history.record({...OHNE, provider, login: CHANNEL_ID, at: NOW});
   }
   history.record({...OHNE, displayName: 'x'.repeat(65), at: NOW});
   history.record({...OHNE, displayName: '   ', at: NOW});
@@ -288,7 +310,7 @@ test('9. unsafe identity fields are rejected and unknown playback metadata never
   assert.deepEqual(disk.changes, [], 'reject without storing anything');
 
   history.record({...OHNE, at: NOW, ...metadata});
-  const channel = {provider: 'youtube', login: 'UCaBcD001234567890xyzPQ', displayName: 'Linus Tech Tips'};
+  const channel = {provider: 'youtube', login: CHANNEL_ID, displayName: 'Linus Tech Tips'};
   history.record({...channel, at: NOW, ...metadata});
   assert.deepEqual(disk.snapshot(), {
     version: 1, paused: false, people: [
@@ -297,4 +319,199 @@ test('9. unsafe identity fields are rejected and unknown playback metadata never
     ],
   });
   assert.doesNotMatch(disk.files.get(FILE), /fixture-secret|fixture-signature|invalid\.example|https?:/);
+});
+
+// Round 2 (Codex review of d790bff/bae776d, lead disposition): regressions the first nine tests missed.
+
+// A disk whose writes or backups can be switched to fail, like a full or read-only volume.
+function failingDisk(initial = null, {unreadable = false} = {}) {
+  const disk = fakeDisk(initial, {unreadable});
+  const faults = {write: false, backup: false};
+  const storage = {
+    read: disk.storage.read,
+    write(path, text) {
+      if (faults.write) throw new Error('disk full');
+      disk.storage.write(path, text);
+    },
+    backup(from, to) {
+      if (faults.backup) throw new Error('cannot back up');
+      disk.storage.backup(from, to);
+    },
+  };
+  const open = () => historyModule.createHistory({storage, now: () => NOW});
+  return {disk, faults, open};
+}
+
+const visitsOf = (history, login) => history.query(login).find(person => person.login === login).visits;
+
+test('r2-1. a failed write is reported, never thrown, and an identical retry writes it', () => {
+  const {disk, faults, open} = failingDisk(snapshot([{...OHNE, visits: [{at: NOW - 60, seconds: 60}]}]));
+  const history = open();
+  const stored = disk.files.get(FILE);
+
+  faults.write = true;
+  assert.equal(history.forget(OHNE), false, 'forget reports the failure');
+  assert.equal(disk.files.get(FILE), stored, 'the file still has the person');
+  faults.write = false;
+  assert.equal(history.forget(OHNE), true, 'the identical retry writes');
+  assert.deepEqual(disk.snapshot().people, []);
+
+  faults.write = true;
+  assert.equal(history.setPaused(true), false);
+  assert.equal(disk.snapshot().paused, false);
+  faults.write = false;
+  assert.equal(history.setPaused(true), true);
+  assert.equal(disk.snapshot().paused, true);
+
+  history.setPaused(false);
+  history.record({...OHNE, at: NOW});
+  faults.write = true;
+  assert.equal(history.clear(), false);
+  assert.equal(disk.snapshot().people.length, 1);
+  faults.write = false;
+  assert.equal(history.clear(), true);
+  assert.deepEqual(disk.snapshot().people, []);
+  assert.deepEqual(open().query(''), [], 'a reload sees the cleared list');
+});
+
+test('r2-2. any later call flushes an unsaved change, and a failed record or finish is reported', () => {
+  const {disk, faults, open} = failingDisk();
+  const history = open();
+
+  faults.write = true;
+  assert.equal(history.record({...OHNE, at: NOW - 100}), false);
+  assert.equal(disk.files.has(FILE), false);
+  assert.equal(history.finish({...OHNE, at: NOW - 40}), false);
+  faults.write = false;
+  assert.equal(history.record({...twitch('other'), at: NOW}), true);
+  assert.deepEqual(disk.snapshot().people.map(({login, visits}) => [login, visits]), [
+    ['ohnepixel', [{at: NOW - 100, seconds: 60}]], ['other', [{at: NOW, seconds: null}]],
+  ]);
+  assert.equal(history.record({...OHNE, at: NOW, offline: 'yes'}), true, 'a good call reports success');
+  assert.equal(history.record({provider: 'vimeo', login: 'x', at: NOW}), false, 'an ignored call reports false');
+});
+
+test('r2-3. a failed backup never lets the unreadable original be overwritten', () => {
+  const raw = '{truncated';
+  const {disk, faults, open} = failingDisk(raw);
+  const history = open();
+
+  faults.backup = true;
+  assert.equal(history.record({...OHNE, at: NOW}), false);
+  assert.equal(disk.files.get(FILE), raw, 'no write after a failed backup');
+  assert.equal(disk.files.has(BACKUP), false);
+  faults.backup = false;
+  assert.equal(history.record({...twitch('other'), at: NOW}), true);
+  assert.equal(disk.files.get(BACKUP), raw);
+  assert.deepEqual(disk.snapshot().people.map(({login}) => login), ['ohnepixel', 'other']);
+});
+
+test('r2-4. a newer file is read-only whatever its layout: no write, no backup, no memory change', () => {
+  const open = {at: NOW - 3600, seconds: null};
+  const layouts = [
+    {version: 2, paused: false, people: [{...OHNE, visits: [open]}]},
+    {version: 2, people: {}},
+    {version: 3, anything: ['else']},
+    {version: 1.5, people: 'x'},
+  ];
+  for (const layout of layouts) {
+    const raw = JSON.stringify(layout);
+    const disk = fakeDisk(raw);
+    const history = openHistory(disk);
+    const before = history.query('');
+
+    assert.equal(history.record({...twitch('another'), at: NOW}), false);
+    assert.equal(history.finish({...OHNE, at: NOW}), false);
+    assert.equal(history.setPaused(true), false);
+    assert.equal(history.forget(OHNE), false);
+    assert.equal(history.clear(), false);
+    assert.equal(history.paused, false, 'pause did not change in memory');
+    assert.deepEqual(history.query(''), before, 'nothing changed in memory');
+    assert.equal(disk.files.get(FILE), raw);
+    assert.equal(disk.files.has(BACKUP), false, 'a newer file is not damaged, so it is not backed up');
+    assert.deepEqual(disk.changes, []);
+  }
+  const stillOpen = openHistory(fakeDisk(JSON.stringify(layouts[0])));
+  stillOpen.finish({...OHNE, at: NOW});
+  assert.deepEqual(visitsOf(stillOpen, 'ohnepixel'), [open], 'finish did not close the visit in memory');
+});
+
+test('r2-5. loaded visits are sorted, durations capped, future times clamped, and a pause toggle is cheap', () => {
+  const disk = fakeDisk(snapshot([
+    {...OHNE, visits: [
+      {at: NOW - DAY, seconds: 60},
+      {at: NOW - 3 * DAY, seconds: 1e300},
+      {at: NOW + DAY, seconds: null},
+      {at: NOW - 2 * DAY, seconds: -5},
+    ]},
+    {...twitch('unsorted'), visits: [{at: NOW - 60, seconds: null}, {at: NOW - 3600, seconds: null}]},
+  ]));
+  const history = openHistory(disk);
+
+  assert.deepEqual(visitsOf(history, 'ohnepixel'), [
+    {at: NOW - 3 * DAY, seconds: 43200}, {at: NOW - DAY, seconds: 60}, {at: NOW, seconds: null},
+  ]);
+  assert.deepEqual(ranks(history, 'ohnepixel'), [['ohnepixel', 300]], 'a future visit weighs as today, not more');
+
+  history.finish({...twitch('unsorted'), at: NOW});
+  assert.deepEqual(disk.snapshot().people[1].visits, [
+    {at: NOW - 3600, seconds: null}, {at: NOW - 60, seconds: 60},
+  ], 'the newest visit is the one finished');
+
+  const writes = disk.changes.length;
+  history.setPaused(false);
+  assert.equal(disk.changes.length, writes, 'pause already off: no write');
+});
+
+test('r2-6. invalid timestamps are rejected and an identical finish retry is a no-op', () => {
+  const disk = fakeDisk();
+  const history = openHistory(disk);
+  for (const at of [NaN, Infinity, -Infinity, '1800000000', null, undefined, {}]) {
+    history.record({...OHNE, at});
+  }
+  assert.deepEqual(disk.changes, []);
+
+  history.record({...OHNE, at: NOW - 200});
+  history.record({...OHNE, at: NOW - 100});
+  const writes = disk.changes.length;
+  for (const at of [NaN, Infinity, '1800000000', null, undefined]) {
+    history.finish({...OHNE, at});
+  }
+  assert.equal(disk.changes.length, writes, 'a bad finish time changes nothing');
+
+  history.finish({...OHNE, at: NOW});
+  history.finish({...OHNE, at: NOW});
+  assert.equal(disk.changes.length, writes + 1, 'the retry writes nothing');
+  assert.deepEqual(disk.snapshot().people[0].visits, [
+    {at: NOW - 200, seconds: null}, {at: NOW - 100, seconds: 100},
+  ], 'the retry did not close the older open visit');
+
+  history.finish({...OHNE, at: NOW + 5});
+  assert.deepEqual(visitsOf(history, 'ohnepixel')[0], {at: NOW - 200, seconds: 205}, 'a later finish still works');
+});
+
+test('r2-7. word starts are judged on code points, not UTF-16 units', () => {
+  const history = openHistory();
+  const mathBoldO = '\u{1D40E}'; // a letter outside the Basic Multilingual Plane
+  watch(history, twitch('inside', mathBoldO + 'oh'), NOW - 60);
+  watch(history, twitch('spaced', mathBoldO + ' oh'), NOW - 60);
+  watch(history, twitch('combining', 'éoh'), NOW - 60);
+  watch(history, twitch('astral', '\u{1F600} oh'), NOW - 60);
+
+  assert.deepEqual(history.query('oh').map(({login}) => login), ['astral', 'spaced']);
+});
+
+test('r2-8. a full history of strong regulars still admits the newcomer, who is never the one evicted', () => {
+  const regulars = Array.from({length: 500}, (_, i) => ({
+    ...twitch('regular' + i), visits: [{at: NOW - DAY, seconds: 60}, {at: NOW - 2 * DAY, seconds: 60}],
+  }));
+  const disk = fakeDisk(snapshot(regulars));
+  const history = openHistory(disk);
+
+  history.record({...OHNE, at: NOW});
+
+  const logins = disk.snapshot().people.map(({login}) => login);
+  assert.equal(logins.length, 500);
+  assert.ok(logins.includes('ohnepixel'), 'the newcomer (score 100) outlives regulars scoring 200');
+  assert.equal(logins.filter(login => login.startsWith('regular')).length, 499, 'one regular made room');
 });

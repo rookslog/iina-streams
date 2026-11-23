@@ -31,11 +31,17 @@
 //   without ids (an older one) gets them from nextId upward, in time order. An id or nextId that is not a
 //   whole number, is below 1 or is above the bound makes the file corrupt (backed up, then replaced). There
 //   is no renumbering: at the bound record() returns null and writes nothing;
-//   record() returns the handle {provider, login, id} for the visit it opened (null when ignored), and
-//   finish(handle, at) closes exactly that visit. Finishing a visit that is already closed, or that does not
+//   A file is corrupt if any visit has an explicit id that is not valid (null included), if an id appears
+//   twice anywhere in it, or if an id sits on a visit that is dropped for a bad time or duration. Load never
+//   changes an id that is there; only an absent id is assigned;
+// - handles belong to one createHistory instance: record() returns {provider, login, id, instance} for the
+//   visit it opened (null when ignored), where `instance` is a random token drawn when the instance was
+//   created (`random` can be injected, as Math.random's shape, for tests). A handle from another instance (a
+//   reopen, or a reset after a corrupt file that restarts the ids) closes nothing. finish(handle, at)
+//   closes exactly that visit. Finishing a visit that is already closed, or that does not
 //   exist, changes nothing, so an identical retry is harmless, two windows of one person each close their
 //   own visit even in the same second, and a clock that moves backwards cannot orphan a handle. The handle
-//   holds no secret and survives a reload; the caller keeps it from player start to close.
+//   holds no secret; the caller keeps it from player start to close, within one instance.
 //
 // finish, forget, clear and setPaused return true when the change is in the file (for forget, clear and
 // setPaused also when it already was), and false when it was ignored or the write failed. record returns its
@@ -137,9 +143,29 @@ function isValidVisitId(value) {
 // Thrown while reading a file that this code owns but cannot trust (for example an id outside its bounds).
 class CorruptHistory extends Error {}
 
+// Judges every explicit id in the file, on every visit of every person, including those that loading will
+// drop. An id that is present must be valid (null is not absent), and no id may appear twice anywhere.
+function checkStoredIds(rawPeople) {
+  const seen = new Set();
+  for (const person of rawPeople) {
+    if (!person || !Array.isArray(person.visits)) {
+      continue;
+    }
+    for (const visit of person.visits) {
+      if (!visit || visit.id === undefined) {
+        continue;
+      }
+      if (!isValidVisitId(visit.id) || seen.has(visit.id)) {
+        throw new CorruptHistory();
+      }
+      seen.add(visit.id);
+    }
+  }
+}
+
 // Returns a clean visit from stored data, or null. Unknown fields are dropped. A visit in the future (clock
 // skew) counts as now, and a duration is capped like finish() caps it.
-function cleanStoredVisit(raw, nowSeconds, strict) {
+function cleanStoredVisit(raw, nowSeconds) {
   if (!raw || !isFiniteNumber(raw.at)) {
     return null;
   }
@@ -148,14 +174,9 @@ function cleanStoredVisit(raw, nowSeconds, strict) {
     return null;
   }
   const seconds = open ? null : Math.min(raw.seconds, MAX_VISIT_SECONDS);
-  // A missing id is null here and assigned once the whole file is known. Any other id must be a whole number
-  // from 1 to MAX_VISIT_ID. In a file this code owns, anything else makes the file corrupt; a newer file is
-  // read-only and only shown, so it is never judged.
-  const missing = raw.id === undefined || raw.id === null;
-  if (!missing && !isValidVisitId(raw.id) && strict) {
-    throw new CorruptHistory();
-  }
-  const id = !missing && isValidVisitId(raw.id) ? raw.id : null;
+  // An absent id is null here and assigned once the whole file is known. (checkStoredIds has already judged
+  // the ids of a file this code owns; in a newer, read-only file an unusable id is simply replaced.)
+  const id = isValidVisitId(raw.id) ? raw.id : null;
   const visit = {id, at: Math.min(raw.at, nowSeconds), seconds};
   if (raw.offline === true) {
     visit.offline = true;
@@ -163,14 +184,14 @@ function cleanStoredVisit(raw, nowSeconds, strict) {
   return visit;
 }
 
-function cleanStoredPerson(raw, nowSeconds, strict) {
+function cleanStoredPerson(raw, nowSeconds) {
   const identity = cleanIdentity(raw);
   if (!identity || !Array.isArray(raw.visits)) {
     return null;
   }
   const visits = [];
   for (const rawVisit of raw.visits) {
-    const visit = cleanStoredVisit(rawVisit, nowSeconds, strict);
+    const visit = cleanStoredVisit(rawVisit, nowSeconds);
     if (visit !== null) {
       visits.push(visit);
     }
@@ -179,9 +200,11 @@ function cleanStoredPerson(raw, nowSeconds, strict) {
   return {...identity, visits};
 }
 
-// Gives every visit without an id (or with an id its person already uses) the next number, from `floor`
-// upward, in time order. `floor` is the highest id handed out before (from the file's nextId). Returns the
-// highest id in use. In a file this code owns, running past MAX_VISIT_ID makes the file corrupt.
+// Gives every visit without an id the next number, from `floor` upward, in time order. `floor` is the highest
+// id handed out before (from the file's nextId). Returns the highest id in use. In a file this code owns, ids
+// are already valid and unique (checkStoredIds), so only absent ones are assigned, and running past
+// MAX_VISIT_ID makes the file corrupt. In a newer, read-only file a repeated id is assigned a new one in
+// memory too.
 function assignVisitIds(people, floor, strict) {
   let highest = floor;
   const needing = [];
@@ -345,8 +368,11 @@ function readPeople(data, newer, nowSeconds, empty) {
   const people = [];
   const seen = new Set();
   const rawPeople = Array.isArray(data.people) ? data.people : [];
+  if (strict) {
+    checkStoredIds(rawPeople);
+  }
   for (const raw of rawPeople) {
-    const person = cleanStoredPerson(raw, nowSeconds, strict);
+    const person = cleanStoredPerson(raw, nowSeconds);
     if (person === null) {
       continue;
     }
@@ -369,7 +395,17 @@ function readPeople(data, newer, nowSeconds, empty) {
   return {...empty, people, paused: data.paused === true, readOnly: newer, lastId};
 }
 
-function createHistory({storage, now}) {
+// A random token naming one createHistory instance. `random` has Math.random's shape: it returns [0, 1).
+function newInstanceToken(random) {
+  const parts = [];
+  for (let i = 0; i < 4; i++) {
+    parts.push(Math.floor(random() * 2 ** 32).toString(16).padStart(8, '0'));
+  }
+  return parts.join('');
+}
+
+function createHistory({storage, now, random = Math.random}) {
+  const instance = newInstanceToken(random);
   let people = [];
   let paused = false;
   let readOnly = false;
@@ -501,7 +537,7 @@ function createHistory({storage, now}) {
 
     evictLowestScore(person);
     unsaved = true;
-    return Object.freeze({provider: identity.provider, login: identity.login, id: visit.id});
+    return Object.freeze({provider: identity.provider, login: identity.login, id: visit.id, instance});
   }
 
   // record({provider, login, displayName, at, offline?}): one visit. Returns the visit's handle, or null when
@@ -520,6 +556,10 @@ function createHistory({storage, now}) {
   // 'ignored' (paused, read-only, bad input, or no such visit).
   function closeVisit(handle, at) {
     if (paused || readOnly || !handle || !isFiniteNumber(at) || !Number.isSafeInteger(handle.id)) {
+      return 'ignored';
+    }
+    // A handle names a visit of this instance only: another instance's ids may mean other visits.
+    if (handle.instance !== instance) {
       return 'ignored';
     }
     const identity = cleanIdentity(handle);

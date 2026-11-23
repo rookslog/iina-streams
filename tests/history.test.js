@@ -73,10 +73,15 @@ function fakeDisk(initial = null, {unreadable = false} = {}) {
   };
 }
 
-function openHistory(disk = fakeDisk()) {
+function openHistory(disk = fakeDisk(), random = Math.random) {
   assert.equal(typeof historyModule?.createHistory, 'function', 'src/history.js must export createHistory');
-  return historyModule.createHistory({storage: disk.storage, now: () => NOW});
+  return historyModule.createHistory({storage: disk.storage, now: () => NOW, random});
 }
+
+// Round 6: a handle belongs to one instance, named by a token drawn from `random` (Math.random's shape).
+// Two instances given the same random share a token, so a test can forge a valid handle for a loaded visit.
+const FIXED_RANDOM = () => 0.25;
+const FIXED_INSTANCE = openHistory(fakeDisk(), FIXED_RANDOM).record({...OHNE, at: NOW}).instance;
 
 const snapshot = (people, paused = false) => JSON.stringify({version: 1, paused, people});
 const twitch = (login, displayName = login) => ({provider: 'twitch', login, displayName});
@@ -219,15 +224,16 @@ test('6. pause survives a reload and prevents both record and finish until resum
   const writes = disk.changes.length;
 
   reopened.record({...twitch('ignored'), at: NOW});
-  reopened.finish(visit, NOW);
+  history.finish(visit, NOW);
   assert.equal(disk.files.get(FILE), before);
   assert.equal(disk.changes.length, writes);
   assert.deepEqual(reopened.query('').map(({login, visits}) => [login, visits]), [
     ['ohnepixel', [{id: 1, at: NOW - 60, seconds: null}]],
   ]);
 
-  reopened.setPaused(false);
-  reopened.finish(visit, NOW);
+  // A handle is good for the instance that made it, so the same instance finishes once pause is off.
+  history.setPaused(false);
+  history.finish(visit, NOW);
   assert.equal(disk.snapshot().paused, false);
   assert.equal(disk.snapshot().people[0].visits[0].seconds, 60);
 });
@@ -358,7 +364,7 @@ function failingDisk(initial = null, {unreadable = false} = {}) {
       disk.storage.backup(from, to);
     },
   };
-  const open = () => historyModule.createHistory({storage, now: () => NOW});
+  const open = (random = Math.random) => historyModule.createHistory({storage, now: () => NOW, random});
   return {disk, faults, open};
 }
 
@@ -403,7 +409,9 @@ test('r2-2. any later call flushes an unsaved change, and a failed record or fin
 
   faults.write = true;
   const visit = history.record({...OHNE, at: NOW - 100});
-  assert.deepEqual(visit, {provider: 'twitch', login: 'ohnepixel', id: 1}, 'the handle survives a failed write');
+  const {instance, ...fields} = visit;
+  assert.deepEqual(fields, {provider: 'twitch', login: 'ohnepixel', id: 1}, 'the handle survives a failed write');
+  assert.match(instance, /^[0-9a-f]{32}$/);
   assert.equal(disk.files.has(FILE), false);
   assert.equal(history.finish(visit, NOW - 40), false);
   faults.write = false;
@@ -442,11 +450,11 @@ test('r2-4. a newer file is read-only whatever its layout: no write, no backup, 
   for (const layout of layouts) {
     const raw = JSON.stringify(layout);
     const disk = fakeDisk(raw);
-    const history = openHistory(disk);
+    const history = openHistory(disk, FIXED_RANDOM);
     const before = history.query('');
 
     assert.equal(history.record({...twitch('another'), at: NOW}), null);
-    assert.equal(history.finish({...OHNE, id: 1}, NOW), false);
+    assert.equal(history.finish({...OHNE, id: 1, instance: FIXED_INSTANCE}, NOW), false);
     assert.equal(history.setPaused(true), false);
     assert.equal(history.forget(OHNE), false);
     assert.equal(history.clear(), false);
@@ -456,8 +464,8 @@ test('r2-4. a newer file is read-only whatever its layout: no write, no backup, 
     assert.equal(disk.files.has(BACKUP), false, 'a newer file is not damaged, so it is not backed up');
     assert.deepEqual(disk.changes, []);
   }
-  const stillOpen = openHistory(fakeDisk(JSON.stringify(layouts[0])));
-  stillOpen.finish({...OHNE, id: 1}, NOW);
+  const stillOpen = openHistory(fakeDisk(JSON.stringify(layouts[0])), FIXED_RANDOM);
+  assert.equal(stillOpen.finish({...OHNE, id: 1, instance: FIXED_INSTANCE}, NOW), false);
   assert.deepEqual(visitsOf(stillOpen, 'ohnepixel'), [open], 'finish did not close the visit in memory');
 });
 
@@ -471,7 +479,7 @@ test('r2-5. loaded visits are sorted, durations capped, future times clamped, an
     ]},
     {...twitch('unsorted'), visits: [{at: NOW - 60, seconds: null}, {at: NOW - 3600, seconds: null}]},
   ]));
-  const history = openHistory(disk);
+  const history = openHistory(disk, FIXED_RANDOM);
 
   assert.deepEqual(visitsOf(history, 'ohnepixel'), [
     {at: NOW - 3 * DAY, seconds: 43200}, {at: NOW - DAY, seconds: 60}, {at: NOW, seconds: null},
@@ -480,7 +488,7 @@ test('r2-5. loaded visits are sorted, durations capped, future times clamped, an
 
   // Visits without ids get them in time order across the file: ohnepixel's 3 days ago and 1 day ago are 1 and 2,
   // then the unsorted person's older visit is 3 and newer is 4, then ohnepixel's visit that counts as now is 5.
-  history.finish({...twitch('unsorted'), id: 3}, NOW);
+  history.finish({...twitch('unsorted'), id: 3, instance: FIXED_INSTANCE}, NOW);
   assert.deepEqual(disk.snapshot().people[1].visits, [
     {at: NOW - 3600, seconds: 3600}, {at: NOW - 60, seconds: null},
   ], 'the visit the handle names is finished, whatever its place in the file');
@@ -506,7 +514,8 @@ test('r2-6. invalid timestamps are rejected; a finish closes the visit its handl
   }
   for (const handle of [null, undefined, {}, {...newer, id: NaN}, {...newer, id: 99}, {...newer, id: String(newer.id)},
     {...newer, id: undefined}, {...newer, login: 'nobody'}, {...newer, provider: 'youtube'},
-    {...newer, provider: 'vimeo'}]) {
+    {...newer, provider: 'vimeo'}, {...newer, instance: undefined}, {...newer, instance: 'other'},
+    {...newer, instance: 7}]) {
     assert.equal(history.finish(handle, NOW), false);
   }
   assert.equal(disk.changes.length, writes, 'a bad time or an unknown visit changes nothing');
@@ -627,22 +636,28 @@ test('r3-3. visit ids are stored, only grow, and are given in time order to a fi
 
   const legacy = openHistory(fakeDisk(snapshot([{...OHNE, visits: [
     {at: NOW - 10, seconds: 5}, {at: NOW - 30, seconds: 5}, {at: NOW - 20, id: 9, seconds: 5},
-    {at: NOW - 15, id: 9, seconds: 5}, {at: NOW - 25, seconds: 5},
+    {at: NOW - 15, seconds: 5}, {at: NOW - 25, seconds: 5},
   ]}])));
   const loaded = legacy.query('')[0].visits.map(({id, at}) => [at - NOW, id]);
   assert.deepEqual(loaded, [[-30, 10], [-25, 11], [-20, 9], [-15, 12], [-10, 13]],
-    'a kept id stays; a missing or repeated one gets the next number, in time order');
+    'a kept id stays; an absent one gets the next number, in time order');
 });
 
 test('r3-4. a handle still closes its visit when the clock has gone backwards', () => {
+  let clock = NOW;
   const disk = fakeDisk();
-  const earlier = historyModule.createHistory({storage: disk.storage, now: () => NOW});
-  const handle = earlier.record({...OHNE, at: NOW - 10});
+  const history = historyModule.createHistory({storage: disk.storage, now: () => clock});
+  const handle = history.record({...OHNE, at: NOW - 10});
 
-  const rolledBack = historyModule.createHistory({storage: disk.storage, now: () => NOW - 50});
-  assert.deepEqual(rolledBack.query('')[0].visits.map(({at}) => at), [NOW - 50], 'the loaded visit counts as now');
-  assert.equal(rolledBack.finish(handle, NOW - 40), true);
-  assert.deepEqual(disk.snapshot().people[0].visits, [{at: NOW - 50, seconds: 10}]);
+  clock = NOW - 50;
+  assert.equal(history.finish(handle, NOW - 40), true, 'ids do not depend on the clock');
+  assert.deepEqual(disk.snapshot().people[0].visits, [{at: NOW - 10, seconds: 0}], 'a negative span counts as 0');
+
+  // A reopen with the earlier clock counts the loaded visit as now; the old handle belongs to the old instance.
+  const open = historyModule.createHistory({storage: fakeDisk(JSON.stringify({version: 1, paused: false,
+    people: [{...OHNE, visits: [{id: 1, at: NOW - 10, seconds: null}]}]})).storage, now: () => NOW - 50});
+  assert.deepEqual(open.query('')[0].visits.map(({at}) => at), [NOW - 50], 'the loaded visit counts as now');
+  assert.equal(open.finish(handle, NOW - 40), false);
 });
 
 test('r3-5. a retry after a failed write cannot close the other window of the same second', () => {
@@ -957,4 +972,116 @@ test('r5-6. a file whose missing ids cannot be given without passing the bound i
     {id: BOUND - 1, at: NOW - 60, seconds: 60}, {at: NOW - 30, seconds: 30},
   ]}]});
   assert.deepEqual(openHistory(fakeDisk(fits)).query('')[0].visits.map(({id}) => id), [BOUND - 1, BOUND]);
+});
+
+// Round 6 (Codex narrow check of 8f37230, lead disposition).
+
+test('r6-1. a handle closes visits of its own instance only', () => {
+  const disk = fakeDisk();
+  const first = openHistory(disk, () => 0.25);
+  const handle = first.record({...OHNE, at: NOW - 100});
+  assert.equal(first.finish({...handle}, NOW), true, 'the same instance still works');
+  assert.deepEqual(visitsOf(first, 'ohnepixel'), [{at: NOW - 100, seconds: 100}]);
+
+  // A normal reopen: ids continue, and a handle from before it closes nothing.
+  const openVisit = first.record({...OHNE, at: NOW - 50});
+  const reopened = openHistory(disk, () => 0.75);
+  const writes = disk.changes.length;
+  assert.equal(reopened.finish(openVisit, NOW), false);
+  assert.equal(disk.changes.length, writes, 'and writes nothing');
+  assert.deepEqual(visitsOf(reopened, 'ohnepixel'), [{at: NOW - 100, seconds: 100}, {at: NOW - 50, seconds: null}]);
+  const next = reopened.record({...OHNE, at: NOW - 20});
+  assert.equal(reopened.finish(next, NOW), true);
+  assert.notEqual(next.instance, openVisit.instance);
+});
+
+test('r6-2. after a corrupt reset restarts the ids, a handle from before the reset closes nothing', () => {
+  const disk = fakeDisk();
+  const before = openHistory(disk, () => 0.25);
+  const stale = before.record({...OHNE, at: NOW - 100});
+  disk.files.set(FILE, '{truncated');
+
+  const after = openHistory(disk, () => 0.75);
+  const fresh = after.record({...OHNE, at: NOW - 60});
+  assert.equal(stale.id, fresh.id, 'the ids restarted, so only the instance tells the handles apart');
+  assert.equal(after.finish(stale, NOW), false);
+  assert.deepEqual(visitsOf(after, 'ohnepixel'), [{at: NOW - 60, seconds: null}], 'the new visit stays open');
+  assert.equal(after.finish(fresh, NOW), true);
+});
+
+test('r6-3. the instance token comes from random: injected for tests, different by default', () => {
+  const draws = [];
+  const history = openHistory(fakeDisk(), () => {
+    draws.push(draws.length);
+    return 0.5;
+  });
+  assert.ok(draws.length > 0, 'random was used');
+  assert.equal(history.record({...OHNE, at: NOW}).instance, '80000000'.repeat(4));
+
+  const one = openHistory(fakeDisk()).record({...OHNE, at: NOW}).instance;
+  const two = openHistory(fakeDisk()).record({...OHNE, at: NOW}).instance;
+  assert.notEqual(one, two);
+});
+
+// Ids the file holds are checked strictly; any failure is a corrupt file: backed up, history starts empty.
+const idsFile = people => JSON.stringify({version: 1, paused: false, people});
+const personWith = (login, visits) => ({...twitch(login), visits});
+const timed = (id, at = NOW - 60, seconds = 60) => ({id, at, seconds});
+
+test('r6-4. a duplicate id anywhere, an explicit null id, or a bad id on any visit makes the file corrupt', () => {
+  const dropped = [
+    {id: 3, at: 'not a time', seconds: 60}, {id: 3, at: NOW - 60, seconds: -1}, {id: 3, seconds: 60},
+    {id: 3, at: NOW - 60, seconds: 'x'},
+  ];
+  const corrupt = {
+    'same id twice on one person': idsFile([personWith('a', [timed(1), timed(1, NOW - 30)])]),
+    'same id on two people': idsFile([personWith('a', [timed(1)]), personWith('b', [timed(1)])]),
+    'a null id': idsFile([personWith('a', [{id: null, at: NOW - 60, seconds: 60}])]),
+    'a null id on a dropped visit': idsFile([personWith('a', [{id: null, at: 'x', seconds: 60}])]),
+    'a bad id on a visit dropped for its time': idsFile([personWith('a', [{id: -2, at: 'x', seconds: 60}])]),
+    'a bad id on a visit dropped for its duration': idsFile([personWith('a', [{id: 1.5, at: NOW - 60, seconds: -1}])]),
+    'a bad id on a person dropped for its login': idsFile([{...twitch('bad login'), visits: [timed('7')]}]),
+    'a bad id on a visit beyond the newest ten': idsFile([personWith('a', [
+      timed(0, NOW - 200), ...Array.from({length: 11}, (_, i) => timed(i + 1, NOW - 100 + i))])]),
+    'a kept id repeated on a dropped visit': idsFile([personWith('a', [timed(5), {...dropped[0], id: 5}])]),
+    'a dropped visit repeated in another person': idsFile([personWith('a', [{...dropped[1], id: 6}]),
+      personWith('b', [timed(6)])]),
+    'a repeated person with the same id': idsFile([personWith('a', [timed(1)]), personWith('a', [timed(1)])]),
+  };
+  for (const [name, raw] of Object.entries(corrupt)) {
+    const disk = fakeDisk(raw);
+    const history = openHistory(disk);
+    assert.deepEqual(history.query(''), [], name);
+    assert.deepEqual(disk.changes, [], name + ': reading writes nothing');
+    history.record({...OHNE, at: NOW});
+    assert.equal(disk.files.get(BACKUP), raw, name + ': kept as .bad');
+    assert.deepEqual(disk.changes.slice(0, 2), [['backup', FILE, BACKUP], ['write', FILE]], name);
+  }
+});
+
+test('r6-5. load never changes an id the file has; only absent ids are assigned', () => {
+  const raw = idsFile([
+    personWith('a', [timed(40, NOW - 90), {at: NOW - 80, seconds: 5}, timed(3, NOW - 70)]),
+    personWith('b', [timed(1, NOW - 60), timed(2, NOW - 50)]),
+  ]);
+  const disk = fakeDisk(raw);
+  const history = openHistory(disk);
+
+  const ids = Object.fromEntries(history.query('').map(({login, visits}) => [login, visits.map(({id}) => id)]));
+  assert.deepEqual(ids, {a: [40, 41, 3], b: [1, 2]}, 'the absent id is 41, above the highest');
+  assert.deepEqual(disk.changes, []);
+});
+
+test('r6-6. a newer file is not judged by its ids: repeats and bad ids are replaced in memory only', () => {
+  const raw = JSON.stringify({version: 2, people: [
+    personWith('a', [timed(1), timed(1, NOW - 30), {id: null, at: NOW - 20, seconds: 20}, timed(-3, NOW - 10)]),
+  ]});
+  const disk = fakeDisk(raw);
+  const history = openHistory(disk);
+
+  const ids = history.query('')[0].visits.map(({id}) => id);
+  assert.equal(new Set(ids).size, 4, 'four distinct ids in memory');
+  assert.equal(disk.files.has(BACKUP), false);
+  assert.equal(history.record({...OHNE, at: NOW}), null);
+  assert.deepEqual(disk.changes, []);
 });

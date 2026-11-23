@@ -18,7 +18,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 - never playback metadata: the module stores only identity fields that pass its allowlists (item 9), and nothing else from its input.
 
 1. **Record and merge.** `record({provider:'twitch', login:'Ohnepixel', displayName, at})` stores login `ohnepixel` (lowercased). A second record for the same provider and login appends a visit; it never creates a second person.
-2. **Duration.** `record(...)` returns a visit handle `{provider, login, id}`, or `null` when the record is ignored. `finish(handle, at)` sets that visit's `seconds` = `at − visit.at`, capped at 12 h.
+2. **Duration.** `record(...)` returns a visit handle `{provider, login, id, instance}`, or `null` when the record is ignored. `finish(handle, at)` sets that visit's `seconds` = `at − visit.at`, capped at 12 h.
    - Finishing a visit that is already closed, or doesn't exist, is a no-op, so an identical retry does nothing.
    - Amended 2026-11-22 round 2b (lead): `finish` closes the visit its handle names, not "the newest open visit of the person" and not "the same as the last finish". Two windows of one person closing in the same second each close their own visit.
    - Amended 2026-11-22 round 3 (lead): every visit has a stored `id` that only grows, and the handle carries the id, not the time. So a clock that moves backwards can't orphan a handle, and two visits opened in the same second are closed independently, also across a retry after a failed write. A file without ids gets them in time order.
@@ -27,6 +27,8 @@ These are behaviours, not code. Where a number is a choice, the choice is record
      - **The next id is stored** in the file (`nextId`), so forgetting the newest visit and reopening never lets its id, or a stale handle, come back.
      - **Ids are bounded, and nothing is renumbered** (step-back, lead): an id is a whole number from 1 to 2^31. An id, or a `nextId` (at most 2^31 + 1), that isn't one makes the file corrupt: it is backed up to `.bad` and history starts empty. A newer file is never judged by its ids. At the bound `record` returns `null` and writes nothing; `finish`, `forget`, `clear` and pause still work.
      - **Ids a file lacks** (an older file) are given from `nextId` upward, in time order across the file.
+     - **Strict id check on load** (round 6, lead): in a file this code owns, a repeated id anywhere, an explicit `null` id, or an invalid id on any visit (including visits and people that loading would drop) makes the file corrupt. Load never changes an id that is there; only absent ids are assigned. A newer file isn't judged: it is read-only, and unusable ids are replaced in memory only.
+   - Amended 2026-11-22 round 6 (lead): handles belong to one `createHistory` instance. `instance` is a random token drawn at creation (`random`, Math.random's shape, can be injected for tests). A handle from another instance (after a reopen, or after a corrupt-file reset that restarts the ids) closes nothing and writes nothing.
    - A `finish` with a non-finite or non-number `at` is ignored. The handle holds no secret, and the caller keeps it from player start to close.
 3. **Frecency** (how often and how recently). Score = Σ over visits of an age weight:
 
@@ -60,7 +62,7 @@ These are behaviours, not code. Where a number is a choice, the choice is record
    - Both write to storage immediately.
 8. **Persistence.**
    - It loads from the injected storage (in production, `@data/history.json`).
-   - **Corrupt file** (it parses badly, has no usable version or shape, or has an id or `nextId` out of bounds): it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
+   - **Corrupt file** (it parses badly, has no usable version or shape, or fails the id checks below): it starts empty, doesn't throw, and keeps the bad file as `history.json.bad` before the next write.
    - **Unknown fields:** ignored.
    - **Version:** the file has a `version`; a newer version than the code knows means read-only, with no overwrite.
    - Amended 2026-11-22 round 2 (lead):

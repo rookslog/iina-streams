@@ -67,6 +67,25 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it.
 - **What your answer changes:** how replies read to you in those two projects for a week, and later everywhere.
 
+### W-12. Open Stream with suggestions: pick the design direction and the window's sizing
+- **What it is:** which mock becomes the Open Stream window with suggestions (#74) and the person row shared with the People screen (#76), and whether the window stays one fixed size or hugs its results. It's yours because it's how the product looks and feels every day.
+- **How it arose:**
+  - the designer's two mocks: `docs/design/finding-2026-11-22/open-stream/direction-a/index.html` (A, Quick list) and `direction-b/index.html` (B, List and detail);
+  - their comparison in the same folder's `README.md`;
+  - the independent review: `REVIEW.md` in the same folder.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Hybrid of A, hugging its results, top edge pinned** (like Spotlight) | A's compact one-line rows; the window is as big as its content | Needs IINA to let Streams read or keep the window's top position; unchecked |
+  | **Hybrid of A, one fixed size** | The field and rows never move; the simplest build | Empty space when there are few matches |
+  | **B, fixed size, fixed per the review** | A detail pane per person | Busier, more text; two review majors to fix |
+  | **Decide after a native test** | Evidence first | The design round waits |
+- **Recommendation:** the hybrid of A, hugging its results with the top edge pinned if IINA allows it, otherwise one fixed size. This is the reviewer's pick. It matches the macOS search-window convention and your minimize-UI-text preference.
+- **What it rests on:** IINA 1.5.1 lets the plugin keep the window's top edge in place while it resizes, by reading the window's frame or remembering the position the plugin set. Unchecked; the review read only `setFrame`.
+- **What would flip it:** if IINA can't pin the top edge, one fixed size. Test: the lead's native check from review finding 1.
+- **What your answer changes:** the second design round (the hybrid drawn, with the review's fixes), then the #74 build.
+
 ## Answered
 
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.

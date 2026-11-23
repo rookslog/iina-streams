@@ -1,6 +1,6 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 19:20.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:15.
 
 ## Open
 
@@ -75,6 +75,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - **C. Documented APIs only;**
   - **D. Defer:** just Following (#30) and the offline VOD list (#32).
 - **Recommendation:** A. Most opens are you reopening someone you already watch, and your history answers that instantly, signed in or out, with no cookies. Twitch's own "likely to watch" ordering isn't available to outside apps anyway.
+  - **Updated 21:15:** A, without adding new uses of Twitch's undocumented website interface. Signed in (the default, as you said) uses the documented API: search, live follows, popular. Signed out uses local history. Reason: Twitch's developer agreement, now read, says registered developers use only documented interfaces (W-9). The follows research found no evidence that Twitch's personalised sidebar order is reachable anyway: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`.
 - **What it rests on:** most of what you open are repeat visits to a small set of people. This is unmeasured.
 - **What would flip it:** if you mostly want to discover new channels, B; if you'd rather use only documented APIs, C.
 - **Platform facts that constrain it:**
@@ -83,6 +84,38 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - YouTube live chat has a daily quota;
   - no public service links one creator's accounts across platforms.
 - **What your answer changes:** what 0.5.6 builds (suggestions from history and Following), and the shape of 0.6.0's People view and 0.8.0's platforms.
+
+### W-9. Streams' Twitch playback uses an interface Twitch's developer agreement excludes
+- **What it is:** Twitch documents no way to get a playable stream address. Streams, like Streamlink and yt-dlp, gets one from the undocumented interface twitch.tv itself uses ("GQL"), and lists an offline channel's VODs the same way (D-030). Twitch's Developer Services Agreement, section XI.I, says a developer "will only access Program Materials documented on the Twitch Developer Site" without Twitch's written permission. Streams registered a Twitch app for sign-in and chat, so the agreement plausibly applies to it (inferred). Whether GQL called with Twitch's own web client ID counts is an interpretation.
+- **How it arose:** the follows research read the agreement for the first time on 2026-11-22: `docs/design/TWITCH-FOLLOWS-BEYOND-DOCS-2026-11-22.md`, section Q4. The lead checked the quote against the page. D-030 (chosen by the lead during the unattended run) already uses GQL for offline VODs, pending your confirmation in #49.
+- **Options:**
+  - **keep today's uses, add no new ones:** playback and offline VODs stay; follows, search and popular use the documented API;
+  - **also move VOD lists to the documented API:** offline VODs only when signed in;
+  - **ask Twitch for written permission** before the Reddit launch;
+  - **no limit:** new features may use GQL too.
+- **Recommendation:** keep today's uses and add no new ones. Playback has no documented alternative, so dropping it means no product; it's the same exposure every Streamlink-based player has. The worst plausible outcome is Twitch revoking Streams' app ID, which breaks sign-in and chat but not playback (inferred). Not adding uses keeps the exposure from growing as Streams goes public.
+- **What it rests on:** Twitch acts against apps that rebuild signed-in features on GQL (logins, follows, channel points), not against players fetching public playback. Inferred from no known action against Streamlink; unchecked.
+- **What would flip it:** evidence that Twitch acted against a Streamlink-style player or its app ID (then ask permission before launch), or a preference for zero exposure (then also move VOD lists).
+- **What your answer changes:** whether 0.5.6's offline VOD list works signed out, and what the README says before launch.
+
+### W-10. Use the Impeccable design tool on Streams' interface
+- **What it is:** Impeccable (https://github.com/pbakaus/impeccable, Apache-2.0) is a design skill for coding agents:
+  - commands such as `shape` (plan the user experience before code), `critique` (a scored usability review), `audit` (accessibility, performance, theming) and `harden` (errors and edge cases);
+  - a 62-rule detector for generic "AI-made" design.
+
+  Installing it runs third-party code from npm, can add a hook and downloads an engine binary, so it's yours to approve.
+- **How it arose:** you asked on 2026-11-22, about designing the discovery and People screens.
+- **Options:**
+  - **detector first:** run `npx impeccable detect` read-only on `ui/` (Open Stream window, sidebar, overlay) and look at what it finds;
+  - **reviewer, this project only:** no hook, no live mode. `shape` for the People screen and listening mode; `critique`, `audit` and `harden` on the existing windows before the 0.6.0 overhaul;
+  - **full install** with the hook and live mode;
+  - **don't.**
+- **Recommendation:** detector first, then reviewer-only if its findings are real problems. Not the full install:
+  - its hook runs even when Claude Code's own commands are denied;
+  - live mode's apply step can run `codex` or `claude` "with approvals, permission checks, and sandboxing off" (README);
+  - this project keeps its skill set narrow (AGENTS.md).
+- **What it rests on:** a web-design reviewer's findings carry over to web pages that live inside a native macOS player. Impeccable's native modes cover iOS and Android, not macOS (README), so its defaults are web taste. Native IINA remains the proof.
+- **What would flip it:** detector findings that are mostly web conventions IINA's look rightly overrides (then skip it), or findings about contrast, cramped spacing or missing states (then the reviewer install).
 
 ## Answered
 

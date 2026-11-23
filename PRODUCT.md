@@ -9,13 +9,23 @@ Written 2026-11-22 by the Open Stream designer from `README.md`, `AGENTS.md`, `d
 web
 
 ## Users
-- **Viewers who watch Twitch and YouTube in IINA** (the open-source macOS video player) rather than in a browser. They want IINA's playback and window handling, with chat beside or over the video.
-- The approved journeys are J1–J10 in `docs/design/USER-JOURNEYS-2026-11-22.md` (approved in D-026, `docs/DECISIONS.md`). The ones that shape most screens are:
-  - **J1, a stranger:** finds the repo, installs, and watches a first stream with chat;
-  - **J2, the daily viewer:** knows who they want, and wants to know who's live;
-  - **J4, the catch-up viewer:** missed a stream and wants the VOD with chat;
-  - **J10:** every journey done by keyboard and VoiceOver, with reduced motion.
-- **The operator** (the maintainer) is the first daily user. Their recorded preferences are binding product direction (see Product Principles).
+*Draft 2026-11-23, from the operator's own words in chat that day. Awaiting their confirmation through Impeccable's setup interview. It replaces the first version, which was inferred from docs and listed only J1–J10.*
+
+- **Who:** Mac viewers who would rather watch Twitch in IINA than in a browser tab (YouTube too, other platforms later). The first and main user is the operator, who watches daily. *Open: why IINA rather than the browser, and who else (the Reddit launch audience).*
+- **How they watch** (the operator, 2026-11-23):
+  - **One stream at a time.** To change, they switch rather than open another window: "Usually I find myself not wanting to open up multiple streams… I just want to switch to this person."
+  - **They usually know who they want:** "I'm thinking of this person and I know they're not online, but I want their VODs. Or even if they are online, you may still want to watch their VODs."
+  - **They catch up on VODs,** often over several sittings, and come back to half-finished ones, sometimes a week later (J12).
+  - **Often in the background,** while working in other apps (J11, the operator's own habit).
+  - **Chat** sits beside the video (pushing it over), floats over it, or is off. It never sits in a panel that covers the picture.
+  - **The plugin panel is opened briefly**, to switch channel, pick a VOD or change quality, and then closed: "things I want to quickly check and focus on."
+- **What they don't want:**
+  - text that explains: reason text, status sentences, labels that repeat an icon;
+  - sponsored ordering;
+  - feeling tracked: they can pause or forget history (J19).
+- **Journeys:**
+  - approved in D-026: J1–J10 (`docs/design/USER-JOURNEYS-2026-11-22.md`), mainly J1 a stranger, J2 the daily viewer, J4 the catch-up viewer, and J10 keyboard and VoiceOver;
+  - approved in D-035: J11 the background listener, J12 the long-VOD viewer, J14 the viewer at stream end, and J19 the privacy-minded viewer.
 
 ## Product Purpose
 IINA Streams is an IINA plugin. It opens Twitch live channels, Twitch VODs and YouTube videos or livestreams in native IINA windows, and shows their chat:

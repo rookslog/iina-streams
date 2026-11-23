@@ -243,3 +243,25 @@ body[data-layout="column"] #column-tools{margin-top:var(--title-bar-height)}
  }
  #column-tools button{opacity:1}
 }
+/* D1c: a collapsed column is only its tool cluster, at the same top-right place, over the video. The title-bar
+   offset moves from the cluster's margin to the panel's top, so no empty band above the buttons takes clicks. */
+body[data-layout="column"] #panel[data-collapsed="true"]{
+ top:var(--title-bar-height);
+ min-height:0;
+ padding:6px 6px 4px 4px;
+ border-left:0;
+ border-radius:8px 0 0 8px;
+}
+body[data-layout="column"] #panel[data-collapsed="true"] #column-tools{margin:0}
+#hide-chat{position:relative}
+#column-tools .tool-icon{display:inline-flex}
+.unread-dot{
+ position:absolute;
+ top:4px;
+ right:4px;
+ width:7px;
+ height:7px;
+ border-radius:50%;
+ background:var(--column-accent);
+ pointer-events:none;
+}

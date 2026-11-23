@@ -28,6 +28,9 @@ const GO_LIVE_MIN_LEAD_SECONDS=1;
 // Ctrl+Meta+l is IINA 1.5.1's Log Viewer (MainMenu.xib; tests/fixtures/iina-1.5.1/mainmenu-keys.txt),
 // and IINA doesn't reject that clash for plugin items, so Go Live uses G.
 const GO_LIVE_KEY='Ctrl+Meta+g';
+// D1c: Hide Chat / Show Chat. C for chat, beside Open Stream's Ctrl+Meta+o and Go Live's Ctrl+Meta+g; no bundled
+// IINA 1.5.1 key config or main-menu item binds it (tests/fixtures/iina-1.5.1, tests/d1c-player.test.js).
+const CHAT_COLLAPSE_KEY='Ctrl+Meta+c';
 // A Go Live seek must leave the player at most this far behind live, else Go Live reloads. Twitch's
 // floor on this path is 6-8 s (spike #16), so 12 s allows one segment of slack above it.
 const GO_LIVE_REACH_SECONDS=12;
@@ -380,6 +383,15 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // window frame, which outlive any one activation. Only the current activation changes them (send), and a loss
  // clears them once, in its release (releaseActivation).
  let besideActive=false,besideMargin=0,besideColumnWidth=null,besideWiden=null;
+ // Whether the margin last applied was for a collapsed column (D1c).
+ let besideCollapsed=false;
+ // D1c: chat hidden over or beside the video. A view state of this window, never saved, kept across this
+ // controller's loads (a quality change or Go Live reload); a newly opened stream gets a new controller and
+ // shows chat. Hiding never stops chat. unread: a message has become visible since chat was hidden.
+ // collapseSeen holds the keys of the messages visible when chat was hidden.
+ let collapsed=false,unread=false,collapseSeen=null;
+ // The menu state the player's items were last built for (syncMenu).
+ let menuKey='';
  // The global entry's messages are registered once, from a later turn (registerAppListeners).
  let appListenersRegistered=false;
  // Live timing preferences (#2, #28).
@@ -433,7 +445,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // so the replaced file's end cannot be told from the replacement's. endSeen records that one arrived; a
    // timeout after one is a stop. goLiveGeneration is the last Go Live generation issued: its file-loaded is
    // authoritative even after the transaction ended, because the timeout may have closed it first.
-   goLiveBusy:false,replacement:null,goLiveGeneration:null
+   goLiveBusy:false,replacement:null,goLiveGeneration:null,
+   // D1c: the deferred menu.forceUpdate after the player's menu items were replaced (syncMenu).
+   menuUpdate:null
   });
   // The clock's timers and log are the activation's: after a loss it neither polls nor samples. A response in
   // flight at the loss only reaches this clock's own estimator; release stops the clock, which then ignores it.
@@ -511,6 +525,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    behindLive:behindLive(),
    atLiveEdge:atLiveEdge(),
    chatTiming:Object.assign(chatTiming.settings(),currentTiming()),
+   collapsed,
+   unread,
    qa:!!config.qa
   });
  }
@@ -532,7 +548,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // (publishFinal).
  function send(){
   if(!active())return;
+  settleCollapse();
+  noteUnread();
   syncBeside();
+  syncMenu();
   publish();
  }
 
@@ -561,7 +580,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    chat:s.chat,
    qa:s.qa,
    layout:s.view.presentation==='beside'?'column':'float',
-   canGoLive:source.kind==='twitch-live'
+   canGoLive:source.kind==='twitch-live',
+   collapsed:s.collapsed===true,
+   unread:s.unread===true
   };
  }
 
@@ -609,6 +630,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   onSidebar('import',()=>importArchive());
   onSidebar('replay-resume',onReplayResume);
   onSidebar('chat-off',onChatOffRequest);
+  onSidebar('chat-collapse',onChatCollapse);
   onSidebar('fetch-replay',fetchReplay);
   onSidebar('view',setView);
   onSidebar('offset',setOffset);
@@ -746,11 +768,11 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   publishForWindow();
  }
 
+ // D1c: hiding the sidebar hides its chat and never stops it; live chat keeps running in the overlay page.
  function hideSidebar(){
   controlsDesired=false;
   sidebarVisible=false;
   sidebar.hide();
-  if(active()&&view.presentation==='sidebar'&&act.chat.mode==='live')chatOff();
  }
 
  // Over Video and Beside Video both draw chat in the overlay.
@@ -765,6 +787,70 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
 
  function overlayNeeded(){
   return act.chat.mode==='live'||chatOnVideo()&&act.chat.mode!=='off'||view.presentation==='beside'&&chatPending();
+ }
+
+ // ---- Hiding chat (D1c) ----
+ // Hiding is a view state of this window. It never stops the live transport, replay or live timing; only Turn
+ // Chat Off stops chat. Beside the video, the margin goes to 0 (updateBesideMargin); over the video, the overlay
+ // page hides its panel. The page only asks (chat-collapse); the player decides and publishes the state.
+
+ // Chat can be hidden only while it is on and drawn over or beside the video.
+ function canCollapse(){
+  return chatOnVideo()&&act.chat.mode!=='off';
+ }
+
+ // The overlay's column button and the sidebar's Hide Chat / Show Chat button send {collapsed}.
+ function onChatCollapse(data){
+  if(!data||typeof data.collapsed!=='boolean')return;
+  setCollapsed(data.collapsed);
+ }
+
+ function toggleCollapsed(){
+  setCollapsed(!collapsed);
+ }
+
+ function setCollapsed(next){
+  if(next&&!canCollapse())return;
+  if(next===collapsed)return;
+  collapsed=next;
+  unread=false;
+  collapseSeen=next?visibleMessageKeys():null;
+  trace(next?'chat-hide':'chat-show');
+  send();
+ }
+
+ // Chat that is off, or moved to another presentation, is shown again. The caller publishes.
+ function clearCollapse(){
+  collapsed=false;
+  unread=false;
+  collapseSeen=null;
+ }
+
+ // A restart that fails (an import error, a fetch that finds no replay) leaves chat off without Turn Chat Off, so
+ // chat that has settled off is shown again here. Mode 'off' with state 'off' is a restart's own publication, right
+ // before it sets 'importing' or 'fetching' or turns chat back on (chatOff with restart), and keeps chat hidden.
+ function settleCollapse(){
+  if(!collapsed||act.chat.mode!=='off')return;
+  if(act.chat.state==='off'||chatPending())return;
+  clearCollapse();
+ }
+
+ // A message's identity, as the live buffer keys it (inboxKey): its id, or its kind and text.
+ function messageKey(message){
+  return message.id||message.kind+'|'+message.text;
+ }
+
+ function visibleMessageKeys(){
+  return new Set(act.messages.map(messageKey));
+ }
+
+ // unread: while chat is hidden, a message has become visible that was not visible when it was hidden. A live
+ // message counts once it is revealed under the timing mode, not when it reaches the buffer; a moderation removal
+ // adds nothing. Once set, it holds until chat is shown.
+ function noteUnread(){
+  if(!collapsed||unread)return;
+  const seen=collapseSeen||new Set();
+  unread=act.messages.some(message=>!seen.has(messageKey(message)));
  }
 
  function stopLiveTransport(){
@@ -818,6 +904,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   onOverlay('view',onOverlayView);
   onOverlay('go-live',()=>goLive());
   onOverlay('chat-off',onChatOffRequest);
+  onOverlay('chat-collapse',onChatCollapse);
   if(config.qa)onOverlay('qa-result',d=>trace('overlay-ui-result',d));
   postOverlay('hello',{});
  }
@@ -1239,7 +1326,10 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function setView(change){
   if(!active()||!change||typeof change!=='object')return;
   const editing=change.editing===undefined?view.editing:!!change.editing;
+  const presentation=view.presentation;
   view=viewSettings(change.reset?{}:Object.assign({},view,change));
+  // D1c: choosing another presentation shows chat again.
+  if(view.presentation!==presentation)clearCollapse();
   view.editing=editing&&view.presentation==='overlay';
   saveSetting({view:Object.assign({},view,{editing:false})});
   if(overlayNeeded()){
@@ -1275,7 +1365,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }else if(!wanted&&besideActive){
    leaveBeside();
    if(!overlayNeeded())hideOverlay();
-  }else if(wanted&&view.columnWidth!==besideColumnWidth){
+  }else if(wanted&&(view.columnWidth!==besideColumnWidth||collapsed!==besideCollapsed)){
    updateBesideMargin();
   }
  }
@@ -1290,17 +1380,24 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function leaveBeside(){
   besideActive=false;
   besideColumnWidth=null;
+  besideCollapsed=false;
   setBesideMargin(0);
   restoreWindow();
   trace('beside-leave');
  }
 
  // Recomputes the margin from the current window width: after entering, a column-width change, a window
- // resize, IINA's re-fit after a video-size change, or a fullscreen change.
+ // resize, IINA's re-fit after a video-size change, a fullscreen change, or hiding or showing chat (D1c).
+ // Hidden chat gives the video the whole window, and the window frame stays as it is.
  function updateBesideMargin(){
   const frame=windowFrame();
   if(!frame||frame.width<=0)return;
   besideColumnWidth=view.columnWidth;
+  besideCollapsed=collapsed;
+  if(collapsed){
+   setBesideMargin(0);
+   return;
+  }
   setBesideMargin(Math.min(MARGIN_RATIO_MAX,view.columnWidth/frame.width));
  }
 
@@ -1417,6 +1514,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    trace('chat-restart');
    return;
   }
+  // D1c: chat that is off is not hidden. A restart keeps it hidden: chat comes straight back on.
+  if(!options||!options.restart)clearCollapse();
   hideOverlay();
   send();
   trace('chat-off');
@@ -2226,6 +2325,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  function chatMenu(){
   const parent=menu.item('Chat',null);
   const children=[
+   chatCollapseItem(),
    menu.item('Import Chat Archive…',whileActive(()=>importArchive())),
    menu.item('Turn Chat Off',whileActive(onChatOffRequest)),
    menu.item('In Sidebar',whileActive(()=>setView({presentation:'sidebar'}))),
@@ -2236,13 +2336,53 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   return parent;
  }
 
+ // D1c: Hide Chat / Show Chat. IINA calls an item's action with the item (JavascriptPluginMenuItem.callAction),
+ // so the action takes no arguments from it. A disabled item does nothing if it is called anyway.
+ function chatCollapseItem(){
+  const title=collapsed?'Show Chat':'Hide Chat';
+  return menu.item(title,whileActive(()=>{
+   toggleCollapsed();
+  }),{keyBinding:CHAT_COLLAPSE_KEY,enabled:canCollapse()});
+ }
+
  // IINA 1.5.1 shows five top-level plugin items, counting global's Open Stream (MenuController.updatePluginMenu).
  // A parent with a null action only opens its submenu (JavascriptAPIMenu.item, JavascriptPluginMenuItem).
- menu.addItem(menu.item('Show Streams',whileWindow(showSidebar)));
- menu.addItem(menu.item('Go Live',whileActive(()=>{
-  goLive();
- }),{keyBinding:GO_LIVE_KEY,enabled:source.kind==='twitch-live'}));
- menu.addItem(chatMenu());
+ function addMenuItems(){
+  menu.addItem(menu.item('Show Streams',whileWindow(showSidebar)));
+  menu.addItem(menu.item('Go Live',whileActive(()=>{
+   goLive();
+  }),{keyBinding:GO_LIVE_KEY,enabled:source.kind==='twitch-live'}));
+  menu.addItem(chatMenu());
+ }
+
+ // The state the player's menu items show: whether chat can be hidden, and whether it is.
+ function menuStateKey(){
+  return String(canCollapse())+'|'+String(collapsed);
+ }
+
+ // D1c: when that state changes, the player's items are replaced, not edited. In IINA v1.5.1 an item's title and
+ // enabled setters write through an unowned reference to the NSMenuItem of the last menu rebuild, and a rebuild for
+ // another window frees that NSMenuItem (JavascriptPluginMenuItem.swift; MenuController.updatePluginMenu,
+ // add(menuItemDef:)). New items have no NSMenuItem until forceUpdate rebuilds the menu. The replacement runs on a
+ // later turn of the activation, on the main thread: send() can run on an mpv hook's stack, where forceUpdate's
+ // synchronous main-thread hop must not run and IINA may be reading the item list.
+ function syncMenu(){
+  if(menuStateKey()===menuKey||act.menuUpdate!==null)return;
+  act.menuUpdate=act.setTimeout(onMenuUpdateDue,0);
+ }
+
+ function onMenuUpdateDue(){
+  act.menuUpdate=null;
+  const key=menuStateKey();
+  if(key===menuKey)return;
+  menuKey=key;
+  menu.removeAllItems();
+  addMenuItems();
+  if(typeof menu.forceUpdate==='function')menu.forceUpdate();
+ }
+
+ addMenuItems();
+ menuKey=menuStateKey();
  if(windowLoaded)showSidebar();
 
  return{

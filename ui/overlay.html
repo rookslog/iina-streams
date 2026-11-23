@@ -16,7 +16,9 @@
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path class="fill" d="M3 3.2v9.6L10.2 8z"/><rect class="fill" x="11.2" y="3.2" width="1.8" height="9.6" rx=".6"/></svg>
    </button>
    <button id="hide-chat" type="button" aria-label="Hide Chat" title="Hide Chat">
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect class="line" x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path class="line" d="M10 3v10"/><path class="line" d="M5.5 6l2 2-2 2"/></svg>
+    <span id="hide-chat-icon" class="tool-icon"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect class="line" x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path class="line" d="M10 3v10"/><path class="line" d="M5.5 6l2 2-2 2"/></svg></span>
+    <span id="show-chat-icon" class="tool-icon" hidden><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect class="line" x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path class="line" d="M10 3v10"/><path class="line" d="M7.5 6l-2 2 2 2"/></svg></span>
+    <span id="chat-unread" class="unread-dot" aria-hidden="true" hidden></span>
    </button>
   </div>
   <div id="messages" role="log" aria-live="off"></div>

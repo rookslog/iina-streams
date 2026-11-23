@@ -32,3 +32,30 @@ At `bae776d`, `node --test tests/history.test.js` passed **9/9**, and the scoped
 - **P2 Unicode: accepted.** Word starts are judged on code points, not UTF-16 units.
 - **P2 test gaps: accepted.** Add tests that the listed mutations break: the 29-second visit, unsorted loads, invalid timestamps, mixed-case providers, write errors, and mutation attempts on a newer-version file. An identical `finish` retry is a no-op.
 - **Nit: accepted.** Un-pack the dense test helper.
+
+## Round 2, final clearance (verbatim; Codex gpt-6.2-sol xhigh, 23:38–23:42, on 8f83b2c)
+
+**FIX FIRST** — `feat/73-history` at `8f83b2c`.
+
+- **P1 — Privacy guarantee still open.** [src/history.js:72](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:72) implements the approved allowlists and rejects the round‑1 `mailto:` example. But a synthetic opaque token that fits the rules was written to disk as either a login or a display name. The module validates format, not provenance; it cannot support the unconditional “never a token” claim.
+- **P1 — Forget can still falsely report success.** [src/history.js:295](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:295) returns `true` when nothing is dirty. If the initial read throws, `forget` sees an empty list and reports success without writing; the channel reappears when storage is readable again. Ordinary failed writes are reported and identical mutator retries work, but [query](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:408) does not retry a pending write despite the “next call” contract.
+- **P2 — Visit handles break under clock rollback.** [src/history.js:127](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:127) clamps the timestamp that [finish uses as the key](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:385). Record at `1000`, reopen with the clock at `990`, and the original handle no longer closes the visit. Separately, the approved same-second handle collision means an identical retry after a failed write can close the *other* window’s visit.
+- **P2 — The 500-person cap is still open on load.** [src/history.js:263](/Users/rookslog/Development/iina-streams-wt/h73/src/history.js:263) loads all 501 people from an oversized file; changing pause writes all 501 back. Newcomer protection and unchanged-pause behavior are closed.
+- **P2 — Retry tests still miss state loss.** [tests/history.test.js:349](/Users/rookslog/Development/iina-streams-wt/h73/tests/history.test.js:349) stayed green when failed forget, clear and pause calls rolled back their in-memory changes. The suite also missed skipping retries on no-op `record` or `finish`, and accepting invalid stored timestamps.
+
+**Closed:** Readable newer schemas stay read-only; loaded visits sort and clamp as specified in isolation; Unicode word starts and the dense helper are fixed. The tests rejected every mutation explicitly listed in round 1. `node --test tests/history.test.js` passed **18/18**; the scoped diff check passed. Wiring and native IINA were out of scope.
+## Lead disposition after the final clearance (23:50)
+
+Targeted fix plus a narrow check, per the 0.5.5 precedent (and the same path as #67).
+
+- **P1 privacy: accepted, by narrowing the claim.** The module can check format, not provenance. TESTS.md item 9 becomes: "the module stores only identity fields that pass the allowlists, and never playback metadata". Provenance is guaranteed by the wiring: items 10–12 must pass only identity that came from a resolved Twitch user (login and display name) or a YouTube channel record, and a wiring test asserts that nothing from a URL, token or playlist reaches `record`. No module code change for this.
+- **P1 forget after a failed read: accepted.**
+  - An I/O failure on the initial read (not a parse failure) marks the store **unavailable**.
+  - While unavailable, every mutation returns false and writes nothing, so a file it couldn't read is never overwritten. Each call retries the read first.
+  - The pending-write contract becomes "the next *mutating* call": `query` never writes.
+- **P2 handles: accepted.** Each visit gets a stored, monotonically increasing `id`, and handles carry that id, not the timestamp. That fixes both clock rollback and the same-second collision.
+- **P2 cap on load: accepted.** Trim to 500 in memory on load, by score; nothing is written until the next mutating call.
+- **P2 test gaps: accepted.** Tests where:
+  - a failed forget, clear or pause keeps its in-memory change and retries;
+  - a no-op `record` or `finish` doesn't skip a pending retry;
+  - invalid stored timestamps are rejected on load.

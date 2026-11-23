@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar structure A</title>
+<link rel="stylesheet" href="../lowfi.css">
+</head>
+<body>
+<div class="page">
+  <section class="panel" aria-label="Streams sidebar">
+    <div class="iina" aria-hidden="true"><span>Video</span><span>Audio</span><span>Subtitles</span><span class="on">Streams</span><span class="chev">›</span></div>
+
+    <div class="pinned top">
+      <details class="card" style="margin:0 0 8px">
+        <summary style="font-size:13px;color:var(--fg);margin:2px 4px"><span id="np"></span></summary>
+        <div class="line"><span class="grow">Quality</span>
+          <select aria-label="Quality"><option>Source (1080p60)</option><option>720p60</option><option>480p</option><option>Audio only</option></select></div>
+        <div class="line"><span class="grow">Reload stream</span><button class="btn" type="button">Reload</button></div>
+        <h2 class="dim" style="font-size:11px;margin:6px 4px 2px">This channel's VODs</h2><div id="np-vods"></div>
+      </details>
+      <input type="search" id="q" placeholder="Search" aria-label="Search channels">
+    </div>
+
+    <div class="scroll">
+      <div id="results" class="card" hidden aria-label="Search results"></div>
+      <div id="lists">
+        <section class="card" aria-labelledby="h-live"><h2 id="h-live">Live</h2><div id="live"></div></section>
+        <section class="card" aria-labelledby="h-off"><h2 id="h-off">Offline</h2><div id="off"></div></section>
+        <details class="card"><summary>Chat</summary>
+          <div class="line"><label class="grow" for="chat-on">Show chat</label><input id="chat-on" type="checkbox" checked></div>
+          <div class="line"><span class="grow">Chat settings</span><button class="btn" type="button">Open…</button></div>
+          <div class="line"><span class="grow">Import archive</span><button class="btn" type="button">Choose…</button></div>
+        </details>
+        <details class="card"><summary>Twitch account</summary>
+          <div class="line"><span class="grow">Signed in as you_handle</span><button class="btn" type="button">Sign out</button></div>
+          <div class="line"><span class="grow">Pause watch history</span><input type="checkbox" aria-label="Pause watch history"></div>
+          <div class="line"><span class="grow">Forget this channel</span><button class="btn" type="button">Forget</button></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <div class="notes">
+    <h1>A: one list, like Twitch's sidebar</h1>
+    <p class="width-switch">Width: <button type="button" data-width="360" aria-pressed="true">360 pt</button> <button type="button" data-width="300" aria-pressed="false">300 pt</button></p>
+    <p><b>Shown first:</b> what's playing (one line), the search field, then Live, ranked, with viewers.</p>
+    <p><b>Behind a tap:</b></p>
+    <ul>
+      <li>quality, reload and this channel's VODs: tap the playing channel's line;</li>
+      <li>someone's VODs: › on their row (live or offline); tapping an offline person opens them too;</li>
+      <li>more people: "Show more" under Live and Offline;</li>
+      <li>chat on/off, chat settings and import: the Chat group, closed;</li>
+      <li>account and history controls: the Twitch account group, closed.</li>
+    </ul>
+    <p><b>Order, top to bottom:</b> playing, search, Live, Offline, Chat, Twitch account. Playing and search stay put; the rest scrolls.</p>
+    <p><b>Search:</b> typing replaces the lists with matches, local first, then Twitch search results. Escape clears.</p>
+    <p class="status" id="status" role="status"></p>
+  </div>
+</div>
+<script src="../../open-stream/sample-data.js"></script>
+<script src="../lowfi.js"></script>
+<script>
+(function () {
+  const L = window.LowFi, D = L.D;
+  const np = L.byLogin(L.NOW_PLAYING);
+  document.getElementById("np").innerHTML = '<span class="pill">LIVE</span> <b></b> <span class="dim"></span>';
+  document.querySelector("#np b").textContent = np.name;
+  document.querySelector("#np .dim").textContent = D.compact(np.viewers) + " · Source";
+
+  document.getElementById("np-vods").append(L.vodList(np, 3));
+  function capped(host, list, n) {
+    list.slice(0, n).forEach(p => host.append(L.row(p)));
+    if (list.length > n) {
+      const more = document.createElement("button");
+      more.type = "button"; more.className = "more"; more.textContent = "Show more";
+      more.addEventListener("click", () => { list.slice(n).forEach(p => host.insertBefore(L.row(p), more)); more.remove(); });
+      host.append(more);
+    }
+  }
+  const ppl = L.people(true);
+  capped(document.getElementById("live"), ppl.live, 5);
+  capped(document.getElementById("off"), ppl.rest, 3);
+  L.wireSearch(document.getElementById("q"), document.getElementById("results"), [document.getElementById("lists")]);
+  L.widthSwitch();
+})();
+</script>
+</body>
+</html>

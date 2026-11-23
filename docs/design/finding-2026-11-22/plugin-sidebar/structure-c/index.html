@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar structure C</title>
+<link rel="stylesheet" href="../lowfi.css">
+</head>
+<body>
+<div class="page">
+  <section class="panel" aria-label="Streams sidebar">
+    <div class="iina" aria-hidden="true"><span>Video</span><span>Audio</span><span>Subtitles</span><span class="on">Streams</span><span class="chev">›</span></div>
+
+    <div class="pinned top">
+      <input type="search" id="q" placeholder="Search" aria-label="Search channels">
+      <div class="tabs" role="tablist" aria-label="Browse">
+        <button type="button" role="tab" aria-selected="true" aria-controls="t-live" id="b-live">Live</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="t-vods" id="b-vods">VODs</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="t-cat" id="b-cat">Categories</button>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div id="results" class="card" hidden aria-label="Search results"></div>
+      <div id="tabs-body">
+        <div role="tabpanel" id="t-live" aria-labelledby="b-live">
+          <section class="card" aria-label="Live"><div id="live"></div></section>
+          <details class="card"><summary id="off-sum">Offline</summary><div id="off"></div></details>
+        </div>
+        <div role="tabpanel" id="t-vods" aria-labelledby="b-vods" hidden>
+          <section class="card" aria-labelledby="h-c"><h2 id="h-c">Continue watching</h2><div id="cont"></div></section>
+          <section class="card" aria-labelledby="h-this"><h2 id="h-this">This channel</h2><div id="this"></div></section>
+          <section class="card" aria-labelledby="h-new"><h2 id="h-new">From your channels</h2><div id="new"></div></section>
+        </div>
+        <div role="tabpanel" id="t-cat" aria-labelledby="b-cat" hidden><div id="cats"></div></div>
+      </div>
+    </div>
+
+    <div class="pinned">
+      <div class="line"><span class="pill">LIVE</span><b class="grow" id="np-name"></b>
+        <select aria-label="Quality" style="max-width:110px"><option>Source</option><option>720p60</option><option>480p</option><option>Audio only</option></select>
+        <details style="position:relative"><summary class="btn" aria-label="More" style="list-style:none">…</summary>
+          <div class="card" style="position:absolute;right:0;bottom:30px;width:230px;background:#333;z-index:2">
+            <div class="line"><label class="grow" for="chat-on">Show chat</label><input id="chat-on" type="checkbox" checked></div>
+            <div class="line"><span class="grow">Chat settings…</span></div>
+            <div class="line"><span class="grow">Import archive…</span></div>
+            <div class="line"><span class="grow">Pause watch history</span><input type="checkbox" aria-label="Pause watch history"></div>
+            <div class="line"><span class="grow">Forget this channel</span></div>
+            <div class="line"><button class="btn primary" type="button">Sign in with Twitch</button></div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <div class="notes">
+    <h1>C: search and tabs, playing at the bottom</h1>
+    <p class="width-switch">Width: <button type="button" data-width="360" aria-pressed="true">360 pt</button> <button type="button" data-width="300" aria-pressed="false">300 pt</button></p>
+    <p><b>Shown first:</b> search, then the Live tab: live channels, ranked, with viewers. The playing channel and its quality sit in a strip pinned at the bottom.</p>
+    <p><b>Behind a tap:</b></p>
+    <ul>
+      <li>offline channels: the closed Offline group;</li>
+      <li>VODs: the VODs tab (continue watching, this channel, your channels' recent ones), or › on any row;</li>
+      <li>categories with live channels in them: the Categories tab;</li>
+      <li>chat on/off, chat settings, import, history controls and sign-in: the … menu on the bottom strip.</li>
+    </ul>
+    <p><b>Order:</b> search and tabs pinned at the top, the tab's list scrolls, the playing strip pinned at the bottom.</p>
+    <p><b>Trade:</b> the most browsing for the 360 pt, at the cost of three tabs to learn; quality is one tap from anywhere.</p>
+    <p class="status" id="status" role="status"></p>
+  </div>
+</div>
+<script src="../../open-stream/sample-data.js"></script>
+<script src="../lowfi.js"></script>
+<script>
+(function () {
+  const L = window.LowFi, D = L.D;
+  const np = L.byLogin(L.NOW_PLAYING);
+  document.getElementById("np-name").textContent = np.name;
+  const ppl = L.people(true);
+  ppl.live.forEach(p => document.getElementById("live").append(L.row(p)));
+  ppl.rest.forEach(p => document.getElementById("off").append(L.row(p)));
+  document.getElementById("off-sum").textContent = "Offline (" + ppl.rest.length + ")";
+  L.CONTINUE.forEach(c => document.getElementById("cont").append(L.continueRow(c)));
+  document.getElementById("this").append(L.vodList(np, 3));
+  ppl.rest.filter(p => p.state === "offline" && L.vodsOf(p).length).forEach(p => document.getElementById("new").append(L.row(p)));
+  L.categories().forEach(([cat, list]) => {
+    const d = document.createElement("details");
+    d.className = "card";
+    const s = document.createElement("summary");
+    s.textContent = cat + " (" + list.length + ")";
+    d.append(s);
+    list.forEach(p => d.append(L.row(p)));
+    document.getElementById("cats").append(d);
+  });
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  function pick(t) {
+    tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute("aria-controls")).hidden = !on; });
+    t.focus();
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => pick(t));
+    t.addEventListener("keydown", e => {
+      if (e.key === "ArrowRight") pick(tabs[(i + 1) % tabs.length]);
+      if (e.key === "ArrowLeft") pick(tabs[(i + tabs.length - 1) % tabs.length]);
+    });
+  });
+  L.wireSearch(document.getElementById("q"), document.getElementById("results"), [document.getElementById("tabs-body")]);
+  L.widthSwitch();
+})();
+</script>
+</body>
+</html>

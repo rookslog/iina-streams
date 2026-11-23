@@ -16,6 +16,7 @@ Start by checking current Git status, exact IINA plugin identities, and the user
   - `npx impeccable detect` checks `ui/` and the mocks.
 
   Its defaults are web taste: Apple's macOS guidelines, the streams-interaction-design skill and native IINA behaviour win any conflict.
+- **Worktrees live outside the project folder,** in `../iina-streams-wt/<name>`: never `.claude/worktrees/`. In-project copies make link-opening tools ask which `docs/WAITING.md` to open. So don't use the Agent tool's `isolation: worktree`: create the worktree with `git worktree add ../iina-streams-wt/<name> <branch>`, and point the agent at it. Remove each worktree once its branch is merged or parked; the branch keeps the commits.
 - Keep the skill roster narrow. Do not simultaneously invoke the complete Matt Pocock, Superpowers, P Stack, and Addy Osmani workflow routers.
 - Multi-round review follows `docs/REVIEW.md` (D-032): severity gate, a step-back at round 3 or on any recurring class, class repair against written invariants, and the Known classes list in every reviewer brief.
 - Each completed slice needs reproducible observed behavior, tests where appropriate, preserved source SHA, and an honest record of what was **not** tested.

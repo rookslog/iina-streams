@@ -268,7 +268,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Docs to change at merge:** `docs/PRIVACY.md` gains this request under `api.twitch.tv` and `gql.twitch.tv`. Its last line ("only when you open a stream or sign in") gains "or open Open Stream". Its watch-history row ("Nothing leaves your Mac") becomes "names in it are sent to Twitch for live marks".
 
 ### W-19. Switch Streams Dev on so the lead can check tonight's work in IINA
-- **What it is:** nothing built tonight has run in IINA yet. That covers watch history (#73), the reopen quality fix (#59), the per-window diagnostics (#65) and the signed-in broadcast list (#75). A QA build of `next` (`0.5.5-dev+g0708d0a9`, with the test harness) is staged in **Streams Dev**. The lead can drive it from the command line, with no clicking, once Dev is switched on. At night the lead may not change IINA's plugin switches: the request was refused when tried at 18:20.
+- **What it is:** nothing built tonight has run in IINA yet. That covers watch history (#73), the reopen quality fix (#59), the per-window diagnostics (#65) and the signed-in broadcast list (#75). A QA build of `next` (`0.5.5-dev+g0708d0a9`, with the test harness) is staged in **Streams Dev**. The lead can drive it from the command line, with no clicking, once Dev is switched on. At night the lead may not change IINA's plugin switches: the request was refused when tried, shortly before 17:55 (from `date`).
 - **What's needed from you** (about a minute):
   1. In IINA → Settings → Plugins, switch **Streams Dev** on and **Streams Beta** off.
   2. Quit and reopen IINA.

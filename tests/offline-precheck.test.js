@@ -503,3 +503,53 @@ test('#73 round 3 cancel table: submit A, then a broadcast link that opens at on
   await replyThenMainTurn(fixture, 'live');
   assert.equal(fixture.opens().length, 1, 'A, whose form is gone, opens no second player');
 });
+
+// ---- #66 (0.5.6, lead, 2026-11-24): cancel, reopen, and a late broadcasts result from the cancelled form ----
+// Every status check answers offline at once; each channel's broadcast lookup is held until released by login.
+function heldArchivesHttp() {
+  const calls = [];
+  const held = new Map();
+  function post(url, options) {
+    const query = String(options && options.data && options.data.query || '');
+    calls.push({method: 'POST', url, query});
+    if (query.includes(STREAM_QUERY)) return Promise.resolve(STATUS.offline.value);
+    const login = (query.match(/user\(login:"([^"]+)"\)/) || [])[1];
+    return new Promise(resolve => held.set(login, resolve));
+  }
+  function release(login) {
+    const resolve = held.get(login);
+    assert.ok(resolve, 'fixture: a broadcasts lookup for ' + login + ' is waiting');
+    held.delete(login);
+    const reply = archives(2);
+    for (const {node} of reply.data.data.user.videos.edges) node.title = `${login} ${node.title}`;
+    resolve(reply);
+  }
+  return {calls, held, release, answer() {}, api: {post, get: () => Promise.reject(UNAVAILABLE)}};
+}
+
+test('#66 a cancelled form\'s late broadcasts never render in, or replace, a reopened form\'s list', async () => {
+  const http = heldArchivesHttp();
+  const fixture = loadGlobal({http});
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await mainTurns(fixture);
+  assert.ok(http.held.has(LOGIN), 'A\'s broadcasts are being looked up');
+  fixture.win.send('open-cancel', {});
+  await mainTurns(fixture);
+
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: OTHER});
+  await mainTurns(fixture);
+  http.release(OTHER);
+  await mainTurns(fixture);
+  const titles = () => (fixture.lists().at(-1).items || []).map(item => item.title);
+  assert.ok(titles().length > 0 && titles().every(title => title.startsWith(OTHER)), 'B\'s broadcasts show');
+
+  const before = fixture.lists().length;
+  http.release(LOGIN);
+  await mainTurns(fixture);
+  assert.equal(fixture.lists().length, before, 'A\'s late result posts nothing');
+  assert.ok(titles().every(title => title.startsWith(OTHER)), 'and B\'s list stays');
+  assert.equal(fixture.win.visible, true, 'the reopened form stays open');
+  assert.equal(fixture.opens().length, 0);
+});

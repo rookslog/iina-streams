@@ -11,7 +11,7 @@ const {createAuthority}=require('./authority.js');
 const {listen}=require('./listeners.js');
 
 // #60 lifetime probe: one id and start time per JS context (IINA creates one per plugin instance), written with
-// every last-session.json. A new id for the same window shows its context was replaced.
+// every diagnostic post to global. A new id for the same window shows its context was replaced.
 const INSTANCE_ID=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
 const INSTANCE_STARTED_AT=new Date().toISOString();
 
@@ -542,7 +542,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    diag.push(Object.assign({step,t:Date.now()},extra||{}));
    if(diag.length>40)diag.shift();
    const record={instanceId:INSTANCE_ID,instanceStartedAt:INSTANCE_STARTED_AT,steps:diag};
-   if(host.file&&host.file.write)host.file.write('@data/last-session.json',JSON.stringify(record));
+   app.postMessage('diag',record);
   }catch(_){}
  }
 
@@ -1848,12 +1848,12 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
  }
 
- function applyResolution(result,context){
+ function applyResolution(result,context,freshResult){
   if(act.restoreTimer!==null){
    act.clearTimeout(act.restoreTimer);
    act.restoreTimer=null;
   }
-  act.restoration={context,live:result.live,loaded:false,sized:false,loadedAt:null,lastSizeAt:null};
+  act.restoration={context,freshResult,live:result.live,loaded:false,sized:false,loadedAt:null,lastSizeAt:null};
   if(result.headers){
    mpv.set('file-local-options/http-header-fields',Object.keys(result.headers).map(k=>k+': '+result.headers[k]));
   }
@@ -1896,7 +1896,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    speed:c.speed||1,
    requestedPosition:expected.live?0:c.position
   });
-  act.player.loaded(c.generation);
+  act.player.loaded(c.generation,expected.freshResult);
   send();
  }
 
@@ -2060,7 +2060,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    act.historyChannelExplicit=false;
    act.historyChannel=null;
   }
-  applyResolution(result,context);
+  // A reopen's metadata belongs to this load, not the previous file or a staged quality replacement.
+  // Commit it only when the matching native load has completed restoration.
+  applyResolution(result,context,!staged&&act.initialResolved?result:null);
   if(!act.initialResolved){
    act.player.adopt(result);
    act.initialResolved=true;

@@ -126,6 +126,11 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
         const live = found.filter(login => control.liveLogins.has(login));
         shim.http.setResponse({statusCode: 200, data: {data: live.map(login => ({user_login: login, type: 'live'}))}});
       }
+    } else if (url.includes('/helix/users')) {
+      shim.http.setResponse({statusCode: 200, data: {data: [{id: '4242', login: 'ohnepixel'}]}});
+    } else if (url.includes('/helix/videos')) {
+      shim.http.setResponse({statusCode: 200, data: {data: [{id: '1234567890', title: 'Helix Archive',
+        created_at: '2026-11-20T10:31:57Z', duration: '1h0m0s'}]}});
     } else {
       shim.http.rejectResponse({statusCode: 404, reason: 'Not Found', text: ''});
     }
@@ -425,6 +430,20 @@ test('8. open-vods {login} answers offline-vods with recent broadcasts, whether 
     assert.equal(r.prechecks().length, 0, `${precheck}: no live precheck for a broadcast list`);
     assert.deepEqual(r.shim.global.opens, [], `${precheck}: no player is created`);
   }
+});
+
+// Lead, 2026-11-24, after merging #75: a person's broadcasts asked for from a suggestion go through Helix when signed
+// in, like the typed path (tests/helix-vods-075.test.js).
+test('8b. signed in, open-vods lists broadcasts through Helix, with no GQL archive request', async () => {
+  const r = loadGlobal({signedIn: true});
+  await r.signIn();
+  await r.showOpen();
+  r.window.receive('open-vods', {login: 'ohnepixel'});
+  await r.settle();
+  const helixCalls = r.calls().filter(call => /\/helix\/(users|videos)/.test(call.url));
+  assert.deepEqual(helixCalls.map(call => new URL(call.url).pathname), ['/helix/users', '/helix/videos']);
+  assert.equal(r.archives().length, 0, 'no GQL archive request');
+  assert.deepEqual(r.messages('offline-vods').at(-1).items.map(item => item.title), ['Helix Archive']);
 });
 
 test('9. paused history still serves suggestions; cleared history serves rows: []', async () => {

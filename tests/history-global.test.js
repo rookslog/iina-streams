@@ -341,7 +341,7 @@ test('17. the history commands are one Watch History submenu; Go Live and Chat k
     assert.deepEqual(titlesOf(more), [], 'nothing is pushed under More… ' + when);
     const submenu = top.find(entry => entry.title === SUBMENU);
     assert.equal(submenu.action, null, 'the submenu title only opens the submenu');
-    assert.deepEqual(titlesOf(submenu.items), [PAUSE, FORGET, CLEAR]);
+    assert.deepEqual(titlesOf(submenu.items), [PAUSE, CLEAR], "round 3 (item 26): no per-channel Forget");
   };
   check('at start');
   assert.equal(r.menuItem(PAUSE).selected, false, 'Pause is a checkmark item');

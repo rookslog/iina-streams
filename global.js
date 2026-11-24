@@ -178,16 +178,15 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
-// openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
-// source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
-// pendingFormCheck names the most recent submitted live check. Cancellation affects only that submission
-// while its form session is current, not an independent earlier check.
+// openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
+// fresh pages and closes advance it. The form instance instead lasts until the window closes: every check
+// it starts shares its cancellation flag, while sidebar checks have no form instance.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
-let openRun=0,pendingFormCheck=null,openPageReady=false,openQueue=[];
+let openRun=0,formInstance=null,openPageReady=false,openQueue=[];
 
 // Opens the input. Returns 'opened', 'checking' (a Twitch channel whose live check is pending), 'invalid', or
-// 'blank' when there is nothing to open. `fromForm` says the Open Stream form submitted it in the current session.
-function openInput(input,fromForm){
+// 'blank' when there is nothing to open. `form` is the instance that submitted it, if any.
+function openInput(input,form=null){
  if(typeof input!=='string'||!input.trim())return'blank';
  const source=Sources.parse(input);
  if(!source)return'invalid';
@@ -195,7 +194,7 @@ function openInput(input,fromForm){
   openPlayer(source);
   return'opened';
  }
- openWhenLive(source,openRun,!!fromForm);
+ openWhenLive(source,openRun,form);
  return'checking';
 }
 
@@ -210,12 +209,10 @@ function openPlayer(source){
 // Stream window and no player is created. Live, or a check that could not decide: the player opens as before.
 // Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
 // path (src/player.js posts source-offline, onSourceOffline below).
-async function openWhenLive(source,session,fromForm){
- const check=fromForm?{session,cancelled:false}:null;
- if(check)pendingFormCheck=check;
+async function openWhenLive(source,run,form){
  const deps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
  const status=await channelStatus({login:source.id},deps);
- onMainThread(()=>finishLiveCheck(source,status,session,fromForm,check));
+ onMainThread(()=>finishLiveCheck(source,status,run,form));
 }
 
 // H-main (#67): iina.http settles its promise from Just's completion handler, off the main thread
@@ -227,16 +224,15 @@ function onMainThread(fn){
  timers.setTimeout(fn,0);
 }
 
-// The decision, on the main thread. Explicit cancellation (open-cancel) aborts a pending form check; an edit
-// or independent submission keeps its own check while only the current form session updates or closes the window.
-function finishLiveCheck(source,status,session,fromForm,check){
+// Explicit cancellation aborts every unanswered check from that form instance, regardless of status.
+// Independently, only the current draft may update or close the window.
+function finishLiveCheck(source,status,run,form){
  qaTrace('live-check',{status});
- if(check&&pendingFormCheck===check)pendingFormCheck=null;
- if(check&&check.cancelled)return;
- const current=session===openRun;
+ if(form&&form.cancelled)return;
+ const current=run===openRun&&(!form||openWindow.isOpen());
  if(status!=='offline'){
   openPlayer(source);
-  if(fromForm&&current)closeOpenWindow();
+  if(form&&current)closeOpenWindow();
   return;
  }
  if(current)showOfflineVods(source.id);
@@ -259,6 +255,7 @@ function showOpenWindow(){
   return;
  }
  openRun++;
+ formInstance={cancelled:false};
  openPageReady=false;
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
@@ -272,12 +269,13 @@ function showOpenWindow(){
 }
 
 function onOpenCancel(){
- if(pendingFormCheck&&pendingFormCheck.session===openRun)pendingFormCheck.cancelled=true;
+ if(formInstance&&openWindow.isOpen())formInstance.cancelled=true;
  closeOpenWindow();
 }
 
 function closeOpenWindow(){
  openRun++;
+ formInstance=null;
  openWindow.close();
 }
 
@@ -286,11 +284,11 @@ function onOpenEdit(){
  openRun++;
 }
 
-// A submit starts a new form session, so a check from an earlier submit cannot update the form (F-session).
+// A submit advances the draft revision, so a check from an earlier submit cannot update the form (F-session).
 // U-feedback: while a channel is checked the form stays open and shows the list's loading indicator.
 function onOpenWindowSubmit(data){
  openRun++;
- const result=openInput(data&&data.input,true);
+ const result=openInput(data&&data.input,formInstance);
  if(result==='opened')closeOpenWindow();
  if(result==='checking')postOfflineVods({state:'loading'},1);
  if(result==='invalid')openWindow.postMessage('open-error',{});
@@ -482,9 +480,7 @@ function onPlayerClosed(_,label){
  const managedID=targetID(label);
  const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
- const visit=windowVisits.get(id);
  finishWindowVisit(id);
- if(boundVisit&&boundVisit.visit===visit)boundVisit=null;
  // Only a departing audience member can warrant stopping the broker; an unrelated close must not (r3 #3).
  const wasMember=audience.delete(id);
  if(typeof id==='number')managed.delete(id);
@@ -530,8 +526,6 @@ function historyNow(){
 const history=createHistory({storage:historyStorage,now:historyNow});
 // Open visits keyed by managed numeric id or adopted bare-number string label: {provider, login, handle}.
 const windowVisits=new Map();
-// Visit bound when the Plugin menu opened via iina.menu-update -> history-menu: {key, visit}.
-let boundVisit=null;
 let menuRebuildTimer=null;
 
 function adoptionEnabled(){
@@ -579,10 +573,7 @@ function onHistoryStart(data,label){
  if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
  const existing=windowVisits.get(key);
  if(existing&&sameHistoryChannel(existing,data))return;
- if(existing){
-  finishWindowVisit(key);
-  if(boundVisit&&boundVisit.visit===existing)boundVisit=null;
- }
+ if(existing)finishWindowVisit(key);
  // Pass only identity fields so no playback metadata can ever reach history.
  const handle=history.record({
   provider:data.provider,
@@ -602,20 +593,6 @@ function onHistoryEnd(data,label){
  const visit=windowVisits.get(key);
  if(!visit||!sameHistoryChannel(visit,data))return;
  finishWindowVisit(key);
- if(boundVisit&&boundVisit.visit===visit)boundVisit=null;
-}
-
-function onHistoryMenu(data,label){
- const key=historySender(label);
- if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
- const visit=data.visit;
- if(visit===null){
-  boundVisit=null;
-  return;
- }
- if(!visit||typeof visit!=='object'||Array.isArray(visit))return;
- const current=windowVisits.get(key);
- boundVisit=current&&sameHistoryChannel(current,visit)?{key,visit:current}:null;
 }
 
 function toggleHistoryPause(){
@@ -623,22 +600,9 @@ function toggleHistoryPause(){
  scheduleMenuRebuild();
 }
 
-function forgetBoundChannel(){
- if(!boundVisit)return;
- const current=windowVisits.get(boundVisit.key);
- const visit=boundVisit.visit;
- boundVisit=null;
- if(!current||current!==visit)return;
- for(const [key,entry] of windowVisits){
-  if(sameHistoryChannel(entry,visit))windowVisits.delete(key);
- }
- history.forget({provider:visit.provider,login:visit.login});
-}
-
 function clearHistory(){
  history.clear();
  windowVisits.clear();
- boundVisit=null;
  scheduleMenuRebuild();
 }
 
@@ -646,7 +610,6 @@ function historyMenu(){
  const parent=menu.item('Watch History',null);
  const children=[
   menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused}),
-  menu.item('Forget This Channel',forgetBoundChannel),
   menu.item('Clear Watch History',clearHistory)
  ];
  for(const child of children)parent.addSubMenuItem(child);
@@ -688,7 +651,6 @@ listen(app,'global','auth-forget',onAuthForget);
 listen(app,'global','source-offline',onSourceOffline);
 listen(app,'global','history-start',onHistoryStart);
 listen(app,'global','history-end',onHistoryEnd);
-listen(app,'global','history-menu',onHistoryMenu);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

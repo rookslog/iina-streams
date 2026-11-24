@@ -2204,12 +2204,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   app.postMessage('history-end',visit);
  }
 
- // IINA 1.5.1 emits iina.menu-update only to PlayerCore.active when the Plugin menu opens (MenuController.swift L847).
- function onMenuUpdate(){
-  const visit=active()&&act.historyVisit?{provider:act.historyVisit.provider,login:act.historyVisit.login}:null;
-  app.postMessage('history-menu',{visit});
- }
-
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is
  // inactive, then everything is closed as for a window close, except that global is not told the window
  // closed: the window stays, and a stream adopted next takes over the same player.
@@ -2357,7 +2351,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  onActive('mpv.seek',onSeek);
  onActive('mpv.pause.changed',onPauseChanged);
  onActive('iina.window-fs.changed',onFullscreenChanged);
- onWindow('iina.menu-update',onMenuUpdate);
  onWindow('iina.window-will-close',onWindowWillClose);
 
  // IINA creates the child while the parent's createPlayerInstance call is on stack, so the global entry's

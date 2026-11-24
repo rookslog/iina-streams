@@ -378,6 +378,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  let closed=false,windowLoaded=!!core.window.loaded;
  let sidebarLoaded=false,sidebarReady=false,sidebarVisible=false,controlsDesired=true;
  let overlayLoaded=false,overlayReady=false;
+ // Watch history (#73): whether IINA's edge-triggered window-main event has reported focus for this controller.
+ let focusReported=false;
  // Chat beside the video: whether the margin is applied, the ratio and column width last applied, and the
  // widening to undo ({original, target, width}), or null. Window-scoped: they mirror the mpv option and the
  // window frame, which outlive any one activation. Only the current activation changes them (send), and a loss
@@ -2051,7 +2053,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   }
   act.activeGeneration=context.generation;
   const resolvedChannel=result.channel||(services.resolvedChannel&&services.resolvedChannel(source));
-  if(resolvedChannel)act.historyChannel=resolvedChannel;
+  if(resolvedChannel&&resolvedChannel.login)act.historyChannel=resolvedChannel;
   applyResolution(result,context);
   if(!act.initialResolved){
    act.player.adopt(result);
@@ -2104,6 +2106,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    if(channel){
     act.historyStarted=true;
     app.postMessage('history-start',channel);
+    if(!focusReported)reportFocus(true);
    }
   }
   if(act.liveClockURL)startLiveClock();
@@ -2160,6 +2163,16 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed)return;
   teardown({notifyGlobal:true});
   windowClosed();
+ }
+
+ function reportFocus(focused){
+  focusReported=true;
+  app.postMessage('history-focus',{focused});
+ }
+
+ // iina.window-main.changed fires only on main-window transitions (EventController.swift L40).
+ function onWindowMainChanged(isMain){
+  if(typeof isMain==='boolean')reportFocus(isMain);
  }
 
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is
@@ -2317,8 +2330,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  onActive('mpv.seek',onSeek);
  onActive('mpv.pause.changed',onPauseChanged);
  onActive('iina.window-fs.changed',onFullscreenChanged);
- onActive('iina.window-did-become-key',()=>app.postMessage('history-focus',{focused:true}));
- onActive('iina.window-did-resign-key',()=>app.postMessage('history-focus',{focused:false}));
+ onActive('iina.window-main.changed',onWindowMainChanged);
  onWindow('iina.window-will-close',onWindowWillClose);
 
  // IINA creates the child while the parent's createPlayerInstance call is on stack, so the global entry's

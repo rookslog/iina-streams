@@ -423,6 +423,20 @@ test('20. a cancelled offline open records no interest; an edit and a newer subm
   assert.deepEqual(r.people().map(({login}) => login), ['secondchannel']);
 });
 
+// Round 3 (lead): the window's close button is a cancel too. IINA tells the plugin nothing when it is used
+// (PluginStandaloneWindow.swift:23 .closable; isOpen() reads isVisible, JavascriptAPIStandaloneWindow.swift:50).
+test('20b. an offline open whose window the person closes by its close button records no interest', async () => {
+  const r = loadGlobal({stream: null, hold: ['archive']});
+  r.showOpen();
+  r.window.send('open-stream', {input: OHNE.login});
+  await r.settle();
+  r.window.visible = false;
+  r.release('archive');
+  await r.settle();
+  assert.deepEqual(r.people(), [], 'the late archive reply of a closed form records nothing');
+  assert.equal(r.window.visible, false, 'and does not reopen the window');
+});
+
 test('21. a cancelled live precheck opens no player and records nothing', async () => {
   const r = loadGlobal({hold: ['status']});
   r.showOpen();

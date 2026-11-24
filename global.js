@@ -179,8 +179,8 @@ const auth=new TwitchAuth({
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 // openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
-// fresh pages and closes advance it. The form instance instead lasts until the window closes: every check
-// it starts shares its cancellation flag, while sidebar checks have no form instance.
+// fresh pages and closes advance it. Every form-started check instead needs its own form instance
+// to still be showing (class C), while sidebar checks have no form instance.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
 let openRun=0,formInstance=null,openPageReady=false,openQueue=[];
 
@@ -224,12 +224,16 @@ function onMainThread(fn){
  timers.setTimeout(fn,0);
 }
 
-// Explicit cancellation aborts every unanswered check from that form instance, regardless of status.
+function isFormShowing(form){
+ return form===formInstance&&openWindow.isOpen();
+}
+
+// Closing the form revokes every unanswered check from that instance, regardless of status.
 // Independently, only the current draft may update or close the window.
 function finishLiveCheck(source,status,run,form){
  qaTrace('live-check',{status});
- if(form&&form.cancelled)return;
- const current=run===openRun&&(!form||openWindow.isOpen());
+ if(form&&!isFormShowing(form))return;
+ const current=run===openRun;
  if(status!=='offline'){
   openPlayer(source);
   if(form&&current)closeOpenWindow();
@@ -255,22 +259,17 @@ function showOpenWindow(){
   return;
  }
  openRun++;
- formInstance={cancelled:false};
+ formInstance={};
  openPageReady=false;
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
  listen(openWindow,'standaloneWindow','open-stream',onOpenWindowSubmit);
- listen(openWindow,'standaloneWindow','open-cancel',onOpenCancel);
+ listen(openWindow,'standaloneWindow','open-cancel',closeOpenWindow);
  listen(openWindow,'standaloneWindow','open-ready',onOpenPageReady);
  listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
  openWindow.open();
-}
-
-function onOpenCancel(){
- if(formInstance&&openWindow.isOpen())formInstance.cancelled=true;
- closeOpenWindow();
 }
 
 function closeOpenWindow(){
@@ -346,18 +345,19 @@ function offlineLogin(data){
 async function showOfflineVods(login){
  showOpenWindow();
  const run=++openRun;
+ const form=formInstance;
  postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1);
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
  const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
-  showArchives(run,result,login);
+  showArchives(run,result,login,form);
  });
 }
 
-function showArchives(run,result,login){
- if(run!==openRun||!openWindow.isOpen())return;
+function showArchives(run,result,login,form){
+ if(run!==openRun||!isFormShowing(form))return;
  if(result.ok)recordOfflineHistory(login);
  if(!result.ok){
   postOfflineVods({state:'error'},1);

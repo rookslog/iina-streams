@@ -436,3 +436,43 @@ test('#67 channelStatus: one anonymous GQL request; offline only for stream:null
     assert.equal(http.calls[0].headers.Authorization, undefined);
   }
 });
+
+// ---- #73 round 3 (lead, 2026-11-24, after Codex's narrow check): one cancellation rule, as a table ----
+// Rule: an explicit cancel (open-cancel) covers every live check that this form instance started and that has not
+// answered yet. A form instance runs from openStream() to its window closing; an edit (open-edit) or a second
+// submission does not start a new instance, so neither escapes the cancel. Opens from elsewhere (the sidebar's
+// `open`) and checks started by a later form instance are independent and still open.
+const OTHER = 'other_channel';
+const CANCEL_TABLE = [
+  {row: 'submit, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); }, answers: 1, opens: 0},
+  {row: 'submit, edit, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); f.win.send('open-edit', {}); }, answers: 1, opens: 0},
+  {row: 'submit A, submit B, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); f.win.send('open-stream', {input: OTHER}); }, answers: 2, opens: 0},
+  {row: 'sidebar open pending, form opened and cancelled', steps: f => { f.shim.global.send('open', {input: LOGIN}, '0'); }, answers: 1, opens: 1},
+];
+for (const {row, steps, answers, opens} of CANCEL_TABLE) {
+  test(`#73 round 3 cancel table: ${row}`, async () => {
+    const fixture = loadGlobal();
+    openForm(fixture);
+    steps(fixture);
+    await settle();
+    fixture.win.send('open-cancel', {});
+    await settle();
+    for (let i = 0; i < answers; i++) await replyThenMainTurn(fixture, 'live');
+    assert.equal(fixture.opens().length, opens, row);
+  });
+}
+
+test('#73 round 3 cancel table: a later form instance is independent of a cancelled one', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-cancel', {});
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: OTHER});
+  await settle();
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 0, 'the cancelled instance\'s answer opens nothing');
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 1, 'the later instance\'s answer opens its player');
+});

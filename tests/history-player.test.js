@@ -173,35 +173,19 @@ test('#73 no history message carries a URL, title, token or query string', async
 });
 
 // ---- Round 2 (TESTS.md items 17-25) ----
-// Lead's amendment to items 18-19: history-focus is gone; Forget binds only through history-menu at iina.menu-update.
+// Lead's amendments: history-focus is gone (items 18-19); round 3 drops the menu-open binding with per-channel Forget.
 
 const channelOf = (provider, login, displayName) => ({provider, login, displayName});
 const YT_ID = 'UCaBcD0123456789xyzPQrst';
 
-test('#73 19. iina.menu-update posts history-menu with this window\'s open visit, or none', async t => {
-  const f = await playing(t, LIVE);
-  f.shim.emitMenuUpdate();
-  assert.deepEqual(f.named('history-menu'), [{visit: null}], 'nothing has played yet');
-  f.fileLoaded();
-  f.shim.emitMenuUpdate();
-  assert.deepEqual(f.named('history-menu').at(-1), {visit: {provider: 'twitch', login: 'fixture_live'}});
-  assert.equal(f.named('history-menu').length, 2, 'one message per menu-update');
-  f.controller.retire();
-  f.shim.emitMenuUpdate();
-  assert.ok(f.named('history-menu').slice(2).every(message => message.visit === null), 'a retired window has no visit');
-});
-
-test('#73 19. the player sends no history-focus message at all', async t => {
+// Round 3 (lead): per-channel Forget is deferred to #76, so the player reports nothing at menu-open.
+test('#73 19. the player posts no history-menu or history-focus, and registers no iina.menu-update listener', async t => {
   const f = await playing(t, LIVE);
   f.shim.emit('iina.window-main.changed', true);
   f.fileLoaded();
-  f.shim.emit('iina.window-main.changed', false);
   f.shim.emitMenuUpdate();
-  f.shim.emit('iina.window-main.changed', true);
   f.controller.retire();
-  assert.deepEqual(f.posts().filter(post => post.name === 'history-focus'), []);
-  assert.deepEqual(f.posts().map(post => post.name), ['history-start', 'history-menu', 'history-end'],
-    'history-start, the menu report, history-end: nothing else');
+  assert.deepEqual(f.posts().map(post => post.name), ['history-start', 'history-end'], 'history-start and history-end only');
 });
 
 test('#73 22. a failed resolve followed by IINA\'s own fallback load posts no history-start', async t => {

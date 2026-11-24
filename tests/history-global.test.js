@@ -252,33 +252,21 @@ test('14. a native window contributes only when adoption is opted in', async () 
   }
 });
 
-test('15. the Watch History submenu pauses, forgets the channel bound at menu-open, and clears without dialogs', async () => {
+// Round 3 (lead, 2026-11-24, after Codex's narrow check): per-channel Forget is out of 0.5.6 and goes to the People
+// screen (#76), where the person is named on screen. Global has no way to know which window is active (no accessor in
+// JavascriptAPIGlobal.swift), and a player-side item would be the sixth top-level item, which IINA puts under More…
+// (MenuController.swift:660). The Watch History submenu holds Pause and Clear only.
+test('15. the Watch History submenu pauses and clears without dialogs, and has no Forget', async () => {
   const r = loadGlobal();
   const item = name => {
     const entry = r.menuItem(name);
     assert.ok(entry, 'missing menu item: ' + name);
     return entry;
   };
-  for (const name of [PAUSE, CLEAR, FORGET]) assert.equal(typeof item(name).action, 'function');
+  for (const name of [PAUSE, CLEAR]) assert.equal(typeof item(name).action, 'function');
+  assert.equal(r.menuItem(FORGET), undefined, 'no Forget item in 0.5.6');
   assert.equal(item(PAUSE).selected, false);
-  assert.equal(item(FORGET).enabled, true, 'Forget is always enabled; it acts only on a bound open visit');
-
-  await r.submit(ARCHIVE_URL);
-  await r.menuOpen('1-' + ID, null);
-  item(FORGET).action();
-  await r.settle();
-  await r.playing(OHNE);
-
-  await r.submit(YOUTUBE_URL);
-  await r.playing(YOUTUBE, '2-' + ID);
-  await r.menuOpen('2-' + ID, YOUTUBE);
-
-  await r.menuOpen('1-' + ID, OHNE);
   const windows = r.window.shows;
-  item(FORGET).action();
-  await r.settle();
-  assert.deepEqual(r.people().map(({login}) => login), [YOUTUBE.login], 'only the window that opened the menu is forgotten');
-  assert.equal(item(FORGET).enabled, true);
 
   item(PAUSE).action();
   await r.settle();
@@ -369,19 +357,14 @@ test('18. history menu changes replace definitions: no write reaches an added it
   await r.settle();
   const apis = () => r.shim.log.map(entry => entry.api).filter(api => api.startsWith('menu.'));
 
-  // Playing, binding, forgetting and ending change no displayed state, and the bind arrives while IINA's menu
-  // is open: none of them rebuilds (rebuilding an open menu is an unverified host rule).
+  // Playing and ending change no displayed state, so neither rebuilds the menu.
   const start = apis().length;
   await r.submit(ARCHIVE_URL);
   await r.playing(OHNE);
-  await r.menuOpen('1-' + ID, OHNE);
-  r.menuItem(FORGET).action();
-  await r.settle();
-  await r.playing(OHNE);
-  await r.menuOpen('1-' + ID, OHNE);
   await r.end(OHNE);
+  await r.playing(OHNE);
   await r.close();
-  assert.deepEqual(apis().slice(start), [], 'no menu call for play, bind, forget or end');
+  assert.deepEqual(apis().slice(start), [], 'no menu call for play or end');
 
   r.menuItem(PAUSE).action();
   await r.settle();
@@ -404,59 +387,15 @@ test('18. history menu changes replace definitions: no write reaches an added it
   assert.deepEqual(r.shim.menu.writesToAdded, []);
 });
 
-test('19. Forget acts on the visit bound by the latest history-menu', async () => {
+test('19. global ignores history-menu and history-focus, and nothing forgets one channel', async () => {
   const r = loadGlobal();
   await r.submit(ARCHIVE_URL);
   await r.playing(OHNE);
-  await r.submit(YOUTUBE_URL);
-  await r.playing(YOUTUBE, '2-' + ID);
-
-  // The menu opened with window 1 active, then again with window 2: the latest bind wins, A is untouched.
   await r.menuOpen('1-' + ID, OHNE);
-  await r.menuOpen('2-' + ID, YOUTUBE);
-  r.menuItem(FORGET).action();
-  await r.settle();
-  assert.deepEqual(r.people().map(({login}) => login), [OHNE.login], 'only B, the latest bound visit, is forgotten');
-  assert.deepEqual(r.shim.utils.prompts.concat(r.shim.utils.asks), [], 'no dialog');
-});
-
-test('19b. Forget with no bound visit, an ended visit or a replaced visit does nothing', async () => {
-  const r = loadGlobal();
-  await r.submit(ARCHIVE_URL);
-  await r.playing(OHNE);
-  const click = async () => { r.menuItem(FORGET).action(); await r.settle(); };
-
-  // No menu event: an open visit is not enough, and a history-focus message binds nothing (it is not in the protocol).
-  await click();
-  assert.equal(r.people().length, 1, 'no menu-open binding, no forget');
   await r.send('history-focus', {focused: true}, '1-' + ID);
-  await click();
-  assert.equal(r.people().length, 1, 'history-focus does not bind');
-
-  await r.menuOpen('1-' + ID, null);
-  await click();
-  assert.equal(r.people().length, 1, 'the active window had no visit');
-
-  // Bound, then the visit ends in the same window (history-end), which stays open.
-  // (Lead, 2026-11-24: was r.close(), after which the same closed window could not play again; the
-  // window-lifetime fence rightly rejects that, so the next case never recorded.)
-  await r.menuOpen('1-' + ID, OHNE);
-  await r.end(OHNE);
-  await click();
-  assert.equal(r.people().length, 1, 'a visit that has ended is not forgotten');
-
-  // Bound, then the window plays another channel.
-  await r.playing(OHNE);
-  await r.menuOpen('1-' + ID, OHNE);
-  await r.playing(YOUTUBE);
-  await click();
-  assert.deepEqual(r.people().map(({login}) => login).sort(), [OHNE.login, YOUTUBE.login].sort(), 'a replaced visit is not forgotten');
-  assert.deepEqual(r.shim.utils.prompts.concat(r.shim.utils.asks), [], 'no dialog');
-
-  // Positive control: bound to an open visit, Forget acts.
-  await r.menuOpen('1-' + ID, YOUTUBE);
-  await click();
+  await r.settle();
   assert.deepEqual(r.people().map(({login}) => login), [OHNE.login]);
+  assert.equal(r.menuItem(FORGET), undefined);
 });
 
 test('20. a cancelled offline open records no interest; an edit and a newer submission still do', async () => {

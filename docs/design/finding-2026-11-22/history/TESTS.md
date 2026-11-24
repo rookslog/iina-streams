@@ -86,7 +86,7 @@ Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`. Classes H (a host r
 18. **No writes to mounted items (H).**
     - IINA's `JavascriptPluginMenuItem` holds an `unowned` NSMenuItem, and its `selected`, `enabled` and `title` setters write through it (`JavascriptPluginMenuItem.swift`). Model that in the shim: after `menu.removeAllItems()`, writing any of those on an old item throws "IINA 1.5.1 would trap".
     - Toggling pause, binding Forget and clearing all rebuild the definitions: remove all, add, then `forceUpdate()` on the main thread, coalesced. No test may pass by writing to a mounted item.
-19. **Forget targets the window that was active when the menu opened (H, L).**
+19. **Forget targets the window that was active when the menu opened (H, L).** *Amended 2026-11-24 after the advisor's check: `history-focus` is removed altogether, since nothing consumes it once Forget binds at menu-open. The bind is plain state in global; the menu is not rebuilt on bind, because the bind arrives after IINA has built the open menu. Forget This Channel is always enabled. Rebuilds happen only for pause and clear, after a click.*
     - IINA emits `iina.menu-update` only to `PlayerCore.active` when the Plugin menu opens (`MenuController.swift:847`), and the global API has no active-player accessor (`JavascriptAPIGlobal.swift`).
     - On `iina.menu-update`, the player posts `history-menu {visit}`, identifying its own open visit or none. Global binds Forget to that visit.
     - **Forget acts:**

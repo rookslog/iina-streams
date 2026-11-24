@@ -1,6 +1,8 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:25.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-24 15:50.
+
+**Night run 2026-11-24 (operator asleep):** all work is on branch `next`, which starts at `beta`'s tip (3ec70d8) and adds to it; the main checkout now sits on `next`. `beta` is frozen as your daily copy, and the installed Streams Beta is not refreshed. Each finished version will wait on its own release branch with a one-command release written here. Nothing is tagged, released or posted. If you'd rather have it all on `beta`, it's one fast-forward: `git switch beta && git merge --ff-only next`. Run plan: `.kickoff.json` (local).
 
 ## Open
 
@@ -118,6 +120,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** none of the edge cases can make IINA hang or crash. The timer point is the one to confirm in IINA.
 - **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
 - **What your answer changes:** whether the fix is in your next Streams Beta refresh.
+- **Update 2026-11-24 15:40 (decided provisionally on your behalf, operator asleep):** merged into `next` on the recommendation above, as merge commit `022473b`. Both suites pass after the merge (846 and 168 tests). Not yet checked in IINA, and the edge cases are not yet filed as one issue. **Undo:** `git switch next && git revert -m 1 022473b`. Your answer still decides whether it stays.
 
 ### W-15. Grow the plan: a fuller dashboard, and a mini dashboard in the plugin sidebar (amends D-035)
 - **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:

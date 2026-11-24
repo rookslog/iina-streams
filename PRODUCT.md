@@ -38,7 +38,7 @@ web
   | Tension | Pulling one way | Pulling the other | Design response |
   |---|---|---|---|
   | Quick open versus browsing | The daily viewer: one step | The explorer: room to look around | Separate surfaces by job: Quick Open and the panel stay quick; browsing lives in the dashboard |
-  | Personal ranking versus privacy | Better order from history | Not feeling tracked | History stays local, with pause and forget in the menu; the order is still good with no history |
+  | Personal ranking versus privacy | Better order from history | Not feeling tracked | History stays local, with pause and clear in the menu (per-person forget comes with #76); the order is still good with no history |
   | Little text versus being understood | The daily viewer: signs, not sentences | The stranger: needs to know what things do | State through signifiers; detail on hover; one action in an empty state, never an explanation |
   | Simple versus deep | Everyday users | Technical users | Defaults that work; depth only in Settings, never in the panels |
   | Chat versus a clean picture | Chat-first | Video-first | Chat beside, over or off, switched directly (#85) |
@@ -56,6 +56,7 @@ web
     Prioritizing only orders what sits above the floor.
   - **Defaults for the primary viewer, depth for the others:** everyday users get the defaults. Other needs are met in layers (Settings, menus, the dashboard) rather than dropped.
   - **Excluding is explicit:** each exclusion records who loses, what they fall back on (for example, several IINA windows for multi-view, J16), and what evidence would bring it back. Exclusions stay visible in the decision log, so they can be revisited, not forgotten.
+  - **Exclusion record, 2026-11-24 (lead, provisional; the operator may reverse it):** per-channel "Forget This Channel" is out of 0.5.6. **Who loses:** a privacy-minded viewer who wants one person gone but the rest kept. **What they fall back on:** Pause, or Clear (everything). **What brings it back:** the People screen (#76), where the person is named on screen, so there's no question of which window is meant. Reason: two review rounds showed the menu can't know which window a global command means (`docs/REVIEW.md`, class M).
   - **Degrade, don't dead-end:** a viewer whose need isn't served still gets a workable path.
 - **Journeys:**
   - approved in D-026: J1–J10 (`docs/design/USER-JOURNEYS-2026-11-22.md`), mainly J1 a stranger, J2 the daily viewer, J4 the catch-up viewer, and J10 keyboard and VoiceOver;

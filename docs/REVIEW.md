@@ -37,6 +37,9 @@ The reviewer's labels are inputs. The lead gives each finding a disposition and 
 
 ## Known classes
 
+- **M: which window a global action acts on (#73, 2026-11-24).** Global has no active-player accessor in IINA 1.5.1 (`JavascriptAPIGlobal.swift`), so global code never decides which window is meant. A command about one window belongs to that window's controller, as a player menu item (IINA shows only the active player's items, `MenuController.swift:646`), or it waits for a screen that names the person. Origin: two review rounds on Forget This Channel.
+- **C: cancellation scope (#73, 2026-11-24).** An explicit cancel covers every unanswered request that form instance started; edits and repeat submissions stay inside the instance. Opens from elsewhere, and later instances, are independent. One predicate serves every late answer (live and offline). Tests are a table of the ways a form ends, not replays of a reviewer's probe.
+
 - **L: controller authority across async boundaries.** Every timer, post-`await` continuation and listener in the player checks its activation. Losing authority is one-way, and a reload of the same source is a new activation. Origin: v0.5.5 rounds 1–6, 15 findings. Repair and falsifier: `docs/design/V055-CLASS-REPAIR-2026-11-22.md`, class L.
 - **A: Auto chat timing.** Decisions use progress accumulated over samples, never a per-sample delta. The outcome must not depend on how often the player samples. Origin: v0.5.5 rounds 1–6, 7 findings. Repair: the same design doc, class A.
 - **H: a host rule mirrored by guesswork.** A plugin check that mirrors an IINA rule takes its test table from IINA's source, with file and line cited, before any implementation. Origin: the clock's URL gate, v0.5.5 rounds 2–4.

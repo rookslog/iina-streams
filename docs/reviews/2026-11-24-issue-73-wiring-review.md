@@ -48,3 +48,84 @@
 | P2 VOD fallback without owner silently omits history | — | **Accept and document.** No visit, and no extra request. Test 25 pins it. |
 
 **Class note (D-032 rule 3):** H and L recur here. The repair is by class, through the test table in `docs/design/finding-2026-11-22/history/TESTS.md`, round 2 (items 17–25), each taken from IINA's source where it mirrors a host rule.
+
+## Round 2 (narrow check): Codex's report, verbatim
+
+# Verdict: FIX FIRST
+
+Reviewed `e163279..d2e0345`. Two P1 findings remain unresolved. Both suites pass, but additional shim probes reproduced incorrect history deletion and playback after cancellation.
+
+## Round-1 findings
+
+| Finding | Disposition | Evidence |
+|---|---|---|
+| P1-1 — Native menu setters and placement | **Fixed** | [global.js:645](global.js:645). One submenu, no mounted-item writes, coalesced rebuild. Tests 17–18 cover both requirements. |
+| P1-2 — Forget targets the wrong channel | **Not fixed** | [global.js:608](global.js:608). The focus assumption is removed, but the shared `boundVisit` still permits incorrect deletion. See below. |
+| P1-3 — Cancelled opens | **Partially fixed** | [global.js:361](global.js:361) correctly fences offline recording. [global.js:274](global.js:274) protects only the latest unchanged submission. |
+| P1-4 — Failed resolve counts as playback | **Fixed for the reported failure** | [src/player.js:2035](src/player.js:2035) invalidates the generation before resolving; failed resolution cannot match generation zero. Tests 22 demonstrate the negative and positive cases. |
+| P1-5 — Unvalidated identity crosses bridge | **Fixed** | [src/player.js:2179](src/player.js:2179) validates and projects identity, with display-name fallback. Tests 23 cover invalid identities and additional fields. |
+| P2 — Retirement and resolver lifetime | **Fixed** | [src/player.js:1928](src/player.js:1928), `:1988`, `:2200`; [src/resolve.js:133](src/resolve.js:133). Terminal messages are consumed once, and the URL-keyed metadata slot is gone. |
+| P2 — VOD fallback omits history | **Accepted and documented** | `TESTS.md` item 25 and [tests/history-player.test.js:344](tests/history-player.test.js:344) pin the omission without additional requests. |
+
+## Important findings (P1)
+
+### 1. H/L — Forget can still delete another channel
+
+[global.js:626](global.js:626), [src/player.js:134](src/player.js:134).
+
+Two independent failures:
+
+- **Obsolete action:** I retained A's Forget action, bound B, then invoked the retained action. **B was deleted.** Test 19 at `tests/history-global.test.js:407` expects precisely this outcome, contradicting the surviving stale-action requirement in amended item 19.
+- **Native window without a Streams controller:** Bind A, dismiss the menu, switch to a local-file window with adoption disabled, and open its Plugin menu. There is no `history-menu` listener to replace A's binding, but the global Watch History submenu remains available. My shim probe confirmed that clicking Forget deletes A.
+
+The latter is a realistic wrong-channel deletion path, not merely a theoretical stale-action delivery concern.
+
+**Host-rule correction:** IINA 1.5.1's `MenuController.swift:847–848` emits the event **before** rebuilding the menu. `EventController.swift:75–79` calls listeners synchronously. The amendment's rationale that binding arrives after menu construction does not match those sources.
+
+Repair the binding contract against windows with and without controllers, and obsolete actions. Native stale-click delivery remains untested.
+
+### 2. L — Explicit cancellation still permits unwanted playback
+
+[global.js:213](global.js:213), `:234`, `:274`, `:285`.
+
+I reproduced both sequences using held status responses:
+
+- Submit A, edit the field, cancel, release A.
+- Submit A, edit and submit B, cancel, release both.
+
+**One player opened in each case.**
+
+The lead's residual matters. An edit changes `openRun`, which prevents cancellation even when A is the only outstanding submission. A second submission replaces the cancellation handle entirely.
+
+Preserve independent opens, but distinguish them from pending requests belonging to the same explicitly cancelled form instance. Otherwise unwanted playback can also create history, contrary to item 13.
+
+## Lead's test changes
+
+All four changes are individually justified:
+
+- **Class-L explorer:** Correct. `tests/class-l-explorer.test.js:97` permits terminal history messages without removing the once-per-loss and newer-epoch restrictions at `:408–416`.
+- **Startup:** Correct. `tests/global.test.js:69` matches item 17's submenu contract.
+- **19b:** Correct. `tests/history-global.test.js:443` ends a visit without closing the window, making its subsequent visit legitimate.
+- **#67 F-session:** Correct. `tests/offline-precheck.test.js:341` enforces item 21 while retaining the newer-form isolation assertion. It needs additional cancellation interleavings, not reversal.
+
+## Verification
+
+| Command | Result |
+|---|---|
+| `npm test` | **929/929 passed** |
+| `npm run test:py` | **168 passed** |
+
+The initial sandboxed run failed solely because a shim test could not create a temporary directory. The unrestricted rerun completed successfully.
+
+No repository edits; worktree clean. Native IINA and live provider behavior were not exercised.
+
+**D-032:** H and L recur. Step back and repair their written invariants before the next review rather than applying another sequence-specific patch.
+## Round 2: lead's dispositions (step back, D-032; recurring classes H and L)
+
+- **P1-1 Forget (H/L), not fixed for the second time.** Global can't know which window is active: `JavascriptAPIGlobal.swift` has no accessor, and any binding global keeps goes stale. A local-file window has no controller to replace it. The host does scope a player's own menu items to the active window (`MenuController.swift:646`). But a player-side Forget would be the sixth top-level item, which IINA moves under More… (`MenuController.swift:660`).
+  - **Decision (lead, provisional, reversible):** per-channel Forget leaves 0.5.6 and goes to the People screen (#76), where the person is named on screen. Pause and Clear stay. The binding code and its tests are removed.
+  - **The exclusion is recorded** in PRODUCT.md §Users, "How we prioritize and exclude".
+  - **Codex's host-rule correction is accepted.** `menu-update` is emitted before the rebuild, and listeners run synchronously. Item 19's amendment was wrong on timing.
+- **P1-3 cancellation (L), partly fixed.** One rule replaces the counters: an explicit cancel covers every unanswered live check that this form instance started. A form instance runs from `openStream()` until its window closes; edits and second submissions stay inside it. Tested as a table in `tests/offline-precheck.test.js` (round 3).
+- **Lead's four test changes:** judged correct by Codex.
+- **Known classes:** both invariants are added to `docs/REVIEW.md`.

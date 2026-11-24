@@ -110,3 +110,14 @@ Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`. Classes H (a host r
     - Retire, a managed foreign load and window close each send exactly one `history-end` for that visit, keyed by the visit, not the window.
     - The resolver returns the channel identity in its result. An `onChannel` callback after signal loss can't affect a later same-source load, because the URL-keyed slot is gone.
 25. **A Twitch VOD that falls back to Streamlink without owner metadata** records no visit and makes no extra request. This is the documented omission.
+
+## Round 3: step back after Codex's narrow check (lead, 2026-11-24)
+Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`, round 2. Known classes M and C in `docs/REVIEW.md`.
+
+26. **No per-channel Forget in 0.5.6.** It is deferred to #76. The Watch History submenu holds Pause and Clear. The player posts no `history-menu` and no `history-focus`. Global ignores both. Item 19 and its amendment are withdrawn.
+27. **One cancellation rule, as a table** (`tests/offline-precheck.test.js`, "round 3 cancel table"):
+    - submit, then cancel: 0 opens;
+    - submit, edit, then cancel: 0 opens;
+    - submit A, submit B, then cancel: 0 opens;
+    - a sidebar open pending, the form opened and cancelled: 1 open;
+    - a cancelled instance, then a later instance's submission: the cancelled answer opens nothing, the later one opens.

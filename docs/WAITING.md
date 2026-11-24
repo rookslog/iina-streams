@@ -101,6 +101,15 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** when history is wired in, and so when #74 can start.
 - **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), last section.
 
+- **Update 2026-11-24 night (operator asleep):** the module is unchanged. Its wiring into the plugin was built tonight (feat/73-history) and is not yet merged.
+  - **Built and tested:** Hydrogen built rounds 1–4 and Codex built round 5, against tests designed by the lead and written by Sonnet and the lead. Every suite passed after each round's fixes.
+  - **Reviews:** two independent Codex reviews, both "fix first". Most findings are fixed. The two that recurred led to a step back:
+    - **per-channel Forget This Channel is deferred to the People screen (#76),** because a menu command can't know which window it means. Pause and Clear stay;
+    - **cancelling now follows one rule:** a cancel covers everything that form started.
+  - **Record:** [reviews/2026-11-24-issue-73-wiring-review.md](reviews/2026-11-24-issue-73-wiring-review.md).
+  - **Next:** a builder implements round 3, then a third Codex check, then a merge into `next` on the recommendation above.
+  - **Your call:** whether Forget may wait for #76 (reversible).
+
 ### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
 - **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.
 - **How it arose:** five Codex reviews tonight. The record, verbatim: [docs/reviews/2026-11-22-issue-67-review.md](reviews/2026-11-22-issue-67-review.md). Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.

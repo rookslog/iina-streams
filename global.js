@@ -178,14 +178,15 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
-// openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
-// source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
+// openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
+// fresh pages and closes advance it. Every form-started check instead needs its own form instance
+// to still be showing (class C), while sidebar checks have no form instance.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
-let openRun=0,openPageReady=false,openQueue=[];
+let openRun=0,formInstance=null,openPageReady=false,openQueue=[];
 
 // Opens the input. Returns 'opened', 'checking' (a Twitch channel whose live check is pending), 'invalid', or
-// 'blank' when there is nothing to open. `fromForm` says the Open Stream form submitted it in the current session.
-function openInput(input,fromForm){
+// 'blank' when there is nothing to open. `form` is the instance that submitted it, if any.
+function openInput(input,form=null){
  if(typeof input!=='string'||!input.trim())return'blank';
  const source=Sources.parse(input);
  if(!source)return'invalid';
@@ -193,7 +194,7 @@ function openInput(input,fromForm){
   openPlayer(source);
   return'opened';
  }
- openWhenLive(source,openRun,!!fromForm);
+ openWhenLive(source,openRun,form);
  return'checking';
 }
 
@@ -208,10 +209,10 @@ function openPlayer(source){
 // Stream window and no player is created. Live, or a check that could not decide: the player opens as before.
 // Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
 // path (src/player.js posts source-offline, onSourceOffline below).
-async function openWhenLive(source,session,fromForm){
+async function openWhenLive(source,run,form){
  const deps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
  const status=await channelStatus({login:source.id},deps);
- onMainThread(()=>finishLiveCheck(source,status,session,fromForm));
+ onMainThread(()=>finishLiveCheck(source,status,run,form));
 }
 
 // H-main (#67): iina.http settles its promise from Just's completion handler, off the main thread
@@ -223,14 +224,19 @@ function onMainThread(fn){
  timers.setTimeout(fn,0);
 }
 
-// The decision, on the main thread. A live or undecided channel opens its player even when the form has moved on
-// (separate opens stay independent); only the form's own updates are fenced by its session.
-function finishLiveCheck(source,status,session,fromForm){
+function isFormShowing(form){
+ return form===formInstance&&openWindow.isOpen();
+}
+
+// Closing the form revokes every unanswered check from that instance, regardless of status.
+// Independently, only the current draft may update or close the window.
+function finishLiveCheck(source,status,run,form){
  qaTrace('live-check',{status});
- const current=session===openRun;
+ if(form&&!isFormShowing(form))return;
+ const current=run===openRun;
  if(status!=='offline'){
   openPlayer(source);
-  if(fromForm&&current)closeOpenWindow();
+  if(form&&current)closeOpenWindow();
   return;
  }
  if(current)showOfflineVods(source.id);
@@ -253,6 +259,7 @@ function showOpenWindow(){
   return;
  }
  openRun++;
+ formInstance={};
  openPageReady=false;
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
@@ -267,6 +274,7 @@ function showOpenWindow(){
 
 function closeOpenWindow(){
  openRun++;
+ formInstance=null;
  openWindow.close();
 }
 
@@ -275,11 +283,11 @@ function onOpenEdit(){
  openRun++;
 }
 
-// A submit starts a new form session, so a check from an earlier submit cannot update the form (F-session).
+// A submit advances the draft revision, so a check from an earlier submit cannot update the form (F-session).
 // U-feedback: while a channel is checked the form stays open and shows the list's loading indicator.
 function onOpenWindowSubmit(data){
  openRun++;
- const result=openInput(data&&data.input,true);
+ const result=openInput(data&&data.input,formInstance);
  if(result==='opened')closeOpenWindow();
  if(result==='checking')postOfflineVods({state:'loading'},1);
  if(result==='invalid')openWindow.postMessage('open-error',{});
@@ -337,19 +345,20 @@ function offlineLogin(data){
 async function showOfflineVods(login){
  showOpenWindow();
  const run=++openRun;
+ const form=formInstance;
  postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1);
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
  const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
-  if(result.ok)recordOfflineHistory(login);
-  showArchives(run,result);
+  showArchives(run,result,login,form);
  });
 }
 
-function showArchives(run,result){
- if(run!==openRun||!openWindow.isOpen())return;
+function showArchives(run,result,login,form){
+ if(run!==openRun||!isFormShowing(form))return;
+ if(result.ok)recordOfflineHistory(login);
  if(!result.ok){
   postOfflineVods({state:'error'},1);
   return;
@@ -472,8 +481,6 @@ function onPlayerClosed(_,label){
  const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
  finishWindowVisit(id);
- if(focusedWindow===id)focusedWindow=null;
- syncHistoryMenu();
  // Only a departing audience member can warrant stopping the broker; an unrelated close must not (r3 #3).
  const wasMember=audience.delete(id);
  if(typeof id==='number')managed.delete(id);
@@ -519,8 +526,7 @@ function historyNow(){
 const history=createHistory({storage:historyStorage,now:historyNow});
 // Open visits keyed by managed numeric id or adopted bare-number string label: {provider, login, handle}.
 const windowVisits=new Map();
-let focusedWindow=null;
-let pauseItem=null,forgetItem=null,menuRebuildTimer=null;
+let menuRebuildTimer=null;
 
 function adoptionEnabled(){
  if(config.qa)return true;
@@ -550,16 +556,6 @@ function sameHistoryChannel(a,b){
  return a.login===b.login;
 }
 
-function isPersonRecorded(person){
- if(!person)return false;
- return history.query('',{provider:person.provider}).some(entry=>entry.login===person.login);
-}
-
-function canForgetFocused(){
- if(focusedWindow===null)return false;
- return isPersonRecorded(windowVisits.get(focusedWindow));
-}
-
 function finishWindowVisit(key){
  const visit=windowVisits.get(key);
  if(!visit)return;
@@ -587,69 +583,56 @@ function onHistoryStart(data,label){
  });
  if(handle!==null){
   windowVisits.set(key,{provider:handle.provider,login:handle.login,handle});
-  syncHistoryMenu();
  }
 }
 
-function onHistoryEnd(_,label){
+function onHistoryEnd(data,label){
  const managedID=targetID(label);
  const key=managedID!==null?managedID:adoptedLabel(label);
- if(key===null)return;
+ if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
+ const visit=windowVisits.get(key);
+ if(!visit||!sameHistoryChannel(visit,data))return;
  finishWindowVisit(key);
- if(focusedWindow===key)focusedWindow=null;
- syncHistoryMenu();
-}
-
-function onHistoryFocus(data,label){
- const key=historySender(label);
- if(key===null||!data||typeof data!=='object'||typeof data.focused!=='boolean')return;
- if(data.focused)focusedWindow=key;
- else if(focusedWindow===key)focusedWindow=null;
- syncHistoryMenu();
 }
 
 function toggleHistoryPause(){
  history.setPaused(!history.paused);
- syncHistoryMenu();
-}
-
-function forgetFocusedChannel(){
- if(!canForgetFocused())return;
- const visit=windowVisits.get(focusedWindow);
- for(const [key,entry] of windowVisits){
-  if(sameHistoryChannel(entry,visit))windowVisits.delete(key);
- }
- history.forget({provider:visit.provider,login:visit.login});
- syncHistoryMenu();
+ scheduleMenuRebuild();
 }
 
 function clearHistory(){
  history.clear();
  windowVisits.clear();
- syncHistoryMenu();
+ scheduleMenuRebuild();
+}
+
+function historyMenu(){
+ const parent=menu.item('Watch History',null);
+ const children=[
+  menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused}),
+  menu.item('Clear Watch History',clearHistory)
+ ];
+ for(const child of children)parent.addSubMenuItem(child);
+ return parent;
 }
 
 function addGlobalMenuItems(){
  menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
- pauseItem=menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused});
- forgetItem=menu.item('Forget This Channel',forgetFocusedChannel,{enabled:canForgetFocused()});
- menu.addItem(pauseItem);
- menu.addItem(forgetItem);
- menu.addItem(menu.item('Clear Watch History',clearHistory));
+ menu.addItem(historyMenu());
 }
 
-// Update item properties immediately for same-turn callers, then rebuild on a main-thread turn so IINA 1.5.1's
-// NSMenuItem references stay valid across windows without calling forceUpdate off the main thread.
-function syncHistoryMenu(){
- if(pauseItem)pauseItem.selected=history.paused;
- if(forgetItem)forgetItem.enabled=canForgetFocused();
+// Rebuild definitions on a main-thread turn only when Pause or Clear changes displayed state; never write to
+// added menu items, because IINA 1.5.1 setters dereference an unowned NSMenuItem (JavascriptPluginMenuItem.swift).
+function scheduleMenuRebuild(){
  if(menuRebuildTimer!==null)return;
- menuRebuildTimer=timers.setTimeout(()=>{
-  menuRebuildTimer=null;
-  menu.removeAllItems();
-  addGlobalMenuItems();
-  if(typeof menu.forceUpdate==='function')menu.forceUpdate();
- },0);
+ menuRebuildTimer=timers.setTimeout(rebuildMenu,0);
+}
+
+function rebuildMenu(){
+ menuRebuildTimer=null;
+ menu.removeAllItems();
+ addGlobalMenuItems();
+ if(typeof menu.forceUpdate==='function')menu.forceUpdate();
 }
 
 addGlobalMenuItems();
@@ -668,7 +651,6 @@ listen(app,'global','auth-forget',onAuthForget);
 listen(app,'global','source-offline',onSourceOffline);
 listen(app,'global','history-start',onHistoryStart);
 listen(app,'global','history-end',onHistoryEnd);
-listen(app,'global','history-focus',onHistoryFocus);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

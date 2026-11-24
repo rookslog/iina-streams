@@ -408,17 +408,42 @@ function createIina(options = {}) {
   }
 
   // ---- menu ----
+  // IINA 1.5.1 JavascriptPluginMenuItem.swift L20-45: `unowned var nsMenuItem` and the didSet setters of title,
+  // selected and enabled write through it (`guard let item = nsMenuItem else { return }; item.state = ...`).
+  // An `unowned` reference to a freed NSMenuItem traps; MenuController.updatePluginMenu (L634-670) removes every
+  // plugin NSMenuItem on each rebuild, so a definition from before the rebuild holds a dangling reference.
+  // Shim policy: after menu.removeAllItems(), writing any of the three on an item that was added throws
+  // "IINA 1.5.1 would trap: unowned NSMenuItem". Every write to an added item is also recorded in
+  // menuControl.writesToAdded, because a write on a mounted item is the bug even when the item is still alive:
+  // the plugin must replace definitions (remove all, add, forceUpdate), never edit the added ones.
+  const MENU_WRITABLE = ['title', 'selected', 'enabled'];
   class MenuItem {
     constructor(title, action, {enabled = true, selected = false, keyBinding = null, isSeparator = false} = {}) {
-      Object.assign(this, {title, action, enabled, selected, keyBinding, isSeparator, items: []});
+      const state = {title, enabled, selected};
+      for (const prop of MENU_WRITABLE) {
+        Object.defineProperty(this, prop, {
+          enumerable: true, configurable: true,
+          get: () => state[prop],
+          set: value => {
+            if (this.added) menuControl.writesToAdded.push({title: state.title, prop, value});
+            if (this.removed) throw new Error(`IINA 1.5.1 would trap: unowned NSMenuItem (set "${prop}" on "${state.title}" after menu.removeAllItems(); JavascriptPluginMenuItem.swift didSet)`);
+            state[prop] = value;
+          }
+        });
+      }
+      Object.assign(this, {action, keyBinding, isSeparator, items: []});
+      Object.defineProperties(this, {added: {value: false, writable: true}, removed: {value: false, writable: true}});
     }
     addSubMenuItem(item) {
       if (!(item instanceof MenuItem)) throw new TypeError('IINA contract: addSubMenuItem needs a menu item');
       this.items.push(item);
+      if (this.added) markAdded(item);
     }
   }
+  function markAdded(item) { item.added = true; item.items.forEach(markAdded); }
+  function markRemoved(item) { item.removed = true; item.items.forEach(markRemoved); }
   const menuControl = {
-    items: [], created: [], forceUpdates: 0,
+    items: [], created: [], forceUpdates: 0, writesToAdded: [],
     // Every keyBinding on added items (recursively) that is not in IINA normalized form, collides
     // with a bundled IINA binding or main-menu key, or is used twice by this plugin.
     problems() {
@@ -458,10 +483,11 @@ function createIina(options = {}) {
       record('menu.addItem', item && item.title);
       if (!(item instanceof MenuItem)) throw new TypeError('IINA contract: menu.addItem needs an item made by menu.item or menu.separator');
       menuControl.items.push(item);
+      markAdded(item);
     },
     items: () => menuControl.items.slice(),
-    removeAt(index) { record('menu.removeAt', index); if (index < 0 || index >= menuControl.items.length) return false; menuControl.items.splice(index, 1); return true; },
-    removeAllItems() { record('menu.removeAllItems'); menuControl.items.length = 0; },
+    removeAt(index) { record('menu.removeAt', index); if (index < 0 || index >= menuControl.items.length) return false; markRemoved(menuControl.items[index]); menuControl.items.splice(index, 1); return true; },
+    removeAllItems() { record('menu.removeAllItems'); menuControl.items.forEach(markRemoved); menuControl.items.length = 0; },
     forceUpdate() { record('menu.forceUpdate'); menuControl.forceUpdates++; }
   };
 
@@ -678,6 +704,10 @@ function createIina(options = {}) {
     menu: menuControl, sidebar: sidebar.view, overlay: overlay.view, global: globalControl, core, file: fileControl,
     http: httpControl, utils: utilsControl, keychain: keychainControl, event: eventControl, mpv: mpvControl, console: consoleControl,
     emit: (name, ...args) => eventControl.emit(name, ...args),
+    // IINA 1.5.1 emits iina.menu-update when the Plugin menu opens, to PlayerCore.active only (MenuController.swift
+    // L847: `PlayerCore.active.events.emit(.menuUpdate)`), and the global API has no active-player accessor
+    // (JavascriptAPIGlobal.swift). Each shim is one player instance, so call this on the one window that is active.
+    emitMenuUpdate: () => eventControl.emit('iina.menu-update'),
     // Run a plugin entry script (global.js / main.js) in a fresh vm context against this shim.
     runScript(file, {require: requireFn, globals = {}, timeout = 1000} = {}) {
       const context = vm.createContext(Object.assign({
@@ -723,7 +753,18 @@ function createWebViewIina({onPost} = {}) {
     messages: name => posts.filter(p => p.name === name)};
 }
 
+// How IINA 1.5.1 lays out one plugin's items in the Plugin menu: the plugin's global items first, then the
+// instance's, as one list (MenuController.swift L646: `(globalInstance?.menuItems ?? []) + instance.menuItems`).
+// Only the first five go at the top level; from the sixth on, a "More…" submenu holds the rest
+// (L660-L667: `if counter == 5 { ... moreItem.title = "More…" ... }`). Pass the global shim and the active player's.
+const PLUGIN_MENU_TOP_LEVEL_LIMIT = 5;
+function pluginMenuLayout(globalShim, playerShim) {
+  const items = [...(globalShim ? globalShim.menu.items : []), ...(playerShim ? playerShim.menu.items : [])];
+  return {top: items.slice(0, PLUGIN_MENU_TOP_LEVEL_LIMIT), more: items.slice(PLUGIN_MENU_TOP_LEVEL_LIMIT)};
+}
+
 module.exports = {
+  PLUGIN_MENU_TOP_LEVEL_LIMIT, pluginMenuLayout,
   createIina, createWebViewIina, createFakeTimers, createKeychainStore,
   normalizeKeyBinding, loadBoundKeys, keyBindingProblems, jsonPayload, isPlainObject, FIXTURE_DIR
 };

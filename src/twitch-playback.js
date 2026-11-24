@@ -223,10 +223,11 @@ function readTitle(item, request) {
 function readChannel(item, request) {
   const payload = item && item.data;
   if (request.kind === 'live') {
-    const login = request.login.toLowerCase();
     const rawName = payload && payload.user && payload.user.displayName;
-    const displayName = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : login;
-    return {provider: 'twitch', login, displayName};
+    if (typeof rawName !== 'string' || !rawName.trim()) {
+      return null;
+    }
+    return {provider: 'twitch', login: request.login.toLowerCase(), displayName: rawName.trim()};
   }
   const owner = payload && payload.video && payload.video.owner;
   if (!owner || typeof owner.login !== 'string' || !LOGIN_PATTERN.test(owner.login)) {

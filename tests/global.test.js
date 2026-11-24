@@ -64,9 +64,13 @@ function harness(overrides = {}) {
 
 test('production global loading registers its menu but performs no open, network, secret read, or timer work', () => {
   const r = harness();
-  // #73: history is wired, so startup adds its three top-level items and reads @data/history.json once.
-  assert.equal(r.items.length, 4);
-  for (const title of ['Pause Watch History', 'Forget This Channel', 'Clear Watch History']) assert.equal(r.items.filter(item => item.title === title).length, 1, title);
+  // #73 round 2 (TESTS.md item 17): history adds one top-level "Watch History" submenu holding its three commands,
+  // so the existing top-level items keep their places; startup reads @data/history.json once.
+  assert.equal(r.items.length, 2);
+  const history = r.items.filter(item => item.title === 'Watch History');
+  assert.equal(history.length, 1);
+  const inner = (history[0].items || history[0].submenu || []).map(item => item.title);
+  assert.deepEqual(inner, ['Pause Watch History', 'Clear Watch History'], 'round 3: no per-channel Forget in 0.5.6');
   assert.deepEqual(r.fileReads.map(read => read.file), ['@data/history.json']);
   for (const events of [r.opens, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileWrites, r.prompts, r.messages]) assert.equal(events.length, 0);
   // v0.5.5 review r1 #5: the one timer is the deferred 0 ms menu refresh (a synchronous refresh orphans core "0").

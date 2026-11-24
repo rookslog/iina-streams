@@ -120,7 +120,7 @@ function helperShapedResult(source, quality, twitch) {
   if (!selected) {
     return failure(quality === AUTO.id ? 'NO_PLAYABLE_FORMAT' : 'QUALITY_UNAVAILABLE');
   }
-  return {
+  const result = {
     ok: true,
     source,
     title: twitch.title,
@@ -130,6 +130,10 @@ function helperShapedResult(source, quality, twitch) {
     formats: publicFormats(options),
     mediaURL: selected.url,
   };
+  if (twitch.channel) {
+    result.channel = twitch.channel;
+  }
+  return result;
 }
 
 // ---- loss ----
@@ -169,7 +173,7 @@ function errorCode(error) {
   return typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'UNEXPECTED';
 }
 
-function createResolver({resolveTwitch, http, helperResolve, log, onChannel}) {
+function createResolver({resolveTwitch, http, helperResolve, log}) {
   function recordFallback(code) {
     if (typeof log !== 'function') {
       return;
@@ -200,9 +204,6 @@ function createResolver({resolveTwitch, http, helperResolve, log, onChannel}) {
         return definitiveFailure(code);
       }
       return launchHelper(source, quality, signal, code);
-    }
-    if (typeof onChannel === 'function' && twitch && twitch.channel) {
-      onChannel(source, twitch.channel);
     }
     return helperShapedResult(source, quality, twitch);
   }

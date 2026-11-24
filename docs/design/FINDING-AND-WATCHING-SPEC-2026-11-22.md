@@ -86,7 +86,7 @@ These are the six surfaces a viewer meets, in the order they would usually meet 
 - **Today:** no watch history is recorded (READ: DISCOVERY §7 item 1, grep of `src/`, `global.js` and `ui/`).
 - **The viewer can:**
   - pause history;
-  - forget one channel, or delete everything;
+  - delete everything (forgetting one person comes with the People screen, #76: PRODUCT.md's exclusion record of 2026-11-24);
   - pin and hide people;
   - set per-channel preferences: listening mode, chat placement and quality.
 
@@ -170,14 +170,14 @@ The class is one of: **documented** (Helix), **GQL**, **local**, or **other plat
 Each phase ends with something a viewer can do in native IINA. "Rests on" names the one unchecked fact that phase depends on most.
 
 **Phase 1: local history and its controls.** Serves J2 and J19.
-- **The viewer can:** see what they opened before, in Open Stream; pause history; forget one channel; delete everything; pin and hide.
+- **The viewer can:** see what they opened before, in Open Stream; pause history; delete everything; pin and hide. Forgetting one person moved to #76 (exclusion record in PRODUCT.md, 2026-11-24).
 - **Depends on:** adoption (#35) switched on for the proof step. It is off by default in 0.5.5 (D-033) and has two open bugs (READ: DISCOVERY §7 item 4).
 - **Permission:** none.
 - **Rests on:** that the "Open in IINA" extension's hand-off reaches adoption (INFERRED: DISCOVERY §7 item 4). If it doesn't, browser-first opens (J3) never reach history, and the ranking undercounts them. Also UNCHECKED, my addition: where history persists, and whether global or each player window owns it.
 - **Native-IINA proof:**
   1. open three channels, one of them from Safari through the extension with adoption on;
   2. quit and reopen IINA, and see all three in order;
-  3. forget one, and see it gone after another restart.
+  3. ~~forget one, and see it gone after another restart~~ (moved to #76); instead, Clear, and see the list empty after another restart.
 
 **Phase 2: suggestions as you type.** Serves J2, J4 and J10.
 - **The viewer can:** type "oh" and get their most-watched match first, with a live dot when signed in, and remote matches below.

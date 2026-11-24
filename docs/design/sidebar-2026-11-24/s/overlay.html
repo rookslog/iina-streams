@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streams Switcher</title>
+<link rel="stylesheet" href="../shared/base.css">
+<link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+<div class="overlay-backdrop" id="backdrop" aria-hidden="true">
+  <div class="switcher-card" id="card" role="dialog" aria-modal="true" aria-label="Streams">
+    <div class="search">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="6.8" cy="6.8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M10.2 10.2 13.8 13.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <input id="search" type="search" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
+      <button type="button" class="search-clear" id="search-clear" aria-label="Clear" title="Clear" hidden>
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="tile-row scroll-x" id="row-live" role="listbox" aria-orientation="horizontal" aria-label="Live"></div>
+    <div class="row-sep" id="row-sep"></div>
+    <div class="tile-row scroll-x" id="row-vods" role="listbox" aria-orientation="horizontal" aria-label="Broadcasts"></div>
+    <div class="empty-row" id="empty-row" hidden>
+      <button type="button" class="action-btn" id="empty-clear">Clear</button>
+    </div>
+  </div>
+</div>
+<script src="../shared/snapshot.js"></script>
+<script src="../shared/viewer.js"></script>
+<script src="../shared/util.js"></script>
+<script src="overlay.js"></script>
+</body>
+</html>

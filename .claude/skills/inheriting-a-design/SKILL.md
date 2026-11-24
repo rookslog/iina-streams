@@ -5,7 +5,7 @@ description: Use when a design, a skill or a method already exists and you are t
 
 # Taking up an existing design, skill or method
 
-**Draft 3.1, 24 November 2026: draft 3 with redraft 1 and rough pieces 2, 4, 5, 6 and 8 applied provisionally by the lead, not yet marked by the operator; not tried with any model.** Lines changed from draft 3 carry a warrant whose entry begins "Provisional". Part of a set; `../README.md` says what the set is. Bracketed tags are warrants, in `../WARRANTS.md`; `[otherwise: …]` marks a source that speaks against the line. To change a line, engage its warrant. To depart from one, see the core skill.
+**Draft 3.3, 24 November 2026; provisional; not yet marked by the operator; one desk test of the reaction skill (on 3.1, two agents per version) and Codex source checks of 3.1 and 3.2; not used in a project yet.** Part of a set (`../README.md`, which also says what changed). Tags are warrants (`../WARRANTS.md`). To change a line, engage its warrant; to depart from one, see the core skill.
 
 Load `designing-with-a-person` first; it binds this skill. **This is the thinnest skill of the set:** four lines, backed mostly by the lead's own errors in reading Impeccable. It needs cases.
 

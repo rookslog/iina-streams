@@ -32,7 +32,7 @@
 //       write, as in a QA build). The loss step and the turns it armed may also emit this teardown, at most once
 //       each per loss:
 //         - one sidebar `state` (for a foreign file, its phase must be `inactive`) and one overlay `state`;
-//         - global `auth-disconnect` and `player-closed`;
+//         - global `auth-disconnect`, `player-closed` and `history-end` (#73, once per visit's loss);
 //         - overlay `live-stop`, `overlay.hide` and `overlay.setClickable`;
 //         - the `chat-off` and `window-closed` traces.
 //       Teardown that a newer epoch could see is never allowed: no global post once a newer epoch is current.
@@ -97,6 +97,8 @@ const POST_APIS = new Set(['sidebar.postMessage', 'overlay.postMessage', 'global
 const TEARDOWN = new Set([
   'sidebar:state', 'overlay:state', 'global:auth-disconnect', 'global:player-closed', 'overlay:live-stop',
   'call:overlay.hide', 'call:overlay.setClickable',
+  // #73 (lead, 2026-11-24): the visit's terminal message, once per loss, from the loss step (TESTS.md item 24).
+  'global:history-end',
   // QA traces of the teardown itself.
   'call:file.write:@data/qa-trace-chat-off', 'call:file.write:@data/qa-trace-window-closed'
 ]);

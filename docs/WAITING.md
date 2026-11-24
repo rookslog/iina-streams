@@ -1,6 +1,8 @@
 # Waiting on the operator
 
-Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-22 21:25.
+Each item is written once, in full, here. Chat links to an item's line instead of repeating it. When an item is answered, its answer is recorded under it and it moves to **Answered**. Last updated 2026-11-24 15:50.
+
+**Night run 2026-11-24 (operator asleep):** all work is on branch `next`, which starts at `beta`'s tip (3ec70d8) and adds to it; the main checkout now sits on `next`. `beta` is frozen as your daily copy, and the installed Streams Beta is not refreshed. Each finished version will wait on its own release branch with a one-command release written here. Nothing is tagged, released or posted. If you'd rather have it all on `beta`, it's one fast-forward: `git switch beta && git merge --ff-only next`. Run plan: `.kickoff.json` (local).
 
 ## Open
 
@@ -99,6 +101,30 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** when history is wired in, and so when #74 can start.
 - **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), last section.
 
+- **Update 2026-11-24 night (operator asleep):** the module is unchanged. Its wiring into the plugin was built tonight on branch `feat/73-history` (worktree `../iina-streams-wt/h73`).
+  - **Built and tested:**
+    - Hydrogen built rounds 1–4, and Codex rounds 5–7 while Hydrogen was out of quota (16:46 to about 19:39).
+    - The tests were designed by the lead and written by Sonnet and the lead. Each round's suite passed after its fixes, and the lead's mutation checks failed tests as they should.
+    - **Untested in native IINA:** the new "Watch History" submenu in the Plugin menu, and every other path. Shim only.
+  - **Reviews:** two Codex reviews, both "fix first". The two findings that recurred led to a step back, which `docs/REVIEW.md` calls for at round 3. Its triage table and dispositions are in [reviews/2026-11-24-issue-73-wiring-review.md](reviews/2026-11-24-issue-73-wiring-review.md):
+    - **Forget This Channel is out of 0.5.6** (decision below);
+    - **cancelling follows one rule:** a check started from Open Stream acts only while that same form is still showing. This covers Cancel, the window's close button and a later form.
+  - **Still owed before any release:** one clearance review by a provider other than the builder, since Codex built rounds 5–7. Gemini Hydrogen does it when its quota returns. The merge into `next` is provisional and landed at `b36f006` (rounds 1–7; 935 JS tests and 168 Python tests pass on `next`). To undo it: `git switch next && git revert -m 1 b36f006`.
+  - **Decision for you: per-channel "Forget This Channel".**
+    - **What it is:** whether 0.5.6 ships a way to forget one person from watch history. It's yours because it trades a privacy control against a menu that can delete the wrong person.
+    - **Options:**
+
+      | Option | What it buys | What it costs |
+      |---|---|---|
+      | **Defer to the People screen (#76)** (done tonight, reversible) | No wrong-person deletion; the menu stays small | No way to forget one person until #76. Pause and Clear remain. |
+      | **A Forget item in each player window** | Forget one person now. IINA shows only the active window's items, so it can't hit the wrong one. | It would be the sixth item, so IINA puts it under More… (`MenuController.swift:660`). Streams windows only. A new native menu path, untested. |
+      | **Keep tonight's earlier version** (global binds at menu-open) | Forget one person now, at the top of Watch History | Codex reproduced it deleting the wrong person in the shim (a local-file window; an old click). Not offered. |
+
+    - **Recommendation:** defer to #76. The People screen names the person on screen, so there is no question of which window is meant.
+    - **Rests on:** Clear and Pause covering the privacy need until #76 ships.
+    - **What would flip it:** if you want per-person forgetting in 0.5.6, the per-window item under More… is next best. A few lines on the round-3 tests.
+    - **Recorded in:** `PRODUCT.md` §Users, exclusion record of 2026-11-24.
+
 ### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
 - **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.
 - **How it arose:** five Codex reviews tonight. The record, verbatim: [docs/reviews/2026-11-22-issue-67-review.md](reviews/2026-11-22-issue-67-review.md). Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.
@@ -118,6 +144,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What it rests on:** none of the edge cases can make IINA hang or crash. The timer point is the one to confirm in IINA.
 - **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
 - **What your answer changes:** whether the fix is in your next Streams Beta refresh.
+- **Update 2026-11-24 15:40 (decided provisionally on your behalf, operator asleep):** merged into `next` on the recommendation above, as merge commit `022473b`. Both suites pass after the merge (846 and 168 tests). Not yet checked in IINA, and the edge cases are not yet filed as one issue. **Undo:** `git switch next && git revert -m 1 022473b`. Your answer still decides whether it stays.
 
 ### W-15. Grow the plan: a fuller dashboard, and a mini dashboard in the plugin sidebar (amends D-035)
 - **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:
@@ -201,6 +228,28 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   7. **About the lead:** the lead favoured reading 1 because it's a design problem it can fix, rather than reading 4, its own errors.
 
   **Next round:** draw it at real fidelity (tests 3). Show settings both removed from the panel and present at low weight (tests 2 against 1). Try a non-Twitch structure alongside (tests 5).
+
+- **Update 2026-11-24, night (operator asleep): restarted, with five directions to try in use.**
+  - **Why restarted:** your words to the planning lead: rounds 1 and 2 took "the most literal sort of interpretation". So I wrote down what I think you want underneath them, signed, with your words beside it: [READING.md](design/sidebar-2026-11-24/READING.md). Its section 1 lists your located faults, which every direction obeys.
+  - **The five directions:** each opens in Safari as an IINA window with the panel on the left. Buttons along the top switch the width between 300 and 360 and change the state (signed out, new user, many people). The data is real public Twitch channels; the watch history is invented.
+
+    | Direction | What it is for | What picking it would show about my reading |
+    |---|---|---|
+    | [R: the quiet list of people](design/sidebar-2026-11-24/r/index.html) | Get to the next person in one click, then out of the way. No headings; live above a hairline. | You want the short moment I read |
+    | [P: the timeline](design/sidebar-2026-11-24/p/index.html) | Keep up with your people over time; scroll back to find a half-watched VOD | The content you want is time, not people |
+    | [T: this channel](design/sidebar-2026-11-24/t/index.html) | The panel is about the stream you're in: its broadcasts, then a strip of who else is on | The panel's job is the current channel, not a directory |
+    | [S: the switcher](design/sidebar-2026-11-24/s/index.html) | Press Tab over the video for a ⌘-Tab-style switcher; the panel holds only one person's broadcasts | "Beyond the browser" matters most |
+    | [Q: round 2, rebuilt at the same polish](design/sidebar-2026-11-24/q/index.html) | The control: is polish alone enough? | The problem was finish and trust, not the layout |
+    | **None of these** | | Next, I'd ask to watch you switch channels, rather than read more words |
+  - **Judges** (theirs, not yours; both are Claude models, so their agreement isn't independent; details in [JUDGES.md](design/sidebar-2026-11-24/process/JUDGES.md)):
+    - **Opus judge** (separate context; given your words, not my reading): R, T, P, S, Q.
+    - **The advisor** (has read my reading): R, then P, then T, then Q, with S as an add-on.
+    - **Both:** R's weak spot is continue watching, which shows only as an arc on the avatar. P's thumbnails crowd.
+  - **Recommendation on how to look:** open R, T and P first, and switch a channel in each the way you would. S works as an addition to any of them, if you like the key.
+  - **Needed from you:** a pick, a mix, or "none". Anything you say about them is read as evidence, not as a list of changes.
+  - **Unchecked:**
+    - Nothing ran in IINA itself; these were checked in Chrome only.
+    - Whether IINA's default keys already use Tab.
 
 ## Answered
 

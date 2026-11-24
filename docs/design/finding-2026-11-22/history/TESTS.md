@@ -4,8 +4,8 @@
 
 **Pipeline** (memory `delegation-pipeline-tests-first`):
 1. The lead designs these tests.
-2. Codex writes them, red, in a worktree.
-3. An implementer makes them pass.
+2. The lead or a Sonnet agent writes them, red, in a worktree (amended 2026-11-24: never Codex).
+3. An implementer makes them pass (Gemini Hydrogen High in the confined wrapper, 2026-11-24).
 4. The lead reviews, then Codex reviews per `docs/REVIEW.md`.
 
 These are behaviours, not code. Where a number is a choice, the choice is recorded here, so the implementer doesn't invent one.

@@ -42,6 +42,8 @@ with sync_playwright() as pw:
         page = browser.new_page(viewport={"width": 1240, "height": 820}, device_scale_factor=2)
         page.goto(index.as_uri()); page.wait_for_timeout(900)
         pf = frame_of(page, "panel")
+        if "closed" in (page.get_attribute("#sidebar", "class") or ""):
+            page.click("#sbtn"); page.wait_for_timeout(400)   # a direction whose panel starts closed
         for width in ("360", "300"):
             page.click(f'#w button[data-w="{width}"]'); page.wait_for_timeout(400)
             page.screenshot(path=str(o / f"open-{width}.png"))

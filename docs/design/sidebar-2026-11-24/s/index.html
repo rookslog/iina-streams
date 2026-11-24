@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar direction</title>
+<link rel="stylesheet" href="../shared/frame.css">
+<style>
+  .chrome-note {
+    width: min(1180px, 100%);
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, .54);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: baseline;
+  }
+  .chrome-note summary {
+    cursor: pointer;
+    color: rgba(255, 255, 255, .72);
+    user-select: none;
+  }
+  .chrome-note ul {
+    margin: 4px 0 0 16px;
+    padding: 0;
+  }
+  .chrome-note code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, .74);
+  }
+</style>
+</head>
+<body>
+<script src="../shared/snapshot.js"></script>
+<script src="../shared/viewer.js"></script>
+<script src="../shared/util.js"></script>
+<!-- data-overlay="overlay.html" only for a direction that draws over the video. -->
+<script src="../shared/frame.js" data-panel="panel.html" data-overlay="overlay.html" data-label="Direction S" data-open="false"></script>
+<script>
+"use strict";
+(function () {
+  const panel = document.getElementById("panel");
+  const overlay = document.getElementById("overlay");
+  const chrome = document.querySelector(".chrome");
+
+  if (chrome) {
+    const note = document.createElement("div");
+    note.className = "chrome-note";
+    note.innerHTML =
+      '<span>Press <b>Tab</b> over the video to switch; click the sidebar button for the playing person’s broadcasts.</span>' +
+      '<details><summary>Unchecked native feasibility</summary>' +
+      '<ul>' +
+      '<li>IINA 1.5.1’s plugin API has <code>input.onKeyDown(key, callback, priority)</code> (<code>JavascriptAPIInput.swift</code>). Whether a plugin’s handler can stop IINA’s own binding of the same key is unchecked.</li>' +
+      '<li>Whether <code>Tab</code> is free in IINA’s default bindings is unchecked.</li>' +
+      '<li>The overlay is a web view that takes clicks only on elements marked clickable (<code>PluginOverlayView.swift</code>). Typed text would come through key listeners, not a focused field.</li>' +
+      '</ul></details>';
+    chrome.insertAdjacentElement("afterend", note);
+  }
+
+  function sendHash() {
+    const msg = { type: "hash", hash: window.location.hash || "" };
+    if (panel && panel.contentWindow) panel.contentWindow.postMessage(msg, "*");
+    if (overlay && overlay.contentWindow) overlay.contentWindow.postMessage(msg, "*");
+  }
+
+  if (window.location.hash) {
+    if (panel) panel.src = "panel.html" + window.location.hash;
+    if (overlay) overlay.src = "overlay.html" + window.location.hash;
+  }
+  if (panel) panel.addEventListener("load", sendHash);
+  if (overlay) overlay.addEventListener("load", sendHash);
+  window.addEventListener("hashchange", sendHash);
+  const sbtn = document.getElementById("sbtn");
+  const sidebar = document.getElementById("sidebar");
+  if (sbtn && sidebar) {
+    sbtn.addEventListener("click", () => {
+      if (!sidebar.classList.contains("closed") && panel && panel.contentWindow) {
+        panel.contentWindow.postMessage({ type: "panel-opened" }, "*");
+      }
+    });
+  }
+  window.addEventListener("message", e => {
+    if (e.data && e.data.type === "close-panel") {
+      if (panel) panel.blur();
+      document.body.tabIndex = -1;
+      document.body.focus();
+      window.focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>

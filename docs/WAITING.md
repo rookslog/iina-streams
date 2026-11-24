@@ -251,6 +251,22 @@ Each item is written once, in full, here. Chat links to an item's line instead o
     - Nothing ran in IINA itself; these were checked in Chrome only.
     - Whether IINA's default keys already use Tab.
 
+### W-18. Live marks in Open Stream: may Streams ask Twitch about the people in your watch history? (#74)
+- **What it is:** when Open Stream opens, at most once a minute, Streams asks Twitch whether up to 20 people from your local watch history are live, to draw the live dot beside their names. Signed out, the request is anonymous. Signed in, it goes through Twitch's documented API with your sign-in, so Twitch can link those names to your account. Nothing is sent while you type. It's yours because it trades a useful sign (who is live) against the promise that history stays on your Mac (PRODUCT.md, the privacy-minded viewer, journey J19). Raised by the lead on 2026-11-24 night, from the advisor's check.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Ask, as built** (provisional, on the #74 branch) | Live marks for your people; anonymous when signed out | Up to 20 of your history names reach Twitch once a minute while Open Stream is open, tied to your account when signed in |
+  | **Ask only when signed out** (anonymous) | Live marks, never tied to your account | Signed in gives fewer marks than signed out, which goes against "signing in adds" |
+  | **Ask only for people you follow on Twitch** (needs #30) | Twitch already knows your follows | No marks until #30 and its new Twitch permission |
+  | **Don't ask; no live marks** | History never leaves the Mac | The quick list can't show who is live |
+
+- **Recommendation:** ask, as built, and say so in the privacy note. The live dot is what makes the quick list useful to the daily viewer. Twitch already sees which channels you open.
+- **Rests on:** viewers caring more about seeing who's live than about Twitch knowing which channels they look up. That's unchecked with any user but you.
+- **What would flip it:** if you'd rather history never leave the Mac, take "ask only when signed out" or "don't ask". The code change is small either way.
+- **Docs to change at merge:** `docs/PRIVACY.md` gains this request under `api.twitch.tv` and `gql.twitch.tv`. Its last line ("only when you open a stream or sign in") gains "or open Open Stream". Its watch-history row ("Nothing leaves your Mac") becomes "names in it are sent to Twitch for live marks".
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

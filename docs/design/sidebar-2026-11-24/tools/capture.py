@@ -14,6 +14,7 @@ folders = sys.argv[3:] or ["p", "q", "r", "s", "t"]
 METRICS_JS = """() => {
   const d = document, w = d.defaultView;
   const visible = el => { const r = el.getBoundingClientRect(), s = w.getComputedStyle(el);
+    let a = el; while (a) { if (w.getComputedStyle(a).opacity === '0') return false; a = a.parentElement; }
     return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && r.bottom > 0 && r.top < w.innerHeight; };
   const strings = [];
   const walk = d.createTreeWalker(d.body, NodeFilter.SHOW_TEXT);

@@ -1,5 +1,17 @@
 "use strict";
 // Small helpers shared by every direction. Values only: no sentences.
+// Twitch lists a live channel's running broadcast as its newest video. That is the live stream, not a
+// recording, so it is taken out of every list here, once per page (the frame and each panel load this file),
+// and the invented watch positions in viewer.js are shifted to match. Added by the lead after the first
+// judging: P and T showed running broadcasts as finished VODs.
+(function dropRunningBroadcasts(S, V) {
+  for (const p of S.people) {
+    if (!p.live || !p.vods.length || p.vods[0].thumb) continue;   // a running broadcast has no thumbnail yet
+    p.vods.shift();
+    for (const u of V.unfinished) if (u.login === p.login) u.vod -= 1;
+  }
+})(window.SNAPSHOT, window.VIEWER);
+
 window.U = (function () {
   const S = window.SNAPSHOT, V = window.VIEWER;
   const NOW = Date.parse(S.takenAt);

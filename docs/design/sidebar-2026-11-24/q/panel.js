@@ -208,7 +208,7 @@
 
   function vodThumbSrc(owner, v, vodIndex) {
     if (v.thumb) return "../shared/" + v.thumb;
-    if (vodIndex === 0 && owner.live && owner.preview) return "../shared/" + owner.preview;
+    // (lead, after util.js dropped running broadcasts: no VOD is the live stream any more)
     return null;
   }
 

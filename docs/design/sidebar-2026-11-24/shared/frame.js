@@ -19,6 +19,7 @@
   document.body.innerHTML = `
     <div class="chrome"><b>${label}</b>
       <span>Panel width</span><span class="seg" id="w"><button data-w="300">300</button><button data-w="360" aria-pressed="true">360</button></span>
+      <span>State</span><span class="seg" id="st"><button data-s="" aria-pressed="true">Default</button><button data-s="signed-out">Signed out</button><button data-s="new">New</button><button data-s="many">Many</button></span>
       <span class="spacer"></span><span class="faint">Snapshot ${S.takenAt.replace("T", " ")} · data public, viewer history invented</span></div>
     <div class="window" id="win">
       <div class="video" id="video"></div>
@@ -40,6 +41,14 @@
     for (const b of $("w").children) b.setAttribute("aria-pressed", String(b.dataset.w === String(w)));
   }
   $("w").addEventListener("click", e => { if (e.target.dataset.w) setWidth(+e.target.dataset.w); });
+  // The states each direction supports (#signed-out, #new, #many), reloading its pages with that hash.
+  $("st").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    for (const x of $("st").children) x.setAttribute("aria-pressed", String(x === b));
+    const hash = b.dataset.s ? "#" + b.dataset.s : "";
+    $("panel").src = panelSrc + hash;
+    if ($("overlay")) $("overlay").src = overlaySrc + hash;
+  });
   $("sbtn").addEventListener("click", () => sidebar.classList.toggle("closed"));
   // Clicking the video closes the panel, as IINA does when Edge-to-Edge Video is on.
   video.addEventListener("click", () => sidebar.classList.add("closed"));

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streams</title>
+<link rel="stylesheet" href="../shared/base.css">
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<div class="panel-shell">
+  <!-- List view -->
+  <div class="pinned top" id="list-top">
+    <details class="card playing-card" id="playing-card">
+      <summary class="playing" id="playing"></summary>
+      <div class="line playing-tools">
+        <div class="select-wrap grow">
+          <select class="mac-select" id="quality" aria-label="Quality" title="Quality"></select>
+          <svg class="select-chev" viewBox="0 0 12 16" aria-hidden="true"><path d="M3 6l3-3 3 3M3 10l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <button class="icon-button" type="button" id="reload" title="Reload" aria-label="Reload">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </details>
+    <div class="search">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="search" id="q" placeholder="Search" aria-label="Search channels" autocomplete="off" spellcheck="false">
+      <span class="count num" id="q-count" hidden></span>
+    </div>
+  </div>
+
+  <div class="scroll" id="list-view">
+    <div id="results" class="card" hidden aria-label="Search results"></div>
+    <div id="lists">
+      <section class="card" id="sec-cont" aria-labelledby="h-cont">
+        <h2 class="head" id="h-cont">Continue watching</h2>
+        <div id="cont"></div>
+      </section>
+      <section class="card" id="sec-live" aria-labelledby="h-live">
+        <h2 class="head" id="h-live">Live</h2>
+        <div id="live"></div>
+      </section>
+      <section class="card" id="sec-off" aria-labelledby="h-off">
+        <h2 class="head" id="h-off">Offline</h2>
+        <div id="off"></div>
+      </section>
+
+      <details class="card group" id="grp-chat">
+        <summary>
+          <span class="group-title">Chat</span>
+          <input class="switch" type="checkbox" id="chat-on" checked aria-label="Show chat" title="Show chat">
+        </summary>
+        <div class="group-body">
+          <div class="seg" role="radiogroup" aria-label="Chat placement" id="chat-place">
+            <button type="button" role="radio" data-place="beside" aria-checked="true">Beside</button>
+            <button type="button" role="radio" data-place="over" aria-checked="false">Over</button>
+          </div>
+          <div class="line">
+            <button class="icon-button" type="button" id="text-smaller" aria-label="Smaller text" title="Smaller text">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="meta num size-val" id="text-size" title="Text size">14</span>
+            <button class="icon-button" type="button" id="text-larger" aria-label="Larger text" title="Larger text">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8M8 4v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="grow"></span>
+            <button class="btn" type="button" id="import-btn">Import…</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="card group" id="grp-twitch">
+        <summary><span class="group-title">Twitch</span></summary>
+        <div class="group-body" id="twitch-body"></div>
+      </details>
+
+      <details class="card group" id="grp-history">
+        <summary>
+          <span class="group-title">History</span>
+          <input class="switch" type="checkbox" id="hist-on" checked aria-label="Record history" title="Record history">
+        </summary>
+        <div class="group-body">
+          <div class="line history-actions">
+            <button class="btn forget-btn" type="button" id="forget"></button>
+            <span class="grow"></span>
+            <button class="btn" type="button" id="delete-all">Delete all…</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Channel view: replaces the list until Back -->
+  <div class="pinned top" id="chan-top" hidden>
+    <div class="chan-head">
+      <button class="icon-button" type="button" id="back" aria-label="Back" title="Back">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5L5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h2 id="chan-name"></h2>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="search" id="vq" placeholder="Search" aria-label="Search VODs" autocomplete="off" spellcheck="false">
+      <span class="count num" id="vq-count" hidden></span>
+    </div>
+    <div class="tools">
+      <div class="select-wrap grow">
+        <select class="mac-select" id="sort" aria-label="Sort" title="Sort">
+          <option value="time">Newest</option>
+          <option value="views">Most viewed</option>
+        </select>
+        <svg class="select-chev" viewBox="0 0 12 16" aria-hidden="true"><path d="M3 6l3-3 3 3M3 10l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="select-wrap grow">
+        <select class="mac-select" id="type" aria-label="Type" title="Type">
+          <option value="all">All</option>
+          <option value="archive">Broadcasts</option>
+          <option value="highlight">Highlights</option>
+          <option value="upload">Uploads</option>
+        </select>
+        <svg class="select-chev" viewBox="0 0 12 16" aria-hidden="true"><path d="M3 6l3-3 3 3M3 10l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll" id="chan-view" hidden>
+    <div id="chan-live"></div>
+    <div class="card" id="chan-vods" aria-label="VODs"></div>
+  </div>
+</div>
+
+<script src="../shared/snapshot.js"></script>
+<script src="../shared/viewer.js"></script>
+<script src="../shared/util.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

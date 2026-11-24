@@ -205,6 +205,28 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
   **Next round:** draw it at real fidelity (tests 3). Show settings both removed from the panel and present at low weight (tests 2 against 1). Try a non-Twitch structure alongside (tests 5).
 
+- **Update 2026-11-24, night (operator asleep): restarted, with five directions to try in use.**
+  - **Why restarted:** your words to the planning lead: rounds 1 and 2 took "the most literal sort of interpretation". So I wrote down what I think you want underneath them, signed, with your words beside it: [READING.md](design/sidebar-2026-11-24/READING.md). Its section 1 lists your located faults, which every direction obeys.
+  - **The five directions:** each opens in Safari as an IINA window with the panel on the left. Buttons along the top switch the width between 300 and 360 and change the state (signed out, new user, many people). The data is real public Twitch channels; the watch history is invented.
+
+    | Direction | What it is for | What picking it would show about my reading |
+    |---|---|---|
+    | [R: the quiet list of people](design/sidebar-2026-11-24/r/index.html) | Get to the next person in one click, then out of the way. No headings; live above a hairline. | You want the short moment I read |
+    | [P: the timeline](design/sidebar-2026-11-24/p/index.html) | Keep up with your people over time; scroll back to find a half-watched VOD | The content you want is time, not people |
+    | [T: this channel](design/sidebar-2026-11-24/t/index.html) | The panel is about the stream you're in: its broadcasts, then a strip of who else is on | The panel's job is the current channel, not a directory |
+    | [S: the switcher](design/sidebar-2026-11-24/s/index.html) | Press Tab over the video for a ⌘-Tab-style switcher; the panel holds only one person's broadcasts | "Beyond the browser" matters most |
+    | [Q: round 2, rebuilt at the same polish](design/sidebar-2026-11-24/q/index.html) | The control: is polish alone enough? | The problem was finish and trust, not the layout |
+    | **None of these** | | Next, I'd ask to watch you switch channels, rather than read more words |
+  - **Judges** (theirs, not yours; both are Claude models, so their agreement isn't independent; details in [JUDGES.md](design/sidebar-2026-11-24/process/JUDGES.md)):
+    - **Opus judge** (separate context; given your words, not my reading): R, T, P, S, Q.
+    - **The advisor** (has read my reading): R, then P, then T, then Q, with S as an add-on.
+    - **Both:** R's weak spot is continue watching, which shows only as an arc on the avatar. P's thumbnails crowd.
+  - **Recommendation on how to look:** open R, T and P first, and switch a channel in each the way you would. S works as an addition to any of them, if you like the key.
+  - **Needed from you:** a pick, a mix, or "none". Anything you say about them is read as evidence, not as a list of changes.
+  - **Unchecked:**
+    - Nothing ran in IINA itself; these were checked in Chrome only.
+    - Whether IINA's default keys already use Tab.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

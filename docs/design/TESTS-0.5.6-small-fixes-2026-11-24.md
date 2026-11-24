@@ -56,3 +56,27 @@ Choose whichever needs no new IINA API. Record the choice in the test's header c
 - **Nit, not fixed:** global doesn't check the type of `instanceStartedAt` or the contents of each step. The player builds both, and the lifetime probe checks they carry no address or credential.
 - **Untested natively:** both fixes. #59's native proof: switch a VOD to 360p, reopen it from Open Stream, and see 720p in the sidebar. #65's: two Streams windows, then read `last-session.json`.
 - **Owed before release:** a review by a provider other than Codex.
+
+## Explorer extension for #64 and #35 (lead's design, 2026-11-24; not yet built)
+D-033 lets adoption, and re-activation after a loss, return in 0.5.6 only once the class-L explorer (`tests/class-l-explorer.test.js`) covers adopted windows and the resolver. #64 needs the same explorer to see mpv reads and timer arms. One pass does both.
+
+**Rule to add (L5b):** work that continues an ended activation reads no mpv property and arms no timer. This covers a resolve settling late, a promise continuation, and a timer turn. Exempt:
+- the loss step's own synchronous teardown;
+- the turns it armed (they keep their loss attribution through `wrapSetTimeout`);
+- a hook's entry read of `path` / `stream-open-filename`, which it needs to decide whether the file is its own.
+
+**Three things to build:**
+1. **See reads and arms.** In `createWorld`, before `start`, wrap `iina.mpv.getString/getNumber/getFlag` to record `{name, attr}`. `wrapSetTimeout` already tags arms; also push each arm to a list. The shim stays unchanged, so other tests don't move.
+2. **Attribute continuations correctly.** The obstacle: a promise continuation runs under whatever `model.attr` is current, so after a foreign step it looks like loss teardown. Fix: a loss step holds the loss attribution only for its synchronous part, then sets `model.attr = {epoch: ended, loss: false, via: 'continuation'}`. Anything running after that, other than its own armed turns, is ended-epoch work and is checked.
+3. **Lose the window between promise jobs.** `stepThenClose` already closes N jobs after a step. Add `stepThenForeign`: a foreign hook N jobs after, for N in `CLOSE_JOBS`, run on every sequence that ends in a foreign step. That's #64's sequence (settle a quality, then a foreign load three jobs later), found without being told.
+
+**Adopted-window world (#35):**
+- `createWorld({adopted: true})`: an unlabeled window (`label: ''`), with `readSettings` returning `adoptNativeWindows: true`.
+- No epoch until the first own-source hook adopts. That hook begins epoch 1.
+- Run the same alphabet, checks and depth.
+- Assert first that this world has the two clearance-1 findings at the commit before D-033 (`f59cc1b^`'s parent, as the review record names it): the falsifier must fail there without being told the sequences (D-032 rule 3).
+
+**Re-activation after loss (D-033's second behaviour):** the model changes from "an own-source hook after a loss begins no epoch" to "it begins a new epoch (`last + 1`)". The explorer is then red on today's code (the spec for the restore) until the player re-activates. Keep the D-033 model selectable with an environment variable, so the 0.5.5 behaviour stays checkable.
+
+**Order:** 1 and 2 first, then 3, on today's code. Expect #64 to show up. Fixing it is a builder's job. Then the adopted world, then the model change, each run before any product change.
+**What this won't settle:** native adoption through the Safari extension (J3), and timing on real hardware.

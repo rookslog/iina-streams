@@ -476,3 +476,30 @@ test('#73 round 3 cancel table: a later form instance is independent of a cancel
   await replyThenMainTurn(fixture, 'live');
   assert.equal(fixture.opens().length, 1, 'the later instance\'s answer opens its player');
 });
+
+// Two more ways a form ends (lead, round 3, after the advisor's check). IINA 1.5.1 always gives the plugin window a
+// close button (PluginStandaloneWindow.swift:23, styleMask [.closable, ...]; setProperty can't remove it) and tells
+// the plugin nothing when it is used: isOpen() reads isVisible (JavascriptAPIStandaloneWindow.swift:50). The shim's
+// `visible = false` with no message is that close.
+test('#73 round 3 cancel table: submit, then the person closes the window by its close button', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.visible = false;
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 0, 'a form closed by the person acts like a cancelled one');
+  assert.equal(fixture.win.visible, false, 'and is not reopened');
+});
+
+test('#73 round 3 cancel table: submit A, then a broadcast link that opens at once; A answers live later', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-stream', {input: VOD_URL});
+  await settle();
+  assert.equal(fixture.opens().length, 1, 'the broadcast opens at once and the form closes');
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 1, 'A, whose form is gone, opens no second player');
+});

@@ -464,6 +464,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   });
   a.player=new Playback({
    source,
+   signal:a.signal,
    resolve:q=>a.wait(resolveFor(a,q)),
    readPlayer:()=>({position:mpv.getNumber('time-pos'),paused:mpv.getFlag('pause'),speed:mpv.getNumber('speed')}),
    replace:a.guard(replaceFile),

@@ -77,12 +77,12 @@ function quoted(query) {
 // ---- global fixture ----
 
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
-  statusFails = false} = {}) {
+  statusFails = false, holdStatus = false} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
   if (signedIn) shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
-  const control = {liveLogins: new Set(liveLogins), statusFails, precheck};
+  const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: []};
 
   const post = shim.iina.http.post;
   const get = shim.iina.http.get;
@@ -101,6 +101,13 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
       const aliased = Array.from(query.matchAll(/(\w+):user\(login:"(\w+)"\)/g));
       const data = {users: quoted(query).map(login => ({login, stream: control.liveLogins.has(login) ? {id: '1'} : null}))};
       for (const [, alias, login] of aliased) data[alias] = {login, stream: control.liveLogins.has(login) ? {id: '1'} : null};
+      if (control.holdStatus) {
+        // Held until releaseStatus(): the answer arrives later, on its own turn.
+        return new Promise(resolve => control.held.push(() => {
+          shim.http.setResponse({statusCode: 200, data: {data}});
+          resolve(post(url, options));
+        }));
+      }
       shim.http.setResponse({statusCode: 200, data: {data}});
     }
     return post(url, options);
@@ -134,7 +141,18 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     },
   });
   const window = shim.standaloneWindow;
-  const menuItem = title => shim.menu.items.find(item => item.title === title);
+  // #73 put Clear Watch History in the Watch History submenu, so the search goes into submenus (lead, 2026-11-24).
+  const menuItem = title => {
+    const visit = items => {
+      for (const item of items || []) {
+        if (item.title === title) return item;
+        const inner = visit(item.items || item.submenu);
+        if (inner) return inner;
+      }
+      return undefined;
+    };
+    return visit(shim.menu.items);
+  };
 
   async function settle() {
     for (let turn = 0; turn < 6; turn++) {
@@ -166,7 +184,8 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   const gqlStatus = () => calls().filter(call => call.url === GQL && call.method === 'POST'
     && !PRECHECK.test(call.options?.data?.query ?? '') && !(call.options?.data?.query ?? '').includes('videos('));
   const helixStatus = () => calls().filter(call => HELIX.test(call.url));
-  const statusRequests = () => gqlStatus().length + helixStatus().length;
+  // A held request counts as made: the shim records it only once released.
+  const statusRequests = () => gqlStatus().length + helixStatus().length + control.held.length;
   const prechecks = () => calls().filter(call => call.url === GQL && PRECHECK.test(call.options?.data?.query ?? ''));
   const archives = () => calls().filter(call => (call.options?.data?.query ?? '').includes('videos('));
 
@@ -179,8 +198,14 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     return answers.at(-1);
   }
 
+  const releaseStatus = () => {
+    const next = control.held.shift();
+    assert.ok(next, 'fixture: a status request is waiting');
+    next();
+  };
+
   return {
-    shim, window, control, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
+    shim, window, control, releaseStatus, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
     statusRequests, prechecks, archives, menuItem, oracle: oracle(text), text,
   };
 }
@@ -326,6 +351,30 @@ test('5d. a success also holds the 60 s rule, and reopening serves the cached li
   r.shim.timers.advance(1);
   await r.reopen();
   assert.equal(r.statusRequests(), 2, 'a new request at 60 s');
+});
+
+// Lead, 2026-11-24, after a mutation check of the global build: removing the form check on a late status answer
+// failed no test. Class C governs what reaches the form. The live values themselves are global's data, so they are
+// cached either way, and the 60 s rule holds for a reopen.
+test('5e. a status answer arriving after the form closed posts nothing to it, and a reopen within 60 s uses it', async () => {
+  const r = loadGlobal({people: many(25), liveLogins: ['p01'], holdStatus: true});
+  await r.showOpen();
+  assert.equal(r.statusRequests(), 1);
+  r.window.send('open-cancel', {});
+  await r.settle();
+  const before = r.messages('suggestions-status').length;
+  r.releaseStatus();
+  await r.settle();
+  assert.equal(r.messages('suggestions-status').length, before, 'nothing posts to a closed form');
+
+  r.shim.timers.advance(1000);
+  r.control.holdStatus = false;
+  await r.showOpen();
+  assert.equal(r.statusRequests(), 1, 'a reopen within 60 s asks nothing');
+  const rows = r.messages('suggestions').at(-1).rows;
+  assert.deepEqual(rows.filter(row => row.login === 'p01').map(row => row.live), rows.some(row => row.login === 'p01') ? [true] : [],
+    'and shows the cached live value');
+  assert.ok(rows.some(row => row.live !== null), 'the cached values are used, not unknown');
 });
 
 test('6. no network for typing: ten open-query messages add no request, and typed text is never sent', async () => {

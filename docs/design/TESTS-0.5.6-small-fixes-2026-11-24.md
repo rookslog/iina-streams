@@ -14,8 +14,8 @@ Each item names its mutation check: the one-line product change that must turn i
 3. Now release A's late result.
 
 **Expected:** the window shows B's broadcasts only. A's never render, and they never replace B's.
-**Mutation check:** removing `openRun++` in `closeOpenWindow` (`global.js`) makes this test fail.
-**No product change** is expected. If the test fails on today's code, that's a real bug: report it and stop.
+**Mutation check:** ~~removing `openRun++` in `closeOpenWindow` (`global.js`) makes this test fail.~~ *Amended 2026-11-24 (lead, on writing it):* since #73 round 7, A's late result is fenced twice in `showArchives`: by the draft counter (reopening and submitting also advance it, not only closing) and by `isFormShowing(form)` (class C). Removing either alone leaves the test green; removing the whole fence turns it red. That is the check.
+**No product change** is expected. Written in `tests/offline-precheck.test.js` ("#66 ..."): **green on `next` at 595639d**, so #66 is settled by the test.
 
 ## #59: an unmarked reopen keeps stale quality metadata
 1. Open a Twitch live source. Confirm a switch to 360p (quality generation > 0).

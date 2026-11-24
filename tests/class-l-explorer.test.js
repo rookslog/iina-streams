@@ -27,6 +27,8 @@
 //
 // Checked per step:
 //   L4: an on_load hook's `next` runs at most once; at quiescence, exactly once.
+//   L5b (#64, 2026-11-24): work that continues an ended epoch (a late resolve, a promise continuation after a loss
+//       between jobs, a timer turn) reads no mpv property and arms no timer (checkContinuations).
 //   L5: work attributed to an ended epoch emits nothing (an mpv command or property, a sidebar, overlay or global
 //       post, an HTTP request, a file write, a window write, an overlay or sidebar call; services.trace is a file
 //       write, as in a QA build). The loss step and the turns it armed may also emit this teardown, at most once
@@ -139,8 +141,14 @@ function createWorld() {
     immediate: false,
     attr: {epoch: 1, loss: false}
   };
+  // L5b (#64): mpv reads and timer arms, with the attribution current when made. `world.continuation`, when set,
+  // is the attribution of work still running after a loss step's synchronous part (stepThenLoss).
+  const reads = [];
+  const arms = [];
+  const current = () => world.continuation || model.attr;
   const wrapSetTimeout = (fn, delay) => {
-    const attr = model.attr;
+    const attr = current();
+    arms.push({attr, delay});
     const id = rawSetTimeout(() => {
       const outer = model.attr;
       model.attr = attr;
@@ -153,6 +161,13 @@ function createWorld() {
     tags.set(id, attr);
     return id;
   };
+  for (const api of ['getString', 'getNumber', 'getFlag']) {
+    const raw = shim.iina.mpv[api].bind(shim.iina.mpv);
+    shim.iina.mpv[api] = name => {
+      reads.push({name, attr: current()});
+      return raw(name);
+    };
+  }
   const services = {
     readSettings: () => ({chatEnabled: true}),
     saveSettings() {},
@@ -177,8 +192,9 @@ function createWorld() {
     setTimeout: wrapSetTimeout, clearTimeout: timers.clearTimeout
   });
   playerScript.runInContext(context);
-  const controller = module.exports.start(shim.iina, {variant: 'unified'}, services);
-  return {shim, timers, tags, model, controller};
+  const world = {shim, timers, tags, model, reads, arms, continuation: null};
+  world.controller = module.exports.start(shim.iina, {variant: 'unified'}, services);
+  return world;
 }
 
 // ---- steps ----
@@ -394,7 +410,25 @@ function emissionsSince(world, mark, end) {
 }
 
 function mark(world) {
-  return {posts: world.shim.posts.length, log: world.shim.log.length};
+  return {posts: world.shim.posts.length, log: world.shim.log.length, reads: world.reads.length, arms: world.arms.length};
+}
+
+// L5b (#64): work that continues an ended epoch (a late resolve, a promise continuation, a timer turn) reads no
+// mpv property and arms no timer. The loss step's own synchronous teardown and the turns it armed keep the loss
+// attribution and are exempt; so is a hook's entry read of the path, which it needs to tell its own file.
+const ENTRY_READS = new Set(['path', 'stream-open-filename']);
+function checkContinuations(world, since) {
+  const {model} = world;
+  const ended = attr => attr.via && !attr.loss && model.losses.has(attr.epoch);
+  for (const read of world.reads.slice(since.reads)) {
+    if (ended(read.attr) && !ENTRY_READS.has(read.name)) {
+      return {invariant: 'L5b', detail: 'ended epoch reads mpv ' + read.name + ' from ' + read.attr.via};
+    }
+  }
+  for (const arm of world.arms.slice(since.arms)) {
+    if (ended(arm.attr)) return {invariant: 'L5b', detail: 'ended epoch arms a ' + arm.delay + ' ms timer from ' + arm.attr.via};
+  }
+  return null;
 }
 
 // L5 for one step's emissions, attributed to `attr`.
@@ -443,12 +477,14 @@ async function step(world, name) {
   await settle();
   resetAttribution(model);
   if (outcome.offMain) return {invariant: 'host', detail: name + ' made a main-thread call on the hook'};
-  return checkEmissions(world, attr, emissionsSince(world, before)) || checkHooks(world, false);
+  return checkEmissions(world, attr, emissionsSince(world, before)) || checkContinuations(world, before) ||
+    checkHooks(world, false);
 }
 
-// Runs `name`, then closes the window `jobs` promise jobs after the step's promise settles, before its remaining
-// jobs drain. Emissions before the close are checked against the model as it was then; the rest against the close.
-async function stepThenClose(world, name, jobs) {
+// Runs `name`, then a loss (`close`, or a `foreign` file) `jobs` promise jobs after the step's promise settles,
+// before its remaining jobs drain. Emissions before the loss are checked against the model as it was then; the rest
+// against the loss. Reads and arms made after the loss step's synchronous part are the step's continuation (L5b).
+async function stepThenLoss(world, name, jobs, loss = 'close') {
   const before = mark(world);
   const {model} = world;
   resetAttribution(model);
@@ -458,19 +494,29 @@ async function stepThenClose(world, name, jobs) {
   const split = mark(world);
   if (outcome.offMain) return {invariant: 'host', detail: name + ' made a main-thread call on the hook'};
   const early = checkEmissions(world, attr, emissionsSince(world, before, split)) || checkHooks(world, false);
-  if (early) return early;
+  const earlyContinuation = checkContinuations(world, before);
+  if (early || earlyContinuation) return early || earlyContinuation;
   resetAttribution(model);
-  await STEPS.close(world);
+  const lossRun = STEPS[loss](world);
   const closeAttr = model.attr;
-  await settle();
-  resetAttribution(model);
-  return checkEmissions(world, closeAttr, emissionsSince(world, split)) || checkHooks(world, false);
+  world.continuation = {epoch: closeAttr.epoch, loss: false, via: 'work continuing after a ' + loss};
+  try {
+    const lossOutcome = await lossRun;
+    await settle();
+    if (lossOutcome && lossOutcome.offMain) return {invariant: 'host', detail: loss + ' made a main-thread call on the hook'};
+  } finally {
+    world.continuation = null;
+    resetAttribution(model);
+  }
+  return checkEmissions(world, closeAttr, emissionsSince(world, split)) || checkContinuations(world, split) ||
+    checkHooks(world, false);
 }
 
-// Whether the sequence's last two letters can run as a step and a close between its jobs.
-function closesBetweenJobs(sequence) {
+// Whether the sequence's last two letters can run as a step and a loss (close or foreign) between its jobs.
+const LOSSES = new Set(['close', 'foreign']);
+function lossBetweenJobs(sequence) {
   const n = sequence.length;
-  return n >= 2 && sequence[n - 1] === 'close' && sequence[n - 2] !== 'close';
+  return n >= 2 && LOSSES.has(sequence[n - 1]) && !LOSSES.has(sequence[n - 2]);
 }
 
 // Settles held resolves, delivers pending mpv loads, and runs every timer due within the horizon.
@@ -567,7 +613,7 @@ async function setUp(world) {
 }
 
 // Runs one sequence; returns null or {at, invariant, detail}. With closeJobs, the final close runs that many
-// promise jobs after the step before it (closesBetweenJobs).
+// promise jobs after the step before it (lossBetweenJobs).
 async function runSequence(sequence, closeJobs) {
   const world = createWorld();
   await setUp(world);
@@ -579,7 +625,7 @@ async function runSequence(sequence, closeJobs) {
   }
   if (closeJobs !== undefined) {
     if (!enabled(world, sequence[split])) return {skipped: true};
-    const violation = await stepThenClose(world, sequence[split], closeJobs);
+    const violation = await stepThenLoss(world, sequence[split], closeJobs, sequence[split + 1]);
     if (violation) return Object.assign({at: split + 1}, violation);
   }
   const violation = await quiesce(world);
@@ -607,12 +653,12 @@ async function explore(depth) {
         if (outcome && !found.has(signature(outcome))) found.set(signature(outcome), {sequence, violation: outcome});
         // A step violation ends the sequence; one found only at quiescence leaves its steps worth extending.
         if (!outcome || outcome.at === 'quiescence') next.push(sequence);
-        if (!closesBetweenJobs(sequence)) continue;
+        if (!lossBetweenJobs(sequence)) continue;
         for (const jobs of CLOSE_JOBS) {
           const between = await runSequence(sequence, jobs);
           if (between && between.skipped) continue;
           runs++;
-          const labelled = sequence.slice(0, -1).concat('close@' + jobs);
+          const labelled = sequence.slice(0, -1).concat(sequence.at(-1) + '@' + jobs);
           if (between && !found.has(signature(between))) {
             found.set(signature(between), {sequence: labelled, violation: between});
           }
@@ -647,11 +693,12 @@ async function randomRun(random) {
     if (!choices.length) break; // Closed, with no late work left.
     const name = choices[Math.floor(random() * choices.length)];
     sequence.push(name);
-    // Sometimes a close interrupts this step's jobs (stepThenClose).
-    const between = name !== 'close' && enabled(world, 'close') && random() < 0.1;
+    // Sometimes a loss interrupts this step's jobs (stepThenLoss): a close or a foreign file.
+    const loss = random() < 0.5 ? 'close' : 'foreign';
+    const between = !LOSSES.has(name) && enabled(world, loss) && random() < 0.1;
     const jobs = between ? CLOSE_JOBS[Math.floor(random() * CLOSE_JOBS.length)] : null;
-    if (between) sequence.push('close@' + jobs);
-    const violation = between ? await stepThenClose(world, name, jobs) : await step(world, name);
+    if (between) sequence.push(loss + '@' + jobs);
+    const violation = between ? await stepThenLoss(world, name, jobs, loss) : await step(world, name);
     if (violation) return {sequence, violation: Object.assign({at: sequence.length}, violation)};
   }
   const violation = await quiesce(world);

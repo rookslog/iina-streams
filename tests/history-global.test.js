@@ -65,10 +65,13 @@ function loadGlobal({adoption, stream = {id: '42'}} = {}) {
   const window = shim.standaloneWindow;
   const menuItem = title => shim.menu.items.find(item => item.title === title);
 
+  // #67 added 0 ms timer hops (offline precheck, archive deadline); settle like b6c-global-offline.
   async function settle() {
-    shim.timers.flush(0);
+    for (let turn = 0; turn < 6; turn++) {
+      await new Promise(resolve => setImmediate(resolve));
+      shim.timers.flush(0);
+    }
     await new Promise(resolve => setImmediate(resolve));
-    shim.timers.flush(0);
   }
 
   function showOpen() {
@@ -83,9 +86,18 @@ function loadGlobal({adoption, stream = {id: '42'}} = {}) {
     if (window.visible) window.send('open-ready', {});
   }
 
+  // src/history.js also writes a visit id and a root nextId (tests/history.test.js requires them); strip them here.
+  function withoutIds(file) {
+    const people = file.people.map(person => ({
+      ...person, visits: person.visits.map(({id, ...visit}) => visit),
+    }));
+    const {nextId, ...rest} = file;
+    return {...rest, people};
+  }
+
   function historyFile() {
     const text = shim.file.get(FILE);
-    return text === undefined ? undefined : JSON.parse(text);
+    return text === undefined ? undefined : withoutIds(JSON.parse(text));
   }
 
   async function send(name, payload, label) {

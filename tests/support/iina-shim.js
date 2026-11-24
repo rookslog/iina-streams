@@ -586,6 +586,13 @@ function createIina(options = {}) {
     emit(name, ...args) { for (const fn of [...(eventControl.listeners.get(name)?.values() || [])]) fn(...args); },
     names: () => [...eventControl.listeners.keys()].filter(n => eventControl.listeners.get(n).size)
   };
+  const IINA_EVENTS = new Set([
+    'iina.window-loaded', 'iina.window-size-adjusted', 'iina.window-moved', 'iina.window-resized',
+    'iina.window-fs.changed', 'iina.window-screen.changed', 'iina.window-miniaturized', 'iina.window-deminiaturized',
+    'iina.window-main.changed', 'iina.window-will-close', 'iina.music-mode.changed', 'iina.pip.changed',
+    'iina.file-loaded', 'iina.file-started', 'iina.mpv-initialized', 'iina.thumbnails-ready',
+    'iina.plugin-overlay-loaded', 'iina.menu-update'
+  ]);
   const eventApi = {
     on(name, callback) {
       record('event.on', name);
@@ -593,6 +600,9 @@ function createIina(options = {}) {
       const isEvent = parts.length === 2, isChange = parts.length === 3 && parts[2] === 'changed';
       if (!((isEvent || isChange) && (parts[0] === 'mpv' || parts[0] === 'iina'))) throw new Error(`Incorrect event name syntax: "${name}"`);
       if (typeof callback !== 'function') throw new TypeError('IINA contract: event.on callback must be a function');
+      // IINA 1.5.1 EventController.swift: these iina.* names exist; mpv.<property>.changed is generic, and the
+      // two-part mpv.<name> form is an mpv core event.
+      if (parts[0] === 'iina' && !IINA_EVENTS.has(name)) throw new Error(`IINA 1.5.1 sends no event named "${name}"`);
       const id = 'listener-' + (++eventControl.nextID);
       if (!eventControl.listeners.has(name)) eventControl.listeners.set(name, new Map());
       eventControl.listeners.get(name).set(id, callback);

@@ -448,6 +448,9 @@ class LargeMetadataTests(unittest.TestCase):
             "extractor_key": lambda f: f.update(extractor_key="Vimeo"),
             "http_headers": lambda f: f.update(http_headers={"User-Agent": "Other/2"}),
             "error": lambda f: f.update(error="Video unavailable"),
+            # #73: watch history needs the channel's id and name.
+            "channel_id": lambda f: f.update(channel_id="UCotherChannel"),
+            "channel": lambda f: f.update(channel="Other channel"),
         }
         # `entries` on a video-typed info (a playlist itself is expanded before printing, see ytdlp_double);
         # `playlist_id` is how a video derived from a playlist, such as a one-entry playlist's child, shows.

@@ -35,6 +35,7 @@ function harness(overrides = {}) {
       if (moduleName === './src/listeners.js') return require('../src/listeners.js');
       if (moduleName === './src/twitch-app.js') return {clientID: overrides.builtInClientID || ''};
       if (moduleName === './src/twitch-vods.js') return require('../src/twitch-vods.js');
+      if (moduleName === './src/history.js') return require('../src/history.js');
       if (moduleName === './src/bridge.js') return require('../src/bridge.js');
       throw new Error('Unexpected module ' + moduleName);
     }
@@ -63,8 +64,11 @@ function harness(overrides = {}) {
 
 test('production global loading registers its menu but performs no open, network, secret read, or timer work', () => {
   const r = harness();
-  assert.equal(r.items.length, 1);
-  for (const events of [r.opens, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites, r.prompts, r.messages]) assert.equal(events.length, 0);
+  // #73: history is wired, so startup adds its three top-level items and reads @data/history.json once.
+  assert.equal(r.items.length, 4);
+  for (const title of ['Pause Watch History', 'Forget This Channel', 'Clear Watch History']) assert.equal(r.items.filter(item => item.title === title).length, 1, title);
+  assert.deepEqual(r.fileReads.map(read => read.file), ['@data/history.json']);
+  for (const events of [r.opens, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileWrites, r.prompts, r.messages]) assert.equal(events.length, 0);
   // v0.5.5 review r1 #5: the one timer is the deferred 0 ms menu refresh (a synchronous refresh orphans core "0").
   assert.deepEqual(r.timers.map(timer => timer.delay), [0]);
   assert.equal(r.auth.snapshot().phase, 'off');
@@ -136,7 +140,8 @@ test('unrelated, malformed, non-string and uncreated labels are rejected before 
     r.handlers.get('auth-disconnect')({}, label);
     r.handlers.get('player-closed')({}, label);
   }
-  for (const events of [r.messages, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileReads, r.fileWrites]) assert.equal(events.length, 0);
+  for (const events of [r.messages, r.httpCalls, r.keychainReads, r.keychainWrites, r.fileWrites]) assert.equal(events.length, 0);
+  assert.deepEqual(r.fileReads.map(read => read.file), ['@data/history.json']); // #73: only the startup history read
   // v0.5.5 review r1 #5: the one timer is the deferred menu refresh from loading; bare-number string labels
   // are adopted senders now and are covered in tests/r1-adopted-global.test.js.
   assert.equal(r.timers.length, 1);

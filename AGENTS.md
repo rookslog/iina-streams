@@ -11,6 +11,12 @@ Start by checking current Git status, exact IINA plugin identities, and the user
 - Prefer a distinct development-plugin identity/worktree over reinstalling the same archive for a CSS or JS change. Preserve rollback and verify IINA reloading before asserting hot reload.
 - **Before describing or designing any surface, or making any claim about users,** read `PRODUCT.md` §Users (everyday Mac users, not technical ones; their desires and the tensions between them) and §Surfaces in IINA (which IINA panel each part of Streams uses, and which side it's on). The operator's first-hand observations of Streams outrank inferences from code. When the operator describes their own IINA, treat it as an observation and find the setting that explains it.
 - On UI work use `.agents/skills/streams-interaction-design/SKILL.md`; on native testing `.agents/skills/streams-native-acceptance/SKILL.md`; on auth/replay `.agents/skills/streams-auth-replay/SKILL.md`. They supplement, not override, Apple's HIG or the operator's feedback.
+- **The design set** (draft 3.1, provisional, from design-practice-lab; installed 2026-11-24 in `.claude/skills/`, version in `DESIGN-SET-VERSION`, departures in `.claude/skills/DEPARTURES.md`). Always read:
+  - Before making, changing, critiquing or reporting on anything a person will look at or use, load `using-the-design-set`.
+  - What the person says is said to you. A stop or a direct instruction takes effect as said; for anything else, load `reading-a-reaction` before changing anything in answer.
+  - A go-ahead covers what was described.
+
+  The design set governs how design work is done with the operator and judged. Impeccable, Apple's macOS guidelines and the streams-interaction-design skill are its craft sources: they govern how a thing looks and behaves on the platform. Do not load `design-craft` or `design-triage` from later drafts.
 - **Impeccable** (design skill; operator-approved 2026-11-22, WAITING W-10), installed for this project only, with no hook and telemetry off:
   - designers start a screen with its `shape`;
   - an independent reviewer runs `critique` and `audit`;

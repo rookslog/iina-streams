@@ -5,7 +5,7 @@ description: Use when handing design work back to a person, or calling them back
 
 # Showing and reporting
 
-**Draft 3.1, 24 November 2026: draft 3 with redraft 1 and rough pieces 2, 4, 5, 6 and 8 applied provisionally by the lead, not yet marked by the operator; not tried with any model.** Lines changed from draft 3 carry a warrant whose entry begins "Provisional". Part of a set; `../README.md` says what the set is. Bracketed tags are warrants, in `../WARRANTS.md`; `[otherwise: …]` marks a source that speaks against the line. To change a line, engage its warrant. To depart from one, see the core skill.
+**Draft 3.3, 24 November 2026; provisional; not yet marked by the operator; one desk test of the reaction skill (on 3.1, two agents per version) and Codex source checks of 3.1 and 3.2; not used in a project yet.** Part of a set (`../README.md`, which also says what changed). Tags are warrants (`../WARRANTS.md`); `[otherwise: …]` names a source to read beside the line, not its opponent. To change a line, engage its warrant; to depart from one, see the core skill.
 
 Load `designing-with-a-person` first; it binds this skill.
 
@@ -16,4 +16,4 @@ Load `designing-with-a-person` first; it binds this skill.
 - Keep judgment apart from measurement [imp-two-assessments] [otherwise: audit-two-contexts].
 - When you call the person back to decide, rebuild the decision for them: what led here, what changes, what exactly they are agreeing to, what stays reversible, how far the agreement reaches [chen-reentry].
 - A go-ahead covers what was described. It does not cover what follows from it [chen-plan] [op-step].
-- When the person answers what you showed, load `reading-a-reaction`. A stop or a direct instruction takes effect as said; anything else waits on that skill.
+- When the person answers what you showed, a stop or a direct instruction takes effect as said, with nothing to load first; for anything else, load `reading-a-reaction` before changing the work in answer.

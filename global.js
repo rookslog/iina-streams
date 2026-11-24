@@ -180,9 +180,10 @@ const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 // openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
 // source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
-// openCancel increments only on explicit cancellation (open-cancel), distinguishing it from edits or independent submissions.
+// pendingFormCheck names the most recent submitted live check. Cancellation affects only that submission
+// while its form session is current, not an independent earlier check.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
-let openRun=0,openCancel=0,openPageReady=false,openQueue=[];
+let openRun=0,pendingFormCheck=null,openPageReady=false,openQueue=[];
 
 // Opens the input. Returns 'opened', 'checking' (a Twitch channel whose live check is pending), 'invalid', or
 // 'blank' when there is nothing to open. `fromForm` says the Open Stream form submitted it in the current session.
@@ -210,10 +211,11 @@ function openPlayer(source){
 // Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
 // path (src/player.js posts source-offline, onSourceOffline below).
 async function openWhenLive(source,session,fromForm){
- const cancel=openCancel;
+ const check=fromForm?{session,cancelled:false}:null;
+ if(check)pendingFormCheck=check;
  const deps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
  const status=await channelStatus({login:source.id},deps);
- onMainThread(()=>finishLiveCheck(source,status,session,fromForm,cancel));
+ onMainThread(()=>finishLiveCheck(source,status,session,fromForm,check));
 }
 
 // H-main (#67): iina.http settles its promise from Just's completion handler, off the main thread
@@ -227,9 +229,10 @@ function onMainThread(fn){
 
 // The decision, on the main thread. Explicit cancellation (open-cancel) aborts a pending form check; an edit
 // or independent submission keeps its own check while only the current form session updates or closes the window.
-function finishLiveCheck(source,status,session,fromForm,cancel){
+function finishLiveCheck(source,status,session,fromForm,check){
  qaTrace('live-check',{status});
- if(fromForm&&cancel!==openCancel)return;
+ if(check&&pendingFormCheck===check)pendingFormCheck=null;
+ if(check&&check.cancelled)return;
  const current=session===openRun;
  if(status!=='offline'){
   openPlayer(source);
@@ -269,7 +272,7 @@ function showOpenWindow(){
 }
 
 function onOpenCancel(){
- openCancel++;
+ if(pendingFormCheck&&pendingFormCheck.session===openRun)pendingFormCheck.cancelled=true;
  closeOpenWindow();
 }
 

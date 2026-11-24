@@ -437,9 +437,11 @@ test('19b. Forget with no bound visit, an ended visit or a replaced visit does n
   await click();
   assert.equal(r.people().length, 1, 'the active window had no visit');
 
-  // Bound, then the visit ends.
+  // Bound, then the visit ends in the same window (history-end), which stays open.
+  // (Lead, 2026-11-24: was r.close(), after which the same closed window could not play again; the
+  // window-lifetime fence rightly rejects that, so the next case never recorded.)
   await r.menuOpen('1-' + ID, OHNE);
-  await r.close();
+  await r.end(OHNE);
   await click();
   assert.equal(r.people().length, 1, 'a visit that has ended is not forgotten');
 

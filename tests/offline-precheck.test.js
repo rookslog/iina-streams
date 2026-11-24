@@ -327,7 +327,9 @@ test('#67 H-main deadline: no timer is cleared in a reply continuation, only on 
   assert.equal(archiveDeadline.cancelled, true, 'the archive deadline is cleared on the turn after its reply');
 });
 
-test('#67 F-session: a late live answer still opens its player but leaves a newer form alone', async () => {
+// Amended 2026-11-24 (lead, #73 review P1-3 and TESTS.md item 21): an explicitly cancelled live check opens
+// nothing when its answer arrives late. It still leaves the newer form alone.
+test('#67 F-session: a late live answer for a cancelled check opens nothing and leaves a newer form alone', async () => {
   const fixture = loadGlobal();
   openForm(fixture);
   fixture.win.send('open-stream', {input: LOGIN});
@@ -336,7 +338,7 @@ test('#67 F-session: a late live answer still opens its player but leaves a newe
   openForm(fixture);
   const at = fixture.mark();
   await replyThenMainTurn(fixture, 'live');
-  assert.equal(fixture.opens().length, 1, 'separate opens stay independent');
+  assert.equal(fixture.opens().length, 0, 'an explicitly cancelled check opens no player');
   assert.equal(fixture.win.visible, true, 'the newer form is not closed');
   assert.deepEqual(fixture.postsSince(at), []);
 });

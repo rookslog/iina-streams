@@ -1,6 +1,6 @@
-# Warrants for the design set (draft 3.1)
+# Warrants for the design set (draft 3.3)
 
-**Draft 3.1 (24 November 2026).** Two optional fields may be added to an entry where they apply (rough piece 8, adopted provisionally): **In its setting**, the section the quoted words stand in and whose voice they are in where the text has more than one; and **What complicates the line**, a passage cited as carefully as the one that backs it. Entries that begin "Provisional" back lines the lead applied before the operator marked them; their sources are named, and no other reader has checked the entries.
+**Draft 3.3, 24 November 2026; provisional; not yet marked by the operator; one desk test of the reaction skill (on 3.1, two agents per version) and Codex source checks of 3.1 and 3.2; not used in a project yet.** Since draft 3.1, two optional fields may be added to an entry where they apply (rough piece 8, adopted provisionally): **In its setting**, the section the quoted words stand in and whose voice they are in where the text has more than one; and **What complicates the line**, a passage cited as carefully as the one that backs it. Entries that begin "Provisional" back lines applied before the operator marked them, or are themselves rewritten without the operator's mark; their sources are named. A Codex check of draft 3.1 tested the entries then marked Provisional, and the rewritten `derrida-fault`, against their named sources (`scratch/runs/draft-3.1/check/REVIEW.md`, untracked). Draft 3.2 made sixteen of the corrections that check asked for in full and two in part (F4 left the standing distinction in `r1-record`'s Limits; F16 put the page and translation in `derrida-fault`'s "In its setting" rather than on the Says line), and added three entries (`check31-stop`, `desk1-proportion`, and, at the lead's later request, `implicit-exclusion`). A Codex check of draft 3.2 (`scratch/runs/draft-3.2/check/REVIEW.md`, untracked) tested the 3.1 check's 18 F-rows, the 22 new or changed entries, the README counts and locators, and pointers; draft 3.3 applies those corrections and adds `lead-stop-branch` and `loop-corrections`. No other reader has checked the changes of 3.3. Paths that do not begin with `../` resolve from the root of the design-practice-lab repository (`/Users/rookslog/Development/design-practice-lab`), where the records are kept; an installed copy does not carry them.
 
 Each entry: where the line came from; the source and how far it was read; what the source says, quoted exactly where a path is given (checked by `tools/warrant_quote_check.py`); how it was read; the step from that reading to the line, where the step is the lead's own carrying-over; what was read beside it and how that differs; limits; and the lines it backs. **The check reruns only while the untracked copies of the sources exist** under `scratch/runs/` on this machine; the books and papers are not in the repository. "Through a scout" means a Gemini reading scout found the passage and the lead checked the words by script.
 
@@ -80,7 +80,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `docs/design/process/NOTES-2-how-to-write-the-skills.md` :: "never can perfectly resolve these tensions, but how we would respond to them through our design"
 - Read as: Several users, whose wants are answered and not dissolved.
 - Read beside it: Impeccable's instruction that the user's goal be one (imp-one-goal).
-- Backs: designing-with-a-person: Whether a tension has been answered well enough, and whom it is accept… | starting-a-design: Write who uses it as kinds of user, each with what they want, and set … | starting-a-design: For each tension, say how the design responds. A tension may stay open…
+- Backs: designing-with-a-person: Whether a tension has been answered well enough… | starting-a-design: Write who uses it as kinds of user, each with what they want, and set … | starting-a-design: For each tension, say how the design responds. A tension may stay open…
 
 ### [iina-users]
 - Came from: A draft already made in the operator's other project.
@@ -100,7 +100,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Step to the line: From persons to whom one is responsible to kinds of user of software. The lead's. The line takes only the structure (more than one, so comparing is required); it asks for none of the terms.
 - Read beside it: Derrida's essay on Levinas warns against turning a text's matter into an instance of a general pattern (Notes 2, part 4).
 - Limits: Ethics between persons. Its use for software users is the lead's carrying-over. No Levinas term is put into a skill line.
-- Backs: designing-with-a-person: Whether a tension has been answered well enough, and whom it is accept… | starting-a-design: Write who uses it as kinds of user, each with what they want, and set …
+- Backs: designing-with-a-person: Whether a tension has been answered well enough… | starting-a-design: Write who uses it as kinds of user, each with what they want, and set …
 
 ### [imp-one-goal]
 - Came from: Named as a source that says otherwise than the line.
@@ -124,9 +124,9 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `/Users/rookslog/Development/sonic-affinity-lab/scratch/runs/sitting-3/sources/2611.01181.txt` :: "the primary bottleneck is identifying the latent defect rather than implementing its repair once identified"
 - Read as: What is stated gets done; what is not stated is mostly missed.
 - Step to the line: From defects a coding task did not state to wants a person did not state. The lead's.
-- Read beside it: The same paper: asking an agent to look beyond the task lowered completion of the task itself for one model.
+- Read beside it: The same paper (§4.4, Table 3): asking an agent to look beyond the task lowered the resolve rate of the task itself for all three models in that comparison (the size of the drop differed).
 - Limits: Coding tasks. The measure does not penalise needless defensive changes.
-- Backs: reading-a-reaction: Do not turn each remark into an item. | starting-a-design: Ask what is missing from what you were told. What would the person hav…
+- Backs: reading-a-reaction: do not turn each remark into an item… | starting-a-design: Ask what is missing from what you were told. What would the person hav…
 
 ### [chen-omission]
 - Came from: What a plan or brief leaves out.
@@ -154,7 +154,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Read as: That project's lead read the result so: generic failures caught, wrong calls in the brief missed. The page scored 22 of 40, "Acceptable"; the person had called it "trash".
 - Read beside it: The report itself, which steps outside the brief twice (iina-critique-report).
 - Limits: One page, one run. The lead first took this summary for the report; corrected in Notes 4.
-- Backs: critiquing-a-design: The brief is given to you as something to judge. It is not the standar… | reading-a-reaction: A reaction is evidence that something is right or wrong. It is not a l… | starting-a-design: A check that is handed the brief will mostly check against it.
+- Backs: critiquing-a-design: The brief is given to you as something to judge. It is not the standar… | reading-a-reaction: What they say of how it looked or sounded to them is evidence about it, not the standard… | starting-a-design: A check that is handed the brief will mostly check against it.
 
 ### [imp-template]
 - Came from: A claim by Impeccable's authors about models.
@@ -197,7 +197,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `~/Development/iina-streams/docs/WAITING.md` :: "I'm not sovereign"
 - Read as: A reaction is evidence, shaped by its situation.
 - Read beside it: The person is still the only authority on their own first look.
-- Backs: critiquing-a-design: If you have the person's reaction, it is evidence and not the answer k… | designing-with-a-person: The person is the authority on their own first look. They are not ther… | reading-a-reaction: A reaction is evidence that something is right or wrong. It is not a l…
+- Backs: critiquing-a-design: If you are given what the person said about the thing, their account of it is evidence and not the answer key… | designing-with-a-person: The person is the authority on their own first look. They are not ther… | reading-a-reaction: What they say of how it looked or sounded to them is evidence about it, not the standard…
 
 ### [audit-remark-item]
 - Came from: The audit's name for the lead's fault.
@@ -205,17 +205,17 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `/Users/rookslog/Development/sonic-affinity-lab/docs/audit/2026-11-23-design-process/reasoning/REASONING-AUDIT.md` :: "remark in, item out"
 - Read as: Each remark became an added item, in pages and in proposals.
 - Read beside it: Impeccable's critique, which maps each finding to a command on purpose.
-- Backs: reading-a-reaction: Do not turn each remark into an item.
+- Backs: reading-a-reaction: do not turn each remark into an item…
 
 ### [iina-readings]
 - Came from: The operator asked that lead what justified its reading.
 - Source and extent: W-17, as above.
 - Says: `~/Development/iina-streams/docs/WAITING.md` :: "what justifies that reading, and what other readings might we have?"
-- Read as: Seven readings were then written with grounds, one about the lead, and the next round was designed to tell them apart.
+- Read as: Seven readings were then written with grounds, one about the lead, and the next round was designed to test fidelity (3), scope against hierarchy (2 against 1), and the reference (5) — not to distinguish all seven.
 - Step to the line: From one case in another project to a general line. The lead's; the operator put that question to that lead about one reading.
 - Read beside it: Writing readings can become a way of not deciding.
 - Limits: One case.
-- Backs: reading-a-reaction: Before changing anything, write more than one reading of the reaction,… | reading-a-reaction: Choose the next step so that it tells the readings apart, and say whic…
+- Backs: reading-a-reaction: hold more than one reading… | reading-a-reaction: Choose a next step that could show your reading wrong…
 
 ### [op-haunted]
 - Came from: The operator, in the IINA streams project.
@@ -223,15 +223,16 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `docs/design/process/NOTES-2-how-to-write-the-skills.md` :: "stop continuing as if a reading is absolute and sovereign"
 - Read as: Keep other readings reachable.
 - Read beside it: The Reading Lab's design notes count it a failure to refuse to decide "on the strength of 'both are valid'" (see rl-working-choice).
-- Backs: reading-a-reaction: Before changing anything, write more than one reading of the reaction,… | reading-a-reaction: Keep the readings you did not follow where they can be found.
+- Backs: reading-a-reaction: hold more than one reading… | reading-a-reaction: Keep the others findable…
 
 ### [audit-mark-places]
 - Came from: The audit found that nobody had asked the operator to point at the text that should not be there.
 - Source and extent: As for audit-remark-item.
 - Says: `/Users/rookslog/Development/sonic-affinity-lab/docs/audit/2026-11-23-design-process/reasoning/REASONING-AUDIT.md` :: "Nobody ever asked the operator to mark the places"
 - Read as: Ask the person to point.
+- Step to the line: Since draft 3.2 the line asks for pointing only when it would change the next step, and is joined to the line on asking to be shown (`rough-shown`). That scope is the Codex check of 3.1 (its worked use 2), not the audit's.
 - Read beside it: none found in what was read.
-- Backs: reading-a-reaction: If you cannot tell which place a remark is about, ask the person to po…
+- Backs: reading-a-reaction: ask them to show or point only when that would change your next step…
 
 ### [grunde-unfound]
 - Came from: What a person wanted to be shown.
@@ -248,7 +249,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `/Users/rookslog/Development/sonic-affinity-lab/scratch/runs/scout-1/sources/dissanayake-2610.27801v1.txt` :: "can create visible verification without an independent judgment about where the implementation may fail"
 - Read as: A generic check shows activity, not diagnosis.
 - Read beside it: none found in what was read.
-- Backs: critiquing-a-design: Go by what each kind of user is trying to do. A general instruction to… | reporting-design-work: Make the consequence of a choice concrete. Do not lead with a score or…
+- Backs: critiquing-a-design: A general instruction to check finds little | reporting-design-work: Make the consequence of a choice concrete. Do not lead with a score or…
 
 ### [op-on-faith]
 - Came from: The operator, 23 November, on the lead's critique of its own rounds.
@@ -369,13 +370,13 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Backs: designing-with-a-person: You are bound by these lines, and you may depart from one. A departure…
 
 ### [derrida-fault]
-- Came from: The operator named this essay, on receiving a work as a gift, as an example of doing justice to a principle by not following it exactly (23 November, 07:41; they gave Levinas as its author; it is Derrida's). The lead read it whole after that, for what it says of the gift; its bearing on departures was the lead's reading afterwards (Notes 2, part 4). Entry rewritten 24 November from redraft 1, piece 9, after a Codex check.
-- Source and extent: Derrida, "At This Very Moment in This Work Here I Am", read whole by the lead from a poor text layer; pp. 180-190 by a reader of reading 7; pp. 185-189 checked on page images by the drafter of redraft 1 and by the checker, p. 186 in the text layer.
+- Came from: Provisional (this rewrite of the entry; the line it backs is not new). The operator named this essay, on receiving a work as a gift, as an example of doing justice to a principle by not following it exactly (23 November, 07:41; they gave Levinas as its author; it is Derrida's). The lead read it whole after that, for what it says of the gift; its bearing on departures was the lead's reading afterwards (Notes 2, part 4). Entry rewritten 24 November from redraft 1, piece 9, after a Codex check.
+- Source and extent: Derrida, "At This Very Moment in This Work Here I Am", read whole by the lead from a poor text layer; pp. 180-190 by a reader of reading 7 (second pass, part 6). On page images, as each reports: the drafter of redraft 1, pp. 185, 187 and 188, with p. 186 in the text layer only and p. 189 not checked (`scratch/runs/redraft-1/NOTES.md`, item 7); the Codex checker of redraft 1, pp. 185-189 and p. 190 (its scope note); the Codex checker of draft 3.1, pp. 185-189 (its coverage note). The lead confirmed in the text layer the two corrections of redraft 1's check that the entry now carries (the reply on p. 188 only; a sentence between the refusal and the question).
 - Says: `/Users/rookslog/Development/design-practice-lab/scratch/books/derrida-at-this-very-moment/atvm-180-190.txt` :: "a fault of my own that I will not seek to resolve or absolve within the general necessity"
-- In its setting: The voice of the essay's "I", which says it speaks from its place as a woman (p. 185) and is answered by another voice (p. 188).
+- In its setting: The quoted words are on printed p. 187 (PDF p. 45) of the English translation by Ruben Berezdivin and Peggy Kamuf (Psyche: Inventions of the Other, vol. I, Stanford 2007). They are in the voice of the essay's "I", which says it speaks from its place as a woman (p. 185) and is answered by another voice (p. 188).
 - Read as: A fault is named and kept as one's own, and the general necessity that saying is always contaminated (p. 185) does not excuse it. After naming the fault, the voice asks whether its unfaithfulness answered to what the work says of itself. The ground is offered as a question, and the fault stays named.
 - Step to the line: From a voice that commits and keeps a fault in receiving another's work, to an agent recording a departure from a line. The lead's. That a departure is justified by what is particular to the case is a reader's step (reading 7, second pass), not the page's. That the ground may be another reading of the line is the operator's (23 November, 08:02).
-- Read beside it: "Des Tours de Babel", where the translator's task includes absolving itself of its debt (p. 121) and, at the limit of the sacred text, the infinite guilt absolves at once (p. 132); the reading-7 Opus reader first set the two side by side. The essay asks where the fault will lie and calls its site improbable (pp. 185-186), and the replying voice finds it illegible (p. 188). That a recorded departure can be found later is this project's practice (`DEPARTURES.md`), not the essay's claim. The operator corrected the lead for treating this essay as ruling out justification: a departure is kept and justified.
+- Read beside it: "Des Tours de Babel", where, in Derrida's reading of Benjamin, the translator tries to absolve itself of its debt (p. 121), a task and not an absolution achieved; at the limit of the sacred text, the infinite guilt absolves at once (p. 132). Neither passage says it is the absolution the voice of the other essay declines (p. 187): the reading-7 Opus reader first set the two side by side, and the comparison is that reader's. The essay asks where the fault will lie and calls its site improbable (pp. 185-186), and the replying voice finds it illegible (p. 188). That a recorded departure can be found later is this project's practice (`DEPARTURES.md`), not the essay's claim. The operator's correction of 23 November, 08:02 EST, was of the lead's false choice between keeping a departure on record and justifying it as making the departure conform to the line, not of a reading of this essay: a departure stays on record and is justified, on another reading of the line or on another ground.
 - Limits: One writer's gift to another, about ethics and sexual difference. An agent's departure from a skill line is not of that order; the carrying-over takes the structure (named, kept as one's own, not excused by the general law, a particular ground asked), not the gravity.
 - Backs: designing-with-a-person: You are bound by these lines, and you may depart from one. A departure…
 
@@ -426,7 +427,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `~/Development/reading-lab/skills/reading-alongside/SKILL.md` :: "Label the decision as your working choice for this task."
 - Read as: Decide, and mark the decision as provisional.
 - Read beside it: op-haunted: no reading is to be treated as final.
-- Backs: reading-a-reaction: Choose a working reading and label it as a working choice. Several rea…
+- Backs: reading-a-reaction: Label your working reading as a working choice…
 
 ### [rl-stays]
 - Came from: The Reading Lab's way of handing a matter back.
@@ -442,7 +443,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `~/Development/reading-lab/docs/design/2026-10-21-skills-v0-design-notes.md` :: "because a log section is where a checklist ritual starts"
 - Read as: A required log invites ritual entries.
 - Read beside it: The operator: a departure stays on record.
-- Backs: designing-with-a-person: otherwise: Record it in `../DEPARTURES.md`: the line; the kind of departure (chan…
+- Backs: designing-with-a-person: otherwise: Record it in the project's `design-set/DEPARTURES.md`…
 
 ### [op-depart-kinds]
 - Came from: The operator, 23 November, twice.
@@ -450,7 +451,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Says: `/Users/rookslog/Development/sonic-affinity-lab/brief/OPERATOR_DIRECTION.md` :: "there's different ways of departing too"
 - Read as: The kinds of departure are open; three come from the earlier message ("modified, overridden slightly, or challenged").
 - Read beside it: none found in what was read.
-- Backs: designing-with-a-person: Record it in `../DEPARTURES.md`: the line; the kind of departure (chan…
+- Backs: designing-with-a-person: Record it in the project's `design-set/DEPARTURES.md`…
 
 ### [imp-untested]
 - Came from: Impeccable on saying what evidence was and was not had.
@@ -520,7 +521,7 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Read as: Each problem begins from what the viewer is trying to do and says how the critic knows.
 - Read beside it: The operator's standing rule on claims already asks for this labelling; a second copy is not evidence it will be followed.
 - Limits: One report from one run, in another project. Making its practice a general line is the lead's step.
-- Backs: critiquing-a-design: Go by what each kind of user is trying to do. A general instruction to… | critiquing-a-design: For each problem say what the user is trying to do, what fails, how yo…
+- Backs: critiquing-a-design: Go by what each kind of user is trying to do… | critiquing-a-design: For each problem say what the user is trying to do, what fails, how yo…
 
 ### [iina-weakened]
 - Came from: The report's last section.
@@ -569,16 +570,16 @@ Each entry: where the line came from; the source and how far it was read; what t
 - Backs: using-the-design-set: A skill that is not loaded does nothing. Name in the brief, or in the …
 
 ### [r1-said-to-you]
-- Came from: Provisional. Redraft 1, piece 3; applied by the lead before the operator marked it.
-- Source and extent: Reading 8 (five readers) and readings 6 and 7, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 3 cites them by file and line; corrected after a Codex check (`../draft-3/REDRAFT-1-MARKING.md`, piece 3).
+- Came from: Provisional. Redraft 1, piece 3; applied by the lead before the operator marked it. Its sources named directly in draft 3.2, after the Codex check of 3.1.
+- Source and extent: Two parts of the line rest on different sources. That a stop, or a correction, takes effect at once is inherited: `docs/design/skill/draft-3/WALKTHROUGH.md` (lines 28-29, "Reactivity") names a correction of fact and an instruction about conduct, above all a stop; `docs/design/process/NOTES-8-reading-round-5.md` ("What does not count as a finding") names an instruction about conduct, above all a stop; and the reading-6 Codex reader of Lacan (`scratch/runs/reading-6/readers/lacan-codex/READING.md`, section 3, "What changes when this leaves the clinic") writes of a clear stop or correction to what was done and notes that the distinction was already in the walkthrough. That a remark can hand back the category the maker offered is from reading 8: for instance the xhigh Codex reader on the operator's "what do you mean, 'my reaction'?" (`scratch/runs/reading-8/readers/fresh-codex-xhigh/READING.md`, section "Who can ask the question?", its closing paragraphs). The line as written, the evidence clause included, is the redraft-1 drafter's (`scratch/runs/redraft-1/REDRAFT.md`, piece 3) and the lead's (`docs/design/skill/draft-3/REDRAFT-1-MARKING.md`, piece 3). Credits in that file corrected 24 November (`scratch/runs/redraft-1/CREDITS-FIXED.md`; a Codex check, `scratch/runs/redraft-1/credits-check/REVIEW.md`, found 25 of 39 rows fixed rightly, 11 partly, 3 inside the replaced piece 9 entry).
 - Read as: A remark is addressed to the maker and does something there; a stop or an instruction takes effect as said.
-- Step to the line: The drafter's and the lead's; the readers gave questions, not this line.
-- Limits: Written from a long written exchange with one person who reads every turn; not from usability sessions, spoken remarks or reviews.
-- Backs: reading-a-reaction: What the person says is said to you…
+- Step to the line: The drafter's and the lead's; the readers gave questions and readings, not this line. In 3.2 the stop sentence became its own paragraph at the head of the skill (with `check31-stop`), and the second of piece 3's two questions joined the line on the record.
+- Limits: Written from a long written exchange with one person, who can correct the maker and does (`scratch/runs/reading-8/readers/fresh-opus/READING.md`, section 2); not from usability sessions, spoken remarks or reviews. That the person reads every turn is not established (Codex check of redraft 1, row W-159).
+- Backs: designing-with-a-person: A stop or a direct instruction from the person takes effect… | reading-a-reaction: A stop or a direct instruction takes effect as said… | reading-a-reaction: What the person says is said to you… | reading-a-reaction: Keep their words in it as said, beside your reading…
 
 ### [r1-grounds]
 - Came from: Provisional. Redraft 1, piece 1 (its paragraph, moved out of the core by the lead).
-- Source and extent: Readings 6 and 8 and round 3, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; the operator, record items 20, 33, 48.
+- Source and extent: Readings 6 and 8 and round 3, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; the operator, record items 20, 33, 48. Credits in that file corrected 24 November (`scratch/runs/redraft-1/CREDITS-FIXED.md`; a Codex check, `scratch/runs/redraft-1/credits-check/REVIEW.md`, found 25 of 39 rows fixed rightly, 11 partly, 3 inside the replaced piece 9 entry).
 - Read as: One remark can speak from several grounds; the maker says which it takes it as and does not make the person settle it.
 - Step to the line: The drafter's ordering; the three grounds are the reading-6 Codex reader's.
 - Limits: Item 33's self-account is a reader's reading, not the operator's assertion (Codex check, W-14).
@@ -586,47 +587,49 @@ Each entry: where the line came from; the source and how far it was read; what t
 
 ### [r1-record]
 - Came from: Provisional. Redraft 1, piece 1.
-- Source and extent: Reading 8, the reader from Lacan and the new reader, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; the lead's own records on transcription.
+- Source and extent: Reading 8, the reader from Lacan and the new reader, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; the lead's own records on transcription. Credits in that file corrected 24 November (`scratch/runs/redraft-1/CREDITS-FIXED.md`; a Codex check, `scratch/runs/redraft-1/credits-check/REVIEW.md`, found 25 of 39 rows fixed rightly, 11 partly, 3 inside the replaced piece 9 entry).
 - Read as: The maker holds most of the record of the person's words and answers for what it makes of them.
 - Step to the line: "Keep it where they can see and correct it" is the drafter's.
 - Limits: Seeing and correcting is access, not standing to contest (Codex check, "What it leaves out", 2); fails where the person cannot see the record.
+- In draft 3.2: the line again ends with the contrast its source had ("the people not here cannot"), which 3.1 dropped without saying so (Codex check of 3.1); the second of redraft 1, piece 3's two questions (their words kept beside the reading, so that they can hold the maker to them) joined it; and "you write it down, cut it and put it into briefs" was cut for length. The standing point above stays here, not in the line. The drafter of 3.2's changes; not checked by another reader.
 - Backs: reading-a-reaction: You keep most of the record…
 
 ### [r1-not-their-voice]
 - Came from: Provisional. Redraft 1, piece 1, joined by the lead to core line 28 as its provisional answer to the marking sheet's question 2.
-- Source and extent: Reading 8, the two Codex readers, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; `starting-a-design` on what the excluded fall back on.
+- Source and extent: Reading 8, the two Codex readers, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 1 cites them; `starting-a-design` on what the excluded fall back on. Credits in that file corrected 24 November (`scratch/runs/redraft-1/CREDITS-FIXED.md`; a Codex check, `scratch/runs/redraft-1/credits-check/REVIEW.md`, found 25 of 39 rows fixed rightly, 11 partly, 3 inside the replaced piece 9 entry).
 - Read as: The person decides whom a design may leave out, as their judgment about those people, not as their voice.
 - Step to the line: The lead's join of the reading to line 28.
 - Limits: Gives the people not here no route of their own; that stays open.
+- In draft 3.2: the line now hands the person a decision on each exclusion that has been named, chosen or found, and gives the maker the finding and naming of those nobody chose (`implicit-exclusion`). Amended by the drafter of 3.2 at the lead's request; not checked by another reader.
 - Backs: designing-with-a-person: Whether a tension has been answered well enough…
 
 ### [r1-brief-holds]
-- Came from: Provisional. Redraft 1, piece 7; applied by the lead before the operator marked it, with the builder's leave restored after the Codex check (W-29).
-- Source and extent: Readings 5, 7 and 8 and the audit's finding F1, as `scratch/runs/redraft-1/REDRAFT.md` (untracked) piece 7 cites them; the operator's request of 23 November, 01:54, and correction of 01:59.
+- Came from: Provisional. Redraft 1, piece 7; applied by the lead before the operator marked it, with the builder's leave restored after the Codex check of redraft 1 (W-29). In draft 3.2 a try the maker proposes left the list of what holds a requirement, after the Codex check of 3.1.
+- Source and extent: The forces a requirement can carry: the xhigh Codex reader of reading 8, `scratch/runs/reading-8/readers/fresh-codex-xhigh/READING.md`, section "What a principle can ask", its closing paragraph; that reader's worked requirement, the same file, section "A requirement someone can test". Changing what the review will accept: the reading-7 Codex reader of Derrida, `scratch/runs/reading-7/readers/derrida-codex/READING.md`, sections "Back through the lead's answer" (its third point) and "What I would try on a brief, and what the warrant would have to admit". Also the audit's finding F1 (`/Users/rookslog/Development/sonic-affinity-lab/docs/audit/2026-11-23-design-process/reasoning/REASONING-AUDIT.md`) and the operator's request of 23 November, 01:54, and correction of 01:59. Redraft 1 (`scratch/runs/redraft-1/REDRAFT.md`) gave the reader's places without naming the file (Codex check of redraft 1, W-390); they are named here. Credits in that file corrected 24 November (`scratch/runs/redraft-1/CREDITS-FIXED.md`; a Codex check, `scratch/runs/redraft-1/credits-check/REVIEW.md`, found 25 of 39 rows fixed rightly, 11 partly, 3 inside the replaced piece 9 entry).
 - Read as: A brief is the maker's writing; each requirement says what holds it there, and the person's words constrain the maker's reading of what they want.
-- Step to the line: The four kinds of hold are the drafter's, from the xhigh Codex reader's four forces, narrowed (the absent become a judgment about them).
-- Limits: Says what holds a requirement, not who ratified it (Codex check, "What it leaves out", 3).
+- Step to the line: The kinds of hold are the drafter's, from the reader's forces, with two changes the drafter did not name: the reader's requirement accepted for a bounded job became a try the maker proposes, and the reader's claim from someone who never got to speak became a judgment, the maker's or the person's, about people not here (Codex check of 3.1). In 3.2 the try left the list: a try can be agreed as an experiment within the job while adopting it stays undecided (the same check, with the case under `docs/design/skill/draft-3/REDRAFT-1-MARKING.md`, piece 7). That change is the 3.2 drafter's.
+- Limits: Says what holds a requirement, not who ratified it (Codex check of redraft 1, "What it leaves out", 3).
 - Backs: starting-a-design: A brief written from what the person said is your writing…
 
 ### [rough-shown]
-- Came from: Provisional. Rough piece 4; not redrafted and not checked.
-- Source and extent: `../draft-3/ROUGH-2026-11-24.md`, piece 4: Suchman's helper at the copier (round 5, unit 2, from pages); the audit's finding that nobody asked the operator to mark the places.
-- Read as: A maker hears of trouble after it happened; where its readings turn on what the person saw, it asks to be shown.
-- Step to the line: The lead's.
-- Limits: The unit gives nothing on when to ask; vague reports sometimes still found the cause.
-- Backs: reading-a-reaction: You mostly hear of the person's trouble…
+- Came from: Provisional. Rough piece 4, not redrafted; its sources checked in the Codex check of draft 3.1. Joined in 3.2 with the line on asking the person to point (`audit-mark-places`).
+- Source and extent: `docs/design/skill/draft-3/ROUGH-2026-11-24.md`, piece 4, which names three sources: Suchman's helper at the copier (round 5, unit 2, from pages; `docs/design/skill/draft-3/WALKTHROUGH.md`, section "Step 2 begun"); the audit's finding that nobody asked the operator to mark the places; and the finder's cases in which a recording or a marked screenshot came with the remark (`scratch/runs/cases-1/scout-codex/CASES.md`, untracked; the walkthrough's note of 01:10 EST, "On asking to point").
+- Read as: A maker hears of trouble after it happened; where its next step turns on what the person saw, it asks to be shown.
+- Step to the line: The lead's. Suchman's helper attends as the trouble happens; that a maker mostly hears of it afterwards is the lead's premise, and when to ask is not in her pages. The threshold in 3.2 (ask only when it would change the next step) is from the Codex check of 3.1, worked use 2.
+- Limits: The unit gives nothing on when to ask. In the finder's closest case (01) the same author says vague reports still got the cause found; the finder left that out, and the source check of the finder's cases reported it (`docs/design/skill/draft-3/WALKTHROUGH.md`, section "The source check of the finder's cases").
+- Backs: reading-a-reaction: You mostly hear of their trouble afterwards…
 
 ### [rough-readings]
-- Came from: Provisional. Rough piece 5, without its opening clause (which sorted remarks); not redrafted and not checked.
-- Source and extent: `../draft-3/ROUGH-2026-11-24.md`, piece 5: rounds 3 and 4 (five of six readers question the old line, five limit it); both readers of Lacan.
+- Came from: Provisional. Rough piece 5, without its opening clause (which sorted remarks), joined with two texts the 3.1 entry did not name; checked in the Codex check of draft 3.1.
+- Source and extent: `docs/design/skill/draft-3/ROUGH-2026-11-24.md`, piece 5: rounds 3 and 4 (five of six readers question the old line, five limit it); both readers of Lacan. The reading-6 Codex reader of Lacan supports weighing evidence for a reading and limits a gate before every change (`scratch/runs/reading-6/readers/lacan-codex/READING.md`, section 6, the row on the third line).
 - Read as: Several readings before a costly change, one about what the maker offered; never on a stop, an instruction, a plain correction or a located fault.
-- Step to the line: The lead's.
+- Step to the line: The lead's, with two joins: asking what speaks for each reading comes from the draft-3 line this replaces, not from piece 5; exempting a direct instruction comes from redraft 1, piece 3 (`docs/design/skill/draft-3/REDRAFT-1-MARKING.md`). In 3.2 "what speaks against it" became "what would show it wrong", and the exemptions moved to the paragraph at the head of the skill (`check31-stop`). "Costly" stays provisional: the reader counts do not test it.
 - Limits: No case found tests several readings against a quick grounded try; readings can be listed with none put at risk.
 - Backs: reading-a-reaction: Before a costly change, hold more than one reading…
 
 ### [rough-step]
 - Came from: Provisional. Rough piece 6; not redrafted and not checked.
-- Source and extent: `../draft-3/ROUGH-2026-11-24.md`, piece 6: both readers of Lacan; the Codex reading of Derrida; the finder's cases of replaying the person's action.
+- Source and extent: `docs/design/skill/draft-3/ROUGH-2026-11-24.md`, piece 6: both readers of Lacan; the Codex reading of Derrida; the finder's cases of replaying the person's action.
 - Read as: A next step that could show the reading wrong, decided beforehand; agreement settles nothing; the person can refuse or redirect it.
 - Step to the line: The lead's.
 - Limits: A step small enough to refuse may be too small to tell anything; the clinic's half (a refusal read as confirming) is not carried.
@@ -634,9 +637,53 @@ Each entry: where the line came from; the source and how far it was read; what t
 
 ### [rough-checked]
 - Came from: Provisional. Rough piece 2; placed by the lead in this skill rather than the core; not redrafted and not checked.
-- Source and extent: `../draft-3/ROUGH-2026-11-24.md`, piece 2: the Codex reading of Lacan, sense F.
+- Source and extent: `docs/design/skill/draft-3/ROUGH-2026-11-24.md`, piece 2: the Codex reading of Lacan, sense F.
 - Read as: Say what was checked and what the maker is only credited with knowing.
 - Step to the line: The lead's.
 - Limits: A maker reciting its motives can take up the room; this line asks for what was checked, not motives.
 - Backs: reporting-design-work: Say what you checked and what you are only credited with knowing…
 
+### [check31-stop]
+- Came from: Provisional. Draft 3.2, written by its drafter from the Codex check of draft 3.1 (its high fault and worked use 1) and the first desk test; no other reader has checked it.
+- Source and extent: `scratch/runs/draft-3.1/check/REVIEW.md` (untracked), read whole; `scratch/runs/desk-test-1/judge/JUDGING.md` and the four `TURNS.md` (untracked), read whole.
+- Says: `scratch/runs/draft-3.1/check/REVIEW.md` :: "A stop is not itself permission to resume."
+- Read as: A stop or a direct instruction is acted on before any reading; a stop ends the work it names, and if the scope is clear an instruction given with it is the one change allowed (if the stop ended the work, the correction is retained without resuming).
+- Step to the line: The paragraph's place and wording are the drafter's. "Do only what an instruction given with it names" follows the check's worked use 1 and the judge's test for the stop, under which a turn passed if it made the one named correction and nothing more.
+- Read beside it: In the desk test the two agents given draft 3.1 wrote the named correction at once in their written turns (r2, r4); of the two given draft 3, one set out three readings before promising the fix (r1), and the other reported the fix in its written turn and noted in its note that a person who wrote "stop" might want to be asked first, without asking them in the turn (r3). The judge scored written reports for one scenario, not actual chart edits.
+- Limits: One check, and four agents of one model writing turns for one scripted stop that named its correction. A stop that names nothing, and a stop during a running edit, were not tried. The branch on what a stop allows is not this source's; see `lead-stop-branch`.
+- Backs: reading-a-reaction: A stop or a direct instruction takes effect as said…
+
+### [desk1-proportion]
+- Came from: Provisional. Draft 3.2, written by its drafter from the first desk test and the Codex check of draft 3.1 (worked use 2 and its note on length); no other reader has checked it.
+- Source and extent: `scratch/runs/desk-test-1/` (untracked): `SCENARIOS.md`, the four `TURNS.md` and `judge/JUDGING.md`, read whole, with the lead's key (`KEY.md`); `scratch/runs/draft-3.1/check/REVIEW.md`, read whole.
+- Says: `scratch/runs/desk-test-1/judge/JUDGING.md` :: "its four readings and combined proposal ask a lot of a hesitant remark"
+- Read as: On the hesitant remark ("maybe something calmer?") the blind judge preferred the shorter turns, written by the agents given draft 3 (195 and 208 words), to those of the agents given draft 3.1 (368 and 322).
+- Step to the line: The drafter's, from one judge's preference among written turns to a line on proportion. The check reached the same point from the text: a quick trial does not need two readings written out (worked use 2). Both agents given draft 3.1 said in their notes that the readings made the turn long for the remark.
+- Read beside it: The judge also valued the explicit wait in one long turn (r2), and would take the two mocks of one draft-3 turn (r3) if they could be looked at; shortness was not its only ground.
+- Limits: Four agents of one model, one judge, three written moments; a judge's preference is not a person's reaction. "Cheap", "reversible" and "hesitant" are left to the agent's judgment, and nothing yet shows that the line shortens a turn.
+- Backs: reading-a-reaction: Keep the turn in proportion to the remark…
+
+### [implicit-exclusion]
+- Came from: Provisional. The operator, 24 November, 15:08 EST (record item 80), on who decides whom a design leaves out: the person can ask for an exclusion, and there may also be exclusions nobody asked for. Applied in draft 3.2 by its drafter at the lead's request, before the operator marked the wording.
+- Source and extent: The operator's message, read whole: item 80 of `/Users/rookslog/Development/sonic-affinity-lab/brief/OPERATOR_DIRECTION.md`, [said: 6232df48/932ed7f9], resolved with that project's `tools/said.py`; not copied here, by the record's rule. And `docs/design/skill/draft-3/WALKTHROUGH.md`, section "Answering for exclusion, and where to mark it", read whole: the operator's item 66 (answering for a skill includes what it excluded) and the lead's table of where each kind of exclusion is marked.
+- Read as: Besides the exclusions the person decides, a design can leave people out that nobody chose.
+- Step to the line: The four places to look (defaults, kinds of user the brief did not name, what the checks test and do not test, what was assumed about who uses it and how) are the lead's, in its request to the drafter; the operator named none of them. Item 66 is about answering for a skill's own exclusions; carrying it to a design's is the lead's. Dividing the work (the maker finds and names, the person decides) is the lead's, and bears on the marking sheet's question 2 (`docs/design/skill/draft-3/REDRAFT-1-MARKING.md`): who settles whom a design may leave out.
+- Read beside it: The walkthrough's table distinguishes what nobody has named (cannot be marked; the head says the record is incomplete and where to raise it) from exclusions someone else points out (`DEPARTURES.md` for agents, the operator's record for the operator; no place yet for users). In the lead's prose below that table ("Three positions of the lead's"): the exclusions that matter most are often those someone else names. So the maker's search is never complete, and naming what it finds does not make it so. `r1-not-their-voice`: the person's decision is a judgment about those people, not their voice.
+- Limits: One message, put as a question; the operator has not marked the wording. Nothing yet gives the people left out a way to point it out themselves (`r1-not-their-voice`, Limits).
+- Backs: starting-a-design: Look also for whom the design leaves out without anyone having chosen it… | designing-with-a-person: Finding and naming the exclusions nobody chose is your part… | critiquing-a-design: report whom the design leaves out without its brief saying so…
+
+### [lead-stop-branch]
+- Came from: Provisional; the design lead's wording, 24 November 2026, untested.
+- Source and extent: the advisor's finding on 3.2 (the core did not carry the stop rule; "instruction", "plain correction" and "located fault" overlapped), and the 3.2 drafter's reading of "a stop does not license resuming" (`docs/design/skill/draft-3.2-record/CHANGES.md`, section "Decisions the operator has not marked").
+- Read as: after a stop the maker does only what the remark says the thing should be, or checks a fault it names, and then waits.
+- Step to the line: the lead's; the branch (what it should be / only what is wrong) is the lead's and is not in the Codex check of 3.1, which made its exception conditional on the scope being clear (`scratch/runs/draft-3.2/check/REVIEW.md`, row S16).
+- Limits: untested; desk test 2's moments 2 and 6 are meant to test it.
+- Backs: designing-with-a-person: A stop or a direct instruction from the person takes effect… | reading-a-reaction: A stop or a direct instruction takes effect as said…
+
+### [loop-corrections]
+- Came from: Provisional; the design lead, 24 November 2026, for the operator's request of 24 November, 15:05 EST, for continuous development of the skills with feedback from projects (`[said: 6232df48/4c246823]`; the record's item 79; cite it, do not copy it).
+- Source and extent: `docs/plan/LOOP-DESIGN.md`, part A items 7-8 and "What the literature scan changes" (the scan, by Codex, before the operator's routing of 15:33: `scratch/runs/lit-scan-1/SCAN.md`, its section 3, item 4 and the paragraph on not making the user classify; the papers it cites are unread by the lead).
+- Read as: a correction is evidence from one occasion, kept with the maker's reading, for the lead to triage.
+- Step to the line: the lead's.
+- Limits: untried; a file depends on the maker remembering to write it.
+- Backs: designing-with-a-person: When the person corrects how a line…

@@ -1,0 +1,488 @@
+/* Direction Q: Round 2 rebuilt at shared macOS polish. 4 px grid, no shadows, no gradients. */
+[hidden] {
+  display: none !important;
+}
+
+.panel-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pinned.top {
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scroll {
+  flex: 1;
+  overflow-x: hidden;
+  padding: 8px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#lists {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Search count badge inside shared .search */
+.search.has-count input {
+  padding-right: 36px;
+}
+.search .count {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--secondary);
+  pointer-events: none;
+}
+
+/* Cards: flat macOS grouped surfaces */
+.card {
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--secondary);
+  margin: 0;
+  padding: 4px 8px;
+}
+
+/* Disclosures */
+details.card > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  list-style: none;
+  user-select: none;
+  cursor: default;
+  transition: background-color 160ms ease;
+}
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary:hover { background: var(--hover); }
+details.card > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-right: 1.5px solid var(--tertiary);
+  border-bottom: 1.5px solid var(--tertiary);
+  transform: rotate(-45deg);
+  transition: transform 160ms ease, border-color 160ms ease;
+  margin-right: 2px;
+}
+details.card[open] > summary::before {
+  transform: rotate(45deg);
+  border-color: var(--secondary);
+}
+
+.playing-card .playing {
+  min-height: 32px;
+}
+.playing-card .playing .name {
+  flex: 1;
+  min-width: 0;
+}
+.playing-tools {
+  padding: 4px 8px 4px;
+}
+
+.group-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+.group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 8px 6px;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* LIVE tag (preserved from Round 2) */
+.pill {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--live);
+  color: #fff;
+}
+
+/* Rows */
+button.row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  transition: background-color 160ms ease;
+}
+
+.row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.row-top .name {
+  flex: 1;
+  min-width: 0;
+}
+.row-top .meta {
+  flex: none;
+}
+.row-sub {
+  display: block;
+  margin-top: 1px;
+}
+
+/* VOD rows */
+.vod {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.thumb-wrap {
+  position: relative;
+  width: 64px;
+  height: 36px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--fill-strong);
+  flex: none;
+}
+.thumb-wrap .thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.thumb-wrap .len {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  font-size: 10px;
+  line-height: 14px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .74);
+  color: rgba(255, 255, 255, .92);
+}
+.thumb-wrap.has-progress .len {
+  bottom: 5px;
+}
+.thumb-wrap .progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 0;
+  background: rgba(255, 255, 255, .22);
+}
+
+.vod-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vod-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.vod-title-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vod .who {
+  font-weight: 590;
+}
+.newdot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Show more button */
+.more {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 160ms ease;
+}
+.more:hover { background: var(--hover); }
+
+/* Controls: macOS switch, segmented control, select, buttons */
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 28px;
+  height: 16px;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-strong);
+  flex: none;
+  cursor: default;
+  transition: background-color 180ms ease;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  transition: transform 180ms ease;
+}
+.switch:checked {
+  background: var(--accent);
+}
+.switch:checked::after {
+  transform: translateX(12px);
+}
+
+.seg {
+  display: flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 7px;
+  background: var(--fill);
+}
+.seg button {
+  flex: 1;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--secondary);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.seg button:hover {
+  color: var(--label);
+}
+.seg button[aria-checked="true"] {
+  background: rgba(255, 255, 255, .16);
+  color: var(--label);
+  font-weight: 500;
+}
+
+.select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.mac-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 24px;
+  padding: 0 24px 0 8px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 6px;
+  background-color: var(--fill-strong);
+  font-size: 12px;
+  color: var(--label);
+  transition: background-color 160ms ease;
+}
+.mac-select:hover {
+  background-color: rgba(255, 255, 255, .16);
+}
+.select-chev {
+  position: absolute;
+  right: 7px;
+  width: 10px;
+  height: 14px;
+  color: var(--secondary);
+  pointer-events: none;
+}
+
+.btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 6px;
+  background: var(--fill-strong);
+  font-size: 12px;
+  color: var(--label);
+  white-space: nowrap;
+  transition: background-color 160ms ease;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, .18);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 500;
+}
+.btn.primary:hover {
+  background: #1a8dff;
+}
+.btn:disabled {
+  opacity: .42;
+}
+
+.size-val {
+  min-width: 18px;
+  text-align: center;
+}
+
+.history-actions {
+  gap: 8px;
+}
+.forget-btn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Channel view */
+.chan-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+}
+.chan-head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools {
+  display: flex;
+  gap: 8px;
+}
+.tools .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.live-now {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 6px;
+  text-align: left;
+  cursor: default;
+  transition: background-color 160ms ease;
+}
+.live-now:hover,
+.live-now[aria-selected="true"] {
+  background: var(--hover);
+}
+.live-now[aria-selected="true"] {
+  background: var(--selected);
+}
+
+.live-thumb-wrap {
+  position: relative;
+  width: 112px;
+  height: 63px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--fill-strong);
+  flex: none;
+}
+.live-thumb-wrap .thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.live-thumb-wrap .pill {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+}
+
+.live-now-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.live-now .ttl {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.live-now-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}

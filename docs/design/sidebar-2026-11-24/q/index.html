@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction Q</title>
+<link rel="stylesheet" href="../shared/frame.css">
+</head>
+<body>
+<script src="../shared/snapshot.js"></script>
+<script src="../shared/viewer.js"></script>
+<script src="../shared/util.js"></script>
+<script src="../shared/frame.js" data-panel="panel.html" data-label="Direction Q"></script>
+<script>
+(function () {
+  var f = document.getElementById("panel");
+  if (!f) return;
+  function syncHash() {
+    if (f.contentWindow) f.contentWindow.postMessage({ type: "hash", hash: location.hash }, "*");
+  }
+  if (location.hash) f.src = "panel.html" + location.hash;
+  window.addEventListener("hashchange", syncHash);
+  f.addEventListener("load", syncHash);
+})();
+</script>
+</body>
+</html>

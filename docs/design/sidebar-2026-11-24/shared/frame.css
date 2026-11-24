@@ -1,0 +1,48 @@
+/* The imitation IINA window around a direction. Not part of any design. */
+:root { color-scheme: dark; font: 12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+body { margin: 0; min-height: 100vh; background: #2a2a2e; color: rgba(255,255,255,.7); display: flex; flex-direction: column;
+  align-items: center; gap: 10px; padding: 12px 8px 24px; box-sizing: border-box; }
+.chrome { display: flex; gap: 14px; align-items: center; width: min(1180px, 100%); }
+.chrome b { color: #fff; font-size: 13px; }
+.chrome .seg { display: inline-flex; border: 1px solid rgba(255,255,255,.18); border-radius: 6px; overflow: hidden; }
+.chrome .seg button { border: 0; background: none; color: inherit; padding: 2px 9px; font: inherit; }
+.chrome .seg button[aria-pressed="true"] { background: rgba(255,255,255,.18); color: #fff; }
+.chrome .spacer { flex: 1; }
+.window { position: relative; width: min(1180px, 100%); aspect-ratio: 16 / 9.6; border-radius: 12px; overflow: hidden;
+  background: #000; box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); }
+.titlebar { position: absolute; inset: 0 0 auto 0; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,0)); z-index: 3; color: rgba(255,255,255,.85); font-size: 13px; }
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.titlebar .title { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; }
+.video { position: absolute; inset: 0; background: #000 center / cover no-repeat; transition: opacity .25s; }
+.video.loading { opacity: .35; }
+.osc { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(440px, 60%); height: 52px;
+  border-radius: 14px; background: rgba(30,30,32,.62); backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%); display: flex; align-items: center; gap: 14px; padding: 0 16px;
+  z-index: 2; color: rgba(255,255,255,.85); box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
+.osc .bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.25); position: relative; }
+.osc .bar i { position: absolute; inset: 0 0 0 auto; width: 0; background: rgba(255,255,255,.85); border-radius: 2px; }
+.osc svg { width: 18px; height: 18px; }
+/* IINA's leading sidebar: its own header (the plugin segmented control) and the plugin's web view below. */
+.sidebar { position: absolute; top: 0; bottom: 0; left: 0; width: var(--sidebar-width, 360px); z-index: 4;
+  background: rgba(28,28,30,.74); backdrop-filter: blur(30px) saturate(170%); -webkit-backdrop-filter: blur(30px) saturate(170%);
+  box-shadow: 1px 0 0 rgba(255,255,255,.08); display: flex; flex-direction: column;
+  transform: translateX(0); transition: transform .22s ease; }
+.sidebar.closed { transform: translateX(-102%); }
+.sb-header { height: 52px; flex: none; display: flex; align-items: center; justify-content: center; padding: 8px 12px 0 76px; }
+.sb-seg { display: inline-flex; height: 30px; border-radius: 15px; background: rgba(255,255,255,.09); overflow: hidden;
+  color: rgba(255,255,255,.88); font-size: 13px; }
+.sb-seg span { display: flex; align-items: center; gap: 6px; padding: 0 12px; }
+.sb-seg span + span { border-left: 1px solid rgba(255,255,255,.12); padding: 0 9px; }
+.sb-seg svg { width: 14px; height: 14px; }
+.sb-sep { height: 1px; background: rgba(255,255,255,.08); margin-top: 1px; flex: none; }
+.sidebar iframe { flex: 1; border: 0; width: 100%; background: transparent; }
+.overlay { position: absolute; inset: 0; border: 0; width: 100%; height: 100%; z-index: 5; background: transparent;
+  pointer-events: none; }
+.overlay.active { pointer-events: auto; }
+.sidebar-button { position: absolute; top: 40px; left: 12px; z-index: 3; width: 30px; height: 26px; border-radius: 7px;
+  border: 0; background: rgba(30,30,32,.55); color: rgba(255,255,255,.85); display: grid; place-items: center; }
+.sidebar-button svg { width: 15px; height: 15px; }
+.lights.top { position: absolute; top: 9px; left: 12px; z-index: 6; }

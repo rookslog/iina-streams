@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streams</title>
+<link rel="stylesheet" href="../shared/base.css">
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<main class="panel" id="app">
+  <section class="view view-list" id="view-list" aria-label="People">
+    <div class="top-bar">
+      <div class="search">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M10.4 10.4 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <input id="list-search" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search">
+        <button type="button" class="search-clear" id="list-clear" aria-label="Clear" title="Clear" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6" fill="currentColor" opacity="0.24"/>
+            <path d="M5.75 5.75 10.25 10.25M10.25 5.75 5.75 10.25" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="scroll list-scroll" id="list-rows" role="region" aria-label="People"></div>
+  </section>
+
+  <section class="view view-person" id="view-person" aria-label="Broadcasts" aria-hidden="true" inert>
+    <div class="person-head">
+      <button type="button" class="icon-button back-btn" id="person-back" aria-label="Back" title="Back">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <img class="avatar person-avatar" id="person-avatar" alt="" hidden>
+      <div class="person-id">
+        <div class="name person-name" id="person-name"></div>
+        <div class="meta person-status" id="person-status"></div>
+      </div>
+    </div>
+    <div class="top-bar person-search-bar">
+      <div class="search">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M10.4 10.4 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <input id="person-search" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search">
+        <button type="button" class="search-clear" id="person-clear" aria-label="Clear" title="Clear" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6" fill="currentColor" opacity="0.24"/>
+            <path d="M5.75 5.75 10.25 10.25M10.25 5.75 5.75 10.25" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="scroll list-scroll" id="person-rows" role="region" aria-label="Broadcasts"></div>
+  </section>
+
+  <div class="quality-menu" id="quality-menu" role="menu" aria-label="Quality" hidden></div>
+</main>
+
+<script src="../shared/snapshot.js"></script>
+<script src="../shared/viewer.js"></script>
+<script src="../shared/util.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

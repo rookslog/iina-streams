@@ -129,3 +129,13 @@ No repository edits; worktree clean. Native IINA and live provider behavior were
 - **P1-3 cancellation (L), partly fixed.** (Round 3 adds the close-button and broadcast-link rows; class C reworded to one predicate, "its own form instance is still showing".) One rule replaces the counters: an explicit cancel covers every unanswered live check that this form instance started. A form instance runs from `openStream()` until its window closes; edits and second submissions stay inside it. Tested as a table in `tests/offline-precheck.test.js` (round 3).
 - **Lead's four test changes:** judged correct by Codex.
 - **Known classes:** both invariants are added to `docs/REVIEW.md`.
+
+## Recurrence triage (D-032 rule 2; lead, 2026-11-24, written at round 3)
+
+| Class | Round 1 (Codex, `5ca015d..e163279`) | Round 2 (Codex narrow check, `e163279..d2e0345`) | Repair (round 3) |
+|---|---|---|---|
+| **H: host rule mirrored by guesswork** | P1-1 menu setters and placement; P1-2 Forget's focus guess; P1-4 failed resolve counted as playback | P1-2 again: `menu-update` timing guessed wrong (emitted before the rebuild, listeners synchronous) | Rules taken from source with file:line (items 17–18, 22). Per-channel Forget removed (item 26, class M). |
+| **L: authority across async boundaries** | P1-2 Forget retargeted at click; P1-3 cancelled opens; P2 retirement and resolver lifetime | P1-3 again: an edit or a second submission escaped the cancel | One predicate, "its own form instance is still showing" (class C), tested as a table of the ways a form ends (item 27), including the close button IINA doesn't report. |
+| **M: which window (new)** | — | P1-2: global has no active-player accessor | Class written; Forget waits for #76. |
+
+**Next review is clearance (rule 4):** one review, seeded with this table and both reports, verifying the current source. Codex built rounds 5–7, so the clearance reviewer is another provider: Gemini Hydrogen when its quota returns, or an Opus gate. At most two clearance reviews. A class that survives goes to the operator as redesign, descope, or ship with the risk accepted.

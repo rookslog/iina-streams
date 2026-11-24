@@ -101,14 +101,29 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** when history is wired in, and so when #74 can start.
 - **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), last section.
 
-- **Update 2026-11-24 night (operator asleep):** the module is unchanged. Its wiring into the plugin was built tonight (feat/73-history) and is not yet merged.
-  - **Built and tested:** Hydrogen built rounds 1–4 and Codex built round 5, against tests designed by the lead and written by Sonnet and the lead. Every suite passed after each round's fixes.
-  - **Reviews:** two independent Codex reviews, both "fix first". Most findings are fixed. The two that recurred led to a step back:
-    - **per-channel Forget This Channel is deferred to the People screen (#76),** because a menu command can't know which window it means. Pause and Clear stay;
-    - **cancelling now follows one rule:** a cancel covers everything that form started.
-  - **Record:** [reviews/2026-11-24-issue-73-wiring-review.md](reviews/2026-11-24-issue-73-wiring-review.md).
-  - **Next:** a builder implements round 3, then a third Codex check, then a merge into `next` on the recommendation above.
-  - **Your call:** whether Forget may wait for #76 (reversible).
+- **Update 2026-11-24 night (operator asleep):** the module is unchanged. Its wiring into the plugin was built tonight on branch `feat/73-history` (worktree `../iina-streams-wt/h73`).
+  - **Built and tested:**
+    - Hydrogen built rounds 1–4, and Codex rounds 5–7 while Hydrogen was out of quota (16:46 to about 19:39).
+    - The tests were designed by the lead and written by Sonnet and the lead. Each round's suite passed after its fixes, and the lead's mutation checks failed tests as they should.
+    - **Untested in native IINA:** the new "Watch History" submenu in the Plugin menu, and every other path. Shim only.
+  - **Reviews:** two Codex reviews, both "fix first". The two findings that recurred led to a step back, which `docs/REVIEW.md` calls for at round 3. Its triage table and dispositions are in [reviews/2026-11-24-issue-73-wiring-review.md](reviews/2026-11-24-issue-73-wiring-review.md):
+    - **Forget This Channel is out of 0.5.6** (decision below);
+    - **cancelling follows one rule:** a check started from Open Stream acts only while that same form is still showing. This covers Cancel, the window's close button and a later form.
+  - **Still owed before any release:** one clearance review by a provider other than the builder, since Codex built rounds 5–7. Gemini Hydrogen does it when its quota returns. The merge into `next` is provisional; its commit and undo are added below when it lands.
+  - **Decision for you: per-channel "Forget This Channel".**
+    - **What it is:** whether 0.5.6 ships a way to forget one person from watch history. It's yours because it trades a privacy control against a menu that can delete the wrong person.
+    - **Options:**
+
+      | Option | What it buys | What it costs |
+      |---|---|---|
+      | **Defer to the People screen (#76)** (done tonight, reversible) | No wrong-person deletion; the menu stays small | No way to forget one person until #76. Pause and Clear remain. |
+      | **A Forget item in each player window** | Forget one person now. IINA shows only the active window's items, so it can't hit the wrong one. | It would be the sixth item, so IINA puts it under More… (`MenuController.swift:660`). Streams windows only. A new native menu path, untested. |
+      | **Keep tonight's earlier version** (global binds at menu-open) | Forget one person now, at the top of Watch History | Codex reproduced it deleting the wrong person in the shim (a local-file window; an old click). Not offered. |
+
+    - **Recommendation:** defer to #76. The People screen names the person on screen, so there is no question of which window is meant.
+    - **Rests on:** Clear and Pause covering the privacy need until #76 ships.
+    - **What would flip it:** if you want per-person forgetting in 0.5.6, the per-window item under More… is next best. A few lines on the round-3 tests.
+    - **Recorded in:** `PRODUCT.md` §Users, exclusion record of 2026-11-24.
 
 ### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
 - **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.

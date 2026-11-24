@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentArchives,channelStatus}=require('./src/twitch-vods.js');
+const {recentArchives,channelStatus,channelsStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {createHistory}=require('./src/history.js');
@@ -178,6 +178,11 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
+const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28;
+const SUGGESTION_HEIGHT=OPEN_HEIGHT+SUGGESTION_ROWS*SUGGESTION_ROW_HEIGHT;
+const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000;
+let suggestionsStatus={},lastStatusAt=-Infinity;
+let openHeight=0;
 // openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
 // fresh pages and closes advance it. Every form-started check instead needs its own form instance
 // to still be showing (class C), while sidebar checks have no form instance.
@@ -267,8 +272,11 @@ function showOpenWindow(){
  listen(openWindow,'standaloneWindow','open-cancel',closeOpenWindow);
  listen(openWindow,'standaloneWindow','open-ready',onOpenPageReady);
  listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
+ listen(openWindow,'standaloneWindow','open-query',onOpenQuery);
+ listen(openWindow,'standaloneWindow','open-vods',onOpenVods);
  openWindow.setProperty({title:'Open Stream',resizable:false});
- openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
+ openHeight=SUGGESTION_HEIGHT;
+ openWindow.setFrame(OPEN_WIDTH,openHeight);
  openWindow.open();
 }
 
@@ -294,15 +302,60 @@ function onOpenWindowSubmit(data){
 }
 
 function onOpenPageReady(){
+ if(!isFormShowing(formInstance)||openPageReady)return;
  openPageReady=true;
  const queued=openQueue;
  openQueue=[];
  for(const message of queued)openWindow.postMessage(message.name,message.data);
+ postSuggestions('');
+ refreshSuggestionsStatus(formInstance);
 }
 
 function postOpenPage(name,data){
  if(openPageReady)openWindow.postMessage(name,data);
  else openQueue.push({name,data});
+}
+
+// #74: history.query owns ranking. Typing only reads local history and the last batch's marks.
+function postSuggestions(text){
+ const rows=history.query(text).slice(0,SUGGESTION_ROWS).map(({provider,login,displayName})=>({
+  provider,login,displayName,
+  live:provider==='twitch'&&Object.hasOwn(suggestionsStatus,login)?suggestionsStatus[login]:null
+ }));
+ postOpenPage('suggestions',envelope({text,rows}));
+}
+
+function onOpenQuery(data){
+ if(!isFormShowing(formInstance)||!data||typeof data.text!=='string')return;
+ onOpenEdit();
+ if(openHeight!==SUGGESTION_HEIGHT){
+  openHeight=SUGGESTION_HEIGHT;
+  openWindow.setFrame(OPEN_WIDTH,openHeight);
+ }
+ postSuggestions(data.text);
+}
+
+async function refreshSuggestionsStatus(form){
+ const now=Date.now();
+ if(now-lastStatusAt<STATUS_INTERVAL_MS)return;
+ const logins=history.query('',{provider:'twitch'}).slice(0,STATUS_BATCH_SIZE).map(person=>person.login);
+ if(!logins.length)return;
+ lastStatusAt=now;
+ const previous=suggestionsStatus;
+ const status=await channelsStatus(logins,credentials,{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+ onMainThread(()=>{
+  // Clear Watch History invalidates the pending batch.
+  if(suggestionsStatus!==previous)return;
+  suggestionsStatus=status;
+  // Class C: cache global status even after close, but publish only to the originating form.
+  if(isFormShowing(form))postOpenPage('suggestions-status',envelope({status}));
+ });
+}
+
+function onOpenVods(data){
+ if(!isFormShowing(formInstance))return;
+ const login=offlineLogin(data);
+ if(login!==null)showOfflineVods(login,true);
 }
 
 // ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. An input is checked
@@ -342,33 +395,33 @@ function offlineLogin(data){
  return login;
 }
 
-async function showOfflineVods(login){
+async function showOfflineVods(login,fromSuggestion=false){
  showOpenWindow();
  const run=++openRun;
  const form=formInstance;
- postOpenPage('prefill',{input:login});
- postOfflineVods({state:'loading'},1);
+ if(!fromSuggestion)postOpenPage('prefill',{input:login});
+ postOfflineVods({state:'loading'},1,fromSuggestion);
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
  const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
-  showArchives(run,result,login,form);
+  showArchives(run,result,login,form,fromSuggestion);
  });
 }
 
-function showArchives(run,result,login,form){
+function showArchives(run,result,login,form,fromSuggestion){
  if(run!==openRun||!isFormShowing(form))return;
- if(result.ok)recordOfflineHistory(login);
+ if(result.ok&&!fromSuggestion)recordOfflineHistory(login);
  if(!result.ok){
-  postOfflineVods({state:'error'},1);
+  postOfflineVods({state:'error'},1,fromSuggestion);
   return;
  }
  if(!result.vods.length){
-  postOfflineVods({state:'none'},1);
+  postOfflineVods({state:'none'},1,fromSuggestion);
   return;
  }
  const items=result.vods.slice(0,OFFLINE_ROWS).map(vodItem);
- postOfflineVods({state:'ready',items},items.length);
+ postOfflineVods({state:'ready',items},items.length,fromSuggestion);
 }
 
 function vodItem(vod){
@@ -376,9 +429,11 @@ function vodItem(vod){
 }
 
 // Titles are untrusted, and IINA 1.5.1 interpolates messages into a template literal, so the list travels
-// as an envelope (src/bridge.js). The frame grows by one row height per row the page shows.
-function postOfflineVods(value,rows){
- openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT+rows*OFFLINE_ROW_HEIGHT);
+// as an envelope (src/bridge.js). The original offline path grows by one row height per row the page shows.
+function postOfflineVods(value,rows,fromSuggestion=false){
+ // Browsing broadcasts from suggestions keeps room for the suggestions when the page goes back.
+ openHeight=fromSuggestion?SUGGESTION_HEIGHT:OPEN_HEIGHT+rows*OFFLINE_ROW_HEIGHT;
+ openWindow.setFrame(OPEN_WIDTH,openHeight);
  postOpenPage('offline-vods',envelope(value));
 }
 
@@ -602,6 +657,7 @@ function toggleHistoryPause(){
 
 function clearHistory(){
  history.clear();
+ suggestionsStatus={};
  windowVisits.clear();
  scheduleMenuRebuild();
 }

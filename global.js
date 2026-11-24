@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentArchives}=require('./src/twitch-vods.js');
+const {recentArchives,channelStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
@@ -176,18 +176,62 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
-// openRun fences a pending broadcast lookup (B6c): a newer source-offline, a fresh page or a close advances
-// it. The page receives nothing until it posts open-ready; until then messages wait in openQueue.
+// openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
+// source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
+// The page receives nothing until it posts open-ready; until then messages wait in openQueue.
 let openRun=0,openPageReady=false,openQueue=[];
 
-// Opens a player for the input. Returns 'opened', 'invalid', or 'blank' when there is nothing to open.
-function openInput(input){
+// Opens the input. Returns 'opened', 'checking' (a Twitch channel whose live check is pending), 'invalid', or
+// 'blank' when there is nothing to open. `fromForm` says the Open Stream form submitted it in the current session.
+function openInput(input,fromForm){
  if(typeof input!=='string'||!input.trim())return'blank';
  const source=Sources.parse(input);
  if(!source)return'invalid';
+ if(source.kind!=='twitch-live'){
+  openPlayer(source);
+  return'opened';
+ }
+ openWhenLive(source,openRun,!!fromForm);
+ return'checking';
+}
+
+function openPlayer(source){
  const label=Sources.label(source,config.variant);
  createPlayer({url:source.url,enablePlugins:false,disableWindowAnimation:true,label});
- return'opened';
+}
+
+// #67: a Twitch channel is checked before any player exists, because a player whose channel is offline can
+// only hand IINA the channel's page URL, which IINA fails to open with its own error and HTTP Authentication
+// panel (review docs/reviews/2026-11-22-issue-67-review.md). Offline: the recent broadcasts appear in the Open
+// Stream window and no player is created. Live, or a check that could not decide: the player opens as before.
+// Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
+// path (src/player.js posts source-offline, onSourceOffline below).
+async function openWhenLive(source,session,fromForm){
+ const deps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
+ const status=await channelStatus({login:source.id},deps);
+ onMainThread(()=>finishLiveCheck(source,status,session,fromForm));
+}
+
+// H-main (#67): iina.http settles its promise from Just's completion handler, off the main thread
+// (JavascriptAPIHttp.swift request, IINA v1.5.1), and createPlayerInstance and standaloneWindow need the main
+// thread. A plugin timer's callback runs on the main thread: setTimeout schedules a Timer on the main run loop
+// (JavascriptPolyfill.swift createTimer, DispatchQueue.main.async + Timer.scheduledTimer; callJSCallback). So the
+// interface work runs inside that callback, not in a promise job after it.
+function onMainThread(fn){
+ timers.setTimeout(fn,0);
+}
+
+// The decision, on the main thread. A live or undecided channel opens its player even when the form has moved on
+// (separate opens stay independent); only the form's own updates are fenced by its session.
+function finishLiveCheck(source,status,session,fromForm){
+ qaTrace('live-check',{status});
+ const current=session===openRun;
+ if(status!=='offline'){
+  openPlayer(source);
+  if(fromForm&&current)closeOpenWindow();
+  return;
+ }
+ if(current)showOfflineVods(source.id);
 }
 
 // With no input, show the Open Stream window; otherwise open the input directly.
@@ -213,6 +257,7 @@ function showOpenWindow(){
  listen(openWindow,'standaloneWindow','open-stream',onOpenWindowSubmit);
  listen(openWindow,'standaloneWindow','open-cancel',closeOpenWindow);
  listen(openWindow,'standaloneWindow','open-ready',onOpenPageReady);
+ listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
  openWindow.open();
@@ -223,9 +268,18 @@ function closeOpenWindow(){
  openWindow.close();
 }
 
+// F-session (#67): an edit of the field is a new draft, so a check started for the old text cannot overwrite it.
+function onOpenEdit(){
+ openRun++;
+}
+
+// A submit starts a new form session, so a check from an earlier submit cannot update the form (F-session).
+// U-feedback: while a channel is checked the form stays open and shows the list's loading indicator.
 function onOpenWindowSubmit(data){
- const result=openInput(data&&data.input);
+ openRun++;
+ const result=openInput(data&&data.input,true);
  if(result==='opened')closeOpenWindow();
+ if(result==='checking')postOfflineVods({state:'loading'},1);
  if(result==='invalid')openWindow.postMessage('open-error',{});
 }
 
@@ -241,8 +295,9 @@ function postOpenPage(name,data){
  else openQueue.push({name,data});
 }
 
-// ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. IINA closes a player
-// window once its load fails, so the player only reports the login and this window lists the broadcasts. ----
+// ---- B6c (#32): an offline channel's recent broadcasts, in the Open Stream window. An input is checked
+// before a player is created (#67, openWhenLive); a player whose channel went offline after that check only
+// reports the login, and this window lists the broadcasts. ----
 
 const OFFLINE_REPEAT_MS=10000;
 const OFFLINE_ROWS=10;
@@ -251,12 +306,19 @@ const OFFLINE_ROW_HEIGHT=28;
 const recentOffline=new Map();
 
 // A managed player or an adopted window may report; neither lookup registers the label.
+// H-main (#67): a player's message reaches this handler through IINA's synchronous message bridge, off the main
+// thread, so the window, the list and the repeat bookkeeping run on a main-thread turn (onMainThread).
 function onSourceOffline(data,label){
  const managedID=targetID(label);
  const sender=managedID!==null?managedID:adoptedLabel(label);
  if(sender===null)return;
  const login=offlineLogin(data);
- if(login===null||recentOffline.has(login))return;
+ if(login===null)return;
+ onMainThread(()=>showReportedOffline(login));
+}
+
+function showReportedOffline(login){
+ if(recentOffline.has(login))return;
  recentOffline.set(login,timers.setTimeout(()=>recentOffline.delete(login),OFFLINE_REPEAT_MS));
  showOfflineVods(login);
 }
@@ -276,7 +338,12 @@ async function showOfflineVods(login){
  postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1);
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
- const result=await recentArchives({login},{http});
+ const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+ // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
+ onMainThread(()=>showArchives(run,result));
+}
+
+function showArchives(run,result){
  if(run!==openRun||!openWindow.isOpen())return;
  if(!result.ok){
   postOfflineVods({state:'error'},1);

@@ -26,12 +26,12 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 ### W-3. Release 0.5.5
 - **What it is:** tag `v0.5.5`. GitHub then publishes the release, and anyone who installed Streams from GitHub gets an update offer in IINA.
-- **How it arose:** the 0.5.5 code is finished and passed its final review: `docs/reviews/2026-11-22-v0.5.5-release-review.md`, sections "Clearance 2" and "Narrow check".
+- **How it arose:** the 0.5.5 code is finished and passed its final review: [docs/reviews/2026-11-22-v0.5.5-release-review.md](reviews/2026-11-22-v0.5.5-release-review.md), sections "Clearance 2" and "Narrow check".
 - **Still to do first:**
   - the IINA checks listed in the same review file, under "Native acceptance for 0.5.5";
   - W-1;
   - W-2.
-- **Recommendation:** release once those are done. Steps are in `docs/RELEASE.md`, "Releasing vX.Y.Z".
+- **Recommendation:** release once those are done. Steps are in [docs/RELEASE.md](RELEASE.md), "Releasing vX.Y.Z".
 - **What your answer changes:** a public release; this one is yours alone.
 
 ### W-4. Report IINA's crash bug to the IINA project
@@ -46,7 +46,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 ### W-5. A separate test account so the lead's tests never touch your IINA
 - **What it is:** a second macOS user on this Mac, where the lead runs IINA tests over ssh. Your IINA, plugin switches and Twitch sign-in are never touched, and a test crash can't kill your stream.
-- **How it arose:** today you had to hand IINA over, and switch plugins by hand, for every test. Scoping: `docs/design/TEST-MACHINE-2026-11-22.md`.
+- **How it arose:** today you had to hand IINA over, and switch plugins by hand, for every test. Scoping: [docs/design/TEST-MACHINE-2026-11-22.md](design/TEST-MACHINE-2026-11-22.md).
 - **What it needs from you:** about 15 minutes. Your admin password to create the user, one login as that user, and later a Twitch sign-in for it.
 - **Recommendation:** before the 0.6.0 Reddit launch, not tonight.
 - **What your answer changes:** whether native testing stops interrupting you.
@@ -61,17 +61,154 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What your answer changes:** the doubled messages, and the gate's log counts.
 
 ### W-7. Output style: trial a revised style in two projects
-- **What it is:** the review session found that the global "scan-first" style has **never been loaded**. Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
-- **The proposal:** `docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md`. Its two decisions start at "Decisions for you":
-  - **D1:** trial the revised draft for a week in `iina-streams` and `sonic-affinity-lab`, as an uncommitted local setting (recommended), committed, globally, or not at all;
-  - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it.
+- **What it is:** the review session found that the global "scan-first" style **isn't loaded** (checked 2026-11-22; whether it ever loaded before is unchecked, so not "never"). Settings ask for `scan-first`, but the style file is named `Scan-first`, and style names are case-sensitive. So tonight's unexplained lists came from habit, not from the style.
+- **The proposal:** [docs/design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md](design/OUTPUT-STYLE-PROPOSAL-2026-11-22.md). Its decisions start at "Decisions for you":
+  - **D1, answered:** see the update below;
+  - **D2:** leave the inactive global setting alone until the trial ends (recommended), fix its letter case now, or remove it;
+  - **D3:** your global decision rule asks for all five decision points in chat when a decision is asked, which you rejected on 2026-11-22. I recommend amending it to one line plus a link to the waiting entry.
 - **What your answer changes:** how replies read to you in those two projects for a week, and later everywhere.
+- **Updates:**
+  - 2026-11-22 22:25 EST: D1 answered, "Yes, switch the trial on." The draft style is installed as local, uncommitted files in both projects, and a fresh session in each quoted it back. It reaches a lead only after a restart.
+  - 2026-11-23: still waiting on you:
+    - **restart** the IINA Streams and sonic-affinity-lab leads, so the style takes effect;
+    - **yes or no to a transcript survey**: count your confused or frustrated messages, reported or not, from the last month's transcripts (about 520,000 tokens of agent reading);
+    - **yes or no to a first plugin build**: auto-linking plus a `/waiting` command, proposal section 6;
+    - **D3** above.
+  - 2026-11-23: a link test in Ovis showed it resolves a link by file name. It asked which `WAITING.md` to open, this one or a worktree copy under `.claude/worktrees/`. The plugin's links will have to avoid that.
+
+### W-13. Merge the watch-history module (#73) after its last fixes, or hold it
+- **What it is:** whether the history module may merge into `beta` once its last small fixes pass their tests, or must wait for another Codex check. It's yours because our review rule (D-032 rule 4) sends any finding that survives the final review to you.
+- **How it arose:** Codex's narrow check of the module, on a branch not yet in `beta`, found five small problems:
+  - the visit counter isn't saved;
+  - forgetting a channel trimmed on load doesn't remove it from disk;
+  - an extreme visit number breaks closing visits;
+  - loading a huge history file is slow;
+  - one return value is inconsistent.
+
+  Details: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), the "Narrow check" section at the end. The fixes are being made on the branch now.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Merge once the fixes pass tests and the lead's review** | History wiring and typing suggestions (#74) can start | Nobody independent checks these last fixes |
+  | **One more narrow Codex check, then merge** | An independent check of the last fixes | About 15 minutes more |
+  | **Hold** until you look | Nothing changes | #73's wiring and #74 wait |
+- **Recommendation:** one more narrow Codex check, then merge. It's cheap, and it keeps "the fix author never closes its own gate".
+- **What it rests on:** the five findings are mechanical, not a sign the design is wrong.
+- **What would flip it:** if that check finds anything new, park the module and step back on the storage design.
+- **What your answer changes:** when history is wired in, and so when #74 can start.
+- **Update 2026-11-23 00:07:** four narrow Codex checks later, the module is at `f3c5826` (44 module tests pass). The last check left only a test-only collision and an intended retry: nothing that would change behaviour in real use. Recommendation is now **merge**. Record: [docs/reviews/2026-11-22-issue-73-module-review.md](reviews/2026-11-22-issue-73-module-review.md), last section.
+
+### W-14. Merge the offline-channel fix (#67) with its known edge cases, or park it
+- **What it is:** whether to merge the fix that checks a Twitch channel before opening a window. Offline: you get the VOD list and no window, so IINA's "Cannot open file" and login panel are gone. Four small findings remain after the final review, so our review rule (D-032 rule 4) sends it to you.
+- **How it arose:** five Codex reviews tonight. The record, verbatim: [docs/reviews/2026-11-22-issue-67-review.md](reviews/2026-11-22-issue-67-review.md). Branch `fix/67-resolve-first` at `3cfe7fd`; all 846 tests pass.
+- **The remaining edge cases, in plain words:**
+  - an offline answer arriving at the same moment as the 1.5 s timeout opens a player instead of the VOD list, which is today's behaviour;
+  - a VOD list arriving in the same instant you edit the text can overwrite your edit;
+  - Codex flags that a timer is started from a network callback; IINA's own source hands timers to the main thread, so the lead reads this as safe (inferred);
+  - one test helper can misattribute a timer.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Merge; file the edge cases as one issue; check in IINA** | The error panel is gone for the common case now | The rare races stay until fixed |
+  | **One more targeted pass first** | Fewer known edge cases | Each pass so far has surfaced new, smaller ones |
+  | **Park** | No risk added to `beta` | The error panel stays |
+- **Recommendation:** merge, file the edge cases, and check it in IINA when you hand it over. Every remaining case is no worse than `beta` today, and the next real evidence has to come from IINA, not another review.
+- **What it rests on:** none of the edge cases can make IINA hang or crash. The timer point is the one to confirm in IINA.
+- **What would flip it:** an IINA test showing a hang or crash in the offline path, which means revert and park.
+- **What your answer changes:** whether the fix is in your next Streams Beta refresh.
+
+### W-15. Grow the plan: a fuller dashboard, and a mini dashboard in the plugin sidebar (amends D-035)
+- **What it is:** your 2026-11-23 ideas go beyond what D-035 mapped to releases:
+  - a **dashboard** like "a miniature version of the Twitch website that's more fully featured": search across VODs, categories, live channels;
+  - a **mini dashboard in the plugin sidebar**, like Twitch's own sidebar, to move to another channel or one of its VODs, search and scroll. It changes the stream in the *same* window instead of opening another.
+
+  It's yours because it changes what 0.6.0 promises, and its order.
+- **What's possible (checked):**
+  - Twitch's documented API offers category search, top categories by viewers, and live streams filtered by category. None is personalised; checked against Twitch's API index only.
+  - Twitch's own "recommended categories" need your twitch.tv login, which D-034 makes a separate decision.
+  - "Categories you watch" can come from Streams' own history, if each visit also stores the category. Today's history design doesn't store it ([TESTS.md](design/finding-2026-11-22/history/TESTS.md), "What's stored").
+  - Per W-16 (answered): the mini dashboard, VODs and quality live in the plugin sidebar, the panel that slides in over the video and is closed again, and chat leaves it.
+  - **Switching streams in the same window** is exactly what D-033 switched off for 0.5.5, "a window whose player loads a different file stays inactive", because of two serious review findings. D-033 plans to restore it in 0.5.6. The sidebar's mini dashboard depends on that.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **Amend D-035: same-window switching first (0.5.6, as D-033 planned), then the sidebar's mini dashboard and a fuller dashboard in 0.6.0** | Switching in place, the way you watch | 0.6.0 grows; the launch moves later |
+  | **Dashboard in 0.6.0 as planned; the sidebar's mini dashboard and VOD and category search after launch** | A sooner launch | You keep using Open Stream to switch until then |
+  | **Defer both until after launch** | The smallest 0.6.0 | The launch shows no dashboard |
+- **Recommendation:** the first option, but in order: restore same-window switching in 0.5.6 with its tests, because both the mini dashboard's channel changes and adoption need it. Store the category with each visit (a small addition before the history wiring). Design the dashboard and the sidebar's mini dashboard together in the 0.6.0 round (design under way: [plugin-sidebar/BRIEF.md](design/finding-2026-11-22/plugin-sidebar/BRIEF.md)).
+- **What it rests on:** same-window switching can be made safe with the class-L rules that already passed review. Unproven until its review.
+- **What would flip it:** if restoring same-window switching takes another multi-round review like tonight's, ship the dashboard first and the sidebar's channel changes after launch.
+- **Naming:** "People" came from the research note's idea that a *person* is the unit across platforms. No other names were weighed. The quick list shows no label, so the name only matters for the dashboard: "Following", "Channels", "Watch" or "Browse" are alternatives.
+- **What your answer changes:**
+  - D-035 and the ROADMAP rows for 0.5.6 and 0.6.0;
+  - #76 (People or dashboard), a new issue for the sidebar's mini dashboard, and #73's stored fields;
+  - the spec, §2 and §6.
+- **Update 2026-11-23:** continue watching (liked, W-17) needs each VOD you started and your position in it to be stored. Watch history (#73) stores visits per person only. Resume is #78, mapped to 0.7.0. Added question for this decision: does resume (#78) move earlier, alongside the sidebar's mini dashboard? It doesn't change the #73 merge.
+
+### W-17. Pick a layout for the plugin sidebar's mini dashboard
+- **What it is:** three rough layouts (structure only, no styling) for the plugin sidebar as a mini dashboard, from the 2026-11-23 design round ([BRIEF.md](design/finding-2026-11-22/plugin-sidebar/BRIEF.md), comparison in [README.md](design/finding-2026-11-22/plugin-sidebar/README.md)). It's yours because it's a judgment about how you use the panel.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **A: one list, like Twitch's sidebar** | Closest to Twitch's sidebar; one scroll; fewest new ideas | Chat and account controls sit at the bottom of a long list |
+  | **B: what's playing first** | Shows at a glance what's playing and how it's set; continue watching is prominent | Quality is always on screen, which you said you don't need; the channel list starts lower |
+  | **C: search and tabs** | The most to browse in 360 pt; a home for categories | Three tabs to learn, and a second place to look (the bottom strip) |
+  | **Mix, or none yet** | Take pieces (for example A plus B's continue watching) | Another rough round |
+- **Recommendation:** A, with B's continue-watching section added above Live.
+- **What it rests on:** you open this panel mostly to switch channel or VOD, and only sometimes for quality or chat.
+- **What would flip it:** if you also open it to check how the stream is set, B. If you want to browse categories here rather than in the bigger dashboard, C.
+- **Also wanted:** strike any of the brief's candidates you don't want in this panel: continue watching, categories, this channel's other VODs, chat on/off and settings, account, history controls.
+- **What your answer changes:** the polished design round, then the build issue for the mini dashboard.
+- **Update 2026-11-23 (operator, after seeing A, B and C):**
+  - likes continue watching, including VODs left half-watched long ago;
+  - wants a click on a person to open a channel view in this panel (VODs, ideally with thumbnails, a search field, filter and sort) instead of a dropdown;
+  - less text: "Reload stream" beside a reload button is a redundant label.
+
+  The lead's "panel covers the chat" line was wrong: the plugin panel opens on the left, and the chat column on the right. **Next:** one revised structure (A's list, continue watching, a channel view, far less text), drawn under the text rule now in the project design skill. No pick is needed until it's ready.
+- **Update 2026-11-23 02:20:** round 2 is ready: one revised layout, [revised/index.html](design/finding-2026-11-22/plugin-sidebar/revised/index.html). It has continue watching, a channel view with VOD thumbnails, VOD search, sort and filter, and far less text. Every visible string is listed with its class in [DONE.md](design/finding-2026-11-22/plugin-sidebar/DONE.md). **Needed now:** keep it, or say what to change.
+- **Update 2026-11-23 (operator, on round 2):** rejected. In their words:
+  - "we need a better way of splitting between live and offline";
+  - "not 100% sure of showing the thumbnails in this already overcrowded space";
+  - "I don't necessarily like the UI, the spacing and stuff when we click in";
+  - "the search bar should be like above all the channels, because we're searching through channels in that search bar, not through VODs";
+  - "maybe we put Continue Watching at the bottom";
+  - "what are these… weird collapsible menus like history, forget Ohnepixel? This is all terrible."
+
+  **Next:** an independent Impeccable critique, run as a check of the Impeccable setup too (the reviewer isn't told these complaints, to see whether the critique finds them). Then one round at real fidelity. No pick is needed until then.
+- **Update 2026-11-23 02:45: the critique, as a check of the Impeccable setup.** It ran properly: two separate assessment agents, real browser inspection, and no knowledge of the operator's complaints. Score 22/40, "Acceptable"; the operator called the same page "trash". Full report: [CRITIQUE.md](design/finding-2026-11-22/plugin-sidebar/CRITIQUE.md).
+
+  | The operator's complaint | Did the critique find it? |
+  |---|---|
+  | History and "Forget Ohnepixel" groups don't belong | No. It flagged only their place at the bottom; the brief had asked for them, which was the lead's error. |
+  | The search field reads as VOD search | No. It found only the channel view's search problems. |
+  | A better live/offline split | Barely: "the headings repeat the live dot" was a minor point. |
+  | Thumbnails crowd the panel | Partly: Continue watching's thumbnails are the heaviest block. |
+  | Channel view spacing | Partly: controls sit above a card they don't affect. |
+
+  It also found things the operator didn't raise: what's playing has no home in the panel, blank empty states, a two-click switch, keyboard focus lost, and "Most viewed" against Product Principle 3. **Reading:** the critique judges against the brief, and catches generic failures but not wrong product calls the brief itself made. Fixing the inputs (PRODUCT.md, a DESIGN.md, the brief) comes before the next round.
+- **Update 2026-11-23 (operator, on the comparison above):** the operator's complaints aren't the standard the critique should be scored against: "what gives my complaints authority? … I'm not sovereign." They are evidence that something is wrong, conditioned by the situation: a rough mock read as finished UI, after several misses. The lead's reading is that the complaints and the critique point at one underlying problem from two sides. The panel has no clear main job: thumbnails, settings, history and search all carry the same weight, so "switch channel" doesn't stand out. The next round answers that through hierarchy, not by moving each item where a complaint put it.
+- **Update 2026-11-23 (operator: "what justifies that reading, and what other readings might we have?"):** the lead's hierarchy reading is one of several, held open:
+  1. **Hierarchy:** no clear main job; everything carries the same weight. *For:* the critique found that the heaviest block isn't the main task, and "overcrowded". *Against:* the operator never said switching was hard to find.
+  2. **Scope:** settings, history and account don't belong in a quick panel at all. *For:* "weird collapsible menus… terrible", and "things I want to quickly check". This means removing them, not re-weighting.
+  3. **Fidelity:** a crude browser mock read as finished UI. *For:* "the spacing and stuff". A properly drawn version might be judged differently.
+  4. **Trust:** reactions shaped by a run of lead errors that day (the panel's side, ads, text, who the users are). *For:* the timing. This one measures the process as much as the design.
+  5. **The reference:** Twitch's sidebar was the starting point, but the goal is "beyond the browser". The reference itself may be the wrong model.
+  6. **Thinking aloud:** "maybe… I don't know". The suggestions are probes, not verdicts.
+  7. **About the lead:** the lead favoured reading 1 because it's a design problem it can fix, rather than reading 4, its own errors.
+
+  **Next round:** draw it at real fidelity (tests 3). Show settings both removed from the panel and present at low weight (tests 2 against 1). Try a non-Twitch structure alongside (tests 5).
 
 ## Answered
 
+- **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.
+- **W-12, Open Stream design** (2026-11-23, operator after trying both mocks in Safari): **A's quick list, one fixed height that scrolls**, no "why it's here" text, and no "your people" label. Typing searches the list. VODs must be reachable for live people too: mock A expands only offline rows (`a.js:112`), so this needs changing. B's list-and-detail ideas move to the bigger dashboard, and a jump links the two. The operator's words: "I'd also keep it to a fixed height that scrolls"; "the quick list doesn't have a 'your people' indicator, which I like". Feedback: [README.md](design/finding-2026-11-22/open-stream/README.md).
 - **W-9, Twitch's internal interface** (2026-11-22, 21:25): **D-034.** Use the documented API where it can deliver a feature; otherwise twitch.tv's internal interface, anonymously, as Streams already does. New uses are allowed. Anything needing your own twitch.tv session is a separate decision.
-- **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in `AGENTS.md`.
+- **W-10, Impeccable** (2026-11-22, 21:25): run the detector first, then install for this project only, with no hook and telemetry off. Recorded in [AGENTS.md](../AGENTS.md).
 - **W-11, release mapping** (2026-11-22, 21:25): **D-035**, option A. If the history and suggestions work is sized over 6 hours, the People screen's build moves after launch without asking again.
-- **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: `docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md` §6–§8.
+- **W-8, discovery model** (2026-11-22, 20:53): **A, people-first**: Streams' own ranking, with Twitch's data as extra inputs when signed in, and no sponsored ordering. Operator's words: "maybe we can have our own kind of customized sort of algorithm"; "logging in should give us better recommendations, not worse"; "I don't want sponsored live channels". Full write-up: [docs/design/DISCOVERY-AND-PLATFORMS-2026-11-22.md](design/DISCOVERY-AND-PLATFORMS-2026-11-22.md) §6–§8.
 
 - **D-033** (2026-11-22, 16:30): 0.5.5 ships with adoption off and no same-window reopen. "Okay, let's go with your recommendation."

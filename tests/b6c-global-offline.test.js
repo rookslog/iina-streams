@@ -13,11 +13,22 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Sources = require('../src/source.js');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const config = {identifier: 'local.iina.streams.b6c-test', variant: 'unified'};
 const LOGIN = 'fixture_offline';
 const MANAGED = '1-' + config.identifier;
-const settle = () => new Promise(resolve => setImmediate(resolve));
+const immediate = () => new Promise(resolve => setImmediate(resolve));
+// #67 H-main: global handles source-offline, the archive reply's deadline and the list on main-thread turns (0 ms
+// timers), so settling also runs the 0 ms timers of the globals this file loaded, until none is left.
+const shims = [];
+const settle = async () => {
+  for (let turn = 0; turn < 6; turn++) {
+    await immediate();
+    for (const shim of shims) shim.timers.flush(0);
+  }
+  await immediate();
+};
 
 // Hand-written archive response in the shape src/twitch-vods.js parses (as in b6b-twitch-vods); not captured.
 function archiveResponse(count) {
@@ -38,6 +49,9 @@ function item(index) {
 
 function loadGlobal(t) {
   const shim = createIina({role: 'global', identifier: config.identifier});
+  shims.push(shim);
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -86,6 +100,7 @@ function loadGlobal(t) {
 
 async function withManagedPlayer(fixture) {
   await fixture.context.openStream(LOGIN);
+  await settleOpens();
   assert.equal(fixture.shim.global.opens.length, 1, 'fixture: player 1 is managed');
 }
 

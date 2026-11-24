@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar structure B</title>
+<link rel="stylesheet" href="../lowfi.css">
+</head>
+<body>
+<div class="page">
+  <section class="panel" aria-label="Streams sidebar">
+    <div class="iina" aria-hidden="true"><span class="tab on" title="Streams"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M6 1.5a1.6 1.6 0 0 1 1.6 1.6V4H11a1 1 0 0 1 1 1v3.4h.9a1.6 1.6 0 1 1 0 3.2H12V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3.4h.9a1.6 1.6 0 1 0 0-3.2H1V5a1 1 0 0 1 1-1h2.4v-.9A1.6 1.6 0 0 1 6 1.5Z"/></svg></span><span class="tab" title="Another plugin"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M6 1.5a1.6 1.6 0 0 1 1.6 1.6V4H11a1 1 0 0 1 1 1v3.4h.9a1.6 1.6 0 1 1 0 3.2H12V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3.4h.9a1.6 1.6 0 1 0 0-3.2H1V5a1 1 0 0 1 1-1h2.4v-.9A1.6 1.6 0 0 1 6 1.5Z"/></svg></span><span class="chev">‹</span></div>
+
+    <div class="scroll" id="main">
+      <section class="card" aria-labelledby="h-np">
+        <h2 id="h-np" class="sr">Playing</h2>
+        <div class="line"><span class="pill">LIVE</span><b class="grow" id="np-name"></b><span class="meta" id="np-viewers"></span></div>
+        <p class="dim" id="np-title" style="margin:0 4px 6px"></p>
+        <div class="line"><span class="grow">Quality</span>
+          <select aria-label="Quality"><option>Source (1080p60)</option><option>720p60</option><option>480p</option><option>Audio only</option></select></div>
+        <div class="line"><label class="grow" for="chat-on">Chat</label><input id="chat-on" type="checkbox" checked></div>
+        <details><summary class="dim" style="margin:4px">This channel's VODs</summary><div id="np-vods"></div></details>
+      </section>
+
+      <input type="search" id="q" placeholder="Search" aria-label="Search channels" style="margin:0 0 10px">
+      <div id="results" class="card" hidden aria-label="Search results"></div>
+
+      <div id="lists">
+        <section class="card" aria-labelledby="h-cont"><h2 id="h-cont">Continue watching</h2><div id="cont"></div></section>
+        <section class="card" aria-labelledby="h-ppl"><h2 id="h-ppl">Channels</h2><div id="ppl"></div></section>
+      </div>
+    </div>
+
+    <div class="scroll" id="settings" hidden>
+      <div class="line" style="margin-bottom:8px"><button class="btn" type="button" id="back">‹ Back</button></div>
+      <section class="card"><h2>Chat</h2>
+        <div class="line"><span class="grow">Placement</span><select aria-label="Chat placement"><option>Beside the video</option><option>Over the video</option></select></div>
+        <div class="line"><span class="grow">Text size</span><span class="meta">14</span></div>
+        <div class="line"><span class="grow">Import archive</span><button class="btn" type="button">Choose…</button></div>
+      </section>
+      <section class="card"><h2>Twitch account</h2>
+        <div class="line"><span class="grow">Signed out</span><button class="btn primary" type="button">Sign in with Twitch</button></div>
+      </section>
+      <section class="card"><h2>Watch history</h2>
+        <div class="line"><span class="grow">Pause</span><input type="checkbox" aria-label="Pause watch history"></div>
+        <div class="line"><span class="grow">Forget this channel</span><button class="btn" type="button">Forget</button></div>
+        <div class="line"><span class="grow">Delete all history</span><button class="btn" type="button">Delete…</button></div>
+      </section>
+    </div>
+
+    <div class="pinned"><button class="btn" type="button" id="open-settings">Settings</button></div>
+  </section>
+
+  <div class="notes">
+    <h1>B: what's playing first</h1>
+    <p class="width-switch">Width: <button type="button" data-width="360" aria-pressed="true">360 pt</button> <button type="button" data-width="300" aria-pressed="false">300 pt</button></p>
+    <p><b>Shown first:</b> the playing channel, with its title, quality and chat on/off, then search, then half-watched VODs, then channels (live first).</p>
+    <p><b>Behind a tap:</b></p>
+    <ul>
+      <li>this channel's other VODs: the closed group in the top card;</li>
+      <li>anyone's VODs: › on their row;</li>
+      <li>more channels: "Show more";</li>
+      <li>chat settings, account (sign in shown as a filled button) and history controls: <b>Settings</b> at the bottom, which replaces the panel's contents until Back.</li>
+    </ul>
+    <p><b>Order, top to bottom:</b> playing, search, Continue watching, Channels; Settings is pinned at the bottom. Everything above Settings scrolls together.</p>
+    <p><b>Trade:</b> quality is always on screen here, which the operator said isn't needed; it sits in the top card because that card is "the stream".</p>
+    <p class="status" id="status" role="status"></p>
+  </div>
+</div>
+<script src="../../open-stream/sample-data.js"></script>
+<script src="../lowfi.js"></script>
+<script>
+(function () {
+  const L = window.LowFi, D = L.D;
+  const np = L.byLogin(L.NOW_PLAYING);
+  document.getElementById("np-name").textContent = np.name;
+  document.getElementById("np-viewers").textContent = D.compact(np.viewers);
+  document.getElementById("np-title").textContent = np.category + " · " + np.title;
+  document.getElementById("np-vods").append(L.vodList(np, 3));
+  L.CONTINUE.forEach(c => document.getElementById("cont").append(L.continueRow(c)));
+  const ppl = L.people(true), all = ppl.live.concat(ppl.rest), host = document.getElementById("ppl");
+  all.slice(0, 6).forEach(p => host.append(L.row(p)));
+  const more = document.createElement("button");
+  more.type = "button"; more.className = "more"; more.textContent = "Show more";
+  more.addEventListener("click", () => { all.slice(6).forEach(p => host.insertBefore(L.row(p), more)); more.remove(); });
+  host.append(more);
+  L.wireSearch(document.getElementById("q"), document.getElementById("results"), [document.getElementById("lists")]);
+  const main = document.getElementById("main"), settings = document.getElementById("settings");
+  document.getElementById("open-settings").addEventListener("click", () => { main.hidden = true; settings.hidden = false; document.getElementById("back").focus(); });
+  document.getElementById("back").addEventListener("click", () => { settings.hidden = true; main.hidden = false; document.getElementById("open-settings").focus(); });
+  L.widthSwitch();
+})();
+</script>
+</body>
+</html>

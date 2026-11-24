@@ -20,3 +20,11 @@ Measure success inside native IINA with real pointer interactions. A standalone 
 Review for semantic clarity, visual density, usable values, color contrast, actual type hierarchy, readability over moving video, and whether native IINA already owns the control. Do not add invented glass, extra controls, instructions, or animations merely to fill space.
 
 Deliver a concise decision ledger: user task → observed failure → alternative(s) → chosen implementation → exact native acceptance proof → remaining uncertainty.
+
+## Text on screen (operator rule, 2026-11-22, restated 2026-11-23)
+- **Every visible string is a name, value, action or error.** Anything else goes, or moves behind a native tooltip or a disclosure for those who want it.
+- **Show state with signifiers, not sentences:** live dot, spinner, progress bar, enabled or disabled, placement, icon.
+- **Never label a control with words that repeat its icon or its place.** "Reload stream" beside a ↻ button is one control saying the same thing twice. The icon plus a tooltip is enough.
+- **No reason text** ("you watch most evenings"), no parenthetical clarifications, and no status sentences ("Chat will appear here").
+- **Before showing any mock or UI change:** list its visible strings, give each one's class (name, value, action or error), and cut the rest. The lead checks that list before the operator sees the work.
+- **Case by case, not a ban:** when text is needed, find how to give it without getting in the way of the viewers who don't care.

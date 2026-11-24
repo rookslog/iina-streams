@@ -27,3 +27,74 @@ Branch `fix/67-offline-fallthrough` (0f518cb, 648905c, 342658c, on beta 11c0d62)
 - **Residual race:** a channel that goes offline between the check and the load falls back to today's behaviour. It's rare, and it's recorded.
 - The Medium finding becomes moot with the stop removed; the new tests must discriminate on the pre-check.
 - The nits (stale comments) are fixed in round 2.
+
+## Round 2 (verbatim; Codex gpt-6.2-sol xhigh, 23:14–23:20, on d338d4d)
+
+**FIX FIRST** — `d338d4d` removes the destructive stop, but introduces an off-main-thread IINA call and can incorrectly block live playback.
+
+- **P1 · Class H — The HTTP reply can trigger IINA UI work off the main thread.** [global.js:209](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:209): When Twitch replies before the timeout, the continuation can call `createPlayerInstance` off-main; that path opens IINA’s native loading panel. The offline branch also calls standalone-window APIs that synchronously dispatch to main, risking deadlock. A standalone JavaScriptCore probe reproduced `post-await main=false`; the Node shim cannot catch this. [IINA HTTP callback](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPIHttp.swift#L87-L105), [native loading panel](https://github.com/iina/iina/blob/v1.5.1/iina/OpenURLWindowController.swift#L51-L64)
+- **P1 — A valid live URL can be sent to the VOD picker.** [src/twitch-helix.js:303](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-helix.js:303): The parameters and `data` arrays match the docs, but Get Streams explicitly omits discovery-restricted live streams. Get Users can still find the account, so the code declares it offline and never attempts playback. Separately, [src/twitch-vods.js:202](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:202) treats HTTP 200 with `errors` and `stream:null` as offline; I reproduced that with a fixture. A field execution failure must be `unknown`. [Get Streams](https://dev.twitch.tv/docs/api/reference/streams#get-streams), [Get Users](https://dev.twitch.tv/docs/api/reference/users#get-users), [GraphQL execution errors](https://spec.graphql.org/September2025/#sec-Handling-Execution-Errors)
+- **P1 · Class L — A stale check can overwrite a fresh Open Stream form.** [global.js:216](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:216): Submit A, reopen the form and enter an invalid B. A’s late offline reply replaces B with A and shows A’s VODs; reproduced in the shim. The fence only rejects an old **offline** reply after a newer **valid** input. An old live or timed-out request can still open after B. Preserve intentionally separate opens, but fence updates to the shared form against its current session.
+- **P2 — The deadline clears the timer, not the authenticated follow-up.** [src/twitch-helix.js:307](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-helix.js:307): If `/streams` returns empty after Sign out and the 1.5 s deadline, `/users` still starts with the old bearer. Reproduced with a synthetic credential. The new path logs status only; the anonymous query sends no viewer credential. The signed-in **VOD list** still uses GQL, the pre-existing [D-034/#49 gap](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/docs/DECISIONS.md:132).
+- **P2 — The form disappears before there is anything to show.** [global.js:253](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:253): Enter closes Open Stream immediately. Neither a player nor a checking indicator is visible for up to 1.5 s. Both Helix status calls share that deadline; a confirmed offline result then gets a separate 5 s archive lookup, with loading feedback only during that second phase.
+
+**Fixture audit.** The canonical managed-player test no longer means “no HTTP on open”; it means “no HTTP other than the routed status call.” The same accounting change affects `global.test.js`’s native-label, rejected-label, explicit-opt-in, failed-creation and unrelated-Forget tests; B2a’s probe/connect tests; R1’s rejected-label test; and B6c’s unknown-label, invalid-login and repeat tests. The `r.timers` filter narrows the rejected-label and explicit-opt-in tests to non-status timers. Their auth checks still work, but **all 96 affected tests passed** with an in-memory mutation that left the status timer armed and added a synthetic bearer to anonymous GQL. The other fixture edits preserve their assertions after settling.
+
+**Round 1:** The queued-file loss path is gone: the plugin no longer stops mpv. A confirmed offline managed open creates no player, so it cannot trigger IINA’s Open URL panel. `unknown`, a channel going offline after the check, and native/adopted opens can still take the old path.
+
+`npm test`: **840 passed**. The exact anonymous Twitch query returned a live ID, `stream:null`, and `user:null` in direct probes. No native IINA or authenticated Twitch session was exercised. D-032 calls for a step-back now that class H has recurred.
+## Step-back after round 2 (lead, D-032: class H recurred)
+
+**What keeps going wrong:** every fix so far crosses an IINA host boundary the shim can't see (mpv's queue in round 1; thread affinity and form state in round 2).
+
+**Written invariants for round 3:**
+
+- **H-main:** any IINA call that touches the interface (`createPlayerInstance`, `standaloneWindow.*`, menus) runs on the main thread. A continuation after `iina.http` must hop back to main before it makes such a call. The hop mechanism must be cited from IINA v1.5.1 source, not assumed.
+- **D-offline:** a channel is "offline" only on an answer that positively says so: anonymous GQL `user{stream}` = null **with no `errors`**. Helix Get Streams can't decide this, because it omits discovery-restricted streams. D-034 allows GQL wherever the documented API can't deliver. Anything else is "unknown", which creates the player.
+- **F-session:** every update to the shared Open Stream form carries the form session it was started from, and is dropped if the form has moved on. Separate opens stay independent.
+- **U-feedback:** the Open Stream window stays open, showing a checking state, until a player exists or the VOD list is shown.
+- **A-auth:** no authenticated request starts after its deadline or after sign-out.
+
+**Decision:** one more round, against these invariants. If IINA v1.5.1 offers no citable main-thread hop, stop the pre-check design and park #67. A native experiment with an in-player alternative would then come first.
+
+## Round 3, final clearance (verbatim; Codex gpt-6.2-sol xhigh, 23:34–23:39, on 8fe2b8d)
+
+**FIX FIRST** — `8fe2b8d` moves the precheck and archive-result UI onto main, but the offline fallback still reaches UI directly from an HTTP continuation.
+
+- **P1 · H-main — The fallback still bypasses main.** If a channel passes the precheck and Usher then returns 404, [src/player.js:2047](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/player.js:2047) posts `source-offline`. [global.js:310](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:310) opens the standalone window immediately. A shim probe reproduced the UI calls before any timer turn; [IINA’s synchronous message bridge](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptAPIGlobal.swift#L120-L122) leaves the native deadlock risk open.
+- **P1 · H-main — Deadline cleanup also crosses the thread boundary.** A fast reply clears the timer at [src/twitch-vods.js:179](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:179), before the main-thread hop. That can race another timer’s registration in [IINA’s unsynchronized timer dictionary](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPolyfill.swift#L30-L46); it also calls [`Timer.invalidate()` from the wrong thread](https://developer.apple.com/documentation/foundation/timer/invalidate%28%29). This is a source finding, not a reproduced native crash.
+- **P1 · F-session / U-feedback — A late reply can erase a new draft.** The round-2 reopen and invalid-submit cases are closed, and the spinner appears initially. But submitting A and then typing B without pressing Return hides the spinner without invalidating A. A late offline reply overwrites B with A; reproduced through [ui/open.js:98](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/ui/open.js:98) and [global.js:234](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:234).
+- **P2 · Fixture — The requested guards work, but timer attribution is too broad.** Probes independently rejected lowercase `authorization` and an armed 1.5 s deadline. [tests/support/live-check.js:73](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/tests/support/live-check.js:73) also accepted an unrelated zero-delay timer as the missing handoff, fired it, and excluded it from legacy timer assertions.
+
+**D-offline and A-auth are closed:** only anonymous GQL `stream:null` with no `errors` is offline; no Helix or viewer credential is used, so the late authenticated follow-up is gone. `npm test`: **843 passed**. Native IINA was not exercised.
+## Lead disposition after the final clearance (23:39)
+
+- **D-offline and A-auth:** closed.
+- **The three surviving P1s are fixed under the 0.5.5 precedent:** a targeted fix, then a narrow Codex check limited to these findings (as with the 0.5.5 narrow check, bd0f96a). They are mechanical applications of the written invariants, not a new design.
+  - **H-main, fallback:** `onSourceOffline` in global does its interface work in a `setTimeout` turn. This path predates this fix (B6c on beta); the fix extends H-main to it.
+  - **H-main, deadline:** `clearTimeout` and every timer bookkeeping call run inside the main-thread turn, never in the `iina.http` continuation.
+  - **F-session, draft:** any edit to the form's text (not only a submit) invalidates pending replies for the old session.
+  - **P2 fixture:** `live-check.js` attributes only the check's own handoff timer, by identity, not any zero-delay timer.
+- **If the narrow check doesn't close all three,** #67 is parked and goes to the operator, per D-032 rule 4.
+
+## Narrow check (verbatim; Codex gpt-6.2-sol xhigh, finished 23:51, on 3cfe7fd)
+
+**NOT CLOSED** — 81 focused tests passed; native IINA was not exercised.
+
+1. **CLOSED — H-main fallback:** [global.js:317](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:317) defers all interface work to the timer callback. No interface call remains in the scoped HTTP continuations.
+2. **NOT CLOSED — H-main deadline:** `clearTimeout` moved to main, but both HTTP replies still arm the handoff at [src/twitch-vods.js:78](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:78), updating the JS timer map at [src/timers.js:17](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/timers.js:17) in the HTTP continuation. [IINA defers native registration to main](https://github.com/iina/iina/blob/v1.5.1/iina/JavascriptPolyfill.swift#L35-L46).
+3. **CLOSED — F-session draft:** [global.js:272](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:272) advances the session on `open-edit`, fencing replies still pending in global. It cannot retract a prefill already posted to WebKit.
+4. **NOT CLOSED — P2 fixture:** [tests/support/live-check.js:68](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/tests/support/live-check.js:68) still infers ownership from timing. A mutation probe got it to fire and classify an unrelated timer as the missing handoff.
+
+**New regressions reproduced in the shim:**
+
+- [global.js:317](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/global.js:317) — A queued `source-offline` report can overwrite a draft edited after the report arrived but before its timer runs.
+- [src/twitch-vods.js:76](/Users/rookslog/Development/iina-streams/.claude/worktrees/agent-aec062fe0655b2fd1/src/twitch-vods.js:76) — An offline reply that arrives before the deadline can now lose if the deadline callback runs before the handoff. The result becomes `unknown` and opens a player.
+## Lead disposition
+
+Per D-032 rule 4, this goes to the operator: `docs/WAITING.md` W-14. Lead reading of the residuals:
+
+- **Arming a timer from an HTTP continuation:** IINA's `createTimer` is designed for this; native registration is dispatched to main (`JavascriptPolyfill.swift:41`). The JS-side map is guarded by JavaScriptCore's API lock. INFERRED, not a demonstrated hazard.
+- **Deadline-versus-handoff race:** the result becomes "unknown", which opens a player and falls back to today's in-player offline path. No worse than beta.
+- **A queued report over a just-edited draft:** a window of one timer turn; cosmetic.
+- **Fixture attribution:** a test-quality gap, not product behaviour.

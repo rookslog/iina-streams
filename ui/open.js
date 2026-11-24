@@ -98,6 +98,8 @@
  function onInput(){
   field.removeAttribute('aria-invalid');
   clearOfflineVods();
+  // #67 F-session: a new draft outdates any pending answer for the old text.
+  iina.postMessage('open-edit',{});
  }
 
  function onKeyDown(event){

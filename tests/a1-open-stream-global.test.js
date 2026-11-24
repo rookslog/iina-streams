@@ -5,12 +5,15 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Sources = require('../src/source.js');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const config = {identifier: 'local.iina.streams.open-test', variant: 'unified'};
 const streamURL = 'https://www.twitch.tv/xqc';
 
 function loadGlobal(options = {}) {
   const shim = createIina({role: 'global', identifier: config.identifier, ...options});
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -66,6 +69,7 @@ test('A1.2 standalone submission opens valid streams, rejects invalid input, and
   const valid = loadGlobal();
   await valid.menuItem.action();
   await valid.shim.standaloneWindow.receive('open-stream', {input: 'xqc'});
+  await settleOpens();
   valid.shim.timers.flush(0);
   assertOpenedStream(valid.shim, 0, 'a valid open-stream submission should create one managed player');
   assert.ok(valid.shim.log.some(call => call.api === 'standaloneWindow.close'), 'valid input closes the window');
@@ -98,11 +102,13 @@ test('A1.3 player open messages route input and errors, and legacy requests open
   const {shim, context} = loadGlobal();
   await context.openStream('firstchannel');
   await context.openStream('secondchannel');
+  await settleOpens();
   const sender = '2-' + config.identifier;
   const initialPlayers = shim.global.opens.length;
   assert.equal(initialPlayers, 2, 'fixture must have the sender and a second player');
 
   await shim.global.send('open', {input: 'xqc'}, sender);
+  await settleOpens();
   shim.timers.flush(0);
   assertOpenedStream(shim, initialPlayers, 'the player open handler should use the supplied input');
   assert.equal(shim.global.messages('open-error').length, 0);
@@ -119,6 +125,7 @@ test('A1.3 player open messages route input and errors, and legacy requests open
 
   const legacy = loadGlobal({rejectModalDialogs: true});
   await legacy.context.openStream('firstchannel');
+  await settleOpens();
   await legacy.shim.global.send('open', {}, '1-' + config.identifier);
   legacy.shim.timers.flush(0);
   assertStandaloneOpened(legacy.shim);

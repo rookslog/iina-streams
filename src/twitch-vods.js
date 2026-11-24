@@ -1,5 +1,7 @@
 'use strict';
 
+const {createHelix} = require('./twitch-helix.js');
+
 // Recent broadcasts of a Twitch channel (B6b, D-030), from Twitch's public GQL, signed out.
 //
 //   recentArchives({login}, {http, log, limit = 10, setTimeout, clearTimeout})
@@ -176,6 +178,36 @@ async function recentArchives(request, deps) {
   return result;
 }
 
+// #75: keep the anonymous path as the one fallback for an unavailable Helix list.
+async function recentBroadcasts(request, deps) {
+  if (deps.credentials) {
+    const outcome = await raceOnMain(() => helixArchives(request, deps), REQUEST_TIMEOUT_MS,
+      {error: new Error('timeout')}, deps);
+    if (!outcome.error) {
+      return outcome.value;
+    }
+  }
+  return recentArchives(request, deps);
+}
+
+async function helixArchives(request, {http, credentials}) {
+  const helix = createHelix({http, clientID: credentials.clientID, token: credentials.token});
+  const videos = await helix.recentVODs(request);
+  return {ok: true, vods: videos.map(helixArchive)};
+}
+
+function helixArchive(video) {
+  const parts = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(video.duration);
+  if (!parts || !parts[0]) {
+    throw new Error('Malformed Helix duration');
+  }
+  const lengthSeconds = Number(parts[1] || 0) * 3600 + Number(parts[2] || 0) * 60 + Number(parts[3] || 0);
+  if (!Number.isSafeInteger(lengthSeconds)) {
+    throw new Error('Malformed Helix duration');
+  }
+  return archiveFrom({...video, lengthSeconds});
+}
+
 // ---- live status (#67) ----
 
 // Whether a channel is live, asked by global before it creates a player for the channel.
@@ -264,4 +296,4 @@ async function gqlBatch(http, logins) {
   }));
 }
 
-module.exports = {recentArchives, channelStatus, channelsStatus};
+module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus};

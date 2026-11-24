@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentArchives,channelStatus,channelsStatus}=require('./src/twitch-vods.js');
+const {recentBroadcasts,channelStatus,channelsStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {createHistory}=require('./src/history.js');
@@ -22,6 +22,7 @@ const qaEvents=[];
 const CLIENT_FILE='@data/twitch-client.json';
 const SETTINGS_FILE='@data/settings.json';
 const globalDiag=[];
+const windowDiagnostics=new Map();
 
 function qaTrace(phase,data){
  if(!config.qa)return;
@@ -130,6 +131,24 @@ function gLog(step,extra){
   if(globalDiag.length>60)globalDiag.shift();
   file.write('@data/beta-global.json',JSON.stringify(globalDiag));
  }catch(_){/* diagnostics are best effort; a failed write must never break the caller */}
+}
+
+// #65: IINA supplies the core's label as the sender, not the player's stream label.
+// Keep insertion order by last write, even when two writes have the same timestamp.
+function onDiagnostics(data,label){
+ if(typeof label!=='string'||!label||!data||typeof data!=='object'||Array.isArray(data))return;
+ if(typeof data.instanceId!=='string'||data.instanceId.length>32||!Array.isArray(data.steps))return;
+ try{
+  windowDiagnostics.delete(label);
+  windowDiagnostics.set(label,{
+   instanceId:data.instanceId,
+   instanceStartedAt:data.instanceStartedAt,
+   writtenAt:new Date().toISOString(),
+   steps:data.steps.slice(-40)
+  });
+  if(windowDiagnostics.size>8)windowDiagnostics.delete(windowDiagnostics.keys().next().value);
+  file.write('@data/last-session.json',JSON.stringify({version:2,windows:Object.fromEntries(windowDiagnostics)}));
+ }catch(_){/* diagnostics are best effort */}
 }
 
 // The saved Twitch login (a JSON string). Prefer the keychainRead spelling; fall back to keyChainRead.
@@ -401,8 +420,8 @@ async function showOfflineVods(login,fromSuggestion=false){
  const form=formInstance;
  if(!fromSuggestion)postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1,fromSuggestion);
- // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
- const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+ // Signed in: Helix first, then one GQL fallback (#75); neither rejects, and each gives up after 5 s.
+ const result=await recentBroadcasts({login},{http,credentials,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
   showArchives(run,result,login,form,fromSuggestion);
@@ -707,6 +726,7 @@ listen(app,'global','auth-forget',onAuthForget);
 listen(app,'global','source-offline',onSourceOffline);
 listen(app,'global','history-start',onHistoryStart);
 listen(app,'global','history-end',onHistoryEnd);
+listen(app,'global','diag',onDiagnostics);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

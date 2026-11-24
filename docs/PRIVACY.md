@@ -9,7 +9,8 @@ Streams runs entirely on your Mac. It has no servers of its own, no analytics, a
 | Your Twitch login: access and refresh tokens, plus the app ID they belong to | macOS Keychain, item `<plugin id> - twitch-readonly` | Keeps you signed in. **Sign out** revokes the login at Twitch and overwrites this item with a signed-out marker. |
 | Your own Twitch Client ID, only if you entered one | IINA plugin data, `twitch-client.json` | Uses your own Twitch app instead of the built-in one |
 | Display settings: layout, text size, timestamps, overlay position | IINA plugin data, `settings.json` | Remembers how you like chat shown |
-| Recent session steps: state flags and timestamps, no addresses or messages | IINA plugin data, `last-session.json` | Diagnosing problems |
+| Your watch history: whom you opened (a Twitch login or YouTube channel, with its display name) and when and for how long; no addresses, titles, tokens or messages | IINA plugin data, `history.json` | Suggesting people in Open Stream, which a later version adds. Plugin menu › Streams › Watch History: **Pause Watch History** stops recording, and **Clear Watch History** deletes it all. Nothing leaves your Mac. |
+| Recent session steps: state flags and timestamps, no addresses or messages, kept for each of the last 8 player windows | IINA plugin data, `last-session.json` | Diagnosing problems |
 | Beta and Dev builds only: recent sign-in steps, such as request paths and status codes, with no tokens | IINA plugin data, `beta-global.json` | Diagnosing sign-in problems |
 | Chat replay downloads | IINA plugin data, temporary files | Replay chat for VODs and finished livestreams; removed when no longer needed |
 
@@ -23,7 +24,8 @@ IINA plugin data lives in `~/Library/Application Support/com.colliderli.iina/plu
   - `dev.twitch.tv`: opened in your browser only if you choose **Use a different Client ID** and click **Open Twitch Developer Console**;
   - `irc-ws.chat.twitch.tv`: live chat (read-only WebSocket);
   - `static-cdn.jtvnw.net`: official Twitch emote images in live chat, loaded by the sidebar and overlay chat views when a message contains an emote;
-  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts, and VOD chat replay;
+  - `api.twitch.tv`: when you're signed in, an offline channel's recent broadcasts, using your sign-in;
+  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts (signed out, or if `api.twitch.tv` fails), and VOD chat replay;
   - `usher.ttvnw.net`: stream and VOD quality playlists (or through Streamlink as a fallback);
   - `*.ttvnw.net`, `*.twitchcdn.net`, and Twitch's CloudFront VOD hosts (`*.cloudfront.net`): video and audio playback in IINA, plus live playlist polling on `*.ttvnw.net` or `*.twitchcdn.net` to keep live chat timing synced.
 - **YouTube:**

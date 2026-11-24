@@ -149,6 +149,9 @@ async function getJSON(config, path, params, stage) {
   let response;
   try {
     response = await config.http.get(`${API_BASE}${path}`, options);
+    if (response && typeof response.statusCode === 'number' && (response.statusCode < 200 || response.statusCode >= 300)) {
+      throw response;
+    }
   } catch (failure) {
     const error = mapFailure(failure);
     config.logLine(stage, {failed: error.code});
@@ -259,11 +262,11 @@ function mapVideo(video) {
 async function lookupUserID(config, login) {
   const body = await getJSON(config, '/users', {login}, 'user');
   const users = dataArray(body, 'user', config);
-  const user = users[0];
-  if (!user) {
+  if (users.length === 0) {
     return '';
   }
-  if (!isString(user.id) || user.id === '') {
+  const user = users[0];
+  if (!user || !isString(user.id) || user.id === '') {
     config.logLine('user', {failed: 'MALFORMED'});
     throw new TwitchHelixError('MALFORMED');
   }

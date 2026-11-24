@@ -39,7 +39,7 @@ class Playback {
    this.data.error=String(error&&error.message||'Could not retrieve that quality.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);this.emit();return false;
   }
  }
- loaded(generation){
+ loaded(generation,freshResult){
   if(this.closed||this.disabled)return false;
   if(this.pending){
    if(generation!==this.pending.generation)return false;
@@ -47,6 +47,7 @@ class Playback {
   }
   // An unstaged load of the source, with no change pending.
   if(generation===this.fresh){
+   if(freshResult)this.adopt(freshResult);
    this.data.phase='playing';this.data.error='';this.emit();return true;
   }
   return false;

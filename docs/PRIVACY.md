@@ -24,7 +24,8 @@ IINA plugin data lives in `~/Library/Application Support/com.colliderli.iina/plu
   - `dev.twitch.tv`: opened in your browser only if you choose **Use a different Client ID** and click **Open Twitch Developer Console**;
   - `irc-ws.chat.twitch.tv`: live chat (read-only WebSocket);
   - `static-cdn.jtvnw.net`: official Twitch emote images in live chat, loaded by the sidebar and overlay chat views when a message contains an emote;
-  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts, and VOD chat replay;
+  - `api.twitch.tv`: when you're signed in, an offline channel's recent broadcasts, using your sign-in;
+  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts (signed out, or if `api.twitch.tv` fails), and VOD chat replay;
   - `usher.ttvnw.net`: stream and VOD quality playlists (or through Streamlink as a fallback);
   - `*.ttvnw.net`, `*.twitchcdn.net`, and Twitch's CloudFront VOD hosts (`*.cloudfront.net`): video and audio playback in IINA, plus live playlist polling on `*.ttvnw.net` or `*.twitchcdn.net` to keep live chat timing synced.
 - **YouTube:**

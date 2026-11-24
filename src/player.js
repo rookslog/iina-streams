@@ -378,8 +378,6 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  let closed=false,windowLoaded=!!core.window.loaded;
  let sidebarLoaded=false,sidebarReady=false,sidebarVisible=false,controlsDesired=true;
  let overlayLoaded=false,overlayReady=false;
- // Watch history (#73): whether IINA's edge-triggered window-main event has reported focus for this controller.
- let focusReported=false;
  // Chat beside the video: whether the margin is applied, the ratio and column width last applied, and the
  // widening to undo ({original, target, width}), or null. Window-scoped: they mirror the mpv option and the
  // window frame, which outlive any one activation. Only the current activation changes them (send), and a loss
@@ -417,7 +415,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // On_load hooks of this activation: a newer one supersedes an older one still resolving.
    loads:0,
    // The Playback generation of the file loading, and of the latest unstaged load (not a replacement).
-   activeGeneration:0,freshGeneration:0,staged:null,loadError:'',initialResolved:false,
+   activeGeneration:null,freshGeneration:null,staged:null,loadError:'',initialResolved:false,
    chatGeneration:0,autoReplayAttempted:false,
    // Whether this activation's first turn has run (startAuth), and a sign-in request made before it.
    authStarted:false,pendingAuth:null,
@@ -450,8 +448,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    goLiveBusy:false,replacement:null,goLiveGeneration:null,
    // D1c: the deferred menu.forceUpdate after the player's menu items were replaced (syncMenu).
    menuUpdate:null,
-   // Watch history (#73): resolved channel identity and whether playback has been reported to global.
-   historyChannel:null,historyStarted:false
+   // Watch history (#73): resolved channel identity, whether playback started, and the open visit key.
+   historyChannel:null,historyChannelExplicit:false,historyStarted:false,historyVisit:null
   });
   // The clock's timers and log are the activation's: after a loss it neither polls nor samples. A response in
   // flight at the loss only reaches this clock's own estimator; release stops the clock, which then ignores it.
@@ -1929,6 +1927,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // options.final: publish the final inactive snapshot (L5). options.retire: see chatOff.
  function releaseActivation(ended,options){
   if(ended.disposed)return;
+  endHistoryVisit(ended);
   chatOff({retire:!!options.retire});
   // D1: the loss leaves beside once, here on the main-thread turn; chatOff has already hidden the overlay.
   if(besideActive)leaveBeside();
@@ -1986,6 +1985,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     // Review r4 #3 and L2: the activation ends before the hook continues, in pure JS, and never returns.
     // Review r2 #6: its release runs on a later main-thread turn, never on mpv's hook queue.
     const ended=authority.end();
+    endHistoryVisit(ended);
     load.release();
     if(ended)authority.windowTurn(()=>releaseActivation(ended,{final:true}));
     return;
@@ -2032,6 +2032,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     mediaURL:source.url
    };
   }else{
+   act.activeGeneration=null;
    phase('resolve-start',{quality:'auto720'});
    result=await act.wait(resolveFor(act,'auto720'));
    if(!act.continues())return;
@@ -2052,8 +2053,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
   }
   act.activeGeneration=context.generation;
-  const resolvedChannel=result.channel||(services.resolvedChannel&&services.resolvedChannel(source));
-  if(resolvedChannel&&resolvedChannel.login)act.historyChannel=resolvedChannel;
+  if(result.channel!==undefined&&result.channel!==null){
+   act.historyChannelExplicit=true;
+   act.historyChannel=cleanHistoryIdentity(result.channel);
+  }else{
+   act.historyChannelExplicit=false;
+   act.historyChannel=null;
+  }
   applyResolution(result,context);
   if(!act.initialResolved){
    act.player.adopt(result);
@@ -2105,8 +2111,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    const channel=historyIdentity();
    if(channel){
     act.historyStarted=true;
+    act.historyVisit={provider:channel.provider,login:channel.login};
     app.postMessage('history-start',channel);
-    if(!focusReported)reportFocus(true);
    }
   }
   if(act.liveClockURL)startLiveClock();
@@ -2165,32 +2171,53 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   windowClosed();
  }
 
- function reportFocus(focused){
-  focusReported=true;
-  app.postMessage('history-focus',{focused});
+ const TWITCH_HISTORY_LOGIN=/^[a-z0-9_]{1,25}$/;
+ const YOUTUBE_HISTORY_CHANNEL=/^UC[A-Za-z0-9_-]{22}$/;
+ const UNSAFE_HISTORY_NAME=/[:/?=&#\\]|\p{Cc}|[^\S ]| {2,}/u;
+
+ // Validate and project to {provider, login, displayName} before posting across the bridge.
+ function cleanHistoryIdentity(channel){
+  if(!channel||typeof channel!=='object')return null;
+  const provider=channel.provider,login=channel.login;
+  if(provider==='twitch'){
+   if(typeof login!=='string'||!TWITCH_HISTORY_LOGIN.test(login))return null;
+  }else if(provider==='youtube'){
+   if(typeof login!=='string'||!YOUTUBE_HISTORY_CHANNEL.test(login))return null;
+  }else{
+   return null;
+  }
+  const rawName=typeof channel.displayName==='string'?channel.displayName.trim():'';
+  const safeName=rawName&&rawName.length<=64&&!UNSAFE_HISTORY_NAME.test(rawName);
+  return{provider,login,displayName:safeName?rawName:login};
  }
 
- // iina.window-main.changed fires only on main-window transitions (EventController.swift L40).
- function onWindowMainChanged(isMain){
-  if(typeof isMain==='boolean')reportFocus(isMain);
+ function historyIdentity(){
+  if(act.historyChannelExplicit)return act.historyChannel;
+  if(source.kind==='twitch-live')return cleanHistoryIdentity({provider:'twitch',login:source.id,displayName:source.id});
+  return null;
+ }
+
+ function endHistoryVisit(activation){
+  const visit=activation&&activation.historyVisit;
+  if(!visit)return;
+  activation.historyVisit=null;
+  app.postMessage('history-end',visit);
+ }
+
+ // IINA 1.5.1 emits iina.menu-update only to PlayerCore.active when the Plugin menu opens (MenuController.swift L847).
+ function onMenuUpdate(){
+  const visit=active()&&act.historyVisit?{provider:act.historyVisit.provider,login:act.historyVisit.login}:null;
+  app.postMessage('history-menu',{visit});
  }
 
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is
  // inactive, then everything is closed as for a window close, except that global is not told the window
  // closed: the window stays, and a stream adopted next takes over the same player.
- function historyIdentity(){
-  if(act.historyChannel)return act.historyChannel;
-  if(source.kind==='twitch-live')return{provider:'twitch',login:source.id,displayName:source.id};
-  return null;
- }
-
  function retire(){
   if(closed)return;
-  const started=act.historyStarted;
   authority.end();
   // The final inactive snapshot, and global hears that this controller's auth use is over (review r3 #3).
   releaseActivation(act,{final:true,retire:true});
-  if(started)app.postMessage('history-end',{});
   teardown({notifyGlobal:false});
  }
 
@@ -2330,7 +2357,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  onActive('mpv.seek',onSeek);
  onActive('mpv.pause.changed',onPauseChanged);
  onActive('iina.window-fs.changed',onFullscreenChanged);
- onActive('iina.window-main.changed',onWindowMainChanged);
+ onWindow('iina.menu-update',onMenuUpdate);
  onWindow('iina.window-will-close',onWindowWillClose);
 
  // IINA creates the child while the parent's createPlayerInstance call is on stack, so the global entry's

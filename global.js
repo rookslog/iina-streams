@@ -180,8 +180,9 @@ const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 // openRun is the Open Stream form's session (F-session, #67). A submit, an edit of the field, a newer
 // source-offline, a fresh page or a close advances it, and a pending broadcast lookup or live check updates the form only while it is unchanged.
+// openCancel increments only on explicit cancellation (open-cancel), distinguishing it from edits or independent submissions.
 // The page receives nothing until it posts open-ready; until then messages wait in openQueue.
-let openRun=0,openPageReady=false,openQueue=[];
+let openRun=0,openCancel=0,openPageReady=false,openQueue=[];
 
 // Opens the input. Returns 'opened', 'checking' (a Twitch channel whose live check is pending), 'invalid', or
 // 'blank' when there is nothing to open. `fromForm` says the Open Stream form submitted it in the current session.
@@ -209,9 +210,10 @@ function openPlayer(source){
 // Residual race: a channel that goes offline between this check and the player's own load keeps the in-player
 // path (src/player.js posts source-offline, onSourceOffline below).
 async function openWhenLive(source,session,fromForm){
+ const cancel=openCancel;
  const deps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
  const status=await channelStatus({login:source.id},deps);
- onMainThread(()=>finishLiveCheck(source,status,session,fromForm));
+ onMainThread(()=>finishLiveCheck(source,status,session,fromForm,cancel));
 }
 
 // H-main (#67): iina.http settles its promise from Just's completion handler, off the main thread
@@ -223,10 +225,11 @@ function onMainThread(fn){
  timers.setTimeout(fn,0);
 }
 
-// The decision, on the main thread. A live or undecided channel opens its player even when the form has moved on
-// (separate opens stay independent); only the form's own updates are fenced by its session.
-function finishLiveCheck(source,status,session,fromForm){
+// The decision, on the main thread. Explicit cancellation (open-cancel) aborts a pending form check; an edit
+// or independent submission keeps its own check while only the current form session updates or closes the window.
+function finishLiveCheck(source,status,session,fromForm,cancel){
  qaTrace('live-check',{status});
+ if(fromForm&&cancel!==openCancel)return;
  const current=session===openRun;
  if(status!=='offline'){
   openPlayer(source);
@@ -257,12 +260,17 @@ function showOpenWindow(){
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
  listen(openWindow,'standaloneWindow','open-stream',onOpenWindowSubmit);
- listen(openWindow,'standaloneWindow','open-cancel',closeOpenWindow);
+ listen(openWindow,'standaloneWindow','open-cancel',onOpenCancel);
  listen(openWindow,'standaloneWindow','open-ready',onOpenPageReady);
  listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(OPEN_WIDTH,OPEN_HEIGHT);
  openWindow.open();
+}
+
+function onOpenCancel(){
+ openCancel++;
+ closeOpenWindow();
 }
 
 function closeOpenWindow(){
@@ -343,13 +351,13 @@ async function showOfflineVods(login){
  const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
-  if(result.ok)recordOfflineHistory(login);
-  showArchives(run,result);
+  showArchives(run,result,login);
  });
 }
 
-function showArchives(run,result){
+function showArchives(run,result,login){
  if(run!==openRun||!openWindow.isOpen())return;
+ if(result.ok)recordOfflineHistory(login);
  if(!result.ok){
   postOfflineVods({state:'error'},1);
   return;
@@ -471,9 +479,9 @@ function onPlayerClosed(_,label){
  const managedID=targetID(label);
  const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
+ const visit=windowVisits.get(id);
  finishWindowVisit(id);
- if(focusedWindow===id)focusedWindow=null;
- syncHistoryMenu();
+ if(boundVisit&&boundVisit.visit===visit)boundVisit=null;
  // Only a departing audience member can warrant stopping the broker; an unrelated close must not (r3 #3).
  const wasMember=audience.delete(id);
  if(typeof id==='number')managed.delete(id);
@@ -519,8 +527,9 @@ function historyNow(){
 const history=createHistory({storage:historyStorage,now:historyNow});
 // Open visits keyed by managed numeric id or adopted bare-number string label: {provider, login, handle}.
 const windowVisits=new Map();
-let focusedWindow=null;
-let pauseItem=null,forgetItem=null,menuRebuildTimer=null;
+// Visit bound when the Plugin menu opened via iina.menu-update -> history-menu: {key, visit}.
+let boundVisit=null;
+let menuRebuildTimer=null;
 
 function adoptionEnabled(){
  if(config.qa)return true;
@@ -550,16 +559,6 @@ function sameHistoryChannel(a,b){
  return a.login===b.login;
 }
 
-function isPersonRecorded(person){
- if(!person)return false;
- return history.query('',{provider:person.provider}).some(entry=>entry.login===person.login);
-}
-
-function canForgetFocused(){
- if(focusedWindow===null)return false;
- return isPersonRecorded(windowVisits.get(focusedWindow));
-}
-
 function finishWindowVisit(key){
  const visit=windowVisits.get(key);
  if(!visit)return;
@@ -577,7 +576,10 @@ function onHistoryStart(data,label){
  if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
  const existing=windowVisits.get(key);
  if(existing&&sameHistoryChannel(existing,data))return;
- if(existing)finishWindowVisit(key);
+ if(existing){
+  finishWindowVisit(key);
+  if(boundVisit&&boundVisit.visit===existing)boundVisit=null;
+ }
  // Pass only identity fields so no playback metadata can ever reach history.
  const handle=history.record({
   provider:data.provider,
@@ -587,69 +589,84 @@ function onHistoryStart(data,label){
  });
  if(handle!==null){
   windowVisits.set(key,{provider:handle.provider,login:handle.login,handle});
-  syncHistoryMenu();
  }
 }
 
-function onHistoryEnd(_,label){
+function onHistoryEnd(data,label){
  const managedID=targetID(label);
  const key=managedID!==null?managedID:adoptedLabel(label);
- if(key===null)return;
+ if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
+ const visit=windowVisits.get(key);
+ if(!visit||!sameHistoryChannel(visit,data))return;
  finishWindowVisit(key);
- if(focusedWindow===key)focusedWindow=null;
- syncHistoryMenu();
+ if(boundVisit&&boundVisit.visit===visit)boundVisit=null;
 }
 
-function onHistoryFocus(data,label){
+function onHistoryMenu(data,label){
  const key=historySender(label);
- if(key===null||!data||typeof data!=='object'||typeof data.focused!=='boolean')return;
- if(data.focused)focusedWindow=key;
- else if(focusedWindow===key)focusedWindow=null;
- syncHistoryMenu();
+ if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
+ const visit=data.visit;
+ if(visit===null){
+  boundVisit=null;
+  return;
+ }
+ if(!visit||typeof visit!=='object'||Array.isArray(visit))return;
+ const current=windowVisits.get(key);
+ boundVisit=current&&sameHistoryChannel(current,visit)?{key,visit:current}:null;
 }
 
 function toggleHistoryPause(){
  history.setPaused(!history.paused);
- syncHistoryMenu();
+ scheduleMenuRebuild();
 }
 
-function forgetFocusedChannel(){
- if(!canForgetFocused())return;
- const visit=windowVisits.get(focusedWindow);
+function forgetBoundChannel(){
+ if(!boundVisit)return;
+ const current=windowVisits.get(boundVisit.key);
+ const visit=boundVisit.visit;
+ boundVisit=null;
+ if(!current||current!==visit)return;
  for(const [key,entry] of windowVisits){
   if(sameHistoryChannel(entry,visit))windowVisits.delete(key);
  }
  history.forget({provider:visit.provider,login:visit.login});
- syncHistoryMenu();
 }
 
 function clearHistory(){
  history.clear();
  windowVisits.clear();
- syncHistoryMenu();
+ boundVisit=null;
+ scheduleMenuRebuild();
+}
+
+function historyMenu(){
+ const parent=menu.item('Watch History',null);
+ const children=[
+  menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused}),
+  menu.item('Forget This Channel',forgetBoundChannel),
+  menu.item('Clear Watch History',clearHistory)
+ ];
+ for(const child of children)parent.addSubMenuItem(child);
+ return parent;
 }
 
 function addGlobalMenuItems(){
  menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
- pauseItem=menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused});
- forgetItem=menu.item('Forget This Channel',forgetFocusedChannel,{enabled:canForgetFocused()});
- menu.addItem(pauseItem);
- menu.addItem(forgetItem);
- menu.addItem(menu.item('Clear Watch History',clearHistory));
+ menu.addItem(historyMenu());
 }
 
-// Update item properties immediately for same-turn callers, then rebuild on a main-thread turn so IINA 1.5.1's
-// NSMenuItem references stay valid across windows without calling forceUpdate off the main thread.
-function syncHistoryMenu(){
- if(pauseItem)pauseItem.selected=history.paused;
- if(forgetItem)forgetItem.enabled=canForgetFocused();
+// Rebuild definitions on a main-thread turn only when Pause or Clear changes displayed state; never write to
+// added menu items, because IINA 1.5.1 setters dereference an unowned NSMenuItem (JavascriptPluginMenuItem.swift).
+function scheduleMenuRebuild(){
  if(menuRebuildTimer!==null)return;
- menuRebuildTimer=timers.setTimeout(()=>{
-  menuRebuildTimer=null;
-  menu.removeAllItems();
-  addGlobalMenuItems();
-  if(typeof menu.forceUpdate==='function')menu.forceUpdate();
- },0);
+ menuRebuildTimer=timers.setTimeout(rebuildMenu,0);
+}
+
+function rebuildMenu(){
+ menuRebuildTimer=null;
+ menu.removeAllItems();
+ addGlobalMenuItems();
+ if(typeof menu.forceUpdate==='function')menu.forceUpdate();
 }
 
 addGlobalMenuItems();
@@ -668,7 +685,7 @@ listen(app,'global','auth-forget',onAuthForget);
 listen(app,'global','source-offline',onSourceOffline);
 listen(app,'global','history-start',onHistoryStart);
 listen(app,'global','history-end',onHistoryEnd);
-listen(app,'global','history-focus',onHistoryFocus);
+listen(app,'global','history-menu',onHistoryMenu);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

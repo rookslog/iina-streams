@@ -2,19 +2,13 @@
 const config=require('./config.js');
 const {listen}=require('./src/listeners.js');
 const services=require('./src/io.js').create(iina);
-let resolvedChannelInfo=null;
 services.resolve=require('./src/resolve.js').createResolver({
  resolveTwitch:require('./src/twitch-playback.js').resolveTwitch,
  http:iina.http,
  helperResolve:services.resolve.bind(services),
  log:(...args)=>iina.console.log(args.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' ')),
- now:()=>Date.now(),
- onChannel:(source,channel)=>{resolvedChannelInfo={sourceUrl:source&&source.url,channel};}
+ now:()=>Date.now()
 });
-services.resolvedChannel=source=>{
- if(!resolvedChannelInfo||!source||resolvedChannelInfo.sourceUrl!==source.url)return null;
- return resolvedChannelInfo.channel;
-};
 
 if(config.qa){
  const events=[];

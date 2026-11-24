@@ -80,3 +80,10 @@ D-033 lets adoption, and re-activation after a loss, return in 0.5.6 only once t
 
 **Order:** 1 and 2 first, then 3, on today's code. Expect #64 to show up. Fixing it is a builder's job. Then the adopted world, then the model change, each run before any product change.
 **What this won't settle:** native adoption through the Safari extension (J3), and timing on real hardware.
+
+### Explorer build record (lead, 2026-11-24)
+- **Built:** items 1–3 (reads and arms, continuation attribution, a loss between jobs that is a close or a foreign file). The adopted-window world and the re-activation model are not built yet.
+- **Red on `next` before the fix:** `L5b: ended epoch reads mpv time-pos from work continuing after a foreign, at step 2 of [quality, settle-ok, foreign@0]`. That is #64, found from the class.
+- **Fixed by Codex:** Playback checks the activation's loss signal at entry and at every continuation. The explorer is clean at K=3 (4830 sequences) and K=4 (61170). Removing the post-resolve check turns it red.
+- **Merged into `next`** ("Merge test/explorer-l5b into next", provisional).
+- **Side effect:** the seeded random runs now draw one extra number per step (close or foreign), so the 1000 random sequences differ from before.

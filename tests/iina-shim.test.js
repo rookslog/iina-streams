@@ -537,3 +537,48 @@ test('standaloneWindow: v1.5.1 surface, lazy creation, and listeners cleared by 
   assert.equal(win.isOpen(), false);
   assert.equal(typeof createIina().iina.standaloneWindow.open, 'function', 'player instances have it too');
 });
+
+// ---- Plugin menu host rules (IINA 1.5.1 MenuController.swift, JavascriptPluginMenuItem.swift) ----
+
+test('menu items trap on write after menu.removeAllItems(), and writes to added items are recorded', () => {
+  const {createIina} = require('./support/iina-shim.js');
+  const shim = createIina();
+  const {menu} = shim.iina;
+  const loose = menu.item('Loose', null);
+  loose.selected = true; // never added: no NSMenuItem, the didSet guard returns
+  const parent = menu.item('Parent', null);
+  const child = menu.item('Child', () => {});
+  parent.addSubMenuItem(child);
+  menu.addItem(parent);
+  assert.deepEqual(shim.menu.writesToAdded, []);
+  child.enabled = false;
+  assert.deepEqual(shim.menu.writesToAdded, [{title: 'Child', prop: 'enabled', value: false}]);
+  menu.removeAllItems();
+  for (const [item, prop, value] of [[parent, 'title', 'X'], [parent, 'selected', true], [child, 'enabled', true]]) {
+    assert.throws(() => { item[prop] = value; }, /IINA 1.5.1 would trap: unowned NSMenuItem/);
+  }
+  const fresh = menu.item('Fresh', null);
+  menu.addItem(fresh);
+  fresh.selected = true; // a new definition is fine to write (and is recorded)
+});
+
+test('pluginMenuLayout puts the first five items at the top level, global items first', () => {
+  const {createIina, pluginMenuLayout, PLUGIN_MENU_TOP_LEVEL_LIMIT} = require('./support/iina-shim.js');
+  const global = createIina({role: 'global'}), player = createIina();
+  for (const title of ['g1', 'g2']) global.iina.menu.addItem(global.iina.menu.item(title, null));
+  for (const title of ['p1', 'p2', 'p3', 'p4']) player.iina.menu.addItem(player.iina.menu.item(title, null));
+  const {top, more} = pluginMenuLayout(global, player);
+  assert.equal(PLUGIN_MENU_TOP_LEVEL_LIMIT, 5);
+  assert.deepEqual(top.map(item => item.title), ['g1', 'g2', 'p1', 'p2', 'p3']);
+  assert.deepEqual(more.map(item => item.title), ['p4']);
+});
+
+test('emitMenuUpdate reaches only the instance it is called on', () => {
+  const {createIina} = require('./support/iina-shim.js');
+  const a = createIina(), b = createIina();
+  const seen = [];
+  a.iina.event.on('iina.menu-update', () => seen.push('a'));
+  b.iina.event.on('iina.menu-update', () => seen.push('b'));
+  b.emitMenuUpdate();
+  assert.deepEqual(seen, ['b']);
+});

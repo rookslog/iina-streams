@@ -76,3 +76,10 @@
 - Return opens it.
 - → shows their broadcasts while they're live.
 - Reading the request log shows one status request and nothing per keystroke.
+
+## Build record (lead, 2026-11-24)
+- **Global half** built by Codex while Hydrogen was out of quota (logic only; the operator rules Codex out of design work). Commit on `feat/74-suggestions`.
+- **Lead's test changes:** test 9 searches the Watch History submenu (#73 moved Clear there). Two #32 tests (`tests/b6c-global-offline.test.js`) now allow a fresh page's `suggestions`, and a plain open holds the list (height above 84 px). New test **5e**: a status answer that arrives after the form closed posts nothing to it, and is still cached for a reopen within 60 s.
+- **Mutation checks:** removing the form check, the 60 s rule or the 20-login batch bound each fails tests. **Untested guard:** dropping a status batch that was pending when the person cleared their history. Without it, a cleared person's live mark could come back if they're recorded again within 60 s.
+- **For the page half (Hydrogen, design):** a plain open is 84 + 8 × 28 = 308 px tall (`SUGGESTION_HEIGHT` in `global.js`). An offline broadcast list from a typed submission still sizes the window by its row count, so it can shrink from 308 px. Choose deliberately whether it should.
+- **Privacy, at merge:** `docs/PRIVACY.md` must add `api.twitch.tv` (signed-in live status), and say that opening Open Stream sends up to 20 logins from watch history to Twitch for live marks.

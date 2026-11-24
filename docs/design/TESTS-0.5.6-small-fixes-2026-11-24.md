@@ -24,6 +24,7 @@ Each item names its mutation check: the one-line product change that must turn i
    - the sidebar's quality value reads 720p, not 360p;
    - choosing 360p then makes one new resolver call.
 
+*Written 2026-11-24 (lead):* `tests/quality-reopen-059.test.js`, red (reports `360p30`).
 **Fix (from the review):** commit the fresh unmarked load's metadata on its matching file-loaded (`src/player.js` near the first-result adoption; `src/playback.js` unmarked-load handling).
 **Mutation check:** reverting the fix fails both assertions.
 
@@ -39,6 +40,10 @@ Choose whichever needs no new IINA API. Record the choice in the test's header c
 3. A test that reads the file can tell "same window, new context" from "different window".
 
 **Mutation check:** dropping the identifier makes test 3 fail.
+
+*Written 2026-11-24 (lead):* `tests/diagnostics-065.test.js`, plus the amended #60 lifetime probe in `tests/listener-registry.test.js`.
+- **Choice:** global is the only writer, keyed by the sender's IINA label. A player can read only its stream label, which two windows of one stream share (`JavascriptAPIGlobal.swift:125`). IINA tags each message to global with the window's own label (`:62`, `:130`). File shape: `{version: 2, windows: {<label>: {instanceId, instanceStartedAt, writtenAt, steps}}}`, keeping the 8 most recently written windows.
+- **Item 2 as written:** the window key surviving a replaced context is global's job (test 3). A new `instanceId` per JS context is #60's existing design, so there is no separate player test. The player test that tried to need a second script context, and the fixture couldn't give it one.
 
 ## Not in this batch
 - **#64** (a promise continuation crossing the loss boundary): it needs the class-L explorer to count mpv reads and timer registrations. That's a design change to the explorer, so it gets its own test design.

@@ -216,19 +216,20 @@ test('global: app listeners and repeated Open Stream windows stay registered wit
 
 // ---- #60 lifetime probe ----
 
-test('lifetime probe: last-session.json carries the instance id and start time, and no URL', async t => {
+// #65 (0.5.6) amends this: the player posts its diagnostics to global, which alone writes last-session.json,
+// keyed by window (tests/diagnostics-065.test.js). The record's content rules are unchanged.
+test('lifetime probe: the diag message carries the instance id and start time, and no URL; the player writes no file', async t => {
   registry().clear();
   const {shim} = await playerWithOverlay();
   t.after(() => shim.emit('iina.window-will-close'));
-  const writes = shim.file.writes.filter(write => write.file === '@data/last-session.json');
-  assert.ok(writes.length > 0, 'precondition: the diagnostics were written');
-  const text = writes.at(-1).content;
-  const record = JSON.parse(text);
+  const posts = shim.global.posts.filter(post => post.name === 'diag');
+  assert.ok(posts.length > 0, 'precondition: the diagnostics were posted');
+  const record = posts.at(-1).data;
+  const text = JSON.stringify(record);
   assert.match(record.instanceId, /^[a-z0-9]{8,}$/);
   assert.equal(new Date(record.instanceStartedAt).toISOString(), record.instanceStartedAt);
-  assert.ok(Array.isArray(record.steps) && record.steps.length > 0);
-  for (const write of writes) {
-    assert.equal(JSON.parse(write.content).instanceId, record.instanceId, 'one id per JS context');
-  }
+  assert.ok(Array.isArray(record.steps) && record.steps.length > 0 && record.steps.length <= 40);
+  for (const post of posts) assert.equal(post.data.instanceId, record.instanceId, 'one id per JS context');
   assert.doesNotMatch(text, /https?:|:\/\/|twitch\.tv|fixturechannel|fixture_reader|fake_registry_credential/);
+  assert.equal(shim.file.writes.filter(write => write.file === '@data/last-session.json').length, 0, 'the player writes no last-session.json');
 });

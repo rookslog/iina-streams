@@ -18,12 +18,17 @@ IINA plugin data lives in `~/Library/Application Support/com.colliderli.iina/plu
 ## What it connects to
 
 - **Twitch:**
-  - sign-in at `id.twitch.tv`, with the read-only `chat:read` permission;
-  - live chat at `irc-ws.chat.twitch.tv`;
-  - VOD chat at `gql.twitch.tv`;
-  - chat emote images from Twitch's CDN at `static-cdn.jtvnw.net`, fetched by the chat view when a message contains an emote;
-  - video through Streamlink or yt-dlp.
-- **YouTube:** video and replay chat through yt-dlp.
+  - `id.twitch.tv`: sign-in, token checks and refresh, and sign-out revocation, with the read-only `chat:read` permission;
+  - `www.twitch.tv`: opened in your browser only when you click **Approve on Twitch**;
+  - `dev.twitch.tv`: opened in your browser only if you choose **Use a different Client ID** and click **Open Twitch Developer Console**;
+  - `irc-ws.chat.twitch.tv`: live chat (read-only WebSocket);
+  - `static-cdn.jtvnw.net`: official Twitch emote images in live chat, loaded by the sidebar and overlay chat views when a message contains an emote;
+  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts, and VOD chat replay;
+  - `usher.ttvnw.net`: stream and VOD quality playlists (or through Streamlink as a fallback);
+  - `*.ttvnw.net`, `*.twitchcdn.net`, and Twitch's CloudFront VOD hosts (`*.cloudfront.net`): video and audio playback in IINA, plus live playlist polling on `*.ttvnw.net` or `*.twitchcdn.net` to keep live chat timing synced.
+- **YouTube:**
+  - `www.youtube.com`: video info and replay chat through yt-dlp;
+  - `*.googlevideo.com`: video and audio playback in IINA.
 
 Streams contacts these services only when you open a stream or sign in.
 

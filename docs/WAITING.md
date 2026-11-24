@@ -267,6 +267,22 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What would flip it:** if you'd rather history never leave the Mac, take "ask only when signed out" or "don't ask". The code change is small either way.
 - **Docs to change at merge:** `docs/PRIVACY.md` gains this request under `api.twitch.tv` and `gql.twitch.tv`. Its last line ("only when you open a stream or sign in") gains "or open Open Stream". Its watch-history row ("Nothing leaves your Mac") becomes "names in it are sent to Twitch for live marks".
 
+### W-19. Switch Streams Dev on so the lead can check tonight's work in IINA
+- **What it is:** nothing built tonight has run in IINA yet. That covers watch history (#73), the reopen quality fix (#59), the per-window diagnostics (#65) and the signed-in broadcast list (#75). A QA build of `next` (`0.5.5-dev+g0708d0a9`, with the test harness) is staged in **Streams Dev**. The lead can drive it from the command line, with no clicking, once Dev is switched on. At night the lead may not change IINA's plugin switches: the request was refused when tried at 18:20.
+- **What's needed from you** (about a minute):
+  1. In IINA → Settings → Plugins, switch **Streams Dev** on and **Streams Beta** off.
+  2. Quit and reopen IINA.
+  3. Tell the lead.
+  4. When the lead is done, switch Beta back on and Dev off. Found tonight: Beta on, Dev off.
+- **What the lead then checks:**
+  - a live channel and a broadcast play, and `history.json` in Dev's data folder lists them with no address or title;
+  - the Plugin menu shows one "Watch History" submenu (Pause, Clear), with Go Live and Chat still at the top level;
+  - two windows give two entries in `last-session.json`;
+  - after switching a broadcast to 360p and reopening it, the sidebar says 720p;
+  - signed in, an offline channel lists its broadcasts. That needs a Dev sign-in, which only you can approve, so it may stay unchecked.
+- **Done at night, for the record:** the stage folder `~/Library/Application Support/iina-streams-dev` held two Beta backups, `beta-backup-0.5.4-*` and `beta-backup-0.5.5-*`, which blocked staging. They were moved unchanged to `~/Library/Application Support/iina-streams-beta-backups/`. Nothing referred to their old path, and the installed Streams Beta is its own folder.
+- **What your answer changes:** the release branch for 0.5.6 waits on these checks. The merges into `next` don't.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

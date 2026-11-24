@@ -74,7 +74,7 @@ D-033 lets adoption, and re-activation after a loss, return in 0.5.6 only once t
 - `createWorld({adopted: true})`: an unlabeled window (`label: ''`), with `readSettings` returning `adoptNativeWindows: true`.
 - No epoch until the first own-source hook adopts. That hook begins epoch 1.
 - Run the same alphabet, checks and depth.
-- Assert first that this world has the two clearance-1 findings at the commit before D-033 (`f59cc1b^`'s parent, as the review record names it): the falsifier must fail there without being told the sequences (D-032 rule 3).
+- Assert first that this world has the two clearance-1 findings at the commit clearance 1 reviewed (named in `docs/reviews/2026-11-22-v0.5.5-release-review.md`; unchecked which SHA): the falsifier must fail there without being told the sequences (D-032 rule 3).
 
 **Re-activation after loss (D-033's second behaviour):** the model changes from "an own-source hook after a loss begins no epoch" to "it begins a new epoch (`last + 1`)". The explorer is then red on today's code (the spec for the restore) until the player re-activates. Keep the D-033 model selectable with an environment variable, so the 0.5.5 behaviour stays checkable.
 

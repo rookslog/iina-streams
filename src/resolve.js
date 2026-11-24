@@ -120,7 +120,7 @@ function helperShapedResult(source, quality, twitch) {
   if (!selected) {
     return failure(quality === AUTO.id ? 'NO_PLAYABLE_FORMAT' : 'QUALITY_UNAVAILABLE');
   }
-  return {
+  const result = {
     ok: true,
     source,
     title: twitch.title,
@@ -130,6 +130,10 @@ function helperShapedResult(source, quality, twitch) {
     formats: publicFormats(options),
     mediaURL: selected.url,
   };
+  if (twitch.channel) {
+    result.channel = twitch.channel;
+  }
+  return result;
 }
 
 // ---- loss ----

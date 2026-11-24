@@ -21,6 +21,7 @@ function loadGlobalMenu() {
       if (name === './src/listeners.js') return require('../src/listeners.js');
       if (name === './src/twitch-app.js') return {clientID: ''};
       if (name === './src/twitch-vods.js') return require('../src/twitch-vods.js');
+      if (name === './src/history.js') return require('../src/history.js');
       if (name === './src/bridge.js') return require('../src/bridge.js');
       throw new Error('Unexpected module ' + name);
     }

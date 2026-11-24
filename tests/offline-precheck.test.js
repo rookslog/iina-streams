@@ -96,6 +96,7 @@ function loadGlobal(options = {}) {
     ['./src/twitch-app.js', {clientID: ''}],
     ['./src/twitch-vods.js', require('../src/twitch-vods.js')],
     ['./src/bridge.js', require('../src/bridge.js')],
+    ['./src/history.js', require('../src/history.js')],
     ['./src/listeners.js', require('../src/listeners.js')],
   ]);
   const context = shim.runScript(path.join(__dirname, '../global.js'), {
@@ -326,7 +327,9 @@ test('#67 H-main deadline: no timer is cleared in a reply continuation, only on 
   assert.equal(archiveDeadline.cancelled, true, 'the archive deadline is cleared on the turn after its reply');
 });
 
-test('#67 F-session: a late live answer still opens its player but leaves a newer form alone', async () => {
+// Amended 2026-11-24 (lead, #73 review P1-3 and TESTS.md item 21): an explicitly cancelled live check opens
+// nothing when its answer arrives late. It still leaves the newer form alone.
+test('#67 F-session: a late live answer for a cancelled check opens nothing and leaves a newer form alone', async () => {
   const fixture = loadGlobal();
   openForm(fixture);
   fixture.win.send('open-stream', {input: LOGIN});
@@ -335,7 +338,7 @@ test('#67 F-session: a late live answer still opens its player but leaves a newe
   openForm(fixture);
   const at = fixture.mark();
   await replyThenMainTurn(fixture, 'live');
-  assert.equal(fixture.opens().length, 1, 'separate opens stay independent');
+  assert.equal(fixture.opens().length, 0, 'an explicitly cancelled check opens no player');
   assert.equal(fixture.win.visible, true, 'the newer form is not closed');
   assert.deepEqual(fixture.postsSince(at), []);
 });
@@ -432,4 +435,71 @@ test('#67 channelStatus: one anonymous GQL request; offline only for stream:null
     assert.equal(http.calls[0].url, 'https://gql.twitch.tv/gql');
     assert.equal(http.calls[0].headers.Authorization, undefined);
   }
+});
+
+// ---- #73 round 3 (lead, 2026-11-24, after Codex's narrow check): one cancellation rule, as a table ----
+// Rule: an explicit cancel (open-cancel) covers every live check that this form instance started and that has not
+// answered yet. A form instance runs from openStream() to its window closing; an edit (open-edit) or a second
+// submission does not start a new instance, so neither escapes the cancel. Opens from elsewhere (the sidebar's
+// `open`) and checks started by a later form instance are independent and still open.
+const OTHER = 'other_channel';
+const CANCEL_TABLE = [
+  {row: 'submit, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); }, answers: 1, opens: 0},
+  {row: 'submit, edit, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); f.win.send('open-edit', {}); }, answers: 1, opens: 0},
+  {row: 'submit A, submit B, cancel', steps: f => { f.win.send('open-stream', {input: LOGIN}); f.win.send('open-stream', {input: OTHER}); }, answers: 2, opens: 0},
+  {row: 'sidebar open pending, form opened and cancelled', steps: f => { f.shim.global.send('open', {input: LOGIN}, '0'); }, answers: 1, opens: 1},
+];
+for (const {row, steps, answers, opens} of CANCEL_TABLE) {
+  test(`#73 round 3 cancel table: ${row}`, async () => {
+    const fixture = loadGlobal();
+    openForm(fixture);
+    steps(fixture);
+    await settle();
+    fixture.win.send('open-cancel', {});
+    await settle();
+    for (let i = 0; i < answers; i++) await replyThenMainTurn(fixture, 'live');
+    assert.equal(fixture.opens().length, opens, row);
+  });
+}
+
+test('#73 round 3 cancel table: a later form instance is independent of a cancelled one', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-cancel', {});
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: OTHER});
+  await settle();
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 0, 'the cancelled instance\'s answer opens nothing');
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 1, 'the later instance\'s answer opens its player');
+});
+
+// Two more ways a form ends (lead, round 3, after the advisor's check). IINA 1.5.1 always gives the plugin window a
+// close button (PluginStandaloneWindow.swift:23, styleMask [.closable, ...]; setProperty can't remove it) and tells
+// the plugin nothing when it is used: isOpen() reads isVisible (JavascriptAPIStandaloneWindow.swift:50). The shim's
+// `visible = false` with no message is that close.
+test('#73 round 3 cancel table: submit, then the person closes the window by its close button', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.visible = false;
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 0, 'a form closed by the person acts like a cancelled one');
+  assert.equal(fixture.win.visible, false, 'and is not reopened');
+});
+
+test('#73 round 3 cancel table: submit A, then a broadcast link that opens at once; A answers live later', async () => {
+  const fixture = loadGlobal();
+  openForm(fixture);
+  fixture.win.send('open-stream', {input: LOGIN});
+  await settle();
+  fixture.win.send('open-stream', {input: VOD_URL});
+  await settle();
+  assert.equal(fixture.opens().length, 1, 'the broadcast opens at once and the form closes');
+  await replyThenMainTurn(fixture, 'live');
+  assert.equal(fixture.opens().length, 1, 'A, whose form is gone, opens no second player');
 });

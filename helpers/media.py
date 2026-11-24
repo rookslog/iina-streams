@@ -73,7 +73,7 @@ def _twitch_vod_path(path):
 # _youtube or resolve; add a field here when they start reading it. `error` is read by resolve. The flags
 # (`entries`, `playlist_id`) are tested for presence only.
 YOUTUBE_VIDEO_FIELDS = ("id", "_type", "title", "extractor_key", "live_status", "is_live", "duration",
-                        "availability", "has_drm", "_has_drm", "http_headers", "error")
+                        "availability", "has_drm", "_has_drm", "http_headers", "error", "channel_id", "channel")
 YOUTUBE_FLAG_FIELDS = ("entries", "playlist_id")
 YOUTUBE_FORMAT_FIELDS = ("format_id", "url", "protocol", "vcodec", "acodec", "audio_ext", "height", "fps", "abr",
                          "language_preference", "quality", "source_preference", "asr", "has_drm", "http_headers")
@@ -352,6 +352,13 @@ def _title(value, fallback):
     return value[:240] or fallback
 
 
+def _channel_text(value):
+    if not isinstance(value, str):
+        return None
+    value = re.sub(r"[\x00-\x1f\x7f]", " ", value).strip()
+    return value[:240] or None
+
+
 def _choose(options, quality):
     if not options:
         raise MediaError("NO_PLAYABLE_FORMAT")
@@ -448,6 +455,14 @@ def _youtube(source, metadata, quality):
               "live": live, "duration": duration if not live and duration is not None and duration >= 0 else None,
               "quality": selected["id"], "formats": _public_formats(options),
               "mediaURL": _media_url(raw.get("url"), "YouTube")}
+    channel_id = _channel_text(metadata.get("channel_id"))
+    channel_name = _channel_text(metadata.get("channel"))
+    if channel_id is not None or channel_name is not None:
+        result["channel"] = {
+            "provider": "youtube",
+            "login": channel_id or "",
+            "displayName": channel_name or channel_id or "",
+        }
     audio_headers = None
     if not selected["has_audio"]:
         if not audio:

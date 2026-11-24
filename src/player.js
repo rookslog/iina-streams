@@ -415,7 +415,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // On_load hooks of this activation: a newer one supersedes an older one still resolving.
    loads:0,
    // The Playback generation of the file loading, and of the latest unstaged load (not a replacement).
-   activeGeneration:0,freshGeneration:0,staged:null,loadError:'',initialResolved:false,
+   activeGeneration:null,freshGeneration:null,staged:null,loadError:'',initialResolved:false,
    chatGeneration:0,autoReplayAttempted:false,
    // Whether this activation's first turn has run (startAuth), and a sign-in request made before it.
    authStarted:false,pendingAuth:null,
@@ -447,7 +447,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // authoritative even after the transaction ended, because the timeout may have closed it first.
    goLiveBusy:false,replacement:null,goLiveGeneration:null,
    // D1c: the deferred menu.forceUpdate after the player's menu items were replaced (syncMenu).
-   menuUpdate:null
+   menuUpdate:null,
+   // Watch history (#73): resolved channel identity, whether playback started, and the open visit key.
+   historyChannel:null,historyChannelExplicit:false,historyStarted:false,historyVisit:null
   });
   // The clock's timers and log are the activation's: after a loss it neither polls nor samples. A response in
   // flight at the loss only reaches this clock's own estimator; release stops the clock, which then ignores it.
@@ -1925,6 +1927,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // options.final: publish the final inactive snapshot (L5). options.retire: see chatOff.
  function releaseActivation(ended,options){
   if(ended.disposed)return;
+  endHistoryVisit(ended);
   chatOff({retire:!!options.retire});
   // D1: the loss leaves beside once, here on the main-thread turn; chatOff has already hidden the overlay.
   if(besideActive)leaveBeside();
@@ -1982,6 +1985,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     // Review r4 #3 and L2: the activation ends before the hook continues, in pure JS, and never returns.
     // Review r2 #6: its release runs on a later main-thread turn, never on mpv's hook queue.
     const ended=authority.end();
+    endHistoryVisit(ended);
     load.release();
     if(ended)authority.windowTurn(()=>releaseActivation(ended,{final:true}));
     return;
@@ -2028,6 +2032,7 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
     mediaURL:source.url
    };
   }else{
+   act.activeGeneration=null;
    phase('resolve-start',{quality:'auto720'});
    result=await act.wait(resolveFor(act,'auto720'));
    if(!act.continues())return;
@@ -2048,6 +2053,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
   }
   act.activeGeneration=context.generation;
+  if(result.channel!==undefined&&result.channel!==null){
+   act.historyChannelExplicit=true;
+   act.historyChannel=cleanHistoryIdentity(result.channel);
+  }else{
+   act.historyChannelExplicit=false;
+   act.historyChannel=null;
+  }
   applyResolution(result,context);
   if(!act.initialResolved){
    act.player.adopt(result);
@@ -2095,6 +2107,14 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(controlsDesired&&initial)showSidebar();
   if(overlayNeeded())ensureOverlay();
   if(initial)maybeAutoFetchReplay();
+  if(!act.historyStarted){
+   const channel=historyIdentity();
+   if(channel){
+    act.historyStarted=true;
+    act.historyVisit={provider:channel.provider,login:channel.login};
+    app.postMessage('history-start',channel);
+   }
+  }
   if(act.liveClockURL)startLiveClock();
   tick(true);
   trace('file-loaded',{
@@ -2149,6 +2169,39 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(closed)return;
   teardown({notifyGlobal:true});
   windowClosed();
+ }
+
+ const TWITCH_HISTORY_LOGIN=/^[a-z0-9_]{1,25}$/;
+ const YOUTUBE_HISTORY_CHANNEL=/^UC[A-Za-z0-9_-]{22}$/;
+ const UNSAFE_HISTORY_NAME=/[:/?=&#\\]|\p{Cc}|[^\S ]| {2,}/u;
+
+ // Validate and project to {provider, login, displayName} before posting across the bridge.
+ function cleanHistoryIdentity(channel){
+  if(!channel||typeof channel!=='object')return null;
+  const provider=channel.provider,login=channel.login;
+  if(provider==='twitch'){
+   if(typeof login!=='string'||!TWITCH_HISTORY_LOGIN.test(login))return null;
+  }else if(provider==='youtube'){
+   if(typeof login!=='string'||!YOUTUBE_HISTORY_CHANNEL.test(login))return null;
+  }else{
+   return null;
+  }
+  const rawName=typeof channel.displayName==='string'?channel.displayName.trim():'';
+  const safeName=rawName&&rawName.length<=64&&!UNSAFE_HISTORY_NAME.test(rawName);
+  return{provider,login,displayName:safeName?rawName:login};
+ }
+
+ function historyIdentity(){
+  if(act.historyChannelExplicit)return act.historyChannel;
+  if(source.kind==='twitch-live')return cleanHistoryIdentity({provider:'twitch',login:source.id,displayName:source.id});
+  return null;
+ }
+
+ function endHistoryVisit(activation){
+  const visit=activation&&activation.historyVisit;
+  if(!visit)return;
+  activation.historyVisit=null;
+  app.postMessage('history-end',visit);
  }
 
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is

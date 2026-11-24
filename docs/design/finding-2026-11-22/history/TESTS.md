@@ -63,13 +63,14 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 15. **Menu controls,** in the Streams plugin menu, with no dialogs and no extra text ([memory `minimize-ui-text`]):
     - "Pause Watch History" is a checkmark item that toggles `paused`;
     - "Clear Watch History" clears everything;
-    - "Forget This Channel" is enabled only in a window playing a recorded person.
+    - ~~"Forget This Channel" is enabled only in a window playing a recorded person.~~ *Superseded by item 26 (2026-11-24): no per-channel Forget in 0.5.6; it moves to #76.*
 16. **No network.** History never causes an HTTP request.
 
 ## Native IINA proof (lead, after the build)
 - Open Ohnepixel twice for over 30 s and another channel once. `@data/history.json` holds both, with Ohnepixel scored higher.
 - Pause, then open: no change.
 - Clear: an empty list.
+- The Plugin menu shows Streams' items as before, plus one "Watch History" submenu holding Pause and Clear only; Go Live and Chat stay at the top level (item 17, untested natively).
 - Grep the file for `token`, `sig` and `http`: nothing.
 
 ## Round 2: the wiring after Codex's review (lead, 2026-11-24)
@@ -79,14 +80,14 @@ Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`. Classes H (a host r
 17. **Menu placement (H).**
     - History's three commands live in one Streams submenu, "Watch History":
       - "Pause Watch History", a checkmark item;
-      - "Forget This Channel";
+      - ~~"Forget This Channel";~~ (removed by item 26)
       - "Clear Watch History".
     - The top-level Streams items are as before history, plus that one submenu. Go Live and the Chat items stay at the top level.
     - IINA shows only the first five plugin items at the top level and puts the rest under More… (`MenuController.swift`, the plugin menu rebuild). The shim models that limit.
 18. **No writes to mounted items (H).**
     - IINA's `JavascriptPluginMenuItem` holds an `unowned` NSMenuItem, and its `selected`, `enabled` and `title` setters write through it (`JavascriptPluginMenuItem.swift`). Model that in the shim: after `menu.removeAllItems()`, writing any of those on an old item throws "IINA 1.5.1 would trap".
-    - Toggling pause, binding Forget and clearing all rebuild the definitions: remove all, add, then `forceUpdate()` on the main thread, coalesced. No test may pass by writing to a mounted item.
-19. **Forget targets the window that was active when the menu opened (H, L).** *Amended 2026-11-24 after the advisor's check: `history-focus` is removed altogether, since nothing consumes it once Forget binds at menu-open. The bind is plain state in global; the menu is not rebuilt on bind, because the bind arrives after IINA has built the open menu. Forget This Channel is always enabled. Rebuilds happen only for pause and clear, after a click.*
+    - Toggling pause and clearing rebuild the definitions (binding Forget went with item 26): remove all, add, then `forceUpdate()` on the main thread, coalesced. No test may pass by writing to a mounted item.
+19. *Withdrawn by item 26 (2026-11-24): per-channel Forget left 0.5.6. Codex's round-2 check also showed this item's timing reason was wrong: `menu-update` is emitted before the rebuild, and listeners run synchronously.* **Forget targets the window that was active when the menu opened (H, L).** *Amended 2026-11-24 after the advisor's check: `history-focus` is removed altogether, since nothing consumes it once Forget binds at menu-open. The bind is plain state in global; the menu is not rebuilt on bind, because the bind arrives after IINA has built the open menu. Forget This Channel is always enabled. Rebuilds happen only for pause and clear, after a click.*
     - IINA emits `iina.menu-update` only to `PlayerCore.active` when the Plugin menu opens (`MenuController.swift:847`), and the global API has no active-player accessor (`JavascriptAPIGlobal.swift`).
     - On `iina.menu-update`, the player posts `history-menu {visit}`, identifying its own open visit or none. Global binds Forget to that visit.
     - **Forget acts:**
@@ -120,4 +121,7 @@ Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`, round 2. Known clas
     - submit, edit, then cancel: 0 opens;
     - submit A, submit B, then cancel: 0 opens;
     - a sidebar open pending, the form opened and cancelled: 1 open;
-    - a cancelled instance, then a later instance's submission: the cancelled answer opens nothing, the later one opens.
+    - a cancelled instance, then a later instance's submission: the cancelled answer opens nothing, the later one opens;
+    - submit, then the window's close button (no message reaches the plugin): 0 opens, and the window isn't reopened;
+    - submit A, then a broadcast link that opens at once and closes the form, then A answers live: no second player.
+    The predicate (class C, reworded): a form-started answer acts only while its own form instance is still showing.

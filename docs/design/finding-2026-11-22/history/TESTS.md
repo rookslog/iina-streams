@@ -71,3 +71,42 @@ These are behaviours, not code. Where a number is a choice, the choice is record
 - Pause, then open: no change.
 - Clear: an empty list.
 - Grep the file for `token`, `sig` and `http`: nothing.
+
+## Round 2: the wiring after Codex's review (lead, 2026-11-24)
+
+Record: `docs/reviews/2026-11-24-issue-73-wiring-review.md`. Classes H (a host rule mirrored by guesswork) and L (authority across async boundaries) recur, so each test below is a class rule, not a replay of the reviewer's probe. **For every H test, the shim's behaviour is taken from IINA 1.5.1's source, cited in the test.**
+
+17. **Menu placement (H).**
+    - History's three commands live in one Streams submenu, "Watch History":
+      - "Pause Watch History", a checkmark item;
+      - "Forget This Channel";
+      - "Clear Watch History".
+    - The top-level Streams items are as before history, plus that one submenu. Go Live and the Chat items stay at the top level.
+    - IINA shows only the first five plugin items at the top level and puts the rest under More… (`MenuController.swift`, the plugin menu rebuild). The shim models that limit.
+18. **No writes to mounted items (H).**
+    - IINA's `JavascriptPluginMenuItem` holds an `unowned` NSMenuItem, and its `selected`, `enabled` and `title` setters write through it (`JavascriptPluginMenuItem.swift`). Model that in the shim: after `menu.removeAllItems()`, writing any of those on an old item throws "IINA 1.5.1 would trap".
+    - Toggling pause, binding Forget and clearing all rebuild the definitions: remove all, add, then `forceUpdate()` on the main thread, coalesced. No test may pass by writing to a mounted item.
+19. **Forget targets the window that was active when the menu opened (H, L).**
+    - IINA emits `iina.menu-update` only to `PlayerCore.active` when the Plugin menu opens (`MenuController.swift:847`), and the global API has no active-player accessor (`JavascriptAPIGlobal.swift`).
+    - On `iina.menu-update`, the player posts `history-menu {visit}`, identifying its own open visit or none. Global binds Forget to that visit.
+    - **Forget acts:**
+      - on a bound visit that is still open: it forgets that person;
+      - with no bound visit, or a visit that has ended or been replaced: it does nothing, with no dialog.
+    - **Test:** bind A, then send B's `history-menu`, then invoke the action built for A. A is not forgotten wrongly, and B is not forgotten at all. The old "no focus event means focused" fallback is removed.
+20. **Offline interest respects cancellation (L).** Hold the archive reply, cancel the window, then release the reply. No visit is recorded, and the window stays closed. An edit or an independent new submission isn't a cancellation, so the newer run's reply still records.
+21. **The live precheck respects explicit cancellation (L).** Hold the status reply, cancel, then release a "live" answer. No player opens, and nothing is recorded.
+22. **Only Streams' own loads count (H).**
+    - Resolve fails, so IINA's hook releases the original URL. Then an unmarked `iina.file-loaded` for that URL arrives (IINA's yt-dlp fallback succeeded). No `history-start` is sent.
+    - A visit starts only for a load this activation resolved and handed off. Generation 0 is not a match.
+23. **Identity is validated before it's posted (privacy).**
+    - The player posts exactly `{provider, login, displayName}`.
+    - `login`:
+      - Twitch: `^[a-z0-9_]{1,25}$`;
+      - YouTube: `^UC[A-Za-z0-9_-]{22}$`;
+      - otherwise, no post.
+    - `displayName`: at most 64 characters, and containing none of `/ ? = & #`, `://` or whitespace other than single spaces. Otherwise it is replaced by `login`.
+    - **Test:** a display name holding an absolute URL with a query reaches neither the message nor disk.
+24. **One end per visit, on every loss path (L).**
+    - Retire, a managed foreign load and window close each send exactly one `history-end` for that visit, keyed by the visit, not the window.
+    - The resolver returns the channel identity in its result. An `onChannel` callback after signal loss can't affect a later same-source load, because the URL-keyed slot is gone.
+25. **A Twitch VOD that falls back to Streamlink without owner metadata** records no visit and makes no extra request. This is the documented omission.

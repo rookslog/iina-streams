@@ -10,7 +10,7 @@ Streams runs entirely on your Mac. It has no servers of its own, no analytics, a
 | Your own Twitch Client ID, only if you entered one | IINA plugin data, `twitch-client.json` | Uses your own Twitch app instead of the built-in one |
 | Display settings: layout, text size, timestamps, overlay position | IINA plugin data, `settings.json` | Remembers how you like chat shown |
 | Your watch history: whom you opened (a Twitch login or YouTube channel, with its display name) and when and for how long; no addresses, titles, tokens or messages | IINA plugin data, `history.json` | Suggesting people in Open Stream, which a later version adds. Plugin menu › Streams › Watch History: **Pause Watch History** stops recording, and **Clear Watch History** deletes it all. Nothing leaves your Mac. |
-| Recent session steps: state flags and timestamps, no addresses or messages | IINA plugin data, `last-session.json` | Diagnosing problems |
+| Recent session steps: state flags and timestamps, no addresses or messages, kept for each of the last 8 player windows | IINA plugin data, `last-session.json` | Diagnosing problems |
 | Beta and Dev builds only: recent sign-in steps, such as request paths and status codes, with no tokens | IINA plugin data, `beta-global.json` | Diagnosing sign-in problems |
 | Chat replay downloads | IINA plugin data, temporary files | Replay chat for VODs and finished livestreams; removed when no longer needed |
 

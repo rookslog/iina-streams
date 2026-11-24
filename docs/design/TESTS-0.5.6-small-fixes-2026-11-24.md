@@ -48,3 +48,11 @@ Choose whichever needs no new IINA API. Record the choice in the test's header c
 ## Not in this batch
 - **#64** (a promise continuation crossing the loss boundary): it needs the class-L explorer to count mpv reads and timer registrations. That's a design change to the explorer, so it gets its own test design.
 - **#63** (a saved personal Client ID overriding the built-in app): it needs a visible action ("Use the built-in app") and an error split. A small UI decision, done with the sidebar work.
+
+## Build record (lead, 2026-11-24)
+- **#66:** test only, green on today's code.
+- **#59 and #65:** built by Codex while Hydrogen was out of quota (logic only). The lead reviewed the diff. Removing the reopen's adopt, keying by one constant, or dropping the 8-window bound each fails tests.
+- **Merged into `next`** at the merge commit "Merge feat/056-small-fixes into next" (provisional). 940 JS tests and 168 Python tests pass there.
+- **Nit, not fixed:** global doesn't check the type of `instanceStartedAt` or the contents of each step. The player builds both, and the lifetime probe checks they carry no address or credential.
+- **Untested natively:** both fixes. #59's native proof: switch a VOD to 360p, reopen it from Open Stream, and see 720p in the sidebar. #65's: two Streams windows, then read `last-session.json`.
+- **Owed before release:** a review by a provider other than Codex.

@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentArchives,channelStatus}=require('./src/twitch-vods.js');
+const {recentBroadcasts,channelStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {createHistory}=require('./src/history.js');
@@ -367,8 +367,7 @@ async function showOfflineVods(login){
  const form=formInstance;
  postOpenPage('prefill',{input:login});
  postOfflineVods({state:'loading'},1);
- // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
- const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+ const result=await recentBroadcasts({login},{http,credentials,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
  onMainThread(()=>{
   showArchives(run,result,login,form);

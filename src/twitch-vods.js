@@ -2,7 +2,7 @@
 
 // Recent broadcasts of a Twitch channel (B6b, D-030), from Twitch's public GQL, signed out.
 //
-//   recentArchives({login}, {http, log, limit = 10})
+//   recentArchives({login}, {http, log, limit = 10, setTimeout, clearTimeout})
 //     -> {ok: true, vods: [{id, title, createdAt, lengthSeconds, url}]} | {ok: false, code}
 //
 // `code` is NOT_FOUND (no such user), NETWORK (transport failure, non-2xx or timeout) or MALFORMED.
@@ -15,6 +15,7 @@ const WEB_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Public web client id,
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 const REQUEST_TIMEOUT_MS = 5000;
+const STATUS_TIMEOUT_MS = 1500;
 const MAX_TITLE_LENGTH = 240;
 const LOGIN_PATTERN = /^[A-Za-z0-9_]{1,25}$/;
 const VOD_ID_PATTERN = /^\d{1,20}$/;
@@ -53,16 +54,46 @@ function requestHeaders() {
   return {'Client-ID': WEB_CLIENT_ID, 'Content-Type': 'application/json'};
 }
 
-async function postWithTimeout(http, options) {
-  let timer;
-  const expired = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('timeout')), REQUEST_TIMEOUT_MS);
+// H-main (#67): races start() against a deadline with every timer call on IINA's main thread. iina.http settles
+// off the main thread (JavascriptAPIHttp.swift request, IINA v1.5.1), and IINA's timer registry is a plain
+// dictionary that clearTimeout changes on the calling thread (JavascriptPolyfill.swift removeTimer). A timer
+// callback runs on the main thread (createTimer schedules the Timer through DispatchQueue.main.async). So the
+// reply's continuation only arms a 0 ms handoff timer (creating one is safe from any thread: createTimer itself
+// hops to main), and the handoff, on the main thread, clears the deadline and settles. The deadline settles with
+// `onTimeout` from its own callback. Resolves to {value} or {error}; it settles exactly once and never rejects.
+function raceOnMain(start, ms, onTimeout, timers) {
+  const setTimer = timers && timers.setTimeout || setTimeout;
+  const clearTimer = timers && timers.clearTimeout || clearTimeout;
+  return new Promise(resolve => {
+    let settled = false;
+    const settle = outcome => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(outcome);
+    };
+    const deadline = setTimer(() => settle(onTimeout), ms);
+    const handOff = outcome => {
+      setTimer(() => {
+        if (settled) {
+          return;
+        }
+        clearTimer(deadline);
+        settle(outcome);
+      }, 0);
+    };
+    Promise.resolve().then(start).then(value => handOff({value}), error => handOff({error}));
   });
-  try {
-    return await Promise.race([Promise.resolve().then(() => http.post(GQL_URL, options)), expired]);
-  } finally {
-    clearTimeout(timer);
+}
+
+async function postWithTimeout(http, options, timers) {
+  const outcome = await raceOnMain(() => http.post(GQL_URL, options), REQUEST_TIMEOUT_MS,
+    {error: new Error('timeout')}, timers);
+  if (outcome.error) {
+    throw outcome.error;
   }
+  return outcome.value;
 }
 
 function bodyOf(response) {
@@ -122,6 +153,7 @@ function isSuccess(response) {
 
 async function recentArchives(request, deps) {
   const {http, log, limit = DEFAULT_LIMIT} = deps || {};
+  const timers = {setTimeout: deps && deps.setTimeout, clearTimeout: deps && deps.clearTimeout};
   const login = request && request.login;
   if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) {
     return failure('NOT_FOUND');
@@ -132,7 +164,7 @@ async function recentArchives(request, deps) {
   };
   let result;
   try {
-    const response = await postWithTimeout(http, options);
+    const response = await postWithTimeout(http, options, timers);
     result = isSuccess(response) ? readArchives(response) : failure('NETWORK');
   } catch (_) {
     // A rejection is the response object (non-2xx) or a transport Error; neither is read or logged.
@@ -144,4 +176,52 @@ async function recentArchives(request, deps) {
   return result;
 }
 
-module.exports = {recentArchives};
+// ---- live status (#67) ----
+
+// Whether a channel is live, asked by global before it creates a player for the channel.
+//
+//   channelStatus({login}, {http, setTimeout, clearTimeout}) -> 'live' | 'offline' | 'unknown'
+//
+// One anonymous GQL query, user(login){stream{id}}, with the public web client id and no viewer credential, like
+// archivesQuery. Helix Get Streams cannot decide this: it omits discovery-restricted live streams (Twitch API
+// reference, Get Streams), so D-034 allows GQL here. 'offline' only when the answer positively says so: user.stream
+// is null and the reply carries no `errors` (a GraphQL field error also nulls the field). 'unknown' covers no such
+// channel, any error, an odd reply and no answer within STATUS_TIMEOUT_MS, so the caller creates the player as
+// before. It never rejects, and nothing is logged. A request still in flight at the deadline is not cancelled
+// (iina.http has no abort); its late answer is ignored.
+async function channelStatus(request, deps) {
+  const {http} = deps || {};
+  const timers = {setTimeout: deps && deps.setTimeout, clearTimeout: deps && deps.clearTimeout};
+  const login = request && request.login;
+  if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) {
+    return 'unknown';
+  }
+  const outcome = await raceOnMain(() => gqlStatus(http, login), STATUS_TIMEOUT_MS, {value: 'unknown'}, timers);
+  return outcome.error ? 'unknown' : outcome.value;
+}
+
+// The login is validated against LOGIN_PATTERN before this, so JSON.stringify quoting is safe.
+function streamQuery(login) {
+  return `query{user(login:${JSON.stringify(login)}){stream{id}}}`;
+}
+
+async function gqlStatus(http, login) {
+  const response = await http.post(GQL_URL, {headers: requestHeaders(), data: {query: streamQuery(login)}});
+  if (!isSuccess(response)) {
+    return 'unknown';
+  }
+  const body = bodyOf(response);
+  if (!body || Object.hasOwn(body, 'errors')) {
+    return 'unknown';
+  }
+  const user = body.data && body.data.user;
+  if (!user || typeof user !== 'object' || !Object.hasOwn(user, 'stream')) {
+    return 'unknown';
+  }
+  if (user.stream === null) {
+    return 'offline';
+  }
+  return user.stream && typeof user.stream.id === 'string' ? 'live' : 'unknown';
+}
+
+module.exports = {recentArchives, channelStatus};

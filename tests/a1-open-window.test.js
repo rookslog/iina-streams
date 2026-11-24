@@ -9,6 +9,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const Sources = require('../src/source.js');
 const {createIina, createWebViewIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const ui = path.join(__dirname, '../ui');
 const config = {identifier: 'local.iina.streams.open-window-test', variant: 'unified'};
@@ -73,6 +74,8 @@ function openPage() {
 
 function loadGlobal() {
   const shim = createIina({role: 'global', identifier: config.identifier, rejectModalDialogs: true});
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   const modules = new Map([
     ['./config.js', config],
     ['./src/source.js', Sources],
@@ -142,6 +145,7 @@ test('A1 window wiring: Escape closes, reopening reloads, and a second shortcut 
   assert.equal(shim.standaloneWindow.loads.length, 2, 'a closed window reopens with a fresh page');
   // loadFile clears listeners in IINA 1.5.1, so the submit handler must be registered again after it.
   shim.standaloneWindow.send('open-stream', {input: 'xqc'});
+  await settleOpens();
   assert.equal(shim.global.opens.length, 1);
   assert.equal(shim.global.opens[0].url, 'https://www.twitch.tv/xqc');
   assert.equal(shim.standaloneWindow.visible, false);

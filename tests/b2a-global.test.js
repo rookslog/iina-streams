@@ -5,6 +5,7 @@ const {createRequire} = require('node:module');
 const {join} = require('node:path');
 const {format} = require('node:util');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 
 const SCRIPT = join(__dirname, '../global.js');
 const requireFromGlobal = createRequire(SCRIPT);
@@ -16,7 +17,7 @@ const CORRUPT_LOGIN = '{"access_token":"' + TOKEN_PREFIX.repeat(3);
 const CLIENT_FILE_MARKER = 'fake-unreadable-client-file';
 const CORRUPT_CLIENT = '{"clientID":"' + CLIENT_FILE_MARKER;
 
-function setup() {
+async function setup() {
   const config = {identifier: 'local.iina.streams.dev', variant: 'unified', qa: true};
   const shim = createIina({role: 'global', identifier: config.identifier});
   shim.keychain.seed('twitch-readonly', 'oauth', CORRUPT_LOGIN);
@@ -24,6 +25,8 @@ function setup() {
   shim.http.setResponse({statusCode: 200, data: {
     device_code: 'fake-device-code', user_code: 'ABCD', verification_uri: 'https://www.twitch.tv/activate'
   }});
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  routeLiveCheck(shim);
   shim.runScript(SCRIPT, {
     require(name) {
       if (name === './config.js') return config;
@@ -33,6 +36,7 @@ function setup() {
   });
   shim.menu.items[0].action();
   shim.standaloneWindow.send('open-stream', {input: 'example'});
+  await settleOpens();
   assert.equal(shim.global.opens.length, 1);
   return {shim, label: '1-' + config.identifier};
 }
@@ -42,8 +46,8 @@ function diagnosticCodes(shim) {
   return entries.filter(entry => entry.step === 'auth-diagnostic').map(entry => entry.code);
 }
 
-test('B2a global probe reports an unreadable saved login and still replies saved=false', () => {
-  const {shim, label} = setup();
+test('B2a global probe reports an unreadable saved login and still replies saved=false', async () => {
+  const {shim, label} = await setup();
   shim.global.send('auth-probe', {}, label);
   shim.timers.flush();
 
@@ -55,7 +59,7 @@ test('B2a global probe reports an unreadable saved login and still replies saved
 });
 
 test('B2a global connect records all parse failures and still signs in with the built-in client', async () => {
-  const {shim, label} = setup();
+  const {shim, label} = await setup();
   await shim.global.send('auth-connect', {}, label);
   shim.timers.flush();
 
@@ -74,7 +78,7 @@ test('B2a global connect records all parse failures and still signs in with the 
 });
 
 test('B2a global probe and connect do not copy fake credential or client-file text to logs', async () => {
-  const {shim, label} = setup();
+  const {shim, label} = await setup();
   shim.global.send('auth-probe', {}, label);
   await shim.global.send('auth-connect', {}, label);
   shim.timers.flush();

@@ -2041,8 +2041,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   // Only the newest load of the activation sets the generation an unstaged load confirms.
   if(!staged)context=freshContext(path);
   if(!result||!result.ok){
-   // B6c (#32): IINA closes this window once the load fails, so global lists the channel's recent
-   // broadcasts in the Open Stream window instead.
+   // B6c (#32): global lists the channel's recent broadcasts in the Open Stream window. Global checks a channel
+   // before creating its player (#67, global.js openWhenLive), so this is the residual race: the channel went
+   // offline between that check and this load, and the load falls through as before.
    if(isOfflineResult(result))app.postMessage('source-offline',{login:source.id});
    throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
   }

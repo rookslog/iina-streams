@@ -1,7 +1,7 @@
 'use strict';
 
-// B6c contract (#32): the sidebar no longer lists an offline channel's broadcasts; IINA closes a player
-// window whose load failed, so that list moved to the Open Stream window. The sidebar keeps the plain
+// B6c contract (#32): the sidebar no longer lists an offline channel's broadcasts; that list lives in the
+// Open Stream window (global checks a channel before creating its player, #67). The sidebar keeps the plain
 // playback error line. Check the real sidebar markup and script in a DOM double.
 
 const test = require('node:test');

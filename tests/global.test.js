@@ -5,6 +5,7 @@ const path = require('node:path');
 const Sources = require('../src/source.js');
 const {TwitchAuth, SIGNED_OUT} = require('../src/auth.js');
 const {createIina} = require('./support/iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./support/live-check.js');
 const scriptPath = path.join(__dirname, '../global.js');
 const plain = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 
@@ -23,6 +24,8 @@ function harness(overrides = {}) {
     wires.push({target, name, data: plain(data)});
     messages.push({target, name, data: typeof data === 'string' ? JSON.parse(data) : plain(data)});
   };
+  // #67: a channel open first checks the channel; the check is answered live outside shim.http.
+  const liveChecks = routeLiveCheck(shim);
   shim.runScript(scriptPath, {
     require(moduleName) {
       if (moduleName === './config.js') return config;
@@ -38,13 +41,14 @@ function harness(overrides = {}) {
   });
   return {
     shim, config, handlers: shim.global.listeners, items: shim.menu.items, opens: shim.global.opens, messages, wires,
-    httpCalls: shim.http.calls, timers: shim.timers.all, files: shim.file.files, get fileReads() { return shim.file.reads; }, get fileWrites() { return shim.file.writes; }, // live: the shim builds these on access
+    httpCalls: shim.http.calls, get timers() { return shim.timers.all.filter(timer => !liveChecks.isCheckTimer(timer)); }, files: shim.file.files, get fileReads() { return shim.file.reads; }, get fileWrites() { return shim.file.writes; }, // live: the shim builds these on access
     keychainReads: shim.keychain.reads, keychainWrites: shim.keychain.writes, prompts: shim.utils.prompts, alerts: shim.utils.asks,
     auth, authOptions,
     // #50: Open Stream shows a standalone window, and its page submits the input as 'open-stream'.
-    open(value) {
+    async open(value) {
       shim.menu.items[0].action();
       shim.standaloneWindow.send('open-stream', {input: value});
+      await settleOpens();
       return shim.global.opens.at(-1);
     },
     openWindow: shim.standaloneWindow,
@@ -81,14 +85,14 @@ test('global auth timers release fired native entries and stop cancels pending w
   assert.equal(invoked, 1);
 });
 
-test('the global Open Stream menu creates canonical managed players with only this plugin enabled', () => {
+test('the global Open Stream menu creates canonical managed players with only this plugin enabled', async () => {
   const cases = [
     ['HuTcHmF', 'https://www.twitch.tv/hutchmf', 'twitch-live', 0],
     ['https://twitch.tv/videos/123456?t=1h2m3s', 'https://www.twitch.tv/videos/123456', 'twitch-vod', 3723],
     ['https://youtu.be/AbC_123-xYz?t=95&tracking=discard', 'https://www.youtube.com/watch?v=AbC_123-xYz', 'youtube', 95]
   ];
   for (const [input, url, kind, startSeconds] of cases) {
-    const r = harness({variant: 'unified'}), opened = r.open(input);
+    const r = harness({variant: 'unified'}), opened = await r.open(input);
     assert.equal(opened.url, url); assert.equal(opened.enablePlugins, false);
     const identity = Sources.fromLabel(opened.label);
     assert.equal(identity.variant, 'unified'); assert.equal(identity.source.kind, kind); assert.equal(identity.source.startSeconds, startSeconds);
@@ -97,8 +101,8 @@ test('the global Open Stream menu creates canonical managed players with only th
 });
 
 // #50 changed this: invalid input is marked in the Open Stream window (open-error), not shown in a modal alert.
-test('cancelled or invalid Open Stream input never creates a managed player', () => {
-  const r = harness(); r.open(null); r.open('https://twitch.tv.evil.example/channel');
+test('cancelled or invalid Open Stream input never creates a managed player', async () => {
+  const r = harness(); await r.open(null); await r.open('https://twitch.tv.evil.example/channel');
   assert.equal(r.opens.length, 0);
   assert.equal(r.prompts.length, 0);
   assert.equal(r.alerts.length, 0);
@@ -107,7 +111,7 @@ test('cancelled or invalid Open Stream input never creates a managed player', ()
 });
 
 test('native internal string labels route authorization only to numeric opted-in children', async () => {
-  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  const r = harness(); await r.open('firstchannel'); await r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(2));
   assert.equal(r.messages.length, 0, 'native delivery must not occur while the child call is on the stack');
   r.flushMessages();
@@ -126,7 +130,7 @@ test('native internal string labels route authorization only to numeric opted-in
 });
 
 test('unrelated, malformed, non-string and uncreated labels are rejected before touching credentials', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   for (const label of [null, undefined, 1, {}, '1-other-plugin', '01-' + r.config.identifier, r.label(2), r.label() + '-extra', '0-' + r.config.identifier]) {
     await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, label);
     r.handlers.get('auth-disconnect')({}, label);
@@ -142,7 +146,7 @@ test('unrelated, malformed, non-string and uncreated labels are rejected before 
 });
 
 test('disconnect and close affect the addressed player without stopping another opted-in child', async () => {
-  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  const r = harness(); await r.open('firstchannel'); await r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(1));
   await r.handlers.get('auth-connect')({}, r.label(2));
   r.flushMessages();
@@ -189,7 +193,7 @@ test('IINA HTTP rejection preserves Twitch authorization_pending and the global 
   assert.deepEqual(plain(await r.authOptions.request('/token', 'POST', {}, {})),
     {status: 403, data: {message: 'access_denied'}});
 
-  r.open('example');
+  await r.open('example');
   r.setResponse({statusCode: 200, data: {device_code: 'pending-device', user_code: 'ABCD-EFGH', verification_uri: 'https://www.twitch.tv/activate', expires_in: 1800, interval: 5}});
   await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
   assert.equal(r.auth.snapshot().phase, 'waiting');
@@ -203,7 +207,7 @@ test('IINA HTTP rejection preserves Twitch authorization_pending and the global 
 });
 
 test('real authorization orchestration requests only chat:read in a POST form after explicit opt-in', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   r.setResponse({statusCode: 200, data: {device_code: 'offline-device-code', user_code: 'ABCD-EFGH', verification_uri: 'https://www.twitch.tv/activate', expires_in: 1800, interval: 5}});
   await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
   assert.equal(r.httpCalls.length, 1);
@@ -216,13 +220,13 @@ test('real authorization orchestration requests only chat:read in a POST form af
 });
 
 test('a failed native player creation never authorizes a fabricated numeric target', async () => {
-  const r = harness(); r.setNativeResult(false); r.open('example');
+  const r = harness(); r.setNativeResult(false); await r.open('example');
   await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
   assert.equal(r.messages.length, 0); assert.equal(r.httpCalls.length, 0); assert.equal(r.keychainReads.length, 0);
 });
 
 test('an unrelated sender cannot forget the candidate shared authorization', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   await r.handlers.get('auth-forget')({}, '1-unrelated-plugin');
   assert.equal(r.keychainWrites.length, 0); assert.equal(r.httpCalls.length, 0);
   await r.handlers.get('auth-forget')({}, r.label());
@@ -230,7 +234,7 @@ test('an unrelated sender cannot forget the candidate shared authorization', asy
 });
 
 test('deferred credentials are discarded if the child opts out or closes before delivery', async () => {
-  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  const r = harness(); await r.open('firstchannel'); await r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(1));
   await r.handlers.get('auth-connect')({}, r.label(2));
   r.flushMessages(); r.messages.length = 0;
@@ -244,7 +248,7 @@ test('deferred credentials are discarded if the child opts out or closes before 
 });
 
 test('a queued old token is never delivered after the broker replaces credentials', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
   r.authOptions.onReady({token: 'offline-obsolete-token', login: 'reader'});
   r.authOptions.onReady({token: 'offline-current-token', login: 'reader'});
@@ -253,7 +257,7 @@ test('a queued old token is never delivered after the broker replaces credential
 });
 
 test('stop and forgotten reach managed children after Forget clears the opted-in audience', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
   await r.handlers.get('auth-forget')({}, r.label());
   assert.equal(r.messages.length, 0); r.flushMessages();
@@ -266,7 +270,7 @@ test('stop and forgotten reach managed children after Forget clears the opted-in
 });
 
 test('oversized or unserializable auth payloads never enter native delivery', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
   const cycle = {phase: 'error'}; cycle.self = cycle;
   assert.doesNotThrow(() => r.authOptions.onState(cycle));
@@ -275,7 +279,7 @@ test('oversized or unserializable auth payloads never enter native delivery', as
 });
 
 test('a queued Forget result and stop cannot interrupt a newer authorization generation', async () => {
-  const r = harness(); r.open('example');
+  const r = harness(); await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label()); r.flushMessages(); r.messages.length = 0;
   await r.handlers.get('auth-forget')({}, r.label());
   await r.handlers.get('auth-connect')({}, r.label());
@@ -286,7 +290,7 @@ test('a queued Forget result and stop cannot interrupt a newer authorization gen
 });
 
 test('A reconnecting after shared Forget still stops B without stopping A newer session', async () => {
-  const r = harness(); r.open('firstchannel'); r.open('secondchannel');
+  const r = harness(); await r.open('firstchannel'); await r.open('secondchannel');
   await r.handlers.get('auth-connect')({}, r.label(1));
   await r.handlers.get('auth-connect')({}, r.label(2));
   r.flushMessages(); r.messages.length = 0;
@@ -304,7 +308,7 @@ const BUILT_IN = 'b'.repeat(30), OWN = 'c'.repeat(30);
 const clientFileWrites = r => r.fileWrites.filter(w => String(w.path || w.file || w[0] || '').includes('twitch-client.json'));
 
 test('with no ID entered, saved or in the saved login, Sign in uses the built-in app and saves nothing', async () => {
-  const r = harness({builtInClientID: BUILT_IN}); r.open('example');
+  const r = harness({builtInClientID: BUILT_IN}); await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label());
   assert.equal(r.auth.client, BUILT_IN);
   assert.equal(clientFileWrites(r).length, 0, 'the built-in ID is never written as the user\'s own');
@@ -314,13 +318,13 @@ test('with no ID entered, saved or in the saved login, Sign in uses the built-in
 
 test('a user\'s own saved app wins over the built-in app', async () => {
   const r = harness({builtInClientID: BUILT_IN}); r.shim.file.seed('@data/twitch-client.json', JSON.stringify({clientID: OWN}));
-  r.open('example');
+  await r.open('example');
   await r.handlers.get('auth-connect')({}, r.label());
   assert.equal(r.auth.client, OWN);
 });
 
 test('an ID entered in setup wins and is saved as the user\'s own', async () => {
-  const r = harness({builtInClientID: BUILT_IN}); r.open('example');
+  const r = harness({builtInClientID: BUILT_IN}); await r.open('example');
   await r.handlers.get('auth-connect')({clientID: OWN}, r.label());
   assert.equal(r.auth.client, OWN);
   assert.equal(clientFileWrites(r).length, 1);

@@ -13,13 +13,14 @@ const BuiltInApp = require('../../src/twitch-app.js');
 const {TwitchAuth} = require('../../src/auth.js');
 const {start} = require('../../src/player.js');
 const {createIina} = require('./iina-shim.js');
+const {routeLiveCheck, settleOpens} = require('./live-check.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const IDENTIFIER = 'local.iina.streams';
 const LOGIN = 'testreader';
 const ACCESS_TOKEN = 'a'.repeat(30);
 
-function createBridge(options = {}) {
+async function createBridge(options = {}) {
   const sourceURL = options.sourceURL || 'https://www.twitch.tv/test_channel';
   const keychainWrites = options.keychainWrites || (() => true); // (call number) => saved?
   const revokeStatus = options.revokeStatus === undefined ? 200 : options.revokeStatus;
@@ -55,6 +56,8 @@ function createBridge(options = {}) {
   };
   globalShim.iina.http.get = respond;
   globalShim.iina.http.post = respond;
+  // #67: a channel open first checks the channel; the check is answered live, outside `respond`.
+  routeLiveCheck(globalShim);
   globalShim.runScript(path.join(ROOT, 'global.js'), {
     require: name => name === './config.js' ? {identifier: IDENTIFIER, variant: 'unified', qa: false}
       : require(path.join(ROOT, name))
@@ -64,6 +67,7 @@ function createBridge(options = {}) {
   // #50: Open Stream is a standalone window; its page submits the input as 'open-stream'.
   globalShim.menu.items[0].action();
   globalShim.standaloneWindow.send('open-stream', {input: sourceURL});
+  await settleOpens();
   const opened = globalShim.global.opens[0];
   const senderLabel = '1-' + IDENTIFIER;
   const source = Sources.parse(sourceURL);

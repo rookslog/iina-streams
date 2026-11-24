@@ -1,7 +1,7 @@
 "use strict";
 class Playback {
  // One Playback per controller activation (src/authority.js). Its resolve, timers and replace are the
- // activation's, so a change from an activation that has ended never continues. options.firstGeneration
+ // activation's. Its loss signal also fences continuations after the resolve settles. options.firstGeneration
  // continues the previous activation's generations, so a load marker is never reused. `fresh` is the generation
  // of the latest unstaged load (not a change's replacement), which loaded() confirms (set by the controller).
  constructor(options){
@@ -16,25 +16,28 @@ class Playback {
   this.data.title=String(result.title||'').slice(0,300);this.data.live=!!result.live;this.data.duration=Number(result.duration)||0;this.data.phase='loading';this.emit();
  }
  cancelDeadline(){if(this.deadline!==null){this.o.clearTimer(this.deadline);this.deadline=null;}}
+ lost(){return this.o.signal&&this.o.signal.lost();}
  async change(quality){
-  if(this.closed||this.disabled||this.data.busy||!['playing','unconfirmed','stopped'].includes(this.data.phase))return false;
+  if(this.lost()||this.closed||this.disabled||this.data.busy||!['playing','unconfirmed','stopped'].includes(this.data.phase))return false;
   if(quality!=='auto720'&&!this.data.formats.some(f=>f.id===quality)){this.data.error='That quality is unavailable. Refresh the list.';this.emit();return false;}
   if(quality===this.data.quality&&this.data.phase==='playing')return true;
   const generation=++this.generation;this.data.busy=true;this.data.phase='resolving';this.data.error='';this.emit();
   try{
    const result=await this.o.resolve(quality);
-   if(this.closed||generation!==this.generation)return false;
+   // Authority may be lost between the resolve settling and this continuation running, before teardown.
+   if(this.lost()||this.closed||generation!==this.generation)return false;
    if(!result||!result.ok)throw Error(result&&result.error&&result.error.message||'Could not retrieve that quality.');
    const player=this.o.readPlayer();
    const context={generation,position:result.live?0:Math.max(0,Number(player.position)||0),paused:!!player.paused,speed:Number(player.speed)||1};
    this.pending={generation,result};this.data.phase='buffering';
    this.deadline=this.o.setTimer(()=>{
+    if(this.lost())return;
     this.deadline=null;if(this.closed||!this.pending||this.pending.generation!==generation)return;
     this.pending=null;this.data.busy=false;this.data.phase='unconfirmed';this.data.error='Quality change did not finish. Reload the source or choose another quality.';this.emit();
    },25000);
    this.o.replace(result,context);this.emit();return true;
   }catch(error){
-   if(this.closed||generation!==this.generation)return false;
+   if(this.lost()||this.closed||generation!==this.generation)return false;
    this.pending=null;this.cancelDeadline();this.data.busy=false;this.data.phase='playing';
    this.data.error=String(error&&error.message||'Could not retrieve that quality.').replace(/https?:\/\/\S+/g,'[address omitted]').slice(0,180);this.emit();return false;
   }

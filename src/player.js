@@ -447,7 +447,9 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    // authoritative even after the transaction ended, because the timeout may have closed it first.
    goLiveBusy:false,replacement:null,goLiveGeneration:null,
    // D1c: the deferred menu.forceUpdate after the player's menu items were replaced (syncMenu).
-   menuUpdate:null
+   menuUpdate:null,
+   // Watch history (#73): resolved channel identity and whether playback has been reported to global.
+   historyChannel:null,historyStarted:false
   });
   // The clock's timers and log are the activation's: after a loss it neither polls nor samples. A response in
   // flight at the loss only reaches this clock's own estimator; release stops the clock, which then ignores it.
@@ -2048,6 +2050,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
    throw Error(result&&result.error&&result.error.message||'This source could not be opened.');
   }
   act.activeGeneration=context.generation;
+  const resolvedChannel=result.channel||(services.resolvedChannel&&services.resolvedChannel(source));
+  if(resolvedChannel)act.historyChannel=resolvedChannel;
   applyResolution(result,context);
   if(!act.initialResolved){
    act.player.adopt(result);
@@ -2095,6 +2099,13 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
   if(controlsDesired&&initial)showSidebar();
   if(overlayNeeded())ensureOverlay();
   if(initial)maybeAutoFetchReplay();
+  if(!act.historyStarted){
+   const channel=historyIdentity();
+   if(channel){
+    act.historyStarted=true;
+    app.postMessage('history-start',channel);
+   }
+  }
   if(act.liveClockURL)startLiveClock();
   tick(true);
   trace('file-loaded',{
@@ -2154,11 +2165,19 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  // Review r1 #6: a later load on this core retires this controller. Its sidebar shows that Streams is
  // inactive, then everything is closed as for a window close, except that global is not told the window
  // closed: the window stays, and a stream adopted next takes over the same player.
+ function historyIdentity(){
+  if(act.historyChannel)return act.historyChannel;
+  if(source.kind==='twitch-live')return{provider:'twitch',login:source.id,displayName:source.id};
+  return null;
+ }
+
  function retire(){
   if(closed)return;
+  const started=act.historyStarted;
   authority.end();
   // The final inactive snapshot, and global hears that this controller's auth use is over (review r3 #3).
   releaseActivation(act,{final:true,retire:true});
+  if(started)app.postMessage('history-end',{});
   teardown({notifyGlobal:false});
  }
 
@@ -2298,6 +2317,8 @@ function run(host,config,services,identity,registerLoadHook,lifecycle){
  onActive('mpv.seek',onSeek);
  onActive('mpv.pause.changed',onPauseChanged);
  onActive('iina.window-fs.changed',onFullscreenChanged);
+ onActive('iina.window-did-become-key',()=>app.postMessage('history-focus',{focused:true}));
+ onActive('iina.window-did-resign-key',()=>app.postMessage('history-focus',{focused:false}));
  onWindow('iina.window-will-close',onWindowWillClose);
 
  // IINA creates the child while the parent's createPlayerInstance call is on stack, so the global entry's

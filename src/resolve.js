@@ -169,7 +169,7 @@ function errorCode(error) {
   return typeof code === 'string' && /^[A-Z_]+$/.test(code) ? code : 'UNEXPECTED';
 }
 
-function createResolver({resolveTwitch, http, helperResolve, log}) {
+function createResolver({resolveTwitch, http, helperResolve, log, onChannel}) {
   function recordFallback(code) {
     if (typeof log !== 'function') {
       return;
@@ -200,6 +200,9 @@ function createResolver({resolveTwitch, http, helperResolve, log}) {
         return definitiveFailure(code);
       }
       return launchHelper(source, quality, signal, code);
+    }
+    if (typeof onChannel === 'function' && twitch && twitch.channel) {
+      onChannel(source, twitch.channel);
     }
     return helperShapedResult(source, quality, twitch);
   }

@@ -7,6 +7,7 @@ const {create:createTimers}=require('./src/timers.js');
 const {recentArchives,channelStatus}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
+const {createHistory}=require('./src/history.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
@@ -19,6 +20,7 @@ let credentials=null;
 const qaEvents=[];
 // The user's own Twitch app Client ID, when they entered one.
 const CLIENT_FILE='@data/twitch-client.json';
+const SETTINGS_FILE='@data/settings.json';
 const globalDiag=[];
 
 function qaTrace(phase,data){
@@ -340,7 +342,10 @@ async function showOfflineVods(login){
  // recentArchives never rejects and gives up after 5 s (src/twitch-vods.js).
  const result=await recentArchives({login},{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
- onMainThread(()=>showArchives(run,result));
+ onMainThread(()=>{
+  if(result.ok)recordOfflineHistory(login);
+  showArchives(run,result);
+ });
 }
 
 function showArchives(run,result){
@@ -466,6 +471,9 @@ function onPlayerClosed(_,label){
  const managedID=targetID(label);
  const id=managedID!==null?managedID:adoptedLabel(label);
  if(id===null)return;
+ finishWindowVisit(id);
+ if(focusedWindow===id)focusedWindow=null;
+ syncHistoryMenu();
  // Only a departing audience member can warrant stopping the broker; an unrelated close must not (r3 #3).
  const wasMember=audience.delete(id);
  if(typeof id==='number')managed.delete(id);
@@ -487,7 +495,164 @@ async function onAuthForget(_,label){
  if(result&&!result.stale&&isOpen(id)&&sessions.get(id)===session)postChild(id,'auth-forgotten',result);
 }
 
-menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
+// ---- Watch history (#73): local-only, never HTTP, never URLs or tokens ----
+
+const historyStorage={
+ read(path){
+  if(!file.exists(path))return null;
+  return file.read(path);
+ },
+ write(path,text){
+  file.write(path,text);
+ },
+ backup(from,to){
+  const text=file.read(from);
+  if(typeof text!=='string')throw Error('Unreadable history backup source');
+  file.write(to,text);
+ }
+};
+
+function historyNow(){
+ return Math.floor(Date.now()/1000);
+}
+
+const history=createHistory({storage:historyStorage,now:historyNow});
+// Open visits keyed by managed numeric id or adopted bare-number string label: {provider, login, handle}.
+const windowVisits=new Map();
+let focusedWindow=null;
+let pauseItem=null,forgetItem=null,menuRebuildTimer=null;
+
+function adoptionEnabled(){
+ if(config.qa)return true;
+ try{
+  if(!file.exists(SETTINGS_FILE))return false;
+  const settings=JSON.parse(file.read(SETTINGS_FILE));
+  return!!settings&&settings.adoptNativeWindows===true;
+ // Unreadable settings keep native window adoption off by default (D-033).
+ }catch(_){
+  return false;
+ }
+}
+
+// History accepts managed players and, only when opted in, adopted bare-number windows.
+function historySender(label){
+ const id=targetID(label);
+ if(id!==null)return id;
+ const adoptedKey=adoptedLabel(label);
+ if(adoptedKey===null||!adoptionEnabled())return null;
+ return acceptSender(label);
+}
+
+function sameHistoryChannel(a,b){
+ if(!a||!b||a.provider!==b.provider)return false;
+ if(typeof a.login!=='string'||typeof b.login!=='string')return false;
+ if(a.provider==='twitch')return a.login.toLowerCase()===b.login.toLowerCase();
+ return a.login===b.login;
+}
+
+function isPersonRecorded(person){
+ if(!person)return false;
+ return history.query('',{provider:person.provider}).some(entry=>entry.login===person.login);
+}
+
+function canForgetFocused(){
+ if(focusedWindow===null)return false;
+ return isPersonRecorded(windowVisits.get(focusedWindow));
+}
+
+function finishWindowVisit(key){
+ const visit=windowVisits.get(key);
+ if(!visit)return;
+ windowVisits.delete(key);
+ if(visit.handle)history.finish(visit.handle,historyNow());
+}
+
+function recordOfflineHistory(login){
+ // Precheck only resolves the login, so use it as displayName until a stream plays.
+ history.record({provider:'twitch',login,displayName:login,at:historyNow(),offline:true});
+}
+
+function onHistoryStart(data,label){
+ const key=historySender(label);
+ if(key===null||!data||typeof data!=='object'||Array.isArray(data))return;
+ const existing=windowVisits.get(key);
+ if(existing&&sameHistoryChannel(existing,data))return;
+ if(existing)finishWindowVisit(key);
+ // Pass only identity fields so no playback metadata can ever reach history.
+ const handle=history.record({
+  provider:data.provider,
+  login:data.login,
+  displayName:data.displayName,
+  at:historyNow()
+ });
+ if(handle!==null){
+  windowVisits.set(key,{provider:handle.provider,login:handle.login,handle});
+  syncHistoryMenu();
+ }
+}
+
+function onHistoryEnd(_,label){
+ const managedID=targetID(label);
+ const key=managedID!==null?managedID:adoptedLabel(label);
+ if(key===null)return;
+ finishWindowVisit(key);
+ if(focusedWindow===key)focusedWindow=null;
+ syncHistoryMenu();
+}
+
+function onHistoryFocus(data,label){
+ const key=historySender(label);
+ if(key===null||!data||typeof data!=='object'||typeof data.focused!=='boolean')return;
+ if(data.focused)focusedWindow=key;
+ else if(focusedWindow===key)focusedWindow=null;
+ syncHistoryMenu();
+}
+
+function toggleHistoryPause(){
+ history.setPaused(!history.paused);
+ syncHistoryMenu();
+}
+
+function forgetFocusedChannel(){
+ if(!canForgetFocused())return;
+ const visit=windowVisits.get(focusedWindow);
+ for(const [key,entry] of windowVisits){
+  if(sameHistoryChannel(entry,visit))windowVisits.delete(key);
+ }
+ history.forget({provider:visit.provider,login:visit.login});
+ syncHistoryMenu();
+}
+
+function clearHistory(){
+ history.clear();
+ windowVisits.clear();
+ syncHistoryMenu();
+}
+
+function addGlobalMenuItems(){
+ menu.addItem(menu.item('Open Stream…',()=>openStream(),{keyBinding:'Ctrl+Meta+o'}));
+ pauseItem=menu.item('Pause Watch History',toggleHistoryPause,{selected:history.paused});
+ forgetItem=menu.item('Forget This Channel',forgetFocusedChannel,{enabled:canForgetFocused()});
+ menu.addItem(pauseItem);
+ menu.addItem(forgetItem);
+ menu.addItem(menu.item('Clear Watch History',clearHistory));
+}
+
+// Update item properties immediately for same-turn callers, then rebuild on a main-thread turn so IINA 1.5.1's
+// NSMenuItem references stay valid across windows without calling forceUpdate off the main thread.
+function syncHistoryMenu(){
+ if(pauseItem)pauseItem.selected=history.paused;
+ if(forgetItem)forgetItem.enabled=canForgetFocused();
+ if(menuRebuildTimer!==null)return;
+ menuRebuildTimer=timers.setTimeout(()=>{
+  menuRebuildTimer=null;
+  menu.removeAllItems();
+  addGlobalMenuItems();
+  if(typeof menu.forceUpdate==='function')menu.forceUpdate();
+ },0);
+}
+
+addGlobalMenuItems();
 // Refresh the menu on the next turn, not while this initializer runs. In IINA v1.5.1 a synchronous
 // forceUpdate runs updatePluginMenu -> PlayerCore.active -> PlayerCore.first, which creates core "0"
 // before this global instance is registered, so that core gets a nil parentAPI and can never message
@@ -501,6 +666,9 @@ listen(app,'global','auth-disconnect',onAuthDisconnect);
 listen(app,'global','player-closed',onPlayerClosed);
 listen(app,'global','auth-forget',onAuthForget);
 listen(app,'global','source-offline',onSourceOffline);
+listen(app,'global','history-start',onHistoryStart);
+listen(app,'global','history-end',onHistoryEnd);
+listen(app,'global','history-focus',onHistoryFocus);
 
 if(config.qa){
  // #56 probe, QA builds only: does global reach a window IINA opened itself by its bare-number label

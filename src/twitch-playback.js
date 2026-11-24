@@ -188,9 +188,9 @@ function readAccessToken(response, kind) {
 // The login and id are validated against strict patterns, so quoting them with JSON.stringify is safe.
 function titleOperation(request) {
   if (request.kind === 'live') {
-    return {query: `query{user(login:${JSON.stringify(request.login)}){broadcastSettings{title}}}`};
+    return {query: `query{user(login:${JSON.stringify(request.login)}){broadcastSettings{title} displayName}}`};
   }
-  return {query: `query{video(id:${JSON.stringify(request.id)}){title}}`};
+  return {query: `query{video(id:${JSON.stringify(request.id)}){title owner{login displayName}}}`};
 }
 
 function fallbackTitle(request) {
@@ -220,6 +220,25 @@ function readTitle(item, request) {
   return cleanTitle(payload.video && payload.video.title);
 }
 
+function readChannel(item, request) {
+  const payload = item && item.data;
+  if (request.kind === 'live') {
+    const login = request.login.toLowerCase();
+    const rawName = payload && payload.user && payload.user.displayName;
+    const displayName = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : login;
+    return {provider: 'twitch', login, displayName};
+  }
+  const owner = payload && payload.video && payload.video.owner;
+  if (!owner || typeof owner.login !== 'string' || !LOGIN_PATTERN.test(owner.login)) {
+    return null;
+  }
+  const login = owner.login.toLowerCase();
+  const displayName = typeof owner.displayName === 'string' && owner.displayName.trim()
+    ? owner.displayName.trim()
+    : login;
+  return {provider: 'twitch', login, displayName};
+}
+
 // IINA's http API only reads `data` as a plain object (JavascriptAPIHttp.swift, `options?["data"] as? [String: Any]`),
 // so each GraphQL operation is its own POST; a batch array would be sent as `{}`.
 function postGraphQL(body, deps) {
@@ -227,20 +246,23 @@ function postGraphQL(body, deps) {
   return withTimeout(() => deps.http.post(GQL_URL, options), deps.timers);
 }
 
-// Resolves to the cleaned title, or '' on any error, timeout or odd shape. It never rejects.
+// Resolves to {title, channel}, or fallback values on any error, timeout or odd shape. Never rejects.
 async function fetchTitle(request, deps) {
   try {
     const response = await postGraphQL(titleOperation(request), deps);
-    return readTitle(bodyOf(response), request);
+    const body = bodyOf(response);
+    return {title: readTitle(body, request), channel: readChannel(body, request)};
   } catch (_) {
-    return '';
+    return {title: '', channel: readChannel(null, request)};
   }
 }
 
 async function fetchAccessToken(request, deps) {
   // Start the title POST alongside the token POST; only the token can fail playback.
   const tokenPost = postGraphQL(tokenRequestBody(request), deps);
-  const titlePost = deps.includeTitle ? fetchTitle(request, deps) : Promise.resolve('');
+  const titlePost = deps.includeTitle
+    ? fetchTitle(request, deps)
+    : Promise.resolve({title: '', channel: null});
   let token;
   try {
     token = readAccessToken(await tokenPost, request.kind);
@@ -248,7 +270,8 @@ async function fetchAccessToken(request, deps) {
     await titlePost;
     throw failure;
   }
-  return {token, title: await titlePost};
+  const meta = await titlePost;
+  return {token, title: meta.title, channel: meta.channel};
 }
 
 // ---- usher ----
@@ -383,8 +406,9 @@ async function resolveTwitch(request, deps = {}) {
 
   let token;
   let title = '';
+  let channel = null;
   try {
-    ({token, title} = await fetchAccessToken(request, resolved));
+    ({token, title, channel} = await fetchAccessToken(request, resolved));
   } catch (failure) {
     const error = mapFailure(failure, 'token', request.kind);
     logLine('token failed', {kind: request.kind, code: error.code, status: failure && failure.statusCode});
@@ -404,6 +428,9 @@ async function resolveTwitch(request, deps = {}) {
   const result = {live: request.kind === 'live', variants};
   if (resolved.includeTitle) {
     result.title = title || fallbackTitle(request);
+    if (channel) {
+      result.channel = channel;
+    }
   }
   return result;
 }

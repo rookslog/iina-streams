@@ -109,7 +109,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   - **Reviews:** two Codex reviews, both "fix first". The two findings that recurred led to a step back, which `docs/REVIEW.md` calls for at round 3. Its triage table and dispositions are in [reviews/2026-11-24-issue-73-wiring-review.md](reviews/2026-11-24-issue-73-wiring-review.md):
     - **Forget This Channel is out of 0.5.6** (decision below);
     - **cancelling follows one rule:** a check started from Open Stream acts only while that same form is still showing. This covers Cancel, the window's close button and a later form.
-  - **Still owed before any release:** one clearance review by a provider other than the builder, since Codex built rounds 5–7. Gemini Hydrogen does it when its quota returns. The merge into `next` is provisional; its commit and undo are added below when it lands.
+  - **Still owed before any release:** one clearance review by a provider other than the builder, since Codex built rounds 5–7. Gemini Hydrogen does it when its quota returns. The merge into `next` is provisional and landed at `b36f006` (rounds 1–7; 935 JS tests and 168 Python tests pass on `next`). To undo it: `git switch next && git revert -m 1 b36f006`.
   - **Decision for you: per-channel "Forget This Channel".**
     - **What it is:** whether 0.5.6 ships a way to forget one person from watch history. It's yours because it trades a privacy control against a menu that can delete the wrong person.
     - **Options:**

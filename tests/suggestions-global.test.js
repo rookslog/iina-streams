@@ -1800,6 +1800,9 @@ test('R3. the same trimmed, lower-cased text within 60 s is answered from the ca
     assert.equal(searchPending(r).filter(Boolean).length, 1, 'the cache hit shows no pending');
     r.shim.timers.advance(61000);
     await r.settle();
+    // Amended 2026-11-25 (lead; Codex reported the F2 conflict): the field already holds 'RI ', so 'ri' alone is an
+    // unchanged text under F2. Go to 'r' (too short to search) and back.
+    await r.typeSettled('r');
     await r.typeSettled('ri');
     assert.equal(r.searchRequests(), requestsBefore + 1, 'after 60 s the text is asked again');
   }

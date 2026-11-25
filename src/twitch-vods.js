@@ -265,7 +265,7 @@ async function channelsStatus(logins, credentials, deps) {
   }
   const {http} = deps;
   const outcome = await raceOnMain(() => credentials
-    ? helixBatch(http, logins, credentials)
+    ? requestForOwner(deps, () => helixBatch(http, logins, credentials))
     : gqlBatch(http, logins), STATUS_TIMEOUT_MS, {value: unknown}, deps);
   return outcome.error || !outcome.value ? unknown : outcome.value;
 }
@@ -383,9 +383,9 @@ async function followedSuggestions(credentials, deps) {
   const outcome = await raceOnMain(async () => {
     const helix = createHelix({http: deps.http, clientID: credentials.clientID, token: credentials.token});
     const request = {userID: credentials.userID};
-    const [live, channels] = await Promise.all([helix.followedLive(request), helix.followedChannels(request)]);
+    const [live, channels] = await Promise.all([helix.followedLive(request), helix.followedChannelsPage(request)]);
     const rows = new Map(), status = new Map(), details = new Map();
-    for (const channel of channels) {
+    for (const channel of channels.rows) {
       if (!LOGIN_PATTERN.test(channel.login)) continue;
       const login = channel.login.toLowerCase();
       rows.set(login, {provider: 'twitch', login, displayName: cleanTitle(channel.name) || login});
@@ -398,9 +398,37 @@ async function followedSuggestions(credentials, deps) {
       status.set(login, true);
       details.set(login, liveDetails(stream.title, stream.game, stream.viewers));
     }
-    return {rows: [...rows.values()], status: Object.fromEntries(status), details: Object.fromEntries(details)};
+    return {rows: [...rows.values()], status: Object.fromEntries(status), details: Object.fromEntries(details), cursor: channels.cursor};
   }, REQUEST_TIMEOUT_MS, {value: null}, deps);
   return outcome.value || null;
+}
+
+// F3: check immediately before issuing each actual request, including after
+// an asynchronous response. IINA 1.5.1's standaloneWindow.isOpen() already
+// dispatches its visibility read through Utility.executeOnMainThread.
+function requestForOwner(deps, start) {
+  return !deps.canRequest || deps.canRequest() ? start() : null;
+}
+
+// F6: the first page was already fetched for the at-rest list. Read at most
+// nine more pages, each with an owner check and one overall deadline. Keep successful
+// membership even if a subsequent page fails.
+async function remainingFollowedChannels(credentials, cursor, deps) {
+  const rows = [];
+  const helix = createHelix({http: deps.http, clientID: credentials.clientID, token: credentials.token});
+  let active = true;
+  await raceOnMain(async () => {
+    for (let page = 1; active && page < 10 && cursor; page++) {
+      const reply = await requestForOwner(deps, () => helix.followedChannelsPage({userID: credentials.userID, after: cursor}));
+      if (!active || !reply) break;
+      for (const channel of reply.rows) {
+        if (LOGIN_PATTERN.test(channel.login)) rows.push(channel.login.toLowerCase());
+      }
+      cursor = reply.cursor;
+    }
+  }, REQUEST_TIMEOUT_MS, {value: null}, deps);
+  active = false;
+  return rows;
 }
 
 // #74 phase 2: validate at the actual request boundary as well as before
@@ -408,7 +436,7 @@ async function followedSuggestions(credentials, deps) {
 function searchText(value) {
   if (typeof value !== 'string') return null;
   const text = value.trim();
-  return /^[\p{L}\p{Nd}_ ]{2,40}$/u.test(text) ? text : null;
+  return /^[\p{L}\p{M}\p{Nd}_ ]{2,40}$/u.test(text) ? text : null;
 }
 
 function searchRow(login, name, live, details) {
@@ -456,10 +484,10 @@ async function gqlSearch(http, text, deps) {
 
 async function helixSearch(text, credentials, deps) {
   const {http} = deps;
-  const outcome = await raceOnMain(() => http.get('https://api.twitch.tv/helix/search/channels', {
+  const outcome = await raceOnMain(() => requestForOwner(deps, () => http.get('https://api.twitch.tv/helix/search/channels', {
     params: {query: text, first: '10'},
     headers: {Authorization: `Bearer ${credentials.token}`, 'Client-Id': credentials.clientID},
-  }), REQUEST_TIMEOUT_MS, {value: null}, deps);
+  })), REQUEST_TIMEOUT_MS, {value: null}, deps);
   const response = outcome.value;
   const body = bodyOf(response);
   if (!isSuccess(response) || !Array.isArray(body?.data)) return null;
@@ -471,10 +499,12 @@ async function helixSearch(text, credentials, deps) {
   });
   const live = [...new Set(rows.filter(row => row.live).map(row => row.login))];
   const offline = [...new Set(rows.filter(row => !row.live).map(row => row.login))];
-  const [streams, broadcasts] = await Promise.all([
+  const followups = await requestForOwner(deps, () => Promise.all([
     live.length ? channelsStatus(live, credentials, deps) : null,
     lastBroadcasts(offline, deps),
-  ]);
+  ]));
+  if (!followups) return null;
+  const [streams, broadcasts] = followups;
   // Search Channels supplies the marks, titles and categories; Get Streams
   // supplies only missing counts. A failed detail lookup never changes a mark.
   for (const row of rows) {
@@ -497,4 +527,4 @@ async function searchChannels(value, credentials, deps) {
   }
 }
 
-module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions, searchText, searchChannels};
+module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions, remainingFollowedChannels, searchText, searchChannels};

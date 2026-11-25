@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentBroadcasts,channelStatus,channelsStatus,lastBroadcasts,followedSuggestions,searchText,searchChannels}=require('./src/twitch-vods.js');
+const {recentBroadcasts,channelStatus,channelsStatus,lastBroadcasts,followedSuggestions,remainingFollowedChannels,searchText,searchChannels}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {createHistory,matchRank}=require('./src/history.js');
@@ -224,11 +224,12 @@ const SUGGESTION_HEIGHT=OPEN_HEIGHT+SUGGESTION_ROWS*SUGGESTION_ROW_HEIGHT;
 const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000,FIRST_SUGGESTION_WAIT_MS=450;
 const SEARCH_PAUSE_MS=250,SEARCH_CACHE_MS=60000,SEARCH_LIMIT=10;
 const searchCache=new Map();
+const searchInflight=new Map();
 // Separate caches: followed channels are account data, not watch history.
 // A pending cache remains current across a close/reopen, but never across
 // account changes. All results are applied on the main thread.
 function emptyHistoryStatus(){return {at:-Infinity,pending:false,status:{},details:{}};}
-function emptyFollows(){return {at:-Infinity,pending:false,rows:[],status:{},details:{}};}
+function emptyFollows(){return {at:-Infinity,pending:false,rows:[],status:{},details:{},cursor:'',extraKnown:new Set(),membership:null};}
 let historyStatus=emptyHistoryStatus(),follows=emptyFollows(),suggestionText='';
 let passiveRestore=null,idleAuthStop=false,cacheAccount=null;
 function canReadFollows(c){
@@ -333,7 +334,7 @@ function showOpenWindow(){
  }
  openRun++;
  if(formInstance)releaseOpenForm();
- formInstance={posted:false,rows:[],text:null,deadline:null,lease:null,followsState:null,search:null};
+ formInstance={posted:false,rows:[],text:null,deadline:null,lease:null,followsState:null,search:null,resetPending:false};
  openPageReady=false;
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
@@ -351,12 +352,13 @@ function showOpenWindow(){
 
 function releaseOpenForm(){
  const form=formInstance;
+ // Close a pending pair while the page is still showing (F1).
+ if(form)cancelSearch(form);
  formInstance=null;
  openPageReady=false;
  if(form){
   if(form.deadline!==null)timers.clearTimeout(form.deadline);
   if(form.lease!==null)timers.clearTimeout(form.lease);
-  cancelSearch(form);
  }
  if(!audience.size){
   passiveRestore=null;
@@ -441,12 +443,19 @@ function refreshShowingAccount(signedOut=false,forceNote=false,restored=false){
  const form=showingReadyForm();
  if(!form)return;
  publishFollowsState(form,forceNote);
- // Explicit account changes may replace the list. A passive restoration
- // is just a late answer: preserve the order and append new follows only.
- if(form.posted&&!restored){
-  form.posted=false;
-  form.rows=[];
-  form.text=null;
+ // Explicit account changes reset both groups; ordinary passive restoration
+ // remains a late answer unless a search has already started under another account.
+ const resetSearch=!restored||(form.search?.started&&form.search.account!==credentials);
+ if(resetSearch){
+  if(form.posted){
+   form.resetPending=true;
+   form.posted=false;
+   form.rows=[];
+   form.text=null;
+  }
+  cancelSearch(form);
+  searchCache.clear();
+  scheduleSearch(form,suggestionText);
  }
  beginSuggestionCycle(form,signedOut);
  keepOpenFormLease(form);
@@ -556,13 +565,15 @@ function postSuggestions(text){
  const form=showingReadyForm();
  if(!form||!form.posted)return;
  const {status}=suggestionSnapshot();
- if(form.text!==text){
+ if(form.text===null||normalizedQuery(form.text)!==normalizedQuery(text)){
   form.rows=rankedSuggestions(text);
-  form.text=text;
  }else{
   form.rows=form.rows.map(row=>({...row,live:row.provider==='twitch'&&Object.hasOwn(status,row.login)?status[row.login]:null}));
  }
- postOpenPage('suggestions',envelope({text,rows:form.rows}));
+ form.text=text;
+ const payload={text,rows:form.rows};
+ if(form.resetPending){payload.reset=true;form.resetPending=false;}
+ postOpenPage('suggestions',envelope(payload));
  postVisibleSuggestionStatus(form);
  publishSearchAnswer(form);
 }
@@ -579,16 +590,29 @@ function postVisibleSuggestionStatus(form){
 function onOpenQuery(data){
  const form=showingReadyForm();
  if(!form||!data||typeof data.text!=='string')return;
- onOpenEdit();
+ const changed=normalizedQuery(suggestionText)!==normalizedQuery(data.text);
+ if(changed)onOpenEdit();
  suggestionText=data.text;
- scheduleSearch(form,suggestionText);
+ if(changed)scheduleSearch(form,suggestionText);
  if(form.posted)postSuggestions(suggestionText);
+}
+
+function normalizedQuery(text){return text.trim().toLowerCase();}
+
+function setSearchPending(form,search,pending){
+ if(search.pending===pending)return;
+ search.pending=pending;
+ if(form===showingReadyForm())postOpenPage('suggestions-search-pending',envelope({text:search.text,pending}));
 }
 
 // A query owns one debounce and one answer. The form identity and query
 // identity fence both timer callbacks and late HTTP completions.
 function cancelSearch(form){
- if(form.search?.timer!==null&&form.search?.timer!==undefined)timers.clearTimeout(form.search.timer);
+ const search=form.search;
+ if(search){
+  if(search.timer!==null)timers.clearTimeout(search.timer);
+  setSearchPending(form,search,false);
+ }
  form.search=null;
 }
 
@@ -596,7 +620,7 @@ function scheduleSearch(form,value){
  cancelSearch(form);
  const text=searchText(value);
  if(text===null)return;
- const search={text,timer:null,answer:null,published:false,othersDrawn:false,known:new Set()};
+ const search={text,timer:null,answer:null,published:false,rowsDrawn:false,pending:false,started:false,account:null};
  form.search=search;
  search.timer=timers.setTimeout(()=>{
   search.timer=null;
@@ -608,40 +632,103 @@ function isCurrentSearch(form,search){
  return form===showingReadyForm()&&form.search===search;
 }
 
-async function runSearch(form,search){
+function searchOwner(form,account){return form===showingReadyForm()&&credentials===account;}
+
+function ensureFollowedMembership(form,account){
+ const cache=follows;
+ if(!searchOwner(form,account)||!canReadFollows(account)||!cacheVisible()||!cache.cursor)return Promise.resolve();
+ if(cache.membership)return cache.membership;
+ const deps={...suggestionDeps,canRequest:()=>searchOwner(form,account)&&follows===cache};
+ cache.membership=remainingFollowedChannels(account,cache.cursor,deps).then(logins=>new Promise(resolve=>onMainThread(()=>{
+  if(cache===follows&&searchOwner(form,account)){
+   for(const login of logins)cache.extraKnown.add(login);
+   cache.cursor=''; // F6 bounds each follow snapshot to ten pages total.
+  }
+  cache.membership=null;
+  resolve();
+ })));
+ return cache.membership;
+}
+
+function runSearch(form,search){
  const account=credentials;
- const key=JSON.stringify([accountKey(account),search.text.toLowerCase()]);
+ search.started=true;
+ search.account=account;
+ const key=JSON.stringify([accountKey(account),normalizedQuery(search.text)]);
  const now=Date.now();
  for(const [cachedKey,cached] of searchCache){
   if(now-cached.at>=SEARCH_CACHE_MS)searchCache.delete(cachedKey);
  }
  const cached=searchCache.get(key);
  if(cached){
-  search.answer=cached.rows;
-  publishSearchAnswer(form);
+  ensureFollowedMembership(form,account).then(()=>onMainThread(()=>{
+   if(!isCurrentSearch(form,search)||!searchOwner(form,account))return;
+   search.answer=cached.rows;
+   publishSearchAnswer(form);
+  }));
   return;
  }
- postOpenPage('suggestions-search-pending',envelope({text:search.text,pending:true}));
- const rows=await searchChannels(search.text,account,suggestionDeps);
+ setSearchPending(form,search,true);
+ // One physical request chain per cache key, with the newest interested
+ // query as its waiter. Abandoning a waiter closes its pending pair, not
+ // the transport (IINA has no abort).
+ const existing=searchInflight.get(key);
+ if(existing){existing.waiter={form,search};return;}
+ const entry={form,account,waiter:{form,search}};
+ searchInflight.set(key,entry);
+ executeSearch(key,entry,search.text);
+}
+
+async function executeSearch(key,entry,text){
+ const {form,account}=entry;
+ const deps={...suggestionDeps,canRequest:()=>searchOwner(form,account)};
+ const [rows]=await Promise.all([searchChannels(text,account,deps),ensureFollowedMembership(form,account)]);
  onMainThread(()=>{
-  if(rows!==null){
+  if(searchInflight.get(key)===entry)searchInflight.delete(key);
+  const ownerCurrent=searchOwner(form,account);
+  if(rows!==null&&ownerCurrent){
    searchCache.set(key,{at:Date.now(),rows});
    // Keep the memory-only cache bounded even during rapid typing.
    if(searchCache.size>100)searchCache.delete(searchCache.keys().next().value);
   }
-  if(!isCurrentSearch(form,search))return;
-  search.answer=rows;
-  publishSearchAnswer(form);
-  postOpenPage('suggestions-search-pending',envelope({text:search.text,pending:false}));
+  const waiter=entry.waiter;
+  if(!isCurrentSearch(waiter.form,waiter.search))return;
+  if(!ownerCurrent){
+   // A later window/account may be waiting on the same key, but the old
+   // owner's chain cannot send any more authenticated requests.
+   setSearchPending(waiter.form,waiter.search,false);
+   if(searchOwner(waiter.form,waiter.search.account))runSearch(waiter.form,waiter.search);
+   return;
+  }
+  waiter.search.answer=rows;
+  publishSearchAnswer(waiter.form);
+  setSearchPending(waiter.form,waiter.search,false);
  });
 }
 
 function publishSearchAnswer(form){
  const search=form.search;
  if(!search||!isCurrentSearch(form,search)||!form.posted||search.published||search.answer===null)return;
+ if(!searchOwner(form,search.account))return;
+ // The first follows page can arrive while the search is out. If its
+ // cursor is known before this paint, finish membership before splitting
+ // the rows. A genuinely late follows answer still obeys F5.
+ if(cacheVisible()&&follows.cursor&&canReadFollows(search.account)){
+  if(!search.membershipWait){
+   search.membershipWait=true;
+   ensureFollowedMembership(form,search.account).then(()=>onMainThread(()=>{
+    search.membershipWait=false;
+    if(isCurrentSearch(form,search))publishSearchAnswer(form);
+   }));
+  }
+  return;
+ }
  const displayed=new Set(form.rows.filter(row=>row.provider==='twitch').map(row=>row.login));
  const knownLogins=new Set(history.query('',{provider:'twitch'}).map(row=>row.login));
- if(cacheVisible())for(const row of follows.rows)knownLogins.add(row.login);
+ if(cacheVisible()){
+  for(const row of follows.rows)knownLogins.add(row.login);
+  for(const login of follows.extraKnown)knownLogins.add(login);
+ }
  const known=[],others=[],seen=new Set(displayed);
  for(const row of search.answer){
   if(seen.has(row.login))continue;
@@ -657,8 +744,7 @@ function publishSearchAnswer(form){
  });
  const appended=known.slice(0,SEARCH_LIMIT),otherRows=others.slice(0,SEARCH_LIMIT);
  search.published=true;
- search.othersDrawn=otherRows.length>0;
- search.known=new Set(appended.map(row=>row.login));
+ search.rowsDrawn=appended.length>0||otherRows.length>0;
  postOpenPage('suggestions-search',envelope({text:search.text,known:appended,others:otherRows}));
 }
 
@@ -673,11 +759,10 @@ function publishSuggestionUpdate(){
 // Once the followed list and its offline sort keys have answered, append
 // only follow-only matches, in G4/G5 order, without shifting any existing row.
 function appendLateFollows(form){
- if(form.search?.othersDrawn)return false;
+ if(form.search?.rowsDrawn)return false;
  if(!cacheVisible()||follows.pending||!follows.rows.length||form.rows.length>=SUGGESTION_LIMIT)return false;
  const key=row=>row.provider+'\n'+row.login;
  const displayed=new Set(form.rows.map(key));
- for(const login of form.search?.known??[])displayed.add('twitch\n'+login);
  const watched=new Set(history.query('').map(key));
  const followed=new Set(follows.rows.map(key));
  const extra=rankedSuggestions(form.text,Infinity).filter(row=>followed.has(key(row))&&!watched.has(key(row))&&!displayed.has(key(row)))

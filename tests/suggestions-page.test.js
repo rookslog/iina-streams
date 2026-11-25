@@ -30,7 +30,29 @@ const ROWS = [
 ];
 const VOD = {title: 'Fixture archive', createdAt: '2026-11-20T10:31:57Z', lengthSeconds: 3600, url: 'https://www.twitch.tv/videos/1234567890'};
 
-function pageFixture() {
+// Fake timers for the vm, only when asked for (Rev 2 page round 3, P-D): the page then sees setTimeout and clearTimeout.
+function fakeTimers() {
+  let now = 0, nextId = 1;
+  const pending = new Map();
+  return {
+    setTimeout(fn, delay = 0) { const id = nextId++; pending.set(id, {fn, due: now + Number(delay)}); return id; },
+    clearTimeout(id) { pending.delete(id); },
+    advance(ms) {
+      const target = now + ms;
+      for (;;) {
+        const next = [...pending.entries()].filter(([, t]) => t.due <= target).sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0];
+        if (!next) break;
+        now = Math.max(now, next[1].due);
+        pending.delete(next[0]);
+        next[1].fn();
+      }
+      now = target;
+    },
+  };
+}
+
+function pageFixture(config = {}) {
+  const timers = config.timers ? fakeTimers() : null;
   const page = createWebViewIina();
   const byId = new Map();
   const documentListeners = new Map();
@@ -135,7 +157,8 @@ function pageFixture() {
     getElementById: id => all().find(node => node.id === id) ?? null,
     createElement: element, createTextNode: textNode,
   };
-  vm.runInNewContext(SCRIPT, {document, window: {addEventListener() {}}, iina: page.iina}, {filename: 'open.js'});
+  vm.runInNewContext(SCRIPT, {document, window: {addEventListener() {}}, iina: page.iina,
+    ...(timers ? {setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout} : {})}, {filename: 'open.js'});
 
   const field = byId.get('open-input');
   const form = byId.get('open-form');
@@ -168,7 +191,7 @@ function pageFixture() {
   const type = text => { field.value = text; field.dispatch('input'); };
 
   return {
-    page, field, form, press, deliver, suggest, vods, posts, listbox, options, selected, type,
+    page, field, form, press, deliver, suggest, vods, posts, listbox, options, selected, type, timers,
     all, visibleNodes, document,
   };
 }
@@ -923,17 +946,19 @@ test('R5(b). Y empty and no O drawn: Return opens the typed text as a channel, a
   assert.deepEqual(f.posts('open-stream'), [{input: 'glaze'}]);
 });
 
+// Amended 2026-11-25 (page round 3, P-B, TESTS-74): O rows that still match the new text now stay (tested in P-B below),
+// so these two R6 tests type a text that matches no drawn O row ('rix', 'glazx'); known rows still go at the keystroke.
 test('R6. a keystroke removes the old text\'s O rows and appended known rows at once; Y\'s own rows stay until the new list', () => {
   const f = pageFixture();
   f.type('ri');
   f.suggest([yRow(SR.riverlark)], 'ri');
   searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade, SR.riptidejoe]);
   assert.equal(f.options().length, 4, 'fixture: Y, an appended known row and two O rows');
-  f.type('riv');
+  f.type('rix');
   assert.deepEqual(loginsShown(f), ['riverlark'], 'only Y\'s own row is left, before any new list arrives');
   assert.equal(hairlines(f).length, 0);
   assert.equal(groups(f).length, 0);
-  f.suggest([yRow(SR.riverlark)], 'riv');
+  f.suggest([yRow(SR.riverlark)], 'rix');
   assert.deepEqual(loginsShown(f), ['riverlark']);
 });
 
@@ -941,7 +966,7 @@ test('R6. an O row that was selected is not selectable after a keystroke (frame 
   const f = pageFixture();
   frameC(f);
   assert.equal(f.selected().length, 1, 'fixture: the first O row is selected');
-  f.type('glazew');
+  f.type('glazx');
   assert.equal(f.options().length, 0, 'the O rows are gone');
   assert.equal(f.selected().length, 0);
   assert.equal(f.field.getAttribute('aria-activedescendant'), null);
@@ -965,8 +990,10 @@ test('R7. an answer whose text differs from the field (trimmed, case-insensitive
   assert.deepEqual(loginsShown(same), ['riverlark', 'rivenshade'], 'same text after trimming and lower-casing');
 });
 
+// Amended 2026-11-25 (page round 3, P-D, TESTS-74): the spinner shows only once a request has been out 150 ms, so the
+// two R9 tests run on fake timers and let 150 ms pass; the delay itself is tested under P-D.
 test('R9. the spinner #search-pending is hidden at rest, shows while a request for the field\'s text is out, and has no words', () => {
-  const f = pageFixture();
+  const f = pageFixture({timers: true});
   const spinner = f.document.getElementById('search-pending');
   assert.ok(spinner, 'an element #search-pending');
   assert.ok(f.all(f.form).includes(spinner), 'at the trailing end of the field: inside the form');
@@ -974,6 +1001,7 @@ test('R9. the spinner #search-pending is hidden at rest, shows while a request f
   f.type('ri');
   f.suggest([yRow(SR.riverlark)], 'ri');
   searchPending(f, 'ri', true);
+  f.timers.advance(150);
   assert.equal(isVisible(f, spinner), true, 'shown while the request is out');
   assert.equal(attr(f.listbox(), 'aria-busy'), 'true', 'the listbox is busy');
   assert.equal(spinner.textContent.trim(), '', 'a signifier, not words');
@@ -984,14 +1012,16 @@ test('R9. the spinner #search-pending is hidden at rest, shows while a request f
 });
 
 test('R9. a pending message for other text than the field\'s is ignored, whether it starts or ends a request', () => {
-  const f = pageFixture();
+  const f = pageFixture({timers: true});
   const spinner = f.document.getElementById('search-pending');
   assert.ok(spinner, 'an element #search-pending');
   f.type('ri');
   f.suggest([yRow(SR.riverlark)], 'ri');
   searchPending(f, 'rx', true);
+  f.timers.advance(150);
   assert.equal(isVisible(f, spinner), false, 'a start for another text does not show it');
   searchPending(f, 'ri', true);
+  f.timers.advance(150);
   searchPending(f, 'r', false);
   assert.equal(isVisible(f, spinner), true, 'an end for another text does not hide it');
 });
@@ -1119,4 +1149,225 @@ test('F4 protocol. the same re-sent list without reset keeps the drawn search ro
   f.deliver('suggestions', {text: 'ri', rows: [yRow(SR.riverlark), yRow(SR.rimecraft), yRow(SR.rinnyruns)]});
   assert.ok(loginsShown(f).includes('rivenshade') && loginsShown(f).includes('riptidejoe'), 'O rows stay');
   assert.deepEqual(loginsShown(f).slice(0, 2), ['riverlark', 'rimecraft'], 'Y rows already shown do not move');
+});
+
+// =====================================================================================================================
+// Rev 2 page round 3 (TESTS-74, lead 2026-11-25 ~03:25, from the independent design review): P-A, P-B, P-C, P-D and N3.
+// The contract names no markup for the typed-name row, so P-A reads it as the only option on the list: its leaf texts are
+// exactly the typed text (name only, no avatar letter, no age, no detail), no .mark element, selected.
+// =====================================================================================================================
+
+const leafTextsOf = (f, option) => leafTexts(f, option);
+const hasMark = (f, option) => f.all(option).some(node => classOf(node).includes('mark'));
+
+// ---- P-A: a name nobody matches shows itself ----
+
+test('P-A. Y empty and the search answered with nothing: one row with the typed text, name only, no live mark, selected; Return opens it', () => {
+  const f = pageFixture();
+  f.type('zzq');
+  f.suggest([], 'zzq');
+  searchPending(f, 'zzq', true);
+  searchPending(f, 'zzq', false);
+  searchAnswer(f, 'zzq', [], []);
+  assert.equal(f.options().length, 1, 'one row');
+  const [row] = f.options();
+  assert.deepEqual(leafTextsOf(f, row), ['zzq'], 'the typed text as a name, nothing else (the Twitch mark carries no text)');
+  assert.equal(hasMark(f, row), false, 'no live mark');
+  assert.deepEqual(f.selected(), [row], 'selected');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'zzq'}], 'Return opens it as a channel');
+});
+
+test('P-A. text the search is never sent (R4), with Y empty: the same single row, and Return opens it', () => {
+  for (const text of ['zq.tv', 'zq/clips', 'https://zq.example/a?b=c']) {
+    const f = pageFixture();
+    f.type(text);
+    f.suggest([], text);
+    assert.equal(f.options().length, 1, `"${text}": one row`);
+    assert.deepEqual(leafTextsOf(f, f.options()[0]), [text], 'the typed text only');
+    assert.deepEqual(f.selected(), [f.options()[0]]);
+    f.press('Enter');
+    assert.deepEqual(f.posts('open-stream'), [{input: text}]);
+  }
+});
+
+test('P-A. no typed-name row while a search is pending, or when Y or O has rows', () => {
+  const pending = pageFixture();
+  pending.type('zzq');
+  pending.suggest([], 'zzq');
+  searchPending(pending, 'zzq', true);
+  assert.equal(pending.options().length, 0, 'pending: the spinner alone');
+  const withY = pageFixture();
+  withY.type('ri');
+  withY.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(withY, 'ri', [], []);
+  assert.deepEqual(loginsShown(withY), ['riverlark'], 'Y has rows: no typed row');
+  const withO = pageFixture();
+  frameC(withO);
+  assert.deepEqual(loginsShown(withO), ['glazewright', 'glazedgourd', 'glazier9'], 'O has rows: no typed row');
+  const known = pageFixture();
+  known.type('ri');
+  known.suggest([], 'ri');
+  searchAnswer(known, 'ri', [SR.rimecraft], []);
+  assert.deepEqual(loginsShown(known), ['rimecraft'], 'known rows count as rows: no typed row');
+});
+
+// ---- P-B: other channels don't blink ----
+
+const matchRow = (login, displayName, live = true) => ({provider: 'twitch', login, displayName, live});
+
+test('P-B. a keystroke keeps drawn O rows whose login or display name still matches the new text, drops the rest', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  const tidal = matchRow('xk1', 'Tidal Wave');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe, SR.rinnyruns, tidal]);
+  f.type('riv');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade'], 'login prefix kept, the rest dropped');
+  f.type('RIP');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'riptidejoe'], 'case-insensitive');
+  f.type('wav');
+  assert.ok(loginsShown(f).includes('xk1'), 'a word of the display name that starts with the text is a match');
+  assert.ok(!loginsShown(f).includes('riptidejoe'));
+});
+
+test('P-B. kept O rows stay selectable: arrows reach them and Return opens them; the hairline stays while both groups show', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  f.type('riv');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade']);
+  assert.equal(hairlines(f).length, 1, 'the hairline stays');
+  f.suggest([yRow(SR.riverlark)], 'riv');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade'], 'and through the new Y list');
+  f.press('ArrowDown');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'the kept row is selectable');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'rivenshade'}]);
+});
+
+test('P-B. appended known rows still go at the keystroke, even when they match the new text', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade]);
+  f.type('rim');
+  assert.deepEqual(loginsShown(f), ['riverlark'], 'rimecraft (known) is gone; rivenshade does not match "rim"');
+});
+
+test('P-B. the new answer replaces O in its order, and the selection stays on the same person if present', () => {
+  const rivendell = sr('rivendell', 'Rivendell', true, {category: 'Art', title: 'ink', viewers: 12});
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  f.type('riv');
+  f.suggest([yRow(SR.riverlark)], 'riv');
+  f.press('ArrowDown');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'fixture: the kept row is selected');
+  searchAnswer(f, 'riv', [], [rivendell, SR.rivenshade]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivendell', 'rivenshade'], 'O is the new answer, in its order');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'the same person stays selected');
+});
+
+test('P-B. if the selected kept person is not in the new answer, the existing rules apply (the top row)', () => {
+  const rivendell = sr('rivendell', 'Rivendell', true, {category: 'Art', title: 'ink', viewers: 12});
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade]);
+  f.type('riv');
+  f.suggest([yRow(SR.riverlark)], 'riv');
+  f.press('ArrowDown');
+  searchAnswer(f, 'riv', [], [rivendell]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivendell']);
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'the top row is selected');
+});
+
+// ---- P-C: dimmed names reach 4.5:1 ----
+
+function tokensFor(scheme) {
+  const light = CSS.match(/:root\s*\{([^}]*)\}/)[1];
+  const tokens = {};
+  const read = block => { for (const [, name, value] of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+)/g)) tokens[name] = value.trim(); };
+  read(light);
+  if (scheme === 'dark') {
+    const dark = CSS.match(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{\s*:root\s*\{([^}]*)\}/);
+    assert.ok(dark, 'the CSS has a dark scheme block');
+    read(dark[1]);
+  }
+  return tokens;
+}
+
+function colour(value, tokens) {
+  const text = String(value).trim();
+  const variable = text.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+  if (variable) return colour(tokens[variable[1]], tokens);
+  const hex = text.match(/^#([0-9a-f]{6})$/i);
+  if (hex) return {r: parseInt(hex[1].slice(0, 2), 16), g: parseInt(hex[1].slice(2, 4), 16), b: parseInt(hex[1].slice(4, 6), 16), a: 1};
+  const rgb = text.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+  assert.ok(rgb, `a colour the test can read (hex, rgb, rgba or a token of those): ${text}`);
+  return {r: +rgb[1], g: +rgb[2], b: +rgb[3], a: rgb[4] === undefined ? 1 : +rgb[4]};
+}
+
+const channel = v => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const luminance = ({r, g, b}) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+
+// The dimmed name's colour: its text colour (alpha included) times the element's opacity, over the window colour.
+function dimmedContrast(scheme) {
+  const tokens = tokensFor(scheme);
+  const rule = {};
+  for (const [, selectors, block] of CSS.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!selectors.split(',').some(selector => selector.trim() === '.person.dim .name')) continue;
+    for (const [, name, value] of block.matchAll(/([\w-]+)\s*:\s*([^;]+)/g)) rule[name] = value.trim();
+  }
+  const ink = colour(rule.color ?? tokens['--fg'], tokens);
+  const opacity = rule.opacity === undefined ? 1 : Number(rule.opacity);
+  const window = colour(tokens['--window'], tokens);
+  const alpha = ink.a * opacity;
+  const mixed = {r: window.r * (1 - alpha) + ink.r * alpha, g: window.g * (1 - alpha) + ink.g * alpha, b: window.b * (1 - alpha) + ink.b * alpha};
+  const [hi, lo] = [luminance(mixed), luminance(window)].sort((a, b) => b - a);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+for (const scheme of ['light', 'dark']) {
+  test(`P-C. a dimmed row's name reaches 4.5:1 against the window in ${scheme} (from the CSS tokens and the .person.dim .name rule)`, () => {
+    const ratio = dimmedContrast(scheme);
+    assert.ok(ratio >= 4.5, `contrast ${ratio.toFixed(2)}:1 is below 4.5:1`);
+  });
+}
+
+// ---- P-D: the spinner waits 150 ms, and holds still under Reduce Motion ----
+
+test('P-D. #search-pending stays hidden until a request has been out 150 ms, and never shows for one that ends sooner', () => {
+  const f = pageFixture({timers: true});
+  const spinner = f.document.getElementById('search-pending');
+  assert.ok(spinner, 'an element #search-pending');
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchPending(f, 'ri', true);
+  assert.equal(isVisible(f, spinner), false, 'hidden when the request starts');
+  f.timers.advance(149);
+  assert.equal(isVisible(f, spinner), false, 'hidden at 149 ms');
+  f.timers.advance(1);
+  assert.equal(isVisible(f, spinner), true, 'shown at 150 ms');
+  searchPending(f, 'ri', false);
+  assert.equal(isVisible(f, spinner), false, 'gone when it ends');
+  searchPending(f, 'ri', true);
+  f.timers.advance(100);
+  searchPending(f, 'ri', false);
+  f.timers.advance(1000);
+  assert.equal(isVisible(f, spinner), false, 'a request that ended within 150 ms never showed it');
+});
+
+test('P-D. the CSS has a prefers-reduced-motion rule for #search-pending with no rotation', () => {
+  const media = [...CSS.matchAll(/@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)];
+  assert.ok(media.length >= 1, 'a @media (prefers-reduced-motion: reduce) block');
+  const rules = media.flatMap(block => [...block[1].matchAll(/([^{}]+)\{([^{}]*)\}/g)])
+    .filter(([, selectors]) => selectors.split(',').some(selector => /search-pending/.test(selector)));
+  assert.ok(rules.length >= 1, 'a rule for the search spinner inside it');
+  const body = rules.map(([, , declarations]) => declarations).join(';');
+  assert.ok(/animation(-name)?\s*:\s*none/.test(body), 'its animation is off');
+  assert.ok(!/rotate/.test(body), 'and nothing rotates');
 });

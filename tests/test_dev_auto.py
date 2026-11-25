@@ -70,7 +70,11 @@ class AutoRunTests(unittest.TestCase):
         self.assertIn(True, seen[1:], 'pending.json exists while the build waits for IINA to quit')
 
     def test_a_second_waiter_does_not_start_while_one_is_waiting(self):
-        (self.stage / 'auto.lock').write_text(json.dumps({'pid': 1}))  # pid 1 (launchd) is always alive
+        # Amended 2026-11-24 (lead, review finding 3): a waiter holds an flock on auto.lock for its lifetime.
+        import fcntl
+        holder = open(self.stage / 'auto.lock', 'a+')
+        self.addCleanup(holder.close)
+        fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
         result = DEV.auto_run(self.stage, branch='next', running=lambda: True, deploy=self.fake_deploy,
                               sleep=lambda s: self.fail('a second waiter must not wait'))
         self.assertEqual(result, 'already-waiting')
@@ -79,6 +83,12 @@ class AutoRunTests(unittest.TestCase):
 
     def test_a_stale_lock_from_a_dead_process_is_replaced(self):
         (self.stage / 'auto.lock').write_text(json.dumps({'pid': 999999}))
+        result = DEV.auto_run(self.stage, branch='next', running=lambda: False, deploy=self.fake_deploy, sleep=lambda s: None)
+        self.assertEqual(result, 'deployed')
+
+    def test_a_lock_naming_a_live_but_unrelated_process_is_not_trusted(self):
+        # Review finding 3 (pid reuse): a pid in the file proves nothing without the flock.
+        (self.stage / 'auto.lock').write_text(json.dumps({'pid': __import__('os').getpid()}))
         result = DEV.auto_run(self.stage, branch='next', running=lambda: False, deploy=self.fake_deploy, sleep=lambda s: None)
         self.assertEqual(result, 'deployed')
 
@@ -102,6 +112,67 @@ class AutoRunTests(unittest.TestCase):
                               sleep=lambda s: self.fail('no wait'))
         self.assertEqual(result, 'skipped')
         self.assertEqual(self.deploys, [])
+
+
+class AutoReviewFixTests(unittest.TestCase):
+    """Lead, 2026-11-24, from the Claude review of the first build (findings 1, 2, 4, 6)."""
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.base = Path(temp.name)
+        self.stage = self.base / 'stage'
+        self.stage.mkdir()
+
+    def test_a_commit_queued_during_a_failed_build_is_still_built(self):
+        calls = []
+        def deploy(stage, tests=None, qa=False):
+            calls.append(1)
+            if len(calls) == 1:
+                # A newer commit fires its hook while this build runs: it finds the lock held and queues itself.
+                inner = DEV.auto_run(self.stage, branch='next', running=lambda: False, deploy=lambda *a, **k: None,
+                                     sleep=lambda s: None)
+                self.assertEqual(inner, 'already-waiting')
+                raise RuntimeError('tests failed for the older commit')
+            return {'version': 'v', 'branch': 'next', 'testsRan': True, 'qa': qa}
+        result = DEV.auto_run(self.stage, branch='next', running=lambda: False, deploy=deploy, sleep=lambda s: None)
+        self.assertEqual(len(calls), 2, 'the newer request is built after the failure')
+        self.assertEqual(result, 'deployed')
+        self.assertFalse((self.stage / 'pending.json').exists())
+
+    def test_a_failure_with_nothing_newer_is_visible_in_pending(self):
+        def failing(stage, tests=None, qa=False):
+            raise RuntimeError('tests failed')
+        DEV.auto_run(self.stage, branch='next', running=lambda: False, deploy=failing, sleep=lambda s: None)
+        pending = json.loads((self.stage / 'pending.json').read_text())
+        self.assertEqual(pending.get('state'), 'failed')
+        self.assertIn('tests failed', pending.get('reason', ''))
+
+    def test_the_log_is_bounded(self):
+        (self.stage / 'auto.log').write_text('x' * 3_000_000)
+        DEV.auto_run(self.stage, branch='next', running=lambda: False,
+                     deploy=lambda s, tests=None, qa=False: {'version': 'v', 'branch': 'next', 'testsRan': True, 'qa': qa},
+                     sleep=lambda s: None)
+        self.assertLess((self.stage / 'auto.log').stat().st_size, 1_000_000)
+
+    def test_the_snapshot_is_the_commit_not_the_working_tree(self):
+        # Review finding 2: an automatic build uses a clean snapshot of HEAD, never uncommitted edits.
+        import subprocess
+        repo = self.base / 'repo'
+        repo.mkdir()
+        git = lambda *a: subprocess.run(['git', '-C', str(repo), *a], check=True, capture_output=True)
+        git('init', '-q', '-b', 'next')
+        git('config', 'user.email', 'test@example.invalid')
+        git('config', 'user.name', 'Test')
+        (repo / 'global.js').write_text('committed\n')
+        git('add', '.')
+        git('commit', '-q', '-m', 'one')
+        (repo / 'global.js').write_text('half-edited\n')
+        (repo / 'untracked.js').write_text('scratch\n')
+        dest = self.base / 'snapshot'
+        DEV.snapshot_head(repo, dest)
+        self.assertEqual((dest / 'global.js').read_text(), 'committed\n')
+        self.assertFalse((dest / 'untracked.js').exists())
+        self.assertEqual((repo / 'global.js').read_text(), 'half-edited\n', 'the checkout is left alone')
 
 
 class HookInstallTests(unittest.TestCase):

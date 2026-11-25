@@ -736,6 +736,8 @@ const SR = {
   glazewright: sr('glazewright', 'Glazewright', true, {category: 'Makers & Crafting', title: 'throwing a tea set live', viewers: 3420}),
   glazedgourd: sr('glazedgourd', 'glazed_gourd', true, {category: 'Just Chatting', title: 'morning coffee', viewers: 190}),
   glazier9: sr('glazier9', 'glazier9', false, {lastAt: hoursBack(24 * 14), lastTitle: 'stained glass part 2'}),
+  // Names the step-back tests use (B2, B3).
+  rip: sr('rip', 'rip', false), rivulet: sr('rivulet', 'Rivulet', true), rivendell: sr('rivendell', 'Rivendell', true),
 };
 // Y rows as `suggestions` sends them: identity and live only (details travel in suggestions-status).
 const yRow = ({details, ...row}) => row;
@@ -1193,12 +1195,25 @@ test('P-A. text the search is never sent (R4), with Y empty: the same single row
   }
 });
 
-test('P-A. no typed-name row while a search is pending, or when Y or O has rows', () => {
+// Amended 2026-11-25 (step-back, P-A′, TESTS-74): the typed-name row also shows while a search is pending (it is what
+// Return opens at that moment) and is replaced when selectable results land (I1's exception: it is a placeholder).
+test('P-A′. the typed-name row shows while a search is pending, is selected, and gives way to results; none when Y or O has rows', () => {
   const pending = pageFixture();
   pending.type('zzq');
   pending.suggest([], 'zzq');
   searchPending(pending, 'zzq', true);
-  assert.equal(pending.options().length, 0, 'pending: the spinner alone');
+  assert.equal(pending.options().length, 1, 'pending: the typed-name row shows');
+  assert.deepEqual(leafTextsOf(pending, pending.options()[0]), ['zzq']);
+  assert.deepEqual(pending.selected(), [pending.options()[0]], 'and is selected');
+  pending.press('Enter');
+  assert.deepEqual(pending.posts('open-stream'), [{input: 'zzq'}], 'Return opens the typed text, never a result not yet seen');
+  const landing = pageFixture();
+  landing.type('glaze');
+  landing.suggest([], 'glaze');
+  searchPending(landing, 'glaze', true);
+  searchAnswer(landing, 'glaze', [], [SR.glazewright, SR.glazedgourd]);
+  assert.deepEqual(loginsShown(landing), ['glazewright', 'glazedgourd'], 'results replace the placeholder');
+  assert.deepEqual(landing.selected().map(option => optionLogin(landing, option)), ['glazewright'], 'and the first result is selected');
   const withY = pageFixture();
   withY.type('ri');
   withY.suggest([yRow(SR.riverlark)], 'ri');
@@ -1233,20 +1248,86 @@ test('P-B. a keystroke keeps drawn O rows whose login or display name still matc
   assert.ok(!loginsShown(f).includes('riptidejoe'));
 });
 
-test('P-B. kept O rows stay selectable: arrows reach them and Return opens them; the hairline stays while both groups show', () => {
+// Amended 2026-11-25 (step-back, P-B′, TESTS-74): kept O rows are shown but not selectable until the answer for the
+// current text lands: arrows, the pointer and Return skip them. This replaces "kept rows stay selectable".
+test('P-B′. kept O rows are shown but arrows, the pointer and Return skip them; the hairline stays', () => {
   const f = pageFixture();
   f.type('ri');
   f.suggest([yRow(SR.riverlark)], 'ri');
   searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
   f.type('riv');
-  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade']);
-  assert.equal(hairlines(f).length, 1, 'the hairline stays');
   f.suggest([yRow(SR.riverlark)], 'riv');
-  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade'], 'and through the new Y list');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade'], 'fixture: rivenshade is kept');
+  assert.equal(hairlines(f).length, 1, 'the hairline stays');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'the top row is selected');
   f.press('ArrowDown');
-  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'the kept row is selectable');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'ArrowDown skips the kept row');
+  f.options()[1].click();
+  assert.deepEqual(f.posts('open-stream'), [], 'a click on a kept row opens nothing');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'and selects nothing');
   f.press('Enter');
-  assert.deepEqual(f.posts('open-stream'), [{input: 'rivenshade'}]);
+  assert.deepEqual(f.posts('open-stream'), [{input: 'riverlark'}], 'Return opens the selected row');
+});
+
+test('P-B′. with nothing selectable but a kept row, Return opens the typed text, never the kept row (B2)', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  f.type('rip');
+  f.suggest([], 'rip');
+  assert.ok(loginsShown(f).includes('riptidejoe'), 'fixture: riptidejoe is kept');
+  assert.ok(!f.selected().some(option => optionLogin(f, option) === 'riptidejoe'), 'the kept row is not selected');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'rip'}]);
+});
+
+test('P-B′. B2: the exact match lands above a kept row: the first selectable row, not the kept one, is selected', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  f.type('rip');
+  f.suggest([], 'rip');
+  searchAnswer(f, 'rip', [], [SR.rip, SR.riptidejoe]);
+  assert.deepEqual(loginsShown(f), ['rip', 'riptidejoe'], 'the answer replaces the kept rows in its order');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rip'], 'the exact match is selected');
+});
+
+test('P-B′. B3: arrows never land on a kept row, so a row the person picked is never removed by the answer', () => {
+  const rivulet = SR.rivulet;
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, rivulet]);
+  f.type('riv');
+  f.suggest([yRow(SR.riverlark)], 'riv');
+  f.press('ArrowDown');
+  f.press('ArrowDown');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'the selection never reaches the kept rows');
+  searchAnswer(f, 'riv', [], [SR.rivenshade]);
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'the answer drops Rivulet; the selection stays');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade']);
+});
+
+test('P-B′. when the answer lands the selection stays on a selectable row; with none selectable its first row is selected', () => {
+  const stays = pageFixture();
+  stays.type('ri');
+  stays.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  searchAnswer(stays, 'ri', [], [SR.rivenshade]);
+  stays.type('riv');
+  stays.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'riv');
+  stays.press('ArrowDown');
+  searchAnswer(stays, 'riv', [], [SR.rivendell, SR.rivenshade]);
+  assert.deepEqual(stays.selected().map(option => optionLogin(stays, option)), ['rimecraft'], 'the picked Y row stays');
+  const none = pageFixture();
+  none.type('ri');
+  none.suggest([], 'ri');
+  searchAnswer(none, 'ri', [], [SR.rivenshade]);
+  none.type('riv');
+  none.suggest([], 'riv');
+  searchAnswer(none, 'riv', [], [SR.rivendell, SR.rivenshade]);
+  assert.deepEqual(none.selected().map(option => optionLogin(none, option)), ['rivendell'], 'nothing was selectable: the first row is');
 });
 
 test('P-B. appended known rows still go at the keystroke, even when they match the new text', () => {
@@ -1258,34 +1339,8 @@ test('P-B. appended known rows still go at the keystroke, even when they match t
   assert.deepEqual(loginsShown(f), ['riverlark'], 'rimecraft (known) is gone; rivenshade does not match "rim"');
 });
 
-test('P-B. the new answer replaces O in its order, and the selection stays on the same person if present', () => {
-  const rivendell = sr('rivendell', 'Rivendell', true, {category: 'Art', title: 'ink', viewers: 12});
-  const f = pageFixture();
-  f.type('ri');
-  f.suggest([yRow(SR.riverlark)], 'ri');
-  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
-  f.type('riv');
-  f.suggest([yRow(SR.riverlark)], 'riv');
-  f.press('ArrowDown');
-  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'fixture: the kept row is selected');
-  searchAnswer(f, 'riv', [], [rivendell, SR.rivenshade]);
-  assert.deepEqual(loginsShown(f), ['riverlark', 'rivendell', 'rivenshade'], 'O is the new answer, in its order');
-  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'the same person stays selected');
-});
-
-test('P-B. if the selected kept person is not in the new answer, the existing rules apply (the top row)', () => {
-  const rivendell = sr('rivendell', 'Rivendell', true, {category: 'Art', title: 'ink', viewers: 12});
-  const f = pageFixture();
-  f.type('ri');
-  f.suggest([yRow(SR.riverlark)], 'ri');
-  searchAnswer(f, 'ri', [], [SR.rivenshade]);
-  f.type('riv');
-  f.suggest([yRow(SR.riverlark)], 'riv');
-  f.press('ArrowDown');
-  searchAnswer(f, 'riv', [], [rivendell]);
-  assert.deepEqual(loginsShown(f), ['riverlark', 'rivendell']);
-  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['riverlark'], 'the top row is selected');
-});
+// (Two earlier P-B tests, "the new answer replaces O in its order, selection stays on the same person" and "if the selected kept
+// person is not in the new answer", were superseded 2026-11-25 by the P-B′ tests above: a kept row can no longer be selected.)
 
 // ---- P-C: dimmed names reach 4.5:1 ----
 
@@ -1340,7 +1395,7 @@ for (const scheme of ['light', 'dark']) {
   });
 }
 
-// ---- P-D: the spinner waits 150 ms, and holds still under Reduce Motion ----
+// ---- P-D: the spinner waits 150 ms ----
 
 test('P-D. #search-pending stays hidden until a request has been out 150 ms, and never shows for one that ends sooner', () => {
   const f = pageFixture({timers: true});
@@ -1363,13 +1418,226 @@ test('P-D. #search-pending stays hidden until a request has been out 150 ms, and
   assert.equal(isVisible(f, spinner), false, 'a request that ended within 150 ms never showed it');
 });
 
-test('P-D. the CSS has a prefers-reduced-motion rule for #search-pending with no rotation', () => {
-  const media = [...CSS.matchAll(/@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)];
-  assert.ok(media.length >= 1, 'a @media (prefers-reduced-motion: reduce) block');
-  const rules = media.flatMap(block => [...block[1].matchAll(/([^{}]+)\{([^{}]*)\}/g)])
-    .filter(([, selectors]) => selectors.split(',').some(selector => /search-pending/.test(selector)));
-  assert.ok(rules.length >= 1, 'a rule for the search spinner inside it');
-  const body = rules.map(([, , declarations]) => declarations).join(';');
-  assert.ok(/animation(-name)?\s*:\s*none/.test(body), 'its animation is off');
-  assert.ok(!/rotate/.test(body), 'and nothing rotates');
+// Removed 2026-11-25 (step-back, P-D′, TESTS-74): the test that the spinner has a prefers-reduced-motion rule with no
+// rotation. Under Reduce Motion the spinner keeps its normal look (feedback, not decorative motion).
+
+// =====================================================================================================================
+// Step-back (D-032), TESTS-74 "the selection class": invariant I1, driven over seeded pseudo-random message sequences.
+// I1: the selected row changes only by the person's own input (typing, arrows, the pointer), with one exception: when
+// nothing is selectable, the first selectable row that appears becomes selected. Return opens the selected row, or the
+// typed text when nothing is selectable. A row the person selected is never removed or moved except by their own edit.
+// Readings this test makes where I1 meets older rules (listed in the hand-back): an unmoved default selection follows
+// the top when a list arrives (P2); the typed-name row is a placeholder that gives way to results; a reset:true list
+// (an account change) may remove a person-selected search row; kept rows (P-B′) are never selected. The model only
+// sends what global may send: a list for the current text, re-sent lists that only append, answers for the current or an
+// older text, pending messages for either, status, and timer ticks.
+// =====================================================================================================================
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const I1_POOL = ['pa1', 'pa2', 'pb1', 'pb2', 'pc1', 'qa1', 'qa2', 'qb1'];
+const I1_TEXTS = ['', 'p', 'pa', 'pb', 'pc', 'q', 'qa', 'PA ', 'zz', 'a.b', 'pa ', 'Q'];
+
+function rowName(f, option) {
+  const node = f.all(option).find(inner => classOf(inner).includes('name'));
+  return node ? node.textContent.trim() : String(attr(option, 'aria-label') ?? '').split(',')[0];
+}
+
+function i1Snapshot(f) {
+  const options = f.options();
+  const selected = f.selected();
+  return {
+    rows: options.map(option => rowName(f, option)),
+    sel: selected.length ? rowName(f, selected[0]) : null,
+    selCount: selected.length,
+    active: f.field.getAttribute('aria-activedescendant'),
+    selectedId: selected.length ? selected[0].id : null,
+  };
+}
+
+function runI1Sequence(seed, steps) {
+  const rnd = mulberry32(seed);
+  const pick = list => list[Math.floor(rnd() * list.length)];
+  const subset = (list, max) => {
+    const chosen = [];
+    for (const item of list) if (rnd() < 0.4 && chosen.length < max) chosen.push(item);
+    return chosen;
+  };
+  const row = (login, live = pick([true, false, null])) => ({provider: 'twitch', login, displayName: login, live});
+  const f = pageFixture({timers: true});
+  const log = [];
+  let text = '';
+  let yList = subset(I1_POOL, 4);
+  f.suggest(yList.map(login => row(login)), '');
+  let personMoved = false;
+  let chosen = null;
+  let needList = false;
+  let lastOthers = new Set();
+  let kept = new Set();
+  let posted = new Set();
+  const cache = new Map();
+  let prev = i1Snapshot(f);
+  const norm = value => String(value).trim().toLowerCase();
+  const isTyped = id => id !== null && text.trim() !== '' && norm(id) === norm(text) && !I1_POOL.includes(id);
+  const fail = message => {
+    throw new Error(`seed ${seed}: ${message}\n  steps: ${log.join(' | ')}\n  before ${JSON.stringify(prev)}\n  after ${JSON.stringify(i1Snapshot(f))}`);
+  };
+
+  for (let step = 0; step < steps; step++) {
+    const roll = rnd();
+    let kind = 'message';
+    let name;
+    let reset = false;
+    let returned = null;
+    let editResponse = false;
+    if (roll < 0.17) {
+      kind = 'person'; name = 'type';
+      const before = text;
+      text = pick(I1_TEXTS);
+      f.type(text);
+      if (norm(text) === norm(before)) {
+        // F2: an edit that leaves the trimmed, lower-cased text unchanged changes no rows and no selection; typing
+        // still resets "the person has moved" (phase 3 decision 9), so the next list follows the top again.
+        personMoved = false; posted = new Set();
+      } else {
+        personMoved = false; chosen = null; needList = true; posted = new Set();
+        kept = new Set(i1Snapshot(f).rows.filter(id => lastOthers.has(id) && !yList.includes(id)));
+      }
+      log.push(`type ${JSON.stringify(text)}`);
+    } else if (roll < 0.27) {
+      kind = 'person'; name = 'arrow';
+      const key = pick(['ArrowDown', 'ArrowDown', 'ArrowUp']);
+      f.press(key);
+      personMoved = true; chosen = i1Snapshot(f).sel;
+      log.push(key);
+    } else if (roll < 0.31) {
+      kind = 'person'; name = 'click';
+      const options = f.options();
+      if (options.length) {
+        const index = Math.floor(rnd() * options.length);
+        const target = rowName(f, options[index]);
+        const before = f.posts('open-stream').length;
+        options[index].click();
+        log.push(`click ${target}`);
+        for (const post of f.posts('open-stream').slice(before)) posted.add(norm(post.input));
+        const after = i1Snapshot(f);
+        if (after.sel !== null && after.sel === target) { personMoved = true; chosen = after.sel; }
+        if (kept.has(target) && f.posts('open-stream').length > before) fail(`a click opened kept row ${target}`);
+      } else {
+        log.push('click (no rows)');
+      }
+    } else if (roll < 0.37 && text.trim() !== '') {
+      kind = 'person'; name = 'return';
+      const sel = i1Snapshot(f).sel;
+      const before = f.posts('open-stream').length;
+      f.press('Enter');
+      f.timers.advance(400);
+      const fresh = f.posts('open-stream').slice(before);
+      const expected = sel === null || isTyped(sel) ? text : sel;
+      log.push(`return (selected ${sel})`);
+      returned = {sel, expected, fresh};
+      if (fresh.length > 1) fail('Return posted more than one open-stream');
+      if (fresh.length === 1 && norm(fresh[0].input) !== norm(expected)) {
+        fail(`Return opened ${JSON.stringify(fresh[0].input)} but the selected row or typed text is ${JSON.stringify(expected)}`);
+      }
+      if (fresh.length === 0 && !posted.has(norm(expected))) fail(`Return opened nothing; expected ${JSON.stringify(expected)}`);
+      for (const post of fresh) posted.add(norm(post.input));
+    } else {
+      const kindRoll = rnd();
+      if (kindRoll < 0.3) {
+        name = 'suggestions';
+        editResponse = needList;
+        let rows;
+        if (needList || rnd() < 0.12) {
+          reset = !needList;
+          rows = subset(I1_POOL, 4);
+        } else {
+          rows = yList.concat(subset(I1_POOL.filter(login => !yList.includes(login)), 2));
+        }
+        yList = rows;
+        f.deliver('suggestions', {text, rows: rows.map(login => row(login)), ...(reset ? {reset: true} : {})});
+        if (reset) { kept = new Set(); lastOthers = new Set(); }
+        needList = false;
+        log.push(`suggestions ${JSON.stringify(rows)}${reset ? ' reset' : ''}`);
+      } else if (kindRoll < 0.6) {
+        name = 'answer';
+        const current = rnd() < 0.8;
+        const answerText = current ? text : pick(I1_TEXTS);
+        // Global answers a text once (and from its cache after that): a repeat is the same answer.
+        const free = I1_POOL.filter(login => !yList.includes(login));
+        if (!cache.has(norm(answerText))) {
+          const knownNew = subset(free, 2);
+          cache.set(norm(answerText), {known: knownNew, others: subset(free.filter(login => !knownNew.includes(login)), 5)});
+        }
+        const {known, others} = cache.get(norm(answerText));
+        f.deliver('suggestions-search', {text: answerText, known: known.map(login => row(login)), others: others.map(login => row(login))});
+        if (norm(answerText) === norm(text) && text.trim() !== '') { kept = new Set(); lastOthers = new Set(others); }
+        log.push(`answer ${JSON.stringify(answerText)} known ${JSON.stringify(known)} others ${JSON.stringify(others)}`);
+      } else if (kindRoll < 0.75) {
+        name = 'pending';
+        const pendingText = rnd() < 0.8 ? text : pick(I1_TEXTS);
+        const value = rnd() < 0.5;
+        searchPending(f, pendingText, value);
+        log.push(`pending ${JSON.stringify(pendingText)} ${value}`);
+      } else if (kindRoll < 0.85) {
+        name = 'status';
+        const status = {};
+        for (const login of subset(I1_POOL, 3)) status[login] = pick([true, false, null]);
+        f.deliver('suggestions-status', {status, details: {}});
+        log.push('status');
+      } else {
+        kind = 'timer'; name = 'tick';
+        const ms = pick([0, 100, 150, 250]);
+        f.timers.advance(ms);
+        log.push(`tick ${ms}`);
+      }
+    }
+
+    const now = i1Snapshot(f);
+    if (now.selCount > 1) fail('more than one row is selected');
+    if (now.sel === null && now.active !== null) fail('aria-activedescendant names a row but none is selected');
+    if (now.sel !== null && now.active !== now.selectedId) fail('aria-activedescendant is not the selected row');
+    if (kept.size && now.sel !== null && kept.has(now.sel)) fail(`kept row ${now.sel} is selected (kept rows are not selectable)`);
+    // The first list after an edit is the answer to that edit: it may remove what the person had picked meanwhile.
+    if (editResponse) {
+      if (chosen !== null && !now.rows.includes(chosen)) chosen = null;
+      prev = now;
+      continue;
+    }
+    if (kind !== 'person' && now.sel !== prev.sel) {
+      const placeholder = prev.sel !== null && isTyped(prev.sel);
+      const followsTop = !personMoved && name === 'suggestions';
+      const firstSelectable = prev.sel === null;
+      const removedByReset = reset && prev.sel !== null && !now.rows.includes(prev.sel);
+      if (!(firstSelectable || placeholder || followsTop || removedByReset || (!personMoved && name === 'answer'))) {
+        fail(`the selection changed from ${prev.sel} to ${now.sel} on a ${name} step the person did not make`);
+      }
+    }
+    if (kind !== 'person' && personMoved && chosen !== null && !reset) {
+      const was = prev.rows.indexOf(chosen);
+      const is = now.rows.indexOf(chosen);
+      if (prev.sel === chosen && (is === -1 || is !== was)) {
+        fail(`the row the person selected (${chosen}) was ${is === -1 ? 'removed' : 'moved'} by a ${name} step`);
+      }
+    }
+    if (returned === null && kind === 'person' && name === 'type') { /* the edit itself may change anything */ }
+    prev = now;
+  }
+}
+
+test('I1. the selection invariant holds over seeded pseudo-random message and input sequences (300 sequences of 30 steps)', t => {
+  const started = Date.now();
+  const sequences = 300;
+  const steps = 30;
+  for (let seed = 1; seed <= sequences; seed++) runI1Sequence(seed, steps);
+  t.diagnostic(`I1: ${sequences} sequences, ${sequences * steps} steps, ${Date.now() - started} ms`);
 });

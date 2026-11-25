@@ -367,6 +367,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Recommendation (lead, and the builder's pick):** 1, with the split also given to VoiceOver as hidden group names. Load-bearing assumption: with live people first, an offline tail below them reads as "more", not clutter. What would flip it: after your follows load (sign out and in once), if the offline tail feels like noise, 2.
 - **Decided by the lead unless you say otherwise:** Twitch-wide search starts at two typed characters after a short pause; people you don't follow are ordered live first by viewers; the typed text goes to Twitch's search (a PRIVACY line).
 - **What the answer changes:** the tests and build of #74 phase 2; the backend's now-unused follows sign-in path is removed in the same round.
+- **Answered 2026-11-25 (operator):** "I'll go with your recommended approach, and then we'll see." Option 1, provisional; revisit after their real follows load.
 
 ## Answered
 

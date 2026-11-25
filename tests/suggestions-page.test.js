@@ -263,15 +263,17 @@ test('12. Return: typing "oh" then Return opens the top match, not the typed tex
   assert.deepEqual(f.posts('open-stream'), [{input: 'ohnepixel'}]);
 });
 
-test('12. Return: on a person known to be offline it opens their broadcasts in the list, not the live check', () => {
-  // Lead, 2026-11-24 ~20:55, after the design review (finding 3): the old path shrank the window to a spinner,
-  // then showed the #32 list with another key model. An offline person's broadcasts open inline, as with →.
+test('12. Return: on a person marked offline it still runs the live check; an offline answer shows their broadcasts in the list', () => {
+  // Lead, 2026-11-24 ~21:25, design review round 2 (R2-1): a mark can be up to a minute old (global's status
+  // cache), so Return never trusts it: someone who just went live must open live. The check's offline answer
+  // shows the broadcasts under the row (round 2's behaviour), so the mark only saves a request, and is not used.
   const f = pageFixture();
-  f.suggest();  // OhmWrecker's row already carries live: false; any offline mark (row or status) skips the check
+  f.suggest();
+  f.deliver('suggestions-status', {status: {ohnepixel: true, ohmwrecker: false}});
   f.press('ArrowDown');
   f.press('Enter');
-  assert.deepEqual(f.posts('open-vods'), [{login: 'ohmwrecker'}]);
-  assert.deepEqual(f.posts('open-stream'), []);
+  assert.deepEqual(f.posts('open-stream'), [{input: 'ohmwrecker'}]);
+  assert.deepEqual(f.posts('open-vods'), []);
 });
 
 test('12. Return: with text and no selection it posts today\'s open-stream {input: text}', () => {

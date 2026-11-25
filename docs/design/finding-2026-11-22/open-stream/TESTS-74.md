@@ -136,3 +136,14 @@ P5. Details arriving update the row in place (same element), as status does.
 
 ### Phase 3b (lead, 2026-11-24 ~23:00)
 Offline details gain `lastTitle` (GQL `lastBroadcast{title}`, checked live tonight), and an offline row shows it as its second line, as mock A did. P1d's earlier "age and name, nothing else" was a third drift from mock A by the lead's contract (after rule 11 and the follows); G6 and P1d amended.
+
+## Phase 3c (lead, 2026-11-25 ~00:10): fixes from the Opus design review (P3-1, P3-2) and the Opus backend review (B1–B8)
+Reviews: scratchpad `opus-74-design-review.md` ("Phase 3") and the backend reviewer's report (probe harness at scratchpad `probe74/`).
+- **C1 (P3-1) The order settles once.** For each open, global posts the first `suggestions` only after status (and, with the follows scope, follows) have answered or 450 ms have passed, whichever is first; cached answers count. After that first post the rows' order never changes while the window shows the same text: later answers travel only in `suggestions-status` (marks and details). A new text or a reopen gets the fresh G4/G5 order. Supersedes G7's repost.
+- **C2 (B1) Open Stream reads the saved sign-in itself.** Opening Open Stream with a saved Keychain grant and no player connected validates it and, with the follows scope, fetches follows. Global may hold the credentials while Open Stream is showing or a player uses them; it drops them as before when neither does.
+- **C3 (P3-2, B5) One action to include follows.** When the grant lacks `user:read:follows` (or no grant exists), the note is a button, "Include who you follow". It posts `follows-connect`; global forgets the old grant (as Sign out does), starts the device flow with both scopes, and posts `follows-code {userCode, verificationUri}` to the page, which shows the code with a button that opens the Twitch page. The person completes sign-in on Twitch; on success the follows load in the open window. The lead never completes an authorization.
+- **C4 (B2, B3) Account and late answers.** A sign-in, sign-out or reopen while Open Stream shows refreshes status and follows for the showing form; a still-current cache refresh is published to whichever form is showing and ready.
+- **C5 (B4) A detail or age error never wipes live status.** Live status and details/ages are separate queries (or errors are scoped by path): an error on `lastBroadcast` or a title loses only that.
+- **C6 (B6) `user_id` must match `/^\d+$/`;** otherwise follows are treated as needs-sign-in.
+- **C7 (B8) `suggestions-status` carries status and details only for the logins in the rows sent** (≤50).
+- **C8 (B7):** record in CHANGELOG/release notes that rolling back to an older build asks for a new sign-in.

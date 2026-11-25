@@ -1908,3 +1908,20 @@ test('R8. a follows answer after O is drawn changes nothing already drawn; the n
   assert.ok(second, 'and searches');
   assert.ok(![...second.known, ...second.others].some(row => row.login === 'rimecraft'), 'one person once: not in O or known');
 });
+
+// Follow-up of the removal review (TESTS-74, MINOR), 2026-11-25: the removed D1 test was the only one that ran a real
+// validate returning userID and scopes and checked what a player is sent. Global keeps userID and scopes to itself
+// (phase 3 decision 6): auth-ready is exactly {token, login, clientID}.
+for (const scopes of [FOLLOWS_SCOPES, ['chat:read']]) {
+  test(`auth-ready to a player is exactly {token, login, clientID}, though validate returned user_id and scopes (${scopes.join(' ')})`, async () => {
+    const r = loadGlobal({signedIn: true, scopes});
+    await r.signIn();
+    const validated = r.validateCalls();
+    assert.ok(validated.length >= 1, 'fixture: a real validate ran (the fake answers user_id and scopes)');
+    const ready = r.shim.global.messages('auth-ready');
+    assert.ok(ready.length >= 1, 'a player got auth-ready');
+    for (const message of ready) {
+      assert.deepEqual(decode(typeof message.data === 'string' ? JSON.parse(message.data) : message.data), {token: SAVED.access_token, login: 'reader', clientID: SAVED.clientID});
+    }
+  });
+}

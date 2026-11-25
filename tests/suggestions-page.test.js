@@ -1010,3 +1010,68 @@ test('R10. O arriving is announced only if the selection moves: not under a sele
   searchAnswer(b, 'glaze', [], [SR.glazewright]);
   assert.ok(b.document.getElementById('announce').textContent.includes('Glazewright'), 'the selection moved: it is announced');
 });
+
+// ---- Follow-ups on the page build (cbbbd9b), TESTS-74 "Rev 2 build notes", 2026-11-25 ----
+
+test('R5(b)+. Y empty, a typed Return is pending, then O arrives: nothing is selected, and a second Return does not open the new first row', () => {
+  const f = pageFixture();
+  f.type('glaze');
+  f.suggest([], 'glaze');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'glaze'}], 'fixture: the typed text was submitted');
+  searchAnswer(f, 'glaze', [], [SR.glazewright, SR.glazedgourd]);
+  assert.equal(f.options().length, 2, 'fixture: the O rows are drawn');
+  assert.equal(f.selected().length, 0, 'nothing is selected');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), null);
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'glaze'}], 'a second Return opens nothing new');
+});
+
+test('R5(b)+. Y empty while the broadcasts list (#32) shows, O arrives: nothing is selected', () => {
+  const f = pageFixture();
+  f.type('glaze');
+  f.suggest([], 'glaze');
+  f.press('Enter');
+  f.vods({state: 'ready', items: [VOD]});
+  assert.ok(f.visibleNodes().find(node => node.ownText.includes(VOD.title)), 'fixture: the broadcasts list shows');
+  searchAnswer(f, 'glaze', [], [SR.glazewright, SR.glazedgourd]);
+  assert.equal(f.selected().length, 0, 'nothing is selected under the broadcasts list');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), null);
+});
+
+test('D2/R8. a list re-sent for the same text after search drew known rows puts late follows below them; no shown row moves', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], []);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft'], 'fixture: Y, then a known row');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rivenshade)], 'ri');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade'], 'the late follow goes below the known row');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft), yRow(SR.rivenshade)], 'ri');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade'], 'a known person re-sent is shown once, in place');
+});
+
+test('R8. with O drawn, a re-sent list adds no follow above the hairline: rows already shown never move', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade', 'riptidejoe'], 'fixture: O is drawn');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade', 'riptidejoe'], 'the late follow (rimecraft) is held');
+  assert.equal(hairlines(f).length, 1);
+  f.type('rim');
+  f.suggest([yRow(SR.rimecraft)], 'rim');
+  assert.deepEqual(loginsShown(f), ['rimecraft'], 'the next text lists the follow');
+});
+
+test('R8. a person drawn in O stays there when a re-sent list for the same text now lists them as a follow', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  f.suggest([yRow(SR.riverlark), yRow(SR.rivenshade)], 'ri');
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rivenshade', 'riptidejoe'], 'shown once, still in O');
+  const [yGroup, oGroup] = groups(f);
+  assert.ok(f.all(oGroup).includes(f.options()[1]) && !f.all(yGroup).includes(f.options()[1]));
+});

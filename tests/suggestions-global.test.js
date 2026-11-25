@@ -2154,3 +2154,66 @@ test('F7. text with combining marks (a Hindi word with vowel signs) is searched'
   assert.equal(r.searchRequests(), 1, 'one search request');
   assert.equal(r.searchTextOfCall(r.gqlSearch()[0]), word);
 });
+
+// F4 protocol (TESTS-74, lead, 2026-11-25): on an account change global re-sends `suggestions {text, rows, reset:true}`
+// for the current text, then the new search answer; in no other case does a `suggestions` carry `reset`.
+const postIndexes = (r, name, test) => r.window.posts
+  .map((post, index) => ({index, post}))
+  .filter(({post}) => post.name === name && test(decode(post.data)))
+  .map(({index}) => index);
+
+for (const [change, run] of [
+  ['sign-in', async () => {
+    const base = {people: SEARCH_HISTORY(), liveLogins: SEARCH_LIVE, details: SEARCH_DETAILS, searchResults: searchFixture};
+    const r = loadGlobal({...base, scopes: FOLLOWS_SCOPES, follows: SEARCH_FOLLOWS});
+    await r.showOpen();
+    await r.ask('ri');
+    await r.typeSettled('ri');
+    const since = r.window.posts.length;
+    r.shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
+    await r.signIn();
+    r.shim.timers.advance(2000);
+    await r.settle();
+    return {r, since};
+  }],
+  ['sign-out', async () => {
+    const r = await searchRig({signedIn: true});
+    await r.ask('ri');
+    await r.typeSettled('ri');
+    const since = r.window.posts.length;
+    await r.shim.global.send('auth-forget', {}, '0');
+    await r.settle();
+    r.shim.timers.advance(2000);
+    await r.settle();
+    return {r, since};
+  }],
+]) {
+  test(`F4 protocol. ${change} with search rows drawn: the current text's list is re-sent with reset:true, before the new search answer`, async () => {
+    const {r, since} = await run();
+    const resets = postIndexes(r, 'suggestions', data => data.text === 'ri' && data.reset === true).filter(index => index >= since);
+    assert.equal(resets.length, 1, 'one re-sent list for "ri" carries reset:true');
+    const answers = postIndexes(r, 'suggestions-search', data => data.text.trim().toLowerCase() === 'ri').filter(index => index >= since);
+    assert.ok(answers.length >= 1, 'a new search answer follows the account change');
+    assert.ok(resets[0] < answers[0], 'the reset list is posted before the new search answer');
+    const rows = r.window.posts[resets[0]];
+    assert.ok(Array.isArray(decode(rows.data).rows), 'and it carries the rows');
+  });
+}
+
+test('F4 protocol. no other list ever carries reset: not typing, not a late-follows append, not a reopen', async () => {
+  const r = await searchRig({signedIn: true, holdFollows: true});
+  r.shim.timers.advance(450);
+  await r.settle();
+  await r.ask('ri');
+  r.releaseFollows();
+  await r.settle();
+  r.shim.timers.advance(100);
+  await r.settle();
+  await r.ask('rim');
+  await r.typeSettled('rim');
+  await r.reopen();
+  await r.ask('ri');
+  const lists = r.messages('suggestions');
+  assert.ok(lists.length >= 4, 'fixture: several lists were posted');
+  assert.deepEqual(lists.filter(list => Object.hasOwn(list, 'reset')).map(list => list.text), [], 'none carries reset');
+});

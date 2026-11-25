@@ -1093,3 +1093,30 @@ test('F2. an edit that leaves the trimmed, lower-cased text unchanged keeps the 
     assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rimecraft']);
   }
 });
+
+// F4 protocol (TESTS-74, lead, 2026-11-25): `suggestions {text, rows, reset:true}` for the same text drops every drawn
+// search row (known and others) and draws the new Y; without `reset` a re-sent list never moves drawn rows (R8).
+test('F4 protocol. suggestions with reset:true for the same text removes the drawn search rows and draws the new Y; the next answer draws fresh', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade, SR.riptidejoe]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade', 'riptidejoe'], 'fixture: known and O are drawn');
+  f.deliver('suggestions', {text: 'ri', rows: [yRow(SR.riverlark), yRow(SR.rimecraft), yRow(SR.rinnyruns)], reset: true});
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rinnyruns'], 'only the new Y is drawn');
+  assert.equal(hairlines(f).length, 0, 'no hairline without O');
+  assert.equal(groups(f).length, 0);
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rinnyruns', 'rivenshade', 'riptidejoe'], 'the next answer draws fresh');
+  assert.equal(hairlines(f).length, 1);
+});
+
+test('F4 protocol. the same re-sent list without reset keeps the drawn search rows (R8)', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade, SR.riptidejoe]);
+  f.deliver('suggestions', {text: 'ri', rows: [yRow(SR.riverlark), yRow(SR.rimecraft), yRow(SR.rinnyruns)]});
+  assert.ok(loginsShown(f).includes('rivenshade') && loginsShown(f).includes('riptidejoe'), 'O rows stay');
+  assert.deepEqual(loginsShown(f).slice(0, 2), ['riverlark', 'rimecraft'], 'Y rows already shown do not move');
+});

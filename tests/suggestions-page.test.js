@@ -687,3 +687,326 @@ test('D4. Return with text in the field and no list yet submits the text', () =>
   f.suggest(ROWS, '');
   assert.equal(f.posts('open-stream').length, 1, 'and the list that arrives later opens nothing more');
 });
+
+// =====================================================================================================================
+// Phase 2 rev 2: search (TESTS-74 "Phase 2 rev 2: search", R1-R14; the lead's answers 2026-11-25). Written 2026-11-25.
+// The page half: global sends `suggestions-search {text, known, others}` and `suggestions-search-pending {text,
+// pending}` (R12); the fixtures are the chosen mock's frames, mock-74-search/index.html variant 1: (b) "ri" and (c)
+// "glaze". The contract names no markup for the hairline, the dimming or the group names, so these tests read them
+// through the hooks listed here, and the hand-back asks the lead to confirm them:
+//   hairline: a non-option node inside the listbox with role=separator, tag HR, or a class token hair, hairline,
+//     separator or divider;
+//   dimmed: an offline option (live false) carries a class token dim, dimmed or offline; live and unknown rows carry none;
+//   group name: aria-label, or the text of the element aria-labelledby names.
+// The spinner is `#search-pending` inside the form, `hidden` when no request is out, and the listbox carries
+// aria-busy="true" while one is (the lead's answer on R9).
+// =====================================================================================================================
+
+const hoursBack = hours => new Date(Date.now() - hours * 3600000).toISOString();
+const sr = (login, displayName, live, details) => ({provider: 'twitch', login, displayName, live, ...(details ? {details} : {})});
+const SR = {
+  riverlark: sr('riverlark', 'Riverlark', true, {category: 'Outer Wilds', title: 'first time through, no spoilers', viewers: 2140}),
+  rimecraft: sr('rimecraft', 'Rimecraft', false, {lastAt: hoursBack(48), lastTitle: 'Frostpunk 2, the long night'}),
+  rivenshade: sr('rivenshade', 'RivenShade', true, {category: 'Valorant', title: 'ranked grind to radiant', viewers: 15400}),
+  riptidejoe: sr('riptidejoe', 'riptidejoe', true, {category: 'Sea of Thieves', title: 'sloop life', viewers: 880}),
+  rinnyruns: sr('rinnyruns', 'rinnyruns', false, {lastAt: hoursBack(96), lastTitle: 'knitting night'}),
+  glazewright: sr('glazewright', 'Glazewright', true, {category: 'Makers & Crafting', title: 'throwing a tea set live', viewers: 3420}),
+  glazedgourd: sr('glazedgourd', 'glazed_gourd', true, {category: 'Just Chatting', title: 'morning coffee', viewers: 190}),
+  glazier9: sr('glazier9', 'glazier9', false, {lastAt: hoursBack(24 * 14), lastTitle: 'stained glass part 2'}),
+};
+// Y rows as `suggestions` sends them: identity and live only (details travel in suggestions-status).
+const yRow = ({details, ...row}) => row;
+const searchAnswer = (f, text, known, others) => f.deliver('suggestions-search', {text, known, others});
+const searchPending = (f, text, pending) => f.deliver('suggestions-search-pending', {text, pending});
+const loginsShown = f => f.options().map(option => option.getAttribute('id') && optionLogin(f, option));
+// The login of a shown option, read from the way the page names its rows: the aria-label starts with the display name.
+const NAME_TO_LOGIN = Object.fromEntries(Object.values(SR).map(row => [row.displayName, row.login]));
+function optionLogin(f, option) {
+  const label = String(attr(option, 'aria-label') ?? '');
+  const name = Object.keys(NAME_TO_LOGIN).sort((a, b) => b.length - a.length).find(candidate => label.startsWith(candidate));
+  return name ? NAME_TO_LOGIN[name] : label;
+}
+
+function classOf(node) {
+  return String(node.className || '').split(/\s+/).filter(Boolean);
+}
+
+function hairlines(f) {
+  const box = f.listbox();
+  if (!box) return [];
+  const inOption = new Set(f.options().flatMap(option => f.all(option)));
+  return f.all(box).filter(node => node !== box && !inOption.has(node)
+    && (attr(node, 'role') === 'separator' || node.tagName === 'HR'
+      || classOf(node).some(token => /^(hair|hairline|separator|divider)$/.test(token))));
+}
+
+function groups(f) {
+  const box = f.listbox();
+  return box ? f.all(box).filter(node => attr(node, 'role') === 'group') : [];
+}
+
+function groupName(f, group) {
+  const label = attr(group, 'aria-label');
+  if (label) return label;
+  const by = attr(group, 'aria-labelledby');
+  const target = by && f.document.getElementById(by);
+  return target ? target.textContent.trim() : null;
+}
+
+// Text a sighted viewer sees: every node's own text, except under a visually-hidden class.
+function visibleText(f) {
+  const walk = node => (node.hidden || classOf(node).includes('visually-hidden') ? '' : node.ownText + node.children.map(walk).join(' '));
+  return walk(f.visibleNodes()[0]);
+}
+
+function frameB(f) {
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.riptidejoe, SR.rinnyruns]);
+}
+
+function frameC(f) {
+  f.type('glaze');
+  f.suggest([], 'glaze');
+  searchAnswer(f, 'glaze', [], [SR.glazewright, SR.glazedgourd, SR.glazier9]);
+}
+
+test('R1/R13. frame (b) "ri": Y rows, a hairline, then O rows in the order global sent; the top Y row stays selected', () => {
+  const f = pageFixture();
+  frameB(f);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade', 'riptidejoe', 'rinnyruns']);
+  const lines = hairlines(f);
+  assert.equal(lines.length, 1, 'one hairline');
+  const order = f.all(f.listbox());
+  const [line] = lines;
+  assert.ok(order.indexOf(f.options()[1]) < order.indexOf(line) && order.indexOf(line) < order.indexOf(f.options()[2]),
+    'the hairline sits between the last Y row and the first O row');
+  assert.deepEqual(f.selected(), [f.options()[0]], 'the selection stays on the top Y row (R5)');
+});
+
+test('R1/R13. frame (c) "glaze": O rows only, no hairline, no group, and the first O row is selected as it is drawn', () => {
+  const f = pageFixture();
+  frameC(f);
+  assert.deepEqual(loginsShown(f), ['glazewright', 'glazedgourd', 'glazier9']);
+  assert.equal(hairlines(f).length, 0, 'the hairline is drawn only when both groups show');
+  assert.equal(groups(f).length, 0, 'and so are the groups');
+  assert.deepEqual(f.selected(), [f.options()[0]], 'R5(c): the first row is selected');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'glazewright'}], 'Return opens it');
+});
+
+test('R1/R13. Y alone (an answer with nothing to add) shows no hairline and no groups; known people alone are appended to Y', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [], []);
+  assert.deepEqual(loginsShown(f), ['riverlark']);
+  assert.equal(hairlines(f).length, 0);
+  assert.equal(groups(f).length, 0);
+  searchAnswer(f, 'ri', [SR.rimecraft], []);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft'], 'known people are appended to Y');
+  assert.equal(hairlines(f).length, 0, 'with no O there is no hairline');
+  assert.equal(groups(f).length, 0, 'and no groups');
+});
+
+test('R1. known people the search found sit at the end of Y, above the hairline, in the same paint as O', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade]);
+  assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade']);
+  const order = f.all(f.listbox());
+  const [line] = hairlines(f);
+  assert.ok(line, 'a hairline');
+  assert.ok(order.indexOf(f.options()[1]) < order.indexOf(line) && order.indexOf(line) < order.indexOf(f.options()[2]));
+  const [yGroup, oGroup] = groups(f);
+  assert.equal(attr(f.options()[1], 'aria-setsize'), '2', 'Y counts the appended person');
+  assert.ok(f.all(yGroup).includes(f.options()[1]) && f.all(oGroup).includes(f.options()[2]));
+});
+
+test('R10. with both groups: two role=group inside the listbox named "Your channels" and "Other channels", counted within each', () => {
+  const f = pageFixture();
+  frameB(f);
+  const found = groups(f);
+  assert.equal(found.length, 2, 'two groups');
+  assert.deepEqual(found.map(group => groupName(f, group)), ['Your channels', 'Other channels']);
+  const [yGroup, oGroup] = found;
+  const inY = f.all(yGroup).filter(node => attr(node, 'role') === 'option');
+  const inO = f.all(oGroup).filter(node => attr(node, 'role') === 'option');
+  assert.deepEqual(inY.map(option => optionLogin(f, option)), ['riverlark', 'rimecraft']);
+  assert.deepEqual(inO.map(option => optionLogin(f, option)), ['rivenshade', 'riptidejoe', 'rinnyruns']);
+  inY.forEach((option, index) => {
+    assert.equal(attr(option, 'aria-posinset'), String(index + 1));
+    assert.equal(attr(option, 'aria-setsize'), '2');
+  });
+  inO.forEach((option, index) => {
+    assert.equal(attr(option, 'aria-posinset'), String(index + 1));
+    assert.equal(attr(option, 'aria-setsize'), '3');
+  });
+  assert.ok(!/Your channels|Other channels/.test(visibleText(f)), 'the names are not visible words');
+});
+
+test('R10. with one group (Y alone, or O alone) there are no groups and the whole list is one set', () => {
+  const y = pageFixture();
+  y.type('ri');
+  y.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  assert.equal(groups(y).length, 0);
+  assert.equal(attr(y.options()[0], 'aria-setsize'), '2');
+  const o = pageFixture();
+  frameC(o);
+  assert.equal(o.options().length, 3, 'fixture: the three O rows are drawn');
+  assert.equal(groups(o).length, 0);
+  assert.equal(attr(o.options()[2], 'aria-setsize'), '3');
+  assert.equal(attr(o.options()[2], 'aria-posinset'), '3');
+});
+
+test('R13. offline rows are dimmed, in Y and in O; live rows and rows with unknown status are not', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft), {...yRow(SR.riverlark), login: 'unsure', displayName: 'Unsure', live: null}], 'ri');
+  searchAnswer(f, 'ri', [], [SR.rivenshade, SR.rinnyruns]);
+  const dimmed = option => classOf(option).some(token => /^(dim|dimmed|offline)$/.test(token));
+  const byName = Object.fromEntries(f.options().map(option => [attr(option, 'aria-label').split(',')[0], option]));
+  assert.ok(dimmed(byName.Rimecraft), 'offline in Y');
+  assert.ok(dimmed(byName.rinnyruns), 'offline in O');
+  assert.ok(!dimmed(byName.Riverlark), 'live in Y');
+  assert.ok(!dimmed(byName.RivenShade), 'live in O');
+  assert.ok(!dimmed(byName.Unsure), 'unknown status in Y is not dimmed');
+});
+
+test('R12/R13. O rows read from the row itself: live shows category, title and viewers; offline shows last title and age', () => {
+  const f = pageFixture();
+  frameB(f);
+  const [, , riven, , inny] = f.options();
+  const live = leafTexts(f, riven);
+  assert.ok(live.includes('Valorant · ranked grind to radiant'), `live second line: ${JSON.stringify(live)}`);
+  assert.ok(live.includes('15.4K'), 'viewers, compact');
+  const offline = leafTexts(f, inny);
+  assert.ok(offline.includes('knitting night'), `offline second line: ${JSON.stringify(offline)}`);
+  assert.ok(offline.includes('4d'), 'offline age');
+  assert.ok(String(attr(riven, 'aria-label')).includes('live'), 'spoken name says live');
+});
+
+test('R5. O arriving leaves the selection where it is: on the top Y row, or, after an arrow key, on the row the person chose', () => {
+  const a = pageFixture();
+  a.type('ri');
+  a.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  searchAnswer(a, 'ri', [], [SR.rivenshade]);
+  assert.equal(a.options().length, 3, 'fixture: the O row is drawn');
+  assert.deepEqual(a.selected().map(option => optionLogin(a, option)), ['riverlark']);
+  const b = pageFixture();
+  b.type('ri');
+  b.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  b.press('ArrowDown');
+  searchAnswer(b, 'ri', [], [SR.rivenshade]);
+  assert.equal(b.options().length, 3, 'fixture: the O row is drawn');
+  assert.deepEqual(b.selected().map(option => optionLogin(b, option)), ['rimecraft'], 'by identity after the person moved');
+});
+
+test('R5(c). Return opens the selected O row: after arrowing from Y into O, and for the first O row when Y is empty', () => {
+  const f = pageFixture();
+  frameB(f);
+  f.press('ArrowDown');
+  f.press('ArrowDown');
+  assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rivenshade'], 'arrows move across the hairline');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'rivenshade'}]);
+});
+
+test('R5(b). Y empty and no O drawn: Return opens the typed text as a channel, and does not wait for O or open a result', () => {
+  const f = pageFixture();
+  f.type('glaze');
+  f.suggest([], 'glaze');
+  searchPending(f, 'glaze', true);
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'glaze'}]);
+});
+
+test('R6. a keystroke removes the old text\'s O rows and appended known rows at once; Y\'s own rows stay until the new list', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], [SR.rivenshade, SR.riptidejoe]);
+  assert.equal(f.options().length, 4, 'fixture: Y, an appended known row and two O rows');
+  f.type('riv');
+  assert.deepEqual(loginsShown(f), ['riverlark'], 'only Y\'s own row is left, before any new list arrives');
+  assert.equal(hairlines(f).length, 0);
+  assert.equal(groups(f).length, 0);
+  f.suggest([yRow(SR.riverlark)], 'riv');
+  assert.deepEqual(loginsShown(f), ['riverlark']);
+});
+
+test('R6. an O row that was selected is not selectable after a keystroke (frame c, then one more letter)', () => {
+  const f = pageFixture();
+  frameC(f);
+  assert.equal(f.selected().length, 1, 'fixture: the first O row is selected');
+  f.type('glazew');
+  assert.equal(f.options().length, 0, 'the O rows are gone');
+  assert.equal(f.selected().length, 0);
+  assert.equal(f.field.getAttribute('aria-activedescendant'), null);
+});
+
+test('R7. an answer whose text differs from the field (trimmed, case-insensitive) is dropped; one that matches is drawn', () => {
+  const stale = pageFixture();
+  stale.type('rix');
+  stale.suggest([yRow(SR.riverlark)], 'rix');
+  searchAnswer(stale, 'ri', [SR.rimecraft], [SR.rivenshade]);
+  assert.deepEqual(loginsShown(stale), ['riverlark'], 'an answer for "ri" does not paint under "rix"');
+  assert.equal(hairlines(stale).length, 0);
+  const empty = pageFixture();
+  empty.suggest([yRow(SR.riverlark)], '');
+  searchAnswer(empty, 'ri', [], [SR.rivenshade]);
+  assert.deepEqual(loginsShown(empty), ['riverlark'], 'nor under an empty field');
+  const same = pageFixture();
+  same.type(' RI ');
+  same.suggest([yRow(SR.riverlark)], ' RI ');
+  searchAnswer(same, 'ri', [], [SR.rivenshade]);
+  assert.deepEqual(loginsShown(same), ['riverlark', 'rivenshade'], 'same text after trimming and lower-casing');
+});
+
+test('R9. the spinner #search-pending is hidden at rest, shows while a request for the field\'s text is out, and has no words', () => {
+  const f = pageFixture();
+  const spinner = f.document.getElementById('search-pending');
+  assert.ok(spinner, 'an element #search-pending');
+  assert.ok(f.all(f.form).includes(spinner), 'at the trailing end of the field: inside the form');
+  assert.equal(isVisible(f, spinner), false, 'hidden at rest');
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchPending(f, 'ri', true);
+  assert.equal(isVisible(f, spinner), true, 'shown while the request is out');
+  assert.equal(attr(f.listbox(), 'aria-busy'), 'true', 'the listbox is busy');
+  assert.equal(spinner.textContent.trim(), '', 'a signifier, not words');
+  searchPending(f, 'ri', false);
+  assert.equal(isVisible(f, spinner), false, 'gone when it ends');
+  assert.notEqual(attr(f.listbox(), 'aria-busy'), 'true');
+  assert.deepEqual(loginsShown(f), ['riverlark'], 'and nothing else changed');
+});
+
+test('R9. a pending message for other text than the field\'s is ignored, whether it starts or ends a request', () => {
+  const f = pageFixture();
+  const spinner = f.document.getElementById('search-pending');
+  assert.ok(spinner, 'an element #search-pending');
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchPending(f, 'rx', true);
+  assert.equal(isVisible(f, spinner), false, 'a start for another text does not show it');
+  searchPending(f, 'ri', true);
+  searchPending(f, 'r', false);
+  assert.equal(isVisible(f, spinner), true, 'an end for another text does not hide it');
+});
+
+test('R10. O arriving is announced only if the selection moves: not under a selected Y row, yes when it selects the first O row', () => {
+  const a = pageFixture();
+  a.type('ri');
+  a.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  const announcer = a.document.getElementById('announce');
+  const before = announcer.textContent;
+  searchAnswer(a, 'ri', [], [SR.rivenshade]);
+  assert.equal(announcer.textContent, before, 'Y has a selected row: nothing is announced');
+  const b = pageFixture();
+  b.type('glaze');
+  b.suggest([], 'glaze');
+  searchAnswer(b, 'glaze', [], [SR.glazewright]);
+  assert.ok(b.document.getElementById('announce').textContent.includes('Glazewright'), 'the selection moved: it is announced');
+});

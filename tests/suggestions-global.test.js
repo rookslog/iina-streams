@@ -96,13 +96,19 @@ const OAUTH = 'https://id.twitch.tv/oauth2';
 
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
   statusFails = false, holdStatus = false, scopes = ['chat:read'], follows = [], details = {}, followsFail = false,
-  holdFollows = false, followsCursor = '', builtInClientID = '', gqlFieldError = null} = {}) {
+  holdFollows = false, followsCursor = '', builtInClientID = '', gqlFieldError = null,
+  searchResults = [], searchHold = false, searchFail = false, searchPartFail = null} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
   if (signedIn) shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
   const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: [], scopes, userID: USER_ID,
-    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor, gqlFieldError};
+    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor, gqlFieldError,
+    // Phase 2 rev 2 (search, R11): what Twitch's search answers for a text, in Twitch's order: an array of
+    // {login, name}, or a function of the typed text returning one. Live state and details come from liveLogins and
+    // details, as for every other person. searchHold holds an answer until releaseSearch(); searchFail answers 503;
+    // searchPartFail is 'streams' or 'ages': only that follow-up lookup fails (R11, C5).
+    searchResults, searchHold, searchHeld: [], searchFail, searchPartFail};
   // Only the saved grant is valid in these scenarios.
   const tokenScopes = token => token === SAVED.access_token ? control.scopes : null;
 
@@ -133,6 +139,22 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     return user;
   };
 
+  // The search fake (phase 2 rev 2, R11). The typed text of a search request: GQL inline `userQuery:"x"` or a
+  // `userQuery` variable; Helix `query=x`.
+  const searchTextOf = ({url, options}) => {
+    if (url === GQL) {
+      const inline = String(options?.data?.query ?? '').match(/userQuery:\s*"([^"]*)"/);
+      return inline ? inline[1] : String(options?.data?.variables?.userQuery ?? '');
+    }
+    const fromUrl = new URL(url).searchParams.get('query');
+    return fromUrl ?? String(options?.params?.query ?? '');
+  };
+  const searchFor = text => (typeof control.searchResults === 'function' ? control.searchResults(text) : control.searchResults);
+  const everySearchLogin = () => {
+    const results = control.searchResults;
+    return typeof results === 'function' ? ['ri', 'rid', 'glaze', 'zq'].flatMap(text => results(text)) : results;
+  };
+  const isSearchLogin = login => everySearchLogin().some(result => result.login === login);
   const post = shim.iina.http.post;
   const get = shim.iina.http.get;
   shim.iina.http.post = (url, options) => {
@@ -160,7 +182,26 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     } else if (url === GQL && query.includes('videos(')) {
       const node = {id: '1234567890', title: 'Fixture Archive', createdAt: '2026-11-20T10:31:57Z', lengthSeconds: 3600};
       shim.http.setResponse({statusCode: 200, data: {data: {user: {videos: {edges: [{node}]}}}}});
+    } else if (url === GQL && query.includes('searchFor')) {
+      // Phase 2 rev 2 (R11, signed out): anonymous `searchFor(userQuery, platform:"web") {channels{edges{item{...on User
+      // {...}}}}}`; shape checked live 2026-11-25 (TESTS-74 R11). Each item carries only the fields the query selects.
+      // The `__typename` of an item is User; text comes inline or as a variable.
+      if (control.searchFail) {
+        shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
+        return post(url, options);
+      }
+      const answer = () => {
+        const edges = searchFor(searchTextOf({url, options})).map(({login, name}) =>
+          ({item: {__typename: 'User', ...gqlUser(query, login), displayName: name ?? login}}));
+        shim.http.setResponse({statusCode: 200, data: {data: {searchFor: {channels: {edges}}}}});
+        return post(url, options);
+      };
+      if (control.searchHold) return new Promise(resolve => control.searchHeld.push(() => resolve(answer())));
+      return answer();
     } else if (control.statusFails) {
+      shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
+    } else if (control.searchPartFail === 'ages' && !/stream\{/.test(query.replace(/\s+/g, ''))
+      && quoted(query).some(isSearchLogin)) {
       shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
     } else {
       // A batched status query, in either plausible shape: users(logins:[...]) or aliased user(login:"x").
@@ -238,8 +279,38 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
         }));
       }
       followedAnswer(url, options);
+    } else if (/^https:\/\/api\.twitch\.tv\/helix\/search\/channels(\?|$)/.test(url)) {
+      // Phase 2 rev 2 (R11, signed in): Helix Search Channels. Documented fields (dev.twitch.tv/docs/api/reference/
+      // #search-channels, read 2026-11-25): broadcaster_login, display_name, game_name, is_live, title, started_at;
+      // no viewer count and no last-stream time. Needs a user or app token and a Client-Id (policy: both required).
+      const answer = () => {
+        const headers = options?.headers ?? {};
+        const token = String(headers.Authorization ?? '').replace(/^Bearer /, '');
+        if (control.searchFail) return shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
+        if (!tokenScopes(token) || !headers['Client-Id']) {
+          return shim.http.rejectResponse({statusCode: 401, reason: 'Invalid OAuth token', text: '',
+            data: {status: 401, message: 'Invalid OAuth token'}});
+        }
+        const first = Number(new URL(url).searchParams.get('first') ?? options?.params?.first) || 20;
+        shim.http.setResponse({statusCode: 200, data: {pagination: {}, data: searchFor(searchTextOf({url, options}))
+          .slice(0, first).map(({login, name}) => {
+            const d = liveDetails(login);
+            const live = control.liveLogins.has(login);
+            return {broadcaster_language: 'en', broadcaster_login: login, display_name: name ?? login, game_id: '9',
+              game_name: live ? d.category : '', id: '8' + login.length, is_live: live, tag_ids: [], tags: [],
+              thumbnail_url: 'https://static-cdn.jtvnw.net/jtv_user_pictures/x-profile_image-300x300.png',
+              title: live ? d.title : '', started_at: live ? '2026-11-24T09:00:00Z' : ''};
+          })}});
+      };
+      if (control.searchHold) {
+        return new Promise(resolve => control.searchHeld.push(() => { answer(); resolve(get(url, options)); }));
+      }
+      answer();
     } else if (HELIX.test(url)) {
-      if (control.statusFails) {
+      if (control.searchPartFail === 'streams'
+        && new URL(url).searchParams.getAll('user_login').some(isSearchLogin)) {
+        shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
+      } else if (control.statusFails) {
         shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
       } else {
         const found = [...new URL(url).searchParams.getAll('user_login')];
@@ -341,6 +412,24 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     return answers.at(-1);
   }
 
+  // Search requests (phase 2 rev 2): GQL searchFor or Helix Search Channels. A held one counts as made.
+  const gqlSearch = () => calls().filter(call => call.url === GQL && (call.options?.data?.query ?? '').includes('searchFor'));
+  const helixSearch = () => calls().filter(call => /\/helix\/search\/channels(\?|$)/.test(call.url));
+  const searchRequests = () => gqlSearch().length + helixSearch().length + control.searchHeld.length;
+  const searchTextOfCall = call => searchTextOf({url: call.url, options: call.options});
+  const releaseSearch = () => {
+    const waiting = control.searchHeld.splice(0);
+    assert.ok(waiting.length, 'fixture: a search request is waiting');
+    for (const release of waiting) release();
+  };
+  // Type a text as the page does, let the pause pass, and let the answers settle.
+  async function typeSettled(text, ms = 250) {
+    window.receive('open-query', {text});
+    await settle();
+    shim.timers.advance(ms);
+    await settle();
+  }
+
   const releaseFollows = () => {
     const waiting = control.heldFollows.splice(0);
     assert.ok(waiting.length, 'fixture: a follow request is waiting');
@@ -354,6 +443,7 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   };
 
   return {
+    gqlSearch, helixSearch, searchRequests, searchTextOfCall, releaseSearch, typeSettled,
     shim, window, control, releaseStatus, releaseFollows, followedLive, followedChannels, followRequests, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
     statusRequests, prechecks, archives, menuItem, oracle: oracle(text), text, oauthCalls, validateCalls, gqlAll, gqlAges,
   };
@@ -553,15 +643,24 @@ test('5e. a status answer arriving after the form closed posts nothing to it, an
   assert.ok(rows.some(row => row.live !== null), 'the cached values are used, not unknown');
 });
 
-test('6. no network for typing: ten open-query messages add no request, and typed text is never sent', async () => {
+// Amended 2026-11-25 (phase 2 rev 2, TESTS-74): R3/R4 supersede "typed text is never sent anywhere". Typing alone still
+// makes no request (no time passes here, and the 250 ms pause is tested in the search tests below); text that fails
+// R3/R4 (a URL, an address, anything with / : . ? = & @ #) is never sent, even after the pause has passed.
+test('6. no network for typing: ten open-query messages add no request, and text R4 forbids is never sent', async () => {
   const r = loadGlobal();
   await r.showOpen();
   const before = r.calls().length;
   const typed = ['o', 'oh', 'ohn', 'ohne', 'ohnez', 'zzqq', 'zzqqx', 'qz', 'zq', 'x9'];
   for (const text of typed) await r.ask(text);
-  assert.equal(r.calls().length, before, 'no HTTP request for typing');
-  const sent = JSON.stringify(r.calls());
-  for (const text of ['ohnez', 'zzqq', 'zzqqx']) assert.ok(!sent.includes(text), `${text} was not sent anywhere`);
+  assert.equal(r.calls().length, before, 'no HTTP request for typing, before the pause');
+  const forbidden = ['https://zzqqx.tv/video?a=b', 'zzqqx.tv', 'zzqqx@home', 'zzqqx#1', 'zzqqx/1', 'zzqqx:1', 'zzqqx&y', 'zzqqx=y'];
+  for (const text of forbidden) {
+    await r.ask(text);
+    r.shim.timers.advance(1000);
+    await r.settle();
+  }
+  assert.equal(r.calls().length, before, 'no HTTP request for text R4 forbids, even after the pause');
+  assert.ok(!JSON.stringify(r.calls()).includes('zzqqx'), 'such text was not sent anywhere');
 });
 
 test('7. opening is unchanged: open-stream {input} runs the precheck, then opens a live player or lists broadcasts', async () => {
@@ -844,7 +943,13 @@ test('G4. up to 50 rows, and a live follow beats the cut; the requests do not gr
     'then follows with no known lastAt, by display name');
   const used = r.calls().length - before;
   assert.ok(used <= 8, `${used} requests for 90 people: a few batches, not one per person`);
-  for (let index = 0; index < 10; index++) await r.ask('f' + index);
+  // Amended 2026-11-25 (phase 2 rev 2, TESTS-74): 'f0'..'f9' pass R3 (two characters), so a search follows the 250 ms
+  // pause; Y itself adds no request. Time is held just short of the pause (the search is tested below).
+  for (let index = 0; index < 10; index++) {
+    await r.ask('f' + index);
+    r.shim.timers.advance(249);
+    await r.settle();
+  }
   assert.equal(r.calls().length - before, used, 'typing adds no request');
 });
 
@@ -906,11 +1011,18 @@ test('G6. signed in: follows\' live details come from the followed-live answer, 
 
 // G7 (the repost when status or follows arrive) was superseded by C1 on 2026-11-25 (phase 3c); see the C1 tests below.
 
+// Amended 2026-11-25 (phase 2 rev 2, TESTS-74): the typed text now reaches Twitch's search, and only there (R3/R4/R14);
+// the follow-ups of a search (Helix /streams, the age lookup) may name the logins the search answered with.
 test('G8. privacy: follow and detail requests carry only logins, the user id and the token in Authorization', async () => {
-  const r = await openedWithFollows();
+  const found = {login: 'qzfan', name: 'QzFan'};
+  const r = await openedWithFollows({searchResults: [found], liveLogins: [...FOLLOW_LIVE, 'qzfan']});
   await r.ask('zzqxj');
-  const known = new Set([...FOLLOW_HISTORY().map(p => p.login), ...FOLLOWS.map(f => f.login)]);
-  const sent = r.opened.filter(call => !call.url.startsWith('https://id.twitch.tv/'));
+  r.shim.timers.advance(1000);
+  await r.settle();
+  const known = new Set([...FOLLOW_HISTORY().map(p => p.login), ...FOLLOWS.map(f => f.login), found.login]);
+  const isSearch = call => (call.url === GQL && (call.options?.data?.query ?? '').includes('searchFor'))
+    || /\/helix\/search\/channels(\?|$)/.test(call.url);
+  const sent = r.calls().filter(call => !call.url.startsWith('https://id.twitch.tv/'));
   assert.ok(sent.length >= 3, 'fixture: the follows, the status and any details were requested');
   for (const call of sent) {
     const headers = call.options?.headers ?? {};
@@ -918,7 +1030,11 @@ test('G8. privacy: follow and detail requests carry only logins, the user id and
     const {Authorization, ...rest} = headers;
     const wire = JSON.stringify({...call, options: {...call.options, headers: rest}});
     assert.ok(!wire.includes(SAVED.access_token) && !wire.includes(SAVED.refresh_token), `${call.url}: the token is only in Authorization`);
-    assert.ok(!wire.includes('zzqxj'), 'the typed text is never sent');
+    if (isSearch(call)) {
+      assert.equal(r.searchTextOfCall(call), 'zzqxj', 'the search carries the typed text and nothing else of the person');
+    } else {
+      assert.ok(!wire.includes('zzqxj'), 'the typed text is sent only to search');
+    }
     if (call.url.startsWith('https://api.twitch.tv/helix/')) {
       assert.deepEqual(names.filter(name => !['authorization', 'client-id'].includes(name)), [], 'Helix headers');
       const params = paramsOf(call);
@@ -929,11 +1045,15 @@ test('G8. privacy: follow and detail requests carry only logins, the user id and
       } else if (path === '/helix/streams') {
         assert.deepEqual(Object.keys(params), ['user_login']);
         assert.ok(new URL(call.url).searchParams.getAll('user_login').every(login => known.has(login)));
+      } else if (path === '/helix/search/channels') {
+        assert.deepEqual(Object.keys(params).sort(), ['first', 'query']);
       }
     } else if (call.url === GQL) {
       assert.equal(Authorization, undefined, 'GQL stays anonymous');
       assert.deepEqual(names.filter(name => !['client-id', 'content-type'].includes(name)), [], 'GQL headers');
-      assert.ok(quoted(call.options.data.query).every(login => known.has(login)), 'only logins in the query');
+      if (!isSearch(call)) {
+        assert.ok(quoted(call.options.data.query).every(login => known.has(login)), 'only logins in the query');
+      }
     } else {
       assert.fail(`unexpected request to ${call.url}`);
     }
@@ -1368,4 +1488,423 @@ test('D5. a validate that answers after the first list changes no order: the peo
   }
   assert.ok(FOLLOW_ONLY.every(login => lists.at(-1).includes(login)), 'the follows are appended once the account is known');
   assert.equal(mergedStatus(r, 'status').tidalmoss, true, 'live marks come in suggestions-status');
+});
+
+// =====================================================================================================================
+// Phase 2 rev 2: search (TESTS-74 "Phase 2 rev 2: search", R1-R14; lead's answers 2026-11-25). Written 2026-11-25.
+// Fixtures: the chosen mock's frames, mock-74-search/index.html variant 1: (b) "ri" (two follows, then others) and
+// (c) "glaze" (no follow matches). The names, live states and viewer counts are the mock's made-up data.
+// What the fakes model: Helix Search Channels (documented fields only: no viewer count, no last-stream time) and the
+// anonymous GQL `searchFor`, shaped by the fields the query selects (see loadGlobal). Where the contract is silent
+// these tests pin the readings the lead adopted (TESTS-74, "Rev 2 decisions"); the hand-back lists them.
+// =====================================================================================================================
+
+const SEARCH_NAMES = {
+  riverlark: 'Riverlark', rimecraft: 'Rimecraft', dunmore: 'dunmore', rivenshade: 'RivenShade', riptidejoe: 'riptidejoe',
+  rinnyruns: 'rinnyruns', glazewright: 'Glazewright', glazedgourd: 'glazed_gourd', glazier9: 'glazier9',
+};
+const searchResult = login => ({login, name: SEARCH_NAMES[login] ?? login});
+// Twitch's order for "ri": deliberately not the order the list should come out in.
+const RI_RESULTS = ['rinnyruns', 'riptidejoe', 'riverlark', 'rivenshade', 'rimecraft', 'dunmore'].map(searchResult);
+const GLAZE_RESULTS = ['glazier9', 'glazedgourd', 'glazewright'].map(searchResult);
+const SEARCH_LIVE = ['riverlark', 'rivenshade', 'riptidejoe', 'glazewright', 'glazedgourd'];
+const SEARCH_DETAILS = {
+  riverlark: {title: 'first time through, no spoilers', category: 'Outer Wilds', viewers: 2140},
+  rimecraft: {lastAt: '2026-11-23T10:00:00Z', lastTitle: 'Frostpunk 2, the long night'},
+  dunmore: {lastAt: '2026-11-20T10:00:00Z', lastTitle: 'speedrun practice'},
+  rivenshade: {title: 'ranked grind to radiant', category: 'Valorant', viewers: 15400},
+  riptidejoe: {title: 'sloop life', category: 'Sea of Thieves', viewers: 880},
+  rinnyruns: {lastAt: '2026-11-21T09:00:00Z', lastTitle: 'knitting night'},
+  glazewright: {title: 'throwing a tea set live', category: 'Makers & Crafting', viewers: 3420},
+  glazedgourd: {title: 'morning coffee', category: 'Just Chatting', viewers: 190},
+  glazier9: {lastAt: '2026-11-11T10:00:00Z', lastTitle: 'stained glass part 2'},
+};
+const searchFixture = text => (text.toLowerCase().includes('glaze') ? GLAZE_RESULTS : RI_RESULTS);
+const SEARCH_HISTORY = () => [person('riverlark', 'Riverlark', 4), person('dunmore', 'dunmore', 3)];
+const SEARCH_FOLLOWS = [{login: 'riverlark', name: 'Riverlark'}, {login: 'rimecraft', name: 'Rimecraft'}];
+
+// Signed in with follows, or signed out (history only), Open Stream open, nothing typed.
+async function searchRig({signedIn = false, ...extra} = {}) {
+  const base = {people: SEARCH_HISTORY(), liveLogins: SEARCH_LIVE, details: SEARCH_DETAILS, searchResults: searchFixture};
+  const r = signedIn
+    ? loadGlobal({...base, signedIn: true, scopes: FOLLOWS_SCOPES, follows: SEARCH_FOLLOWS, ...extra})
+    : loadGlobal({...base, ...extra});
+  if (signedIn) await r.signIn();
+  await r.showOpen();
+  r.before = r.calls().length;
+  return r;
+}
+
+const searchAnswers = (r, text = 'ri') => r.messages('suggestions-search')
+  .filter(message => message.text.trim().toLowerCase() === text.trim().toLowerCase());
+const searchPending = (r, text = 'ri') => r.messages('suggestions-search-pending')
+  .filter(message => message.text.trim().toLowerCase() === text.trim().toLowerCase()).map(message => message.pending);
+const logins = rows => rows.map(row => row.login);
+const MODES = [['signed out', false], ['signed in', true]];
+
+// R3 timing. Red now: no search request is ever made.
+for (const [mode, signedIn] of MODES) {
+  test(`R3. ${mode}: nothing is requested before the text has been still for 250 ms; then exactly one request`, async () => {
+    const r = await searchRig({signedIn});
+    r.window.receive('open-query', {text: 'ri'});
+    await r.settle();
+    r.shim.timers.advance(249);
+    await r.settle();
+    assert.equal(r.searchRequests(), 0, 'no search request at 249 ms');
+    r.shim.timers.advance(1);
+    await r.settle();
+    assert.equal(r.searchRequests(), 1, 'one search request at 250 ms');
+    r.shim.timers.advance(5000);
+    await r.settle();
+    assert.equal(r.searchRequests(), 1, 'and no second one for the same text');
+  });
+}
+
+test('R3. the pause restarts on every change: typing r, ri, rid inside the pause asks once, for rid, 250 ms after the last key', async () => {
+  const r = await searchRig();
+  r.window.receive('open-query', {text: 'r'});
+  await r.settle();
+  r.shim.timers.advance(100);
+  r.window.receive('open-query', {text: 'ri'});
+  await r.settle();
+  r.shim.timers.advance(100);
+  r.window.receive('open-query', {text: 'rid'});
+  await r.settle();
+  r.shim.timers.advance(249);
+  await r.settle();
+  assert.equal(r.searchRequests(), 0, 'nothing 249 ms after the last key');
+  r.shim.timers.advance(1);
+  await r.settle();
+  assert.equal(r.searchRequests(), 1, 'one request');
+  assert.equal(r.searchTextOfCall(r.gqlSearch()[0]), 'rid', 'for the text the field holds now');
+});
+
+test('R3. what passes: 2-40 characters of letters (Unicode), digits, underscore and spaces, after trimming', async () => {
+  const r = await searchRig();
+  const passing = ['ri', 'a b', 'ñandú', 'x_y', 'zz9', '  glaze', 'q'.repeat(40), 'ab '];
+  for (const text of passing) await r.typeSettled(text);
+  assert.equal(r.searchRequests(), passing.length, 'each distinct passing text is searched once');
+  const sent = r.gqlSearch().map(call => r.searchTextOfCall(call));
+  assert.deepEqual(sent, passing.map(text => text.trim()), 'with the trimmed text');
+});
+
+test('R3/R4. what is never sent: one character, empty, 41 characters, other punctuation, and anything with / : . ? = & @ #', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn});
+    const refused = ['r', '', '   ', 'q'.repeat(41), 'a-b', 'a!b', 'https://www.twitch.tv/riverlark', 'twitch.tv/riverlark',
+      'a/b', 'a:b', 'a.b', 'a?b', 'a=b', 'a&b', '@ab', '#ab', 'ab cd?x=1'];
+    for (const text of refused) await r.typeSettled(text, 1000);
+    assert.equal(r.searchRequests(), 0, 'no search request for any of them');
+    assert.equal(r.messages('suggestions-search').length, 0, 'no suggestions-search message');
+    assert.equal(r.messages('suggestions-search-pending').length, 0, 'no pending message');
+    assert.ok(!JSON.stringify(r.calls().slice(r.before)).includes('twitch.tv/riverlark'), 'a pasted address is not sent');
+  }
+});
+
+test('R2. at rest (empty field): no search request and no search message, signed in or out', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn});
+    r.shim.timers.advance(5000);
+    await r.settle();
+    await r.ask('');
+    r.shim.timers.advance(5000);
+    await r.settle();
+    assert.equal(r.searchRequests(), 0);
+    assert.equal(r.messages('suggestions-search').length, 0);
+  }
+});
+
+// R11 signed out. Red now: no request, so nothing is asked and nothing answered.
+test('R11. signed out: one anonymous GQL searchFor with the web platform and the selection R11 names, and nothing else', async () => {
+  const r = await searchRig();
+  const before = r.calls().length;
+  await r.typeSettled('ri');
+  const added = r.calls().slice(before);
+  assert.equal(added.length, 1, `exactly one request for O, got ${added.length}`);
+  const [call] = added;
+  assert.equal(call.url, GQL);
+  assert.equal(call.method, 'POST');
+  assert.equal(r.helixSearch().length, 0, 'no Helix search signed out');
+  const headers = call.options.headers ?? {};
+  assert.equal(headers.Authorization, undefined, 'no token');
+  assert.ok(headers['Client-Id'] && headers['Client-Id'] !== SAVED.clientID, 'the public web client id, not the viewer\'s');
+  assert.equal(r.searchTextOfCall(call), 'ri');
+  const flat = call.options.data.query.replace(/\s+/g, '');
+  assert.ok(flat.includes('searchFor(') && /platform:"web"/.test(flat), 'searchFor with platform "web"');
+  assert.ok(/channels\{edges\{item\{/.test(flat), 'channels.edges.item');
+  for (const piece of ['login', 'displayName', 'viewersCount', 'game{displayName']) assert.ok(flat.includes(piece), piece);
+  assert.ok(/lastBroadcast\{[^}]*startedAt/.test(flat) && /lastBroadcast\{[^}]*title/.test(flat), 'lastBroadcast{startedAt title}');
+});
+
+test('R11. signed in: Helix search with the viewer\'s token, one /streams for live results, one age lookup for offline ones', async () => {
+  const r = await searchRig({signedIn: true});
+  const before = r.calls().length;
+  await r.typeSettled('ri');
+  const added = r.calls().slice(before);
+  assert.equal(r.gqlSearch().length, 0, 'no GQL searchFor signed in');
+  assert.equal(r.helixSearch().length, 1, 'one Helix search request');
+  const [search] = r.helixSearch();
+  assert.equal(search.method, 'GET');
+  const params = paramsOf(search);
+  assert.equal(params.query, 'ri');
+  assert.equal(params.first, '10');
+  assert.equal(search.options.headers.Authorization, `Bearer ${SAVED.access_token}`);
+  assert.ok(search.options.headers['Client-Id']);
+  const resultLogins = RI_RESULTS.map(result => result.login);
+  const streams = added.filter(call => HELIX.test(call.url));
+  assert.equal(streams.length, 1, 'one /streams request');
+  const asked = new URL(streams[0].url).searchParams.getAll('user_login');
+  for (const login of ['rivenshade', 'riptidejoe']) assert.ok(asked.includes(login), `/streams asks for live result ${login}`);
+  assert.ok(asked.every(login => resultLogins.includes(login)), 'and only for results');
+  const ages = added.filter(call => call.url === GQL && !/stream\{/.test(call.options.data.query.replace(/\s+/g, '')));
+  assert.equal(ages.length, 1, 'one age lookup');
+  const flat = ages[0].options.data.query.replace(/\s+/g, '');
+  assert.ok(quoted(ages[0].options.data.query).includes('rinnyruns'), 'for the offline result');
+  assert.ok(/lastBroadcast\{[^}]*startedAt/.test(flat) && /lastBroadcast\{[^}]*title/.test(flat));
+  assert.equal(added.length, 3, 'nothing else is requested for O');
+});
+
+test('R11. signed in with only chat:read: still Helix search (the follows scope is not needed)', async () => {
+  const r = await searchRig({signedIn: true, scopes: ['chat:read'], follows: []});
+  await r.typeSettled('ri');
+  assert.equal(r.helixSearch().length, 1, 'one Helix search request');
+  assert.equal(r.gqlSearch().length, 0);
+});
+
+test('R11. signed in: no /streams when no result is live, and no age lookup when none is offline', async () => {
+  const offlineOnly = await searchRig({signedIn: true, liveLogins: [], searchResults: [searchResult('rinnyruns')]});
+  const a = offlineOnly.calls().length;
+  await offlineOnly.typeSettled('ri');
+  assert.equal(offlineOnly.helixSearch().length, 1, 'one Helix search request');
+  assert.ok(!offlineOnly.calls().slice(a).some(call => HELIX.test(call.url)), 'no /streams');
+  const liveOnly = await searchRig({signedIn: true, searchResults: [searchResult('rivenshade'), searchResult('riptidejoe')]});
+  const b = liveOnly.calls().length;
+  await liveOnly.typeSettled('ri');
+  assert.equal(liveOnly.helixSearch().length, 1, 'one Helix search request');
+  assert.ok(!liveOnly.calls().slice(b).some(call => call.url === GQL), 'no age lookup');
+});
+
+// R1, R12, R13: who is in Y, in `known`, in `others`, and in what order. Frame (b).
+const EXPECTED_RI = {
+  'signed out': {known: ['dunmore'], others: ['rivenshade', 'riptidejoe', 'rinnyruns', 'rimecraft']},
+  'signed in': {known: ['dunmore'], others: ['rivenshade', 'riptidejoe', 'rinnyruns']},
+};
+for (const [mode, signedIn] of MODES) {
+  test(`R1/R12. ${mode}: known people the search finds but Y does not show are appended; O is live by viewers, then Twitch's order`, async () => {
+    const r = await searchRig({signedIn});
+    const y = await r.ask('ri');
+    await r.typeSettled('ri');
+    const [answer, ...more] = searchAnswers(r);
+    assert.ok(answer, 'a suggestions-search message for "ri"');
+    assert.equal(more.length, 0, 'once per settled text');
+    assert.deepEqual(Object.keys(answer).sort(), ['known', 'others', 'text']);
+    assert.deepEqual(logins(answer.known), EXPECTED_RI[mode].known, 'known: shown nowhere in Y for this text');
+    assert.deepEqual(logins(answer.others), EXPECTED_RI[mode].others, 'others: unknown people, live by viewers then Twitch order');
+    const inY = new Set(logins(y.rows));
+    for (const row of [...answer.known, ...answer.others]) assert.ok(!inY.has(row.login), `${row.login} is not also in Y`);
+    for (const row of [...answer.known, ...answer.others]) {
+      assert.deepEqual(Object.keys(row).sort(), ['details', 'displayName', 'live', 'login', 'provider']);
+      assert.equal(row.provider, 'twitch');
+      assert.equal(row.displayName, SEARCH_NAMES[row.login]);
+    }
+  });
+
+  test(`R12/R13. ${mode}: O rows carry their own status and details (live: title, category, viewers; offline: lastAt, lastTitle)`, async () => {
+    const r = await searchRig({signedIn});
+    await r.ask('ri');
+    await r.typeSettled('ri');
+    const [answer] = searchAnswers(r);
+    assert.ok(answer, 'a suggestions-search message for "ri"');
+    const byLogin = Object.fromEntries([...answer.known, ...answer.others].map(row => [row.login, row]));
+    assert.equal(byLogin.rivenshade.live, true);
+    assert.deepEqual(byLogin.rivenshade.details, {title: 'ranked grind to radiant', category: 'Valorant', viewers: 15400});
+    assert.equal(byLogin.rinnyruns.live, false);
+    assert.equal(byLogin.rinnyruns.details.lastAt, SEARCH_DETAILS.rinnyruns.lastAt);
+    assert.equal(byLogin.rinnyruns.details.lastTitle, 'knitting night');
+    assert.equal(byLogin.dunmore.live, false, 'a known offline person');
+    assert.equal(byLogin.dunmore.details.lastAt, SEARCH_DETAILS.dunmore.lastAt);
+  });
+}
+
+test('R1. an exact login match for the typed text (trimmed, case-insensitive) leads O, even when offline', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn});
+    await r.ask(' RinnyRuns ');
+    await r.typeSettled(' RinnyRuns ');
+    const answer = searchAnswers(r, 'rinnyruns')[0];
+    assert.ok(answer, 'answered');
+    assert.deepEqual(logins(answer.others).slice(0, 3), ['rinnyruns', 'rivenshade', 'riptidejoe']);
+  }
+});
+
+test('R1. frame (c) "glaze": no one is known, so Y is empty and O is live by viewers, then the offline one', async () => {
+  const r = await searchRig();
+  const y = await r.ask('glaze');
+  assert.deepEqual(y.rows, [], 'fixture: Y is empty');
+  await r.typeSettled('glaze');
+  const answer = searchAnswers(r, 'glaze')[0];
+  assert.ok(answer);
+  assert.deepEqual(answer.known, []);
+  assert.deepEqual(logins(answer.others), ['glazewright', 'glazedgourd', 'glazier9']);
+});
+
+test('R3. at most 10 O rows and at most 10 known people appended; O keeps the highest viewer counts', async () => {
+  const strangers = Array.from({length: 14}, (_, i) => ({login: `st${String(i + 1).padStart(2, '0')}`, name: `Stranger ${i + 1}`}));
+  const history = Array.from({length: 12}, (_, i) => person(`hk${String(i + 1).padStart(2, '0')}`, `Historian ${i + 1}`, 12 - i));
+  const details = Object.fromEntries(strangers.map((s, i) => [s.login, {title: 't', category: 'c', viewers: 100 + i}]));
+  const r = loadGlobal({people: history, liveLogins: strangers.map(s => s.login), details,
+    searchResults: [...strangers, ...history.map(p => ({login: p.login, name: p.displayName}))]});
+  await r.showOpen();
+  await r.ask('zq');
+  await r.typeSettled('zq');
+  const answer = searchAnswers(r, 'zq')[0];
+  assert.ok(answer, 'answered');
+  assert.equal(answer.others.length, 10);
+  assert.deepEqual(logins(answer.others), strangers.slice(4).reverse().map(s => s.login), 'the 10 highest viewer counts, best first');
+  assert.equal(answer.known.length, 10);
+  assert.ok(logins(answer.known).every(login => login.startsWith('hk')));
+});
+
+// R3 cache.
+test('R3. the same trimmed, lower-cased text within 60 s is answered from the cache after the same pause, with no request', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn});
+    await r.ask('ri');
+    await r.typeSettled('ri');
+    const requestsAfterFirst = r.searchRequests();
+    assert.equal(requestsAfterFirst, 1, 'fixture: one request');
+    r.shim.timers.advance(30000);
+    const followUps = r.calls().length;
+    await r.ask('RI ');
+    r.window.receive('open-query', {text: 'RI '});
+    await r.settle();
+    r.shim.timers.advance(249);
+    await r.settle();
+    assert.equal(searchAnswers(r).length, 1, 'nothing yet at 249 ms');
+    r.shim.timers.advance(1);
+    await r.settle();
+    assert.equal(searchAnswers(r).length, 2, 'the cached answer is posted after the same pause');
+    assert.equal(r.searchRequests(), requestsAfterFirst, 'with no request');
+    assert.equal(r.calls().length, followUps, 'and no other request');
+    assert.deepEqual(searchAnswers(r)[1].others, searchAnswers(r)[0].others);
+    assert.equal(searchPending(r).filter(Boolean).length, 1, 'the cache hit shows no pending');
+    r.shim.timers.advance(31000);
+    await r.settle();
+    await r.typeSettled('ri');
+    assert.equal(r.searchRequests(), requestsAfterFirst + 1, 'after 60 s the text is asked again');
+  }
+});
+
+// R12 and R9 messages, R7 for global.
+test('R12/R9. signed out: pending true when the request starts, the answer, then pending false; nothing earlier', async () => {
+  const r = await searchRig({searchHold: true});
+  r.window.receive('open-query', {text: 'ri'});
+  await r.settle();
+  r.shim.timers.advance(249);
+  await r.settle();
+  assert.deepEqual(searchPending(r), [], 'no pending before the request starts');
+  r.shim.timers.advance(1);
+  await r.settle();
+  assert.equal(r.searchRequests(), 1, 'the request is out');
+  assert.deepEqual(searchPending(r), [true], 'pending true when it starts');
+  assert.equal(searchAnswers(r).length, 0, 'and no answer yet');
+  r.releaseSearch();
+  await r.settle();
+  assert.equal(searchAnswers(r).length, 1, 'the answer');
+  assert.deepEqual(searchPending(r), [true, false], 'then pending false');
+});
+
+test('R12/R9. signed in: pending covers the whole chain, and the answer waits for the viewer counts', async () => {
+  const r = await searchRig({signedIn: true, searchHold: true});
+  r.window.receive('open-query', {text: 'ri'});
+  await r.settle();
+  r.shim.timers.advance(250);
+  await r.settle();
+  assert.deepEqual(searchPending(r), [true]);
+  r.releaseSearch();
+  await r.settle();
+  assert.equal(searchAnswers(r).length, 1, 'one answer, after search, /streams and ages');
+  assert.deepEqual(searchPending(r), [true, false], 'one pair of pending messages');
+  const rows = searchAnswers(r)[0].others;
+  assert.equal(rows.find(row => row.login === 'rivenshade').details.viewers, 15400, 'viewer counts are in the one answer');
+});
+
+test('R7. an answer that arrives after the window closed posts nothing to it', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn, searchHold: true});
+    r.window.receive('open-query', {text: 'ri'});
+    await r.settle();
+    r.shim.timers.advance(250);
+    await r.settle();
+    assert.equal(r.searchRequests(), 1, 'fixture: a request is out');
+    r.window.send('open-cancel', {});
+    await r.settle();
+    const posted = r.window.posts.length;
+    r.releaseSearch();
+    await r.settle();
+    assert.equal(r.window.posts.length, posted, 'nothing posted to the closed window');
+    assert.equal(searchAnswers(r).length, 0);
+  }
+});
+
+// R9/R11 failure.
+test('R9/R11. a failed search adds nothing and shows no error: pending ends, Y and the list still answer', async () => {
+  for (const [, signedIn] of MODES) {
+    const r = await searchRig({signedIn, searchFail: true});
+    const y = await r.ask('ri');
+    await r.typeSettled('ri');
+    assert.equal(r.searchRequests(), 1, 'fixture: the search was tried');
+    assert.deepEqual(searchPending(r), [true, false]);
+    for (const answer of searchAnswers(r)) assert.deepEqual([answer.known, answer.others], [[], []], 'nothing added');
+    assert.ok(y.rows.length > 0, 'Y is unaffected');
+    const again = await r.ask('riv');
+    assert.ok(Array.isArray(again.rows), 'later lists still answer');
+  }
+});
+
+test('R11/C5. signed in: a failed /streams loses only the viewer counts; a failed age lookup loses only the ages', async () => {
+  const noViewers = await searchRig({signedIn: true, searchPartFail: 'streams'});
+  await noViewers.ask('ri');
+  await noViewers.typeSettled('ri');
+  const a = searchAnswers(noViewers)[0];
+  assert.ok(a, 'the search still answers');
+  const riven = a.others.find(row => row.login === 'rivenshade');
+  assert.equal(riven.live, true, 'live comes from the search result itself');
+  assert.equal(riven.details?.viewers, undefined, 'viewers are lost');
+  assert.equal(a.others.find(row => row.login === 'rinnyruns').details.lastAt, SEARCH_DETAILS.rinnyruns.lastAt, 'ages stay');
+  const noAges = await searchRig({signedIn: true, searchPartFail: 'ages'});
+  await noAges.ask('ri');
+  await noAges.typeSettled('ri');
+  const b = searchAnswers(noAges)[0];
+  assert.ok(b, 'the search still answers');
+  const inny = b.others.find(row => row.login === 'rinnyruns');
+  assert.equal(inny.live, false);
+  assert.equal(inny.details?.lastAt, undefined, 'ages are lost');
+  assert.equal(b.others.find(row => row.login === 'rivenshade').details.viewers, 15400, 'viewers stay');
+});
+
+// R8: late follows with O drawn.
+test('R8. a follows answer after O is drawn changes nothing already drawn; the next text uses it', async () => {
+  const r = await searchRig({signedIn: true, holdFollows: true});
+  r.shim.timers.advance(450);
+  await r.settle();
+  const y = await r.ask('ri');
+  await r.typeSettled('ri');
+  const first = searchAnswers(r)[0];
+  assert.ok(first, 'fixture: O is drawn before the follows arrive');
+  assert.ok(logins(first.others).includes('rimecraft'), 'fixture: rimecraft is not yet known as a follow, so it is in O');
+  const listsBefore = r.messages('suggestions').length;
+  r.releaseFollows();
+  await r.settle();
+  const later = r.messages('suggestions').slice(listsBefore).filter(message => message.text === 'ri');
+  for (const list of later) assert.ok(!logins(list.rows).includes('rimecraft'), 'no late append while O is drawn');
+  assert.equal(searchAnswers(r).length, 1, 'and O is not redrawn');
+  assert.equal(y.rows.length >= 0, true);
+  const next = await r.ask('rim');
+  assert.ok(logins(next.rows).includes('rimecraft'), 'the next text lists the follow in Y');
+  r.shim.timers.advance(250);
+  await r.settle();
+  const second = searchAnswers(r, 'rim')[0];
+  assert.ok(second, 'and searches');
+  assert.ok(![...second.known, ...second.others].some(row => row.login === 'rimecraft'), 'one person once: not in O or known');
 });

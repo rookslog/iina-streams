@@ -19,13 +19,13 @@ IINA plugin data lives in `~/Library/Application Support/com.colliderli.iina/plu
 ## What it connects to
 
 - **Twitch:**
-  - `id.twitch.tv`: sign-in, token checks and refresh, and sign-out revocation, with the read-only `chat:read` permission;
+  - `id.twitch.tv`: sign-in, token checks and refresh, and sign-out revocation, with the read-only `chat:read` permission and, once you choose "Include who you follow" in Open Stream, the read-only `user:read:follows` permission;
   - `www.twitch.tv`: opened in your browser only when you click **Approve on Twitch**;
   - `dev.twitch.tv`: opened in your browser only if you choose **Use a different Client ID** and click **Open Twitch Developer Console**;
   - `irc-ws.chat.twitch.tv`: live chat (read-only WebSocket);
   - `static-cdn.jtvnw.net`: official Twitch emote images in live chat, loaded by the sidebar and overlay chat views when a message contains an emote;
-  - `api.twitch.tv`: when you're signed in, an offline channel's recent broadcasts, using your sign-in;
-  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, an offline channel's recent broadcasts (signed out, or if `api.twitch.tv` fails), and VOD chat replay;
+  - `api.twitch.tv`: when you're signed in, an offline channel's recent broadcasts; the live status, title, category and viewer count of people in your watch history; and, with `user:read:follows`, who you follow and which of them are live, all using your sign-in;
+  - `gql.twitch.tv`: signed-out playback tokens and stream titles, live-status checks, stream titles, categories and viewer counts and when each person last streamed (for the people Open Stream lists: your watch history and, signed in, who you follow), an offline channel's recent broadcasts (signed out, or if `api.twitch.tv` fails), and VOD chat replay;
   - `usher.ttvnw.net`: stream and VOD quality playlists (or through Streamlink as a fallback);
   - `*.ttvnw.net`, `*.twitchcdn.net`, and Twitch's CloudFront VOD hosts (`*.cloudfront.net`): video and audio playback in IINA, plus live playlist polling on `*.ttvnw.net` or `*.twitchcdn.net` to keep live chat timing synced.
 - **YouTube:**

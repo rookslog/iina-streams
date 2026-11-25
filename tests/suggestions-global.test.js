@@ -411,7 +411,10 @@ test('5b. signed in: one Helix GET /helix/streams with repeated user_login', asy
   await r.signIn();
   await r.showOpen();
   assert.equal(r.statusRequests(), 1, 'exactly one status request');
-  assert.equal(r.gqlStatus().length, 0, 'signed in: the documented API first (D-034), no GQL status');
+  // Amended 2026-11-24 (lead, phase 3 decision 2): signed in, live status comes only from Helix; the one GQL
+  // lookup allowed is the batched age lookup (lastBroadcast), which must not ask for live status.
+  const gqlLive = r.gqlStatus().filter(call => /stream\s*\{/.test(call.options?.data?.query ?? ''));
+  assert.equal(gqlLive.length, 0, 'signed in: the documented API first (D-034), no GQL live status');
   const [request] = r.helixStatus();
   assert.equal(request.method, 'GET');
   const url = new URL(request.url);

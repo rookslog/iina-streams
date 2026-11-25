@@ -133,3 +133,6 @@ P5. Details arriving update the row in place (same element), as status does.
 8. One cap of 50 rows for every list.
 9. Typing resets "the person has moved": after typing, selection follows the top again. The P4 note takes one row's height inside the fixed window. P1's formats follow mock A's sample data.
 10. A login in both history and follows shows Twitch's display name from follows.
+
+### Phase 3b (lead, 2026-11-24 ~23:00)
+Offline details gain `lastTitle` (GQL `lastBroadcast{title}`, checked live tonight), and an offline row shows it as its second line, as mock A did. P1d's earlier "age and name, nothing else" was a third drift from mock A by the lead's contract (after rule 11 and the follows); G6 and P1d amended.

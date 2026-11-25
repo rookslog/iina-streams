@@ -116,8 +116,12 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   };
   const gqlUser = (query, login) => {
     const user = {login, stream: gqlStream(query, login)};
-    if (query.replace(/\s+/g, '').includes('lastBroadcast{startedAt')) {
-      user.lastBroadcast = lastAtOf(login) ? {startedAt: lastAtOf(login)} : null;
+    const flatQuery = query.replace(/\s+/g, '');
+    if (/lastBroadcast\{[^}]*startedAt/.test(flatQuery)) {
+      // Amended 2026-11-24 (lead, phase 3b): the last broadcast's title too, when the query selects it.
+      const lastTitle = (control.details[login] || {}).lastTitle;
+      user.lastBroadcast = lastAtOf(login) ? {startedAt: lastAtOf(login),
+        ...(/lastBroadcast\{[^}]*title/.test(flatQuery) && lastTitle ? {title: lastTitle} : {})} : null;
     }
     return user;
   };
@@ -809,13 +813,15 @@ test('G5. order while typing with follows: history.query\'s matching applies to 
 test('G6. signed out: details come with the status batch: live gives title, category, viewers; offline gives lastAt when known', async () => {
   const details = {
     p01: {title: 'Speedrun marathon day 3', category: 'Celeste', viewers: 12345},
-    p02: {lastAt: '2026-11-20T18:04:11Z'},
+    p02: {lastAt: '2026-11-20T18:04:11Z', lastTitle: 'Sunday cozy stream'},
   };
   const r = loadGlobal({people: many(25), liveLogins: ['p01'], details});
   await r.showOpen();
   const got = mergedStatus(r, 'details');
   assert.deepEqual(got.p01, {title: 'Speedrun marathon day 3', category: 'Celeste', viewers: 12345});
-  assert.deepEqual(Object.keys(got.p02 ?? {}), ['lastAt'], 'an offline person with a known last broadcast');
+  // Amended 2026-11-24 (lead, phase 3b; mock A shows an offline person's last broadcast title).
+  assert.deepEqual(Object.keys(got.p02 ?? {}).sort(), ['lastAt', 'lastTitle'], 'an offline person with a known last broadcast');
+  assert.equal(got.p02.lastTitle, 'Sunday cozy stream');
   assert.equal(typeof got.p02.lastAt, 'string');
   assert.equal(Date.parse(got.p02.lastAt), Date.parse('2026-11-20T18:04:11Z'), 'an ISO time for the same moment');
   assert.equal(got.p03?.lastAt, undefined, 'unknown stays unknown (no lastAt, not 0 or NaN)');

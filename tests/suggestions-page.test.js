@@ -307,16 +307,19 @@ test('P1d. an offline row with lastAt shows a short age ("2d", "3w") and the bro
   ];
   f.suggest(rows);
   statusWithDetails(f, {brindle: false, wrenfield: false, hollowell: false}, {
-    brindle: {lastAt: hoursAgo(2 * DAY + 1)},
+    brindle: {lastAt: hoursAgo(2 * DAY + 1), lastTitle: 'Rhythm game requests'},
     wrenfield: {lastAt: hoursAgo(21 * DAY + 1)},
   });
   const [two, three, none] = f.options();
+  // Amended 2026-11-24 (lead, phase 3b): as in mock A, an offline row shows its last broadcast's title when known.
+  assert.ok(leafTexts(f, two).includes('Rhythm game requests'), 'the last broadcast title is the second line');
   assert.ok(leafTexts(f, two).includes('2d'), 'two days ago is 2d');
   assert.ok(leafTexts(f, three).includes('3w'), 'three weeks ago is 3w');
   for (const row of [two, three]) {
     assert.ok(f.all(row).some(node => /disclos|chev/i.test(String(node.className))), 'the broadcasts chevron');
   }
-  assert.equal(leftover(f, two, ['2d', 'Brindle', 'B']), '', 'age and name, nothing else');
+  assert.equal(leftover(f, two, ['2d', 'Brindle', 'B', 'Rhythm game requests']), '', 'name, last title and age, nothing else');
+  assert.equal(leftover(f, three, ['3w', 'Wrenfield', 'W']), '', 'no last title known: name and age only');
   assert.equal(leftover(f, none, ['Hollowell', 'H']), '', 'no lastAt: no age, no placeholder');
 });
 

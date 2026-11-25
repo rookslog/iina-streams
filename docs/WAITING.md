@@ -388,6 +388,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **2. Other channels blinked on every keystroke.** As specified (so a stale row could never be opened), typing one more letter removed every other-channel row, and they came back a quarter-second plus the network time later. **Working choice:** rows that still match what you typed stay; the rest go; the new answer then replaces them. Alternative: keep the blink. Cost: the order of other channels can change when the answer lands, while you're typing.
 - **Recommendation (lead):** both working choices. Load-bearing assumption: an empty window and blinking rows read as broken, which matches your W-21 "this is still no good". What would flip it: if, on your try, the typed-name row looks like clutter, drop it.
 - **Full rules:** `docs/design/finding-2026-11-22/open-stream/TESTS-74.md`, "Rev 2 page round 3" (P-A, P-B).
+- **Update 2026-11-25 ~03:45 (lead):** both built on feat/74-search (4b2a53c; 1114 tests pass). A pasted link shows as its text alone, without the Twitch mark; the row also shows when the search fails. Not merged: the merge waits for your follows to load natively once (sign out and in once).
 
 ## Answered
 

@@ -89,8 +89,6 @@ function quoted(query) {
 const FOLLOWED = /\/helix\/(streams|channels)\/followed(\?|$)/;
 const USER_ID = '77001';
 const FOLLOWS_SCOPES = ['chat:read', 'user:read:follows'];
-const NEW_TOKEN = 'new-follows-token-0001';
-const NEW_REFRESH = 'new-follows-refresh-0001';
 const USER_CODE = 'WXYZ-1234';
 const DEVICE_CODE = 'device-code-secret-9f3a';
 const VERIFICATION_URI = 'https://www.twitch.tv/activate?public=true';
@@ -104,16 +102,9 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   shim.file.seed(FILE, text);
   if (signedIn) shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
   const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: [], scopes, userID: USER_ID,
-    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor, gqlFieldError,
-    // The device flow of Phase 3c (C3). `approve` is the person finishing sign-in on Twitch; until then the poll is
-    // authorization_pending. The new grant's scopes are `newScopes`. Shapes: src/auth.js and tests/auth.test.js.
-    oauth: {approve: false, issued: false, deviceForm: null, newScopes: FOLLOWS_SCOPES, newToken: NEW_TOKEN,
-      newRefresh: NEW_REFRESH, userCode: USER_CODE, deviceCode: DEVICE_CODE, verificationUri: VERIFICATION_URI,
-      // Phase 3d: the person declining on Twitch ends the poll with access_denied.
-      deny: false}, revokes: []};
-  // The scopes a token carries: the saved one, or the one a finished device flow issued. Anything else is invalid.
-  const tokenScopes = token => token === SAVED.access_token ? control.scopes
-    : token === control.oauth.newToken && control.oauth.issued ? control.oauth.newScopes : null;
+    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor, gqlFieldError};
+  // Only the saved grant is valid in these scenarios.
+  const tokenScopes = token => token === SAVED.access_token ? control.scopes : null;
 
   const liveDetails = login => ({title: `Stream of ${login}`, category: 'Just Chatting', viewers: 100,
     ...(control.details[login] || {})});
@@ -150,24 +141,13 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
       const form = options?.data ?? {};
       const path = url.slice(OAUTH.length);
       if (path === '/device') {
-        control.oauth.deviceForm = form;
-        shim.http.setResponse({statusCode: 200, data: {device_code: control.oauth.deviceCode, user_code: control.oauth.userCode,
-          verification_uri: control.oauth.verificationUri, expires_in: 1800, interval: 5}});
+        // Keep a realistic pending device flow so an accidental page sign-in is observable.
+        shim.http.setResponse({statusCode: 200, data: {device_code: DEVICE_CODE, user_code: USER_CODE,
+          verification_uri: VERIFICATION_URI, expires_in: 1800, interval: 5}});
       } else if (path === '/token' && form.grant_type === 'urn:ietf:params:oauth:grant-type:device_code') {
-        if (control.oauth.deny) {
-          shim.http.rejectResponse({statusCode: 400, reason: 'Bad Request', text: '',
-            data: {status: 400, message: 'access_denied'}});
-        } else if (control.oauth.approve) {
-          control.oauth.issued = true;
-          shim.http.setResponse({statusCode: 200, data: {access_token: control.oauth.newToken,
-            refresh_token: control.oauth.newRefresh, expires_in: 14400, token_type: 'bearer'}});
-        } else {
-          shim.http.rejectResponse({statusCode: 400, reason: 'Bad Request', text: '',
-            data: {status: 400, message: 'authorization_pending'}});
-        }
+        shim.http.rejectResponse({statusCode: 400, reason: 'Bad Request', text: '',
+          data: {status: 400, message: 'authorization_pending'}});
       } else if (path === '/revoke') {
-        // Phase 3d (D1): what the world looked like when the old token was revoked.
-        control.revokes.push({token: form.token, keychain: shim.keychain.get('twitch-readonly', 'oauth')});
         shim.http.setResponse({statusCode: 200, data: {}});
       } else {
         shim.http.rejectResponse({statusCode: 404, reason: 'Not Found', text: ''});
@@ -247,8 +227,7 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
       if (!scopes) {
         shim.http.rejectResponse({statusCode: 401, reason: 'Unauthorized', text: '', data: {status: 401, message: 'invalid access token'}});
       } else {
-        const fresh = token === control.oauth.newToken;
-        shim.http.setResponse({statusCode: 200, data: {client_id: fresh ? control.oauth.deviceForm.client_id : SAVED.clientID,
+        shim.http.setResponse({statusCode: 200, data: {client_id: SAVED.clientID,
           login: 'reader', user_id: control.userID, scopes, expires_in: 5000}});
       }
     } else if (FOLLOWED.test(url)) {

@@ -283,6 +283,42 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Done at night, for the record:** the stage folder `~/Library/Application Support/iina-streams-dev` held two Beta backups, `beta-backup-0.5.4-*` and `beta-backup-0.5.5-*`, which blocked staging. They were moved unchanged to `~/Library/Application Support/iina-streams-beta-backups/`. Nothing referred to their old path, and the installed Streams Beta is its own folder.
 - **What your answer changes:** the release branch for 0.5.6 waits on these checks. The merges into `next` don't.
 
+- **Update 2026-11-24 19:46:** done by the lead at the operator's request in chat (`defaults write` with IINA closed; read back: Dev 1, Beta 0). The operator then took over testing for a while. The lead puts Beta back on and Dev off when testing ends, unless told to leave them.
+
+### W-20. Your first look at tonight's Dev build: where each point goes
+- **What it is:** at about 20:00 on 2026-11-24 you looked at Streams Dev (a build of `next` at 0708d0a9) and raised the points below. Each is now an issue with a proposed release. The one thing to decide is whether dragging chat to dock it (#85) comes before 0.6.0.
+- **Your words (as said):**
+  - "Weren't we supposed to do a UI overhaul kind of deal? Because, I mean, it's still atrocious, and then I'm seeing this terrible "hide chat" kind of button. And then it's mixed with a really shitty legacy setting system where it's like "display over video," "sidebar beside video," and then I'm seeing this hide thing."
+  - "I guess the hide button isn't great, but I don't even remember asking for it. I feel like there's a better way to do this. Thinking about it design-wise, the fact that I have to go into this menu and then click this to hide it, when there's probably a better way to do that? Like, what if I wanted to just maybe right-click it? There should be more right-clicking options."
+  - "What's the difference between hide chat and toggling chat on or off? I guess it deloads it, but I don't know, it feels a bit weird to have these two things. The hide thing really only makes sense to me for the side panel. It squishes it [...] but I don't know why it's in the [...] stream plugin menu."
+  - "what about the sidebar drag thing? I feel like that's important and that needs to be done. Is that issue on the roadmap?"
+  - "when I press the options thing, then I close the panel and reopen that left panel, it reopens with the option still open, which just seems a bit silly."
+  - "there's just something wrong with the process, like thinking about users and what they might want, and there's a failure of attention to detail [...] how do we handle their differences elegantly, right? So that each user feels like the app was made for them in a certain sense."
+  - "I think the stuff we have for 0.5.6 is good, but I also want to fix some of the window stuff, like dragging to the side [...] I kind of want that, but maybe I can wait for a different release."
+- **Where each point went (milestones are the lead's proposal):**
+
+  | Point | Issue | Release |
+  |---|---|---|
+  | Options still open when the plugin panel reopens | #86 | 0.5.6 |
+  | Emotes missing in past-broadcast chat | #87 (part of #34) | 0.5.6 |
+  | Hide Chat vs Turn Chat Off vs the over/beside setting; hiding belongs on the side column, not the plugin menu | #88 | 0.6.0 |
+  | Right-click on chat for its common actions | #89 | 0.6.0 |
+  | Drag the chat box to the edge to dock it, drag out to float; the setting goes | #85 (existing; had no release) | 0.6.0, first of the overhaul |
+  | The whole UI: plugin panel, overlay, Open Stream | #20, #1, #18, #52 (existing) | 0.6.0 |
+
+- **Lead's reading (mine):** the controls were added one issue at a time (D1c made hiding a view state after your #47 feedback; #52 put Show/Hide Chat in the menu because IINA has no playback-bar API) and nobody looked at them together, as a person meets them. The overhaul has to start with an inventory of every control, where it lives and who reaches for it, before anything is redrawn.
+- **The decision: when does drag-to-dock (#85) come?**
+
+  | Option | Buys | Costs |
+  |---|---|---|
+  | **0.6.0, first of the overhaul** | Built with the pointer measurements (#18) it depends on, and with #88's control cleanup | You wait until 0.5.6 ships |
+  | **Pull into 0.5.6** | Sooner on your screen | Delays 0.5.6; dragging over IINA's video without #18's measurements may misbehave |
+  | **Leave unslotted** | Nothing | No date |
+
+  - **Recommendation:** 0.6.0, first. It is the visible change you asked for and fixes the setting you dislike, but done before #18 it would likely be redone.
+  - **Rests on:** a drag over IINA's video depends on how the overlay receives the pointer, which #18 exists to measure and hasn't yet (unchecked how far it differs from a browser).
+  - **Would flip it:** if you'd rather have a rough drag sooner and accept a redo, it can start as soon as 0.5.6's remaining items are built.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

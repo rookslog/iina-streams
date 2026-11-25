@@ -49,6 +49,8 @@
  let late=[];
  // A search request for the text in the field is out (R9).
  let searchPending=false;
+ // The field's text at the last edit or prefill, to tell an edit that changes the text from one that doesn't (F2).
+ let draftText='';
  let heardSuggestions=false;
  // The selected row: {login, vod}, where vod is -1 for the person row or a broadcast index under them.
  let selection=null;
@@ -138,11 +140,13 @@
   // The person opened from the list was offline: their broadcasts come under their row, and the field stays.
   if(vodsTarget==='checking'&&value.input===checkingLogin)return;
   field.value=value.input;
+  draftText=value.input;
   submitted=true;
   vodsTarget='standalone';
   selection=null;
   expanded=null;
   dropSearch();
+  searchPending=false;
   render();
  }
 
@@ -178,7 +182,6 @@
   known=[];
   others=[];
   searchText=null;
-  searchPending=false;
  }
 
  function onSuggestions(data){
@@ -186,18 +189,22 @@
   if(!value||!Array.isArray(value.rows))return;
   const text=typeof value.text==='string'?value.text:'';
   let rows=cleanRows(value.rows);
+  // F4: after an account change global re-sends the list with reset:true. The drawn search rows were the old
+  // account's, so they go and the fresh list is drawn; the next search answer for this text draws afresh.
+  if(value.reset===true)dropSearch();
   if(searchText!==null&&sameText(text,searchText)){
    // R8: a person already drawn from the search stays where they are until the next text.
    const drawn=new Set(known.concat(others).map(row=>row.login));
    rows=rows.filter(person=>!drawn.has(person.login));
-   // D2: people this list adds go below the known rows, so no row already shown moves.
-   if(known.length){
-    const before=new Set(people.map(person=>person.login));
-    people=rows.filter(person=>before.has(person.login));
-    late=rows.filter(person=>!before.has(person.login));
+   const before=new Set(people.map(person=>person.login));
+   const inList=new Set(rows.map(person=>person.login));
+   people=rows.filter(person=>before.has(person.login));
+   if(others.length){
+    // R8/F5: with other channels drawn, anyone this list adds would push them down: held until the next text.
+    late=late.filter(person=>inList.has(person.login));
    }else{
-    people=rows;
-    late=[];
+    // D2: with only known people drawn, those it adds go below them, so no row already shown moves.
+    late=rows.filter(person=>!before.has(person.login));
    }
   }else{
    people=rows;
@@ -803,20 +810,32 @@
  // Every edit is a new draft: the top match is reselected when global answers, no broadcasts are open, and
  // any pending answer is outdated.
  function onInput(){
+  // F2: an edit that leaves the trimmed, lower-cased text as it was ("ri" to "ri ", or "RI") changes nothing on
+  // the list: the search rows, the hairline, the selection and a search still out all stay.
+  const unchanged=sameText(field.value,draftText);
+  draftText=field.value;
   field.removeAttribute('aria-invalid');
   submitted=false;
   pendingInput=null;
-  selection=null;
-  textChosen=false;
   earlyReturn=false;
-  moved=false;
+  if(unchanged){
+   // Broadcasts still close, as on any edit; a selection inside them goes back to their person.
+   if(selection&&selection.vod>=0)selection={login:selection.login,vod:-1};
+  }else{
+   selection=null;
+   textChosen=false;
+   moved=false;
+  }
   expanded=null;
   checkingLogin=null;
   vodsTarget='ignore';
   awaitingText=field.value;
   // R6: the old text's search rows go at the keystroke, so no stale result is ever selectable; your channels' own
   // rows stay until the new list. A search still out is for the old text, so the spinner goes too.
-  dropSearch();
+  if(!unchanged){
+   dropSearch();
+   searchPending=false;
+  }
   announce('');
   clearOfflineVods();
   render();

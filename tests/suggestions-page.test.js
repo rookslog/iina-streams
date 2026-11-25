@@ -225,17 +225,17 @@ test('12a. typing posts open-query {text}', () => {
 test('12. combobox: the field keeps focus; arrows move the selection with aria-activedescendant and aria-selected', () => {
   const f = pageFixture();
   f.suggest();
-  // Amended 2026-11-24 (lead, provisional, the operator to confirm): with an empty field the first person is
-  // selected, so Return opens them in one step (the quick list). Typing clears it; arrows select again.
+  // Amended 2026-11-24 ~20:50 (lead, after the design review): whenever the list has people, the first is
+  // selected, at rest and while typing, so Return opens the top match (mock A, and TESTS-74's native proof:
+  // "Typing 'oh' puts Ohnepixel first. Return opens it."). The first ↓ moves to the second person.
   assert.deepEqual(f.selected(), [f.options()[0]], 'the first person is selected at rest');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
   f.type('o');
   f.suggest();
-  assert.equal(f.selected().length, 0, 'no automatic selection while typing: Return submits the text');
+  assert.deepEqual(f.selected(), [f.options()[0]], 'the top match is selected while typing');
   assert.equal(f.press('ArrowDown'), true, 'ArrowDown does not move the caret');
-  assert.deepEqual(f.selected(), [f.options()[0]]);
-  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
-  f.press('ArrowDown');
-  assert.deepEqual(f.selected(), [f.options()[1]]);
+  assert.deepEqual(f.selected(), [f.options()[1]], 'the first ↓ moves to the second person');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[1].id);
   assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[1].id);
   assert.equal(f.press('ArrowUp'), true);
   assert.deepEqual(f.selected(), [f.options()[0]]);
@@ -249,15 +249,35 @@ test('12. Return: with a selection it posts open-stream {input: login}', () => {
   const f = pageFixture();
   f.suggest();
   f.press('ArrowDown');
-  f.press('ArrowDown');
   f.press('Enter');
   assert.deepEqual(f.posts('open-stream'), [{input: 'ohmwrecker'}], 'one open-stream, with the selected login');
 });
 
+test('12. Return: typing "oh" then Return opens the top match, not the typed text', () => {
+  const f = pageFixture();
+  f.type('oh');
+  f.suggest(ROWS, 'oh');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'ohnepixel'}]);
+});
+
+test('12. Return: on a person known to be offline it opens their broadcasts in the list, not the live check', () => {
+  // Lead, 2026-11-24 ~20:55, after the design review (finding 3): the old path shrank the window to a spinner,
+  // then showed the #32 list with another key model. An offline person's broadcasts open inline, as with →.
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-status', {status: {ohnepixel: true, ohmwrecker: false}});
+  f.press('ArrowDown');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-vods'), [{login: 'ohmwrecker'}]);
+  assert.deepEqual(f.posts('open-stream'), []);
+});
+
 test('12. Return: with text and no selection it posts today\'s open-stream {input: text}', () => {
   const f = pageFixture();
-  f.suggest(ROWS, 'oh');
+  // A pasted URL or a name nobody in history matches: global answers no rows, so nothing is selected.
   f.field.value = 'https://www.twitch.tv/someone';
+  f.suggest([], 'https://www.twitch.tv/someone');
   f.press('Enter');
   assert.deepEqual(f.posts('open-stream'), [{input: 'https://www.twitch.tv/someone'}]);
 });
@@ -281,7 +301,6 @@ test('12. Escape: with text it clears the field first, and the next Escape close
 test('13. selection by identity: status and a new list that still has the login keep it; a list without it selects the first row', () => {
   const f = pageFixture();
   f.suggest();
-  f.press('ArrowDown');
   f.press('ArrowDown');
   const keeps = login => {
     const [only] = f.selected();
@@ -320,7 +339,6 @@ for (const key of ['ArrowRight']) {
     const f = pageFixture();
     f.suggest();
     f.press('ArrowDown');
-    f.press('ArrowDown');
     f.press(key);
     assert.deepEqual(f.posts('open-vods'), [{login: 'ohmwrecker'}]);
   });
@@ -329,7 +347,6 @@ for (const key of ['ArrowRight']) {
 test('14. broadcasts: they render as the #32 list, and Escape returns to the suggestions with the person still selected', () => {
   const f = pageFixture();
   f.suggest();
-  f.press('ArrowDown');
   f.press('ArrowDown');
   f.press('ArrowRight');
   f.vods({state: 'ready', items: [VOD]});

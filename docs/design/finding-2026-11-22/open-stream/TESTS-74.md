@@ -12,7 +12,7 @@
 3. Gemini Hydrogen High implements in the confined wrapper.
 4. The lead reviews, then Codex reviews the code per `docs/REVIEW.md`.
 
-**Phase 1 is local only.** Suggestions come from watch history; the one network request is a batched live-status lookup when the window opens. Remote search (Twitch's search for people not in history) is phase 2, and the typed text is never sent anywhere in phase 1.
+**Phase 1 is local only.** Suggestions come from watch history; the one network request is a batched live-status lookup when the window opens. Remote search (Twitch's search for people not in history) is phase 2, and the typed text is never sent anywhere in phase 1. *(Superseded 2026-11-25 by phase 2 rev 2, R3/R4: text that passes R3 goes to Twitch search.)*
 
 ## Choices made here (the lead's, provisional; the operator may overrule)
 
@@ -233,3 +233,4 @@ Same source of truth (the chosen mock, `mock-74-search/`, variant 1) but **R13 s
 - Recorded, not changed: a late follow can replace a selected typed-name row (W-22's class).
 - **Step-back tests (lead, 2026-11-25):** the test writer's readings where I1 meets older rules are adopted (an unmoved default selection follows the top; the first list after an edit answers that edit and may remove what was picked meanwhile; reset:true may remove a selected row; the typed-name row is a placeholder). I1 runs as a seeded test (300 sequences × 30 steps).
 - **Point fixes after the final clearance (lead, 2026-11-25 04:01):** DUP and BLINK built (one selected row; the typed-name row follows an extending keystroke). Lead's decision on the builder's push-back (render r5: finishing "rivenshade" turned RivenShade's full row into a bare one): **a kept row whose login equals the typed text (case-insensitive) is the typed-name placeholder drawn in full**: shown in the typed-name row's place, the one selected row; Return opens the typed text, which is that channel. I1's exception covers it.
+- **Known edge, not fixed (lead, 2026-11-25 04:15; advisor):** BLINK's shortcut treats an extending edit as still empty for your channels and does not wait for the list, so if a follow that matches arrives in that same instant, a Return straight after the keystroke opens the typed text rather than that follow. Untested; needs the person's known set to grow between keystrokes.

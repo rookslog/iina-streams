@@ -19,9 +19,6 @@
  const LOADING_TEXT='Loading recent broadcasts';
  // A Return pressed before global has answered the latest text waits this long for the answer.
  const RETURN_WAIT_MS=400;
- // A click within this many pixels of the chevron click that opened a list, after the list scrolled, is a
- // repeat aimed at the chevron, not at whatever scrolled under the pointer.
- const POINTER_SLOP=4;
 
  // People as global last sent them, in its order. Live status never reorders them.
  let people=[];
@@ -40,7 +37,7 @@
  // 'standalone' the #32 list, after a typed submit or a prefill, and by default;
  // 'ignore'     an answer outdated by typing or by closing the list.
  let vodsTarget='standalone';
- let checkingLogin=null;
+ let checkingLogin=null,checkingByPointer=false;
  // A submit or prefill is pending: Escape then cancels, as it always has, instead of clearing the field.
  let submitted=false;
  // What the pending submit opens. A double click or a held Return on the same row posts it once, since
@@ -53,7 +50,6 @@
  let optionNodes=new Map(),groupNode=null;
  // The selected row last scrolled into view, so a status update never scrolls the list under the pointer.
  let revealedKey=null;
- let guard=null;
 
  function focusField(){
   field.focus();
@@ -245,13 +241,12 @@
    row.append(el('span'));
   }
   row.addEventListener('click',event=>{
-   if(guarded(event))return;
    if(disclose&&event&&event.target===disclose){
     if(open)closeBroadcasts(true);
-    else openBroadcasts(person.login,event);
+    else openBroadcasts(person.login,true);
     return;
    }
-   activatePerson(person.login);
+   activatePerson(person.login,true);
   });
   optionNodes.set(key(person.login,-1),row);
   return row;
@@ -291,10 +286,7 @@
   row.setAttribute('aria-label',[title,date,length].filter(Boolean).join(', '));
   row.setAttribute('title',title);
   row.append(el('span','vod-title',title),el('span','vod-meta',date),el('span','vod-meta',length));
-  row.addEventListener('click',event=>{
-   if(guarded(event))return;
-   openInput(String(item.url||''));
-  });
+  row.addEventListener('click',()=>openInput(String(item.url||'')));
   optionNodes.set(key(person.login,index),row);
   return row;
  }
@@ -317,35 +309,6 @@
   return reveal(optionNodes.get(key(expanded.login,-1)),groupNode);
  }
 
- // ---- The pointer guard (review finding 4) ----
- // Opening broadcasts with the pointer never scrolls at the click. When they arrive and the list has to scroll
- // to show them, a click at the same spot, before the pointer moves, is ignored instead of playing whatever
- // broadcast now sits under it.
-
- function pointOf(event){
-  return event&&typeof event.clientX==='number'&&typeof event.clientY==='number'?{x:event.clientX,y:event.clientY}:null;
- }
-
- function near(a,b){
-  return Math.abs(a.x-b.x)<=POINTER_SLOP&&Math.abs(a.y-b.y)<=POINTER_SLOP;
- }
-
- function guarded(event){
-  if(!guard||!guard.armed)return false;
-  const point=pointOf(event);
-  if(point&&near(point,guard.point)){
-   guard=null;
-   return true;
-  }
-  guard=null;
-  return false;
- }
-
- function onPointerMove(event){
-  const point=pointOf(event);
-  if(guard&&point&&!near(point,guard.point))guard=null;
- }
-
  // ---- Keys and actions ----
 
  // The rows the arrow keys walk: every person, and the open person's broadcasts under them.
@@ -363,7 +326,6 @@
  function moveSelection(step){
   const list=stops();
   if(!list.length)return false;
-  guard=null;
   if(!selection){
    // With nothing selected (the typed text was chosen), ↓ comes back to the top match; ↑ is the field's.
    if(step<0)return false;
@@ -388,45 +350,42 @@
   return people.find(person=>person.login===login)||null;
  }
 
- // Return or a click on a person. Someone known to be offline shows their broadcasts here (no live check);
- // anyone else is opened, and if the check finds them offline their broadcasts come under their row.
- function activatePerson(login){
+ // Return or a click on a person always opens them through global's live check, whatever their mark says: a
+ // mark can be a minute old, and someone who just went live must open live (review R2-1). If the check finds
+ // them offline, their broadcasts come under their row ('checking').
+ function activatePerson(login,byPointer){
   const person=personFor(login);
   selection={login,vod:-1};
-  if(person&&person.live===false&&canBrowse(person)){
-   if(!expanded||expanded.login!==login)openBroadcasts(login,null);
-   else render();
-   return;
-  }
   if(expanded&&expanded.login!==login){
    expanded=null;
   }
   checkingLogin=canBrowse(person)?login:null;
+  checkingByPointer=!!byPointer;
   render();
   openInput(login,checkingLogin?'checking':'standalone');
  }
 
  function openSelection(){
   if(selection.vod<0){
-   activatePerson(selection.login);
+   activatePerson(selection.login,false);
    return;
   }
   const item=expanded&&expanded.login===selection.login&&expanded.items[selection.vod];
   if(item)openInput(String(item.url||''));
  }
 
- // → on a person: their broadcasts open under the row, whether or not they are live (#74).
- function openBroadcasts(login,pointerEvent){
+ // → or the chevron on a person: their broadcasts open under the row, whether or not they are live (#74).
+ // A pointer open never scrolls the list, at the click or when the broadcasts arrive, as Finder's disclosure
+ // triangles don't (review R2-2, the lead's working choice): nothing moves under a pointer that may have moved
+ // on. Broadcasts that land below the visible rows are reached by scrolling. Keyboard opens scroll to them.
+ function openBroadcasts(login,byPointer){
   const person=personFor(login);
   if(!canBrowse(person))return;
-  const point=pointOf(pointerEvent);
-  expanded={login,state:'loading',items:[],byPointer:!!point};
-  guard=point?{point,armed:false}:null;
+  expanded={login,state:'loading',items:[],byPointer:!!byPointer};
   vodsTarget='inline';
   selection={login,vod:-1};
   render();
-  // The keyboard brings the list into view at once; the pointer leaves the clicked row where it is.
-  if(!point)revealExpanded();
+  if(!byPointer)revealExpanded();
   announce(LOADING_TEXT);
   post('open-vods',{login});
  }
@@ -436,7 +395,6 @@
   if(!expanded)return;
   const login=expanded.login;
   expanded=null;
-  guard=null;
   vodsTarget='ignore';
   announce('');
   if(keepPerson){
@@ -446,7 +404,8 @@
   }
  }
 
- // Review finding 5: when the broadcasts arrive, the person and as many of them as fit come into view.
+ // Review finding 5: when broadcasts opened from the keyboard arrive, the person and as many of them as fit
+ // come into view. Pointer opens stay put (see openBroadcasts).
  function showInlineVods(value){
   const items=value.state==='ready'&&Array.isArray(value.items)?value.items.slice(0,OFFLINE_ROWS):[];
   let state=value.state;
@@ -457,9 +416,7 @@
    selection={login:expanded.login,vod:-1};
   }
   render();
-  const moved=revealExpanded();
-  if(guard)guard.armed=moved&&expanded.byPointer;
-  if(guard&&!guard.armed)guard=null;
+  if(!expanded.byPointer)revealExpanded();
   if(state==='loading')announce(LOADING_TEXT);
   else if(state==='ready')announce(items.length===1?'1 recent broadcast':items.length+' recent broadcasts');
   else announce(EMPTY_TEXT[state]||EMPTY_TEXT.error);
@@ -480,7 +437,7 @@
     pendingInput=null;
     vodsTarget='inline';
    }
-   if(!expanded||expanded.login!==person.login)expanded={login:person.login,state:'loading',items:[],byPointer:false};
+   if(!expanded||expanded.login!==person.login)expanded={login:person.login,state:'loading',items:[],byPointer:checkingByPointer};
    showInlineVods(value);
    return;
   }
@@ -566,7 +523,6 @@
   textChosen=false;
   expanded=null;
   checkingLogin=null;
-  guard=null;
   vodsTarget='ignore';
   awaitingText=field.value;
   announce('');
@@ -645,7 +601,7 @@
    }
    if(canBrowse(personFor(selection.login))){
     event.preventDefault();
-    openBroadcasts(selection.login,null);
+    openBroadcasts(selection.login,false);
    }
    return;
   case'ArrowLeft':
@@ -669,7 +625,6 @@
  if(listbox){
   // A click in the list leaves focus, and the caret, in the field.
   listbox.addEventListener('mousedown',event=>event.preventDefault());
-  listbox.addEventListener('mousemove',onPointerMove);
  }
  iina.onMessage('open-error',markInvalid);
  iina.onMessage('prefill',prefill);

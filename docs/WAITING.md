@@ -351,6 +351,23 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Recommendation (lead):** A, plus C's cap rule, after your native try measures how late follows really answer on your Mac. A matches what you asked for in W-21 (everyone online, in order) without slowing every open. Load-bearing assumption: on real connections follows often answer after 450 ms when no player is open. What would flip it: if your try (and a timing line in the QA log) shows follows answering well inside 450 ms, C alone is enough.
 - **What the answer changes:** A adds a local follows cache and a PRIVACY line before the 0.6.0 People screen; C alone is a small backend round.
 
+### W-23. Open Stream search: how to show offline people and people you don't follow (#74 phase 2)
+- **What it is:** a choice of layout before the lead writes tests for search across your follows and the rest of Twitch, which you asked for on your second try (W-21 update 2026-11-25 06:54). Yours because it is how the window reads to you every day.
+- **Mocks:** `scratchpad/mock-74-search/index.html` in the lead's session scratchpad (Claude Opus page builder, made-up names, light and dark, rendered in Chrome; not IINA). Each variant shows the field empty, "ri" (two follows, then people you don't follow) and "glaze" (no follow matches).
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **1. Offline below live, dimmed; a hairline before people you don't follow** | every follow one glance away, nothing to learn | a long list at rest if you follow many people |
+  | **2. Live only, with a small filter control in the field to add offline** | a short list at rest; your filter idea | a control to discover and remember |
+  | **3. Live only until you type, then offline too** | short at rest, complete when searching | offline follows hidden at rest with no sign why |
+  | **4. Like 1, with small "Following" / "Other channels" labels** | the split is explicit | words that are neither names nor values; the eighth row drops out of the window |
+  | **Defer** | nothing built | the window stays as on your second try |
+
+- **Recommendation (lead, and the builder's pick):** 1, with the split also given to VoiceOver as hidden group names. Load-bearing assumption: with live people first, an offline tail below them reads as "more", not clutter. What would flip it: after your follows load (sign out and in once), if the offline tail feels like noise, 2.
+- **Decided by the lead unless you say otherwise:** Twitch-wide search starts at two typed characters after a short pause; people you don't follow are ordered live first by viewers; the typed text goes to Twitch's search (a PRIVACY line).
+- **What the answer changes:** the tests and build of #74 phase 2; the backend's now-unused follows sign-in path is removed in the same round.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

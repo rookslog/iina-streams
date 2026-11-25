@@ -34,7 +34,8 @@ test('B2a auth connect reports an unreadable grant once and starts device sign-i
   const {auth, requests, writes, diagnostics} = makeAuth(CORRUPT_GRANT);
   assert.equal(await auth.connect(CLIENT_ID), true);
   assert.equal(auth.snapshot().phase, 'waiting');
-  assert.deepEqual(requests, [{path: '/device', method: 'POST', form: {client_id: CLIENT_ID, scopes: 'chat:read'}}]);
+  // Amended 2026-11-24 (phase 3, TESTS-74): A1, the device flow now asks for chat:read and user:read:follows (one new sign-in).
+  assert.deepEqual(requests, [{path: '/device', method: 'POST', form: {client_id: CLIENT_ID, scopes: 'chat:read user:read:follows'}}]);
   assert.equal(writes.length, 0, 'device sign-in must not replace the item before a new grant is saved');
   assert.deepEqual(diagnostics, [['keychain-unreadable']], 'connect must emit the code once, without raw text');
 });

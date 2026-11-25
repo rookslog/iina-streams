@@ -823,23 +823,35 @@ test('r4-3. forgetting a person the load trimmed also removes them from the file
   assert.ok(!failing.snapshot().people.some(({login}) => login === 'weak'));
 });
 
+// Amended 2026-11-25 (phase 3c, TESTS-74; the backend reviewer's likely flake): the bound used the wall clock, which
+// counts time the process spent waiting for a CPU when the whole suite runs in parallel. It now measures the CPU time
+// this process used (process.cpuUsage, user plus system) and takes the least of five loads, so a descheduled or
+// contended run cannot fail it, while a quadratic trim, which costs seconds of CPU, still does. The 200 ms bound and
+// the assertions on the result are unchanged. Measured here: about 10-25 ms of CPU for one load (13 ms wall).
 test('r4-6. a 10,000-person file is trimmed to the 500 strongest by one sort, quickly', () => {
   const people = Array.from({length: 10000}, (_, i) => ({
     ...twitch('p' + i), visits: [{at: NOW - 10 * i, seconds: 60}],
   }));
   people.push({...twitch('veryfrequent'), visits: [1, 2, 3].map(n => ({at: NOW - n, seconds: 60}))});
-  const disk = fakeDisk(snapshot(people));
+  const text = snapshot(people);
 
-  const started = process.hrtime.bigint();
-  const history = openHistory(disk);
-  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  let history;
+  let disk;
+  let leastCpuMs = Infinity;
+  for (let run = 0; run < 5; run++) {
+    disk = fakeDisk(text);
+    const before = process.cpuUsage();
+    history = openHistory(disk);
+    const used = process.cpuUsage(before);
+    leastCpuMs = Math.min(leastCpuMs, (used.user + used.system) / 1000);
+  }
 
   const kept = history.query('').map(({login}) => login);
   assert.equal(kept.length, 500);
   assert.equal(kept[0], 'veryfrequent');
   assert.deepEqual(new Set(kept), new Set(['veryfrequent', ...Array.from({length: 499}, (_, i) => 'p' + i)]),
     'equal scores: the newest visits stay');
-  assert.ok(elapsedMs < 200, 'loading took ' + elapsedMs + ' ms');
+  assert.ok(leastCpuMs < 200, 'loading took at least ' + leastCpuMs.toFixed(1) + ' ms of CPU');
   assert.deepEqual(disk.changes, []);
 });
 

@@ -116,7 +116,11 @@ function loadGlobal(options = {}) {
   // Timers armed since `at` that are still armed, or fired and never cleared (IINA keeps those registered).
   fixture.timersLeftSince = at => shim.timers.all.slice(at.timers)
     .filter(timer => !timer.cancelled);
-  fixture.postsSince = at => win.posts.slice(at.posts).map(post => post.name);
+  // Amended 2026-11-25 (phase 3c, TESTS-74): C1 posts the first suggestions after the status answer or 450 ms, so a
+  // fresh form's suggestions and status can land after mark(). These tests are about what an offline answer
+  // posts, so the suggestion protocol (suggestions, suggestions-status, suggestions-follows, follows-code) is left out.
+  fixture.postsSince = at => win.posts.slice(at.posts).map(post => post.name)
+    .filter(name => !/^(suggestions|follows-)/.test(name));
   return fixture;
 }
 

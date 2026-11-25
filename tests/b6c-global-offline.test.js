@@ -32,7 +32,8 @@ const settle = async () => {
 
 // Hand-written archive response in the shape src/twitch-vods.js parses (as in b6b-twitch-vods); not captured.
 // #74 (lead, 2026-11-24): messages the Open Stream page now receives on open-ready and while typing.
-const SUGGESTION_MESSAGES = new Set(['suggestions', 'suggestions-status']);
+// Amended 2026-11-25 (lead, phase 3c; Codex reported it): the follows note and sign-in messages too.
+const SUGGESTION_MESSAGES = new Set(['suggestions', 'suggestions-status', 'suggestions-follows', 'follows-code']);
 
 function archiveResponse(count) {
   const edges = Array.from({length: count}, (_, index) => ({node: {

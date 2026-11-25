@@ -202,16 +202,300 @@ function markSignature(option, name) {
 
 // ---- tests ----
 
-test('11. rows show only the display name and a live mark: dot when live, none when offline, ring when unknown', () => {
+// Replaced 2026-11-24 (phase 3, TESTS-74): test 11 ("each row shows only the display name and a live mark") was
+// superseded by W-21 and is replaced by P1 below (P1a keeps its mark rule: live, none, ring, now on the avatar).
+// ---- P1: mock A's row (docs/design/finding-2026-11-22/open-stream/direction-a/a.js rowHTML) ----
+
+const P1_ROWS = [
+  {provider: 'twitch', login: 'quillfox', displayName: 'Quillfox', live: true},
+  {provider: 'twitch', login: 'brindle', displayName: 'Brindle', live: false},
+  {provider: 'twitch', login: 'tidalmoss', displayName: 'tidalmoss', live: null},
+];
+const hoursAgo = hours => new Date(Date.now() - hours * 3600000).toISOString();
+const DAY = 24;
+
+// Global's suggestions-status {status, details}, as TESTS-74 G6 describes it.
+function statusWithDetails(f, status, details) {
+  f.deliver('suggestions-status', {status, details});
+}
+
+// The avatar of a row: the element that holds the display name's first letter together with the row's live mark.
+function avatarOf(f, option, letter) {
+  const letterNode = f.all(option).find(node => node !== option && node.ownText.trim() === letter);
+  if (!letterNode) return null;
+  // A letter with a mark inside it is the avatar; a bare letter directly under the row is the avatar with no mark;
+  // a bare letter in a wrapper means the wrapper is the avatar.
+  const avatar = letterNode.children.length || letterNode.parentNode === option ? letterNode : letterNode.parentNode;
+  return {avatar, letterNode};
+}
+
+// What marks an avatar: its own classes and everything under it except the letter.
+function avatarSignature({avatar, letterNode}) {
+  const classes = node => String(node.className || '').split(/\s+/).filter(token => token && !STATE_CLASS.test(token)).sort().join(' ');
+  const parts = [classes(avatar)];
+  const walk = node => {
+    for (const child of node.children) {
+      if (child === letterNode) continue;
+      parts.push(`${classes(child)}|${child.ownText}`);
+      walk(child);
+    }
+  };
+  walk(avatar);
+  return parts;
+}
+
+function leafTexts(f, option) {
+  return f.all(option).map(node => node.ownText.trim()).filter(Boolean);
+}
+
+// The text left on a row once the named pieces are taken out: anything left is text the design does not ask for.
+function leftover(f, option, pieces) {
+  let text = leafTexts(f, option).join(' ');
+  for (const piece of [...pieces].sort((a, b) => b.length - a.length)) text = text.replace(piece, '');
+  return text.replace(/\s+/g, '');
+}
+
+test('P1a. each row has an avatar with the name\'s first letter in capitals, and the live mark is on it: live, none, ring', () => {
+  const f = pageFixture();
+  f.suggest(P1_ROWS);
+  const rows = f.options();
+  assert.equal(rows.length, 3);
+  const letters = ['Q', 'B', 'T'];
+  const avatars = rows.map((row, index) => avatarOf(f, row, letters[index]));
+  avatars.forEach((found, index) => assert.ok(found, `row ${index + 1} has an avatar holding "${letters[index]}"`));
+  const signatures = avatars.map(avatarSignature);
+  assert.equal(new Set(signatures.map(parts => parts.join('/'))).size, 3, 'live, offline and unknown look different on the avatar');
+  assert.equal(signatures[1].length, 1, 'offline: no mark under the avatar');
+});
+
+test('P1b. a live row shows "category · title" and the viewers, and no other text (no login, no reason)', () => {
+  const f = pageFixture();
+  f.suggest(P1_ROWS);
+  statusWithDetails(f, {quillfox: true, brindle: false, tidalmoss: null}, {
+    quillfox: {title: 'Any% marathon, day 3', category: 'Hades', viewers: 12345},
+  });
+  const [live] = f.options();
+  assert.match(live.textContent, /Hades\s*·\s*Any% marathon, day 3/, 'category · title');
+  assert.ok(leafTexts(f, live).includes('12.3K'), 'viewers, compact: 12345 is 12.3K');
+  assert.equal(leftover(f, live, ['Any% marathon, day 3', 'Hades', 'Quillfox', '12.3K', '·', 'Q']), '',
+    'the letter, name, category, title and viewers are the whole row (the login is not shown)');
+  assert.ok(!f.visibleNodes().some(node => /12345|reason|follow/i.test(node.ownText)), 'no raw count, no reason text');
+});
+
+test('P1c. viewers are compact: 950, 1.5K, 12.3K (the compact form is mock A\'s: sample-data.js compact)', () => {
+  const f = pageFixture();
+  const rows = [
+    {provider: 'twitch', login: 'mosswick', displayName: 'Mosswick', live: true},
+    {provider: 'twitch', login: 'ferngully', displayName: 'Ferngully', live: true},
+    {provider: 'twitch', login: 'brookline', displayName: 'Brookline', live: true},
+  ];
+  f.suggest(rows);
+  const stream = viewers => ({title: 'Evening stream', category: 'Chess', viewers});
+  statusWithDetails(f, {mosswick: true, ferngully: true, brookline: true},
+    {mosswick: stream(950), ferngully: stream(1500), brookline: stream(12345)});
+  const options = f.options();
+  assert.deepEqual(['950', '1.5K', '12.3K'].map((text, index) => leafTexts(f, options[index]).includes(text)), [true, true, true]);
+  assert.ok(!leafTexts(f, options[1]).includes('1500'));
+});
+
+test('P1d. an offline row with lastAt shows a short age ("2d", "3w") and the broadcasts chevron; with none known it shows no age', () => {
+  const f = pageFixture();
+  const rows = [
+    {provider: 'twitch', login: 'brindle', displayName: 'Brindle', live: false},
+    {provider: 'twitch', login: 'wrenfield', displayName: 'Wrenfield', live: false},
+    {provider: 'twitch', login: 'hollowell', displayName: 'Hollowell', live: false},
+  ];
+  f.suggest(rows);
+  statusWithDetails(f, {brindle: false, wrenfield: false, hollowell: false}, {
+    brindle: {lastAt: hoursAgo(2 * DAY + 1), lastTitle: 'Rhythm game requests'},
+    wrenfield: {lastAt: hoursAgo(21 * DAY + 1)},
+  });
+  const [two, three, none] = f.options();
+  // Amended 2026-11-24 (lead, phase 3b): as in mock A, an offline row shows its last broadcast's title when known.
+  assert.ok(leafTexts(f, two).includes('Rhythm game requests'), 'the last broadcast title is the second line');
+  assert.ok(leafTexts(f, two).includes('2d'), 'two days ago is 2d');
+  assert.ok(leafTexts(f, three).includes('3w'), 'three weeks ago is 3w');
+  for (const row of [two, three]) {
+    assert.ok(f.all(row).some(node => /disclos|chev/i.test(String(node.className))), 'the broadcasts chevron');
+  }
+  assert.equal(leftover(f, two, ['2d', 'Brindle', 'B', 'Rhythm game requests']), '', 'name, last title and age, nothing else');
+  assert.equal(leftover(f, three, ['3w', 'Wrenfield', 'W']), '', 'no last title known: name and age only');
+  assert.equal(leftover(f, none, ['Hollowell', 'H']), '', 'no lastAt: no age, no placeholder');
+});
+
+// ---- P2: the top stays selected until the person moves ----
+
+test('P2. before any arrow key a new list selects its first row, so Return opens the new top; after one, selection is by identity', () => {
   const f = pageFixture();
   f.suggest();
-  const rows = f.options();
-  assert.equal(rows.length, 3, 'one option per row');
-  assert.ok(rows.every(row => isVisible(f, row)), 'the options are visible');
-  const texts = f.visibleNodes().map(node => node.ownText.replace(GLYPHS, '').trim()).filter(Boolean);
-  assert.deepEqual(texts, ROWS.map(row => row.displayName), 'no text but the names: no login, reason, count or label');
-  const marks = rows.map((row, index) => markSignature(row, ROWS[index].displayName));
-  assert.equal(new Set(marks).size, 3, 'live, offline and unknown each look different');
+  assert.ok(f.selected()[0].textContent.includes('Ohne Pixel'));
+  f.suggest([ROWS[2], ROWS[0], ROWS[1]]);
+  assert.equal(f.selected().length, 1);
+  assert.ok(f.selected()[0].textContent.includes('Oh Baby'), 'the new top (Oh Baby) is selected, not the person who was on top');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
+  f.deliver('suggestions-status', {status: {ohbaby: false}});
+  assert.ok(f.selected()[0].textContent.includes('Oh Baby'), 'a status message leaves the top selected');
+  f.suggest([ROWS[1], ROWS[2], ROWS[0]]);
+  assert.ok(f.selected()[0].textContent.includes('OhmWrecker'), 'and again for the next list');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'ohmwrecker'}], 'Return opens the new top');
+
+  const g = pageFixture();
+  g.suggest();
+  g.press('ArrowDown');
+  g.suggest([ROWS[1], ROWS[2], ROWS[0]]);
+  assert.ok(g.selected()[0].textContent.includes('OhmWrecker'), 'after an arrow key the person stays selected wherever they move');
+  g.suggest([ROWS[2], ROWS[0], ROWS[1]]);
+  assert.ok(g.selected()[0].textContent.includes('OhmWrecker'));
+  assert.equal(g.options().indexOf(g.selected()[0]), 2);
+});
+
+// ---- P3: a selected live row stays a live mark ----
+
+function classTokens(f, node) {
+  return new Set(f.all(node).flatMap(inner => String(inner.className || '').split(/\s+/)).filter(token => token && !STATE_CLASS.test(token)));
+}
+
+// The compound selector a rule ends in, without pseudo-elements, and the classes it names.
+function lastClasses(selector) {
+  const last = selector.trim().split(/[\s>+~]+/).pop().replace(/::?(before|after)\b/g, '');
+  return Array.from(last.matchAll(/\.([\w-]+)/g), match => match[1]);
+}
+
+test('P3. a selected live row keeps its live mark as a live mark: same classes, and no selected-state rule repaints its fill', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-status', {status: {ohnepixel: true, ohmwrecker: false}});
+  const selectedLive = classTokens(f, f.selected()[0]);
+  f.press('ArrowDown');
+  const [live, offline] = f.options();
+  assert.deepEqual([...classTokens(f, live)].sort(), [...selectedLive].sort(), 'the live row has the same classes selected or not');
+  const liveOnly = [...classTokens(f, live)].filter(token => !classTokens(f, offline).has(token));
+  assert.ok(liveOnly.length > 0, 'the live row carries a class its offline neighbour does not');
+  const fill = {};
+  const repaint = [];
+  for (const [, selectors, block] of CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for (const selector of selectors.split(',')) {
+      if (!lastClasses(selector).some(token => liveOnly.includes(token))) continue;
+      const declared = Object.fromEntries(Array.from(block.matchAll(/([\w-]+)\s*:\s*([^;]+)/g), match => [match[1], match[2].trim()]));
+      const value = declared.background ?? declared['background-color'];
+      if (value === undefined) continue;
+      if (/aria-selected|\.selected/.test(selector)) repaint.push({selector: selector.trim(), value});
+      else fill.base = value;
+    }
+  }
+  assert.ok(fill.base, 'the live mark has a fill when the row is not selected');
+  assert.deepEqual(repaint.filter(rule => rule.value !== fill.base), [],
+    'no rule for a selected row repaints the live mark (it would read as a plain dot)');
+});
+
+// ---- P4: one action to include who you follow (phase 3c, C3) ----
+// Amended 2026-11-25 (phase 3c, TESTS-74): P4's quiet line "Sign in to Twitch again to include who you follow." is
+// now a button, "Include who you follow" (C3, review P3-2: a note with no way to act was a dead end). It is still
+// below the list, not a row, and skipped by the arrows; it is no longer role=note, since it is an action.
+
+const INCLUDE_FOLLOWS = 'Include who you follow';
+const CODE = {userCode: 'WXYZ-1234', verificationUri: 'https://www.twitch.tv/activate?public=true'};
+
+const visibleButtons = f => f.visibleNodes().filter(node => node.tagName === 'BUTTON');
+const buttonNamed = (f, text) => visibleButtons(f).filter(node => node.textContent.trim() === text);
+
+test('P4. suggestions-follows needs-sign-in shows one button below the list: an action, not an option', () => {
+  const f = pageFixture();
+  f.suggest();
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 0, 'nothing before the message');
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  const found = buttonNamed(f, INCLUDE_FOLLOWS);
+  assert.equal(found.length, 1, 'one button, "Include who you follow"');
+  const [button] = found;
+  const box = f.listbox();
+  const everything = f.all();
+  assert.ok(!f.all(box).includes(button), 'outside the listbox');
+  assert.ok(everything.indexOf(button) > everything.lastIndexOf(f.all(box).at(-1)), 'below the list');
+  assert.equal(f.options().length, 3, 'it is not a row');
+  assert.ok(f.options().every(option => !option.textContent.includes(INCLUDE_FOLLOWS)));
+  for (let index = 0; index < 5; index++) f.press('ArrowDown');
+  assert.deepEqual(f.selected(), [f.options()[2]], 'the arrows stop at the last person');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[2].id);
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  f.suggest(ROWS, 'oh');
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'still one button after a repeat and a new list');
+});
+
+test('P4. clicking "Include who you follow" posts follows-connect', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  assert.deepEqual(f.posts('follows-connect'), [], 'nothing until the click');
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'the "Include who you follow" button is shown');
+  buttonNamed(f, INCLUDE_FOLLOWS)[0].click();
+  assert.deepEqual(f.posts('follows-connect'), [{}]);
+});
+
+test('P4. follows-code shows the code and a button that opens the Twitch page; connecting is not offered again', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'the "Include who you follow" button is shown');
+  buttonNamed(f, INCLUDE_FOLLOWS)[0].click();
+  f.deliver('follows-code', CODE);
+  const codes = f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode);
+  assert.equal(codes.length, 1, 'the code is shown once');
+  assert.ok(!f.all(f.listbox()).includes(codes[0]), 'outside the listbox');
+  assert.equal(f.options().length, 3, 'and it is not a row');
+  assert.ok(visibleButtons(f).length >= 1, 'a button is shown');
+  // Every button the person could press: only the one that opens Twitch may act, and connecting must not start again,
+  // since a second device flow would void the code on screen.
+  for (const button of visibleButtons(f)) button.click();
+  assert.deepEqual(f.posts('follows-open'), [{}], 'a button posts follows-open');
+  assert.equal(f.posts('follows-connect').length, 1, 'no second follows-connect: the first click was the only one');
+});
+
+test('P4. any other suggestions-follows state takes the button and the code away', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  f.deliver('follows-code', CODE);
+  assert.equal(f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode).length, 1, 'fixture: the code is showing');
+  f.deliver('suggestions-follows', {state: 'ready'});
+  assert.equal(f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode).length, 0, 'the code is gone');
+  assert.deepEqual(visibleButtons(f), [], 'and so is every button');
+  assert.equal(f.options().length, 3);
+});
+
+// ---- P5: details arrive in place ----
+
+test('P5. details update the rows in place: the same elements, the same selection', () => {
+  const f = pageFixture();
+  f.suggest(P1_ROWS);
+  const before = f.options();
+  const selection = f.selected()[0];
+  statusWithDetails(f, {quillfox: true, brindle: false, tidalmoss: null}, {
+    quillfox: {title: 'Any% marathon, day 3', category: 'Hades', viewers: 12345},
+    brindle: {lastAt: hoursAgo(2 * DAY + 1)},
+  });
+  const after = f.options();
+  assert.equal(after.length, 3);
+  after.forEach((option, index) => assert.equal(option, before[index], `row ${index + 1} is the same element`));
+  assert.ok(after[0].textContent.includes('Hades'), 'the live row now shows its details');
+  assert.ok(leafTexts(f, after[1]).includes('2d'), 'and the offline row its age');
+  assert.equal(f.selected()[0], selection, 'the selection did not move');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), selection.id);
+});
+
+// My reading, not stated in the design: global sends details only with status, so a page that dropped them on
+// every new list would blank the rows each time the person types.
+test('P5b. details already received are still shown when a new list for the typed text arrives', () => {
+  const f = pageFixture();
+  f.suggest(P1_ROWS);
+  statusWithDetails(f, {quillfox: true, brindle: false, tidalmoss: null}, {
+    quillfox: {title: 'Any% marathon, day 3', category: 'Hades', viewers: 12345},
+  });
+  f.type('qu');
+  f.suggest([P1_ROWS[0]], 'qu');
+  assert.equal(f.options().length, 1);
+  assert.ok(f.options()[0].textContent.includes('Hades'), 'the category is still on the row');
+  assert.ok(leafTexts(f, f.options()[0]).includes('12.3K'));
 });
 
 test('12a. typing posts open-query {text}', () => {
@@ -414,4 +698,40 @@ test('16. VoiceOver: combobox field with aria-controls on a listbox; options nam
     assert.equal(attr(option, 'aria-posinset'), String(index + 1), 'aria-posinset');
     assert.equal(attr(option, 'aria-setsize'), '3', 'aria-setsize');
   });
+});
+
+// ---- Phase 3d (TESTS-74, 2026-11-25), D4: a Return before the first list is not lost ----
+// The re-check (P3c-2): for up to 450 ms after the window opens there is no list, and Return fell through to a form
+// that ignores an empty field, so the viewer who pressed the shortcut and Return at once got nothing.
+
+test('D4. Return on an empty field before the first list waits for it, then opens the list\'s top row', () => {
+  const f = pageFixture();
+  assert.equal(f.options().length, 0, 'fixture: no list has arrived');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [], 'nothing is opened with no list to open from');
+  assert.equal(f.field.getAttribute('aria-invalid'), null, 'and the empty field is not flagged as an error');
+  f.suggest();
+  assert.deepEqual(f.posts('open-stream'), [{input: ROWS[0].login}], 'the list arrives: its top row opens, once');
+  f.suggest(ROWS, '');
+  assert.equal(f.posts('open-stream').length, 1, 'a later list does not open anything again');
+});
+
+test('D4. an empty answer to that Return opens nothing, and a later Return still works', () => {
+  const f = pageFixture();
+  f.press('Enter');
+  f.suggest([], '');
+  assert.deepEqual(f.posts('open-stream'), [], 'no rows: nothing to open');
+  f.suggest(ROWS, '');
+  assert.deepEqual(f.posts('open-stream'), [], 'the Return was answered; a list that comes later is not opened by it');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: ROWS[0].login}], 'a Return with a list on screen opens the top row, as before');
+});
+
+test('D4. Return with text in the field and no list yet submits the text', () => {
+  const f = pageFixture();
+  f.field.value = 'https://www.twitch.tv/someone';
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'https://www.twitch.tv/someone'}], 'the text, at once, with no list');
+  f.suggest(ROWS, '');
+  assert.equal(f.posts('open-stream').length, 1, 'and the list that arrives later opens nothing more');
 });

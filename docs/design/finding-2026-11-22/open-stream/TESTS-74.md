@@ -95,3 +95,65 @@ Review: scratchpad `opus-74-design-review.md` (verdict fix first; findings 1–3
 ## Round 3 step-back (D-032; lead, 2026-11-24 ~21:30)
 - **Recurring class:** twice in a row the lead's own test amendments, made quickly from one review finding, encoded the wrong behaviour: at 20:00 "no selection while typing" (against this file's native proof and mock A), and at 21:05 "any offline mark skips the live check" (against the status cache's one-minute age, global.js's 60 s rule). The builder's code was right to the tests both times.
 - **Repair:** before amending a test, the lead checks the amendment against this file's earlier rules and native proof and against the data's freshness (where a mark comes from, and how old it can be), and writes that check into the amendment's comment. Return now always runs the live check (R2-1); pointer opens never scroll (R2-2, working choice, Finder's disclosure-triangle behaviour; the operator may flip it).
+
+## Phase 3: your follows and mock A's rows (lead, 2026-11-24 ~22:15; W-21)
+**Why:** the operator tried the list (W-21): one person, bare names, "doesn't show all my people who are online". Mock A, which they liked, put follows in the list when signed in and showed values on each row. Rule 11 is superseded; rule 1 ("live status never reorders") is flipped by the operator's ask (W-21 reading 2).
+
+**Checked facts:** sign-in asks only `chat:read` (`src/auth.js` SCOPE) and `validate` rejects any other scope set, so follows need `user:read:follows` and one new sign-in. `/oauth2/validate` returns `user_id`. `src/twitch-helix.js` already has `followedLive({userID})` (GET /streams/followed). Anonymous GQL answers `user(login){stream{title viewersCount game{displayName}} lastBroadcast{startedAt}}` (checked live, 2026-11-24).
+
+### Auth (tests/auth*.test.js or a new file)
+A1. The device flow asks for `chat:read user:read:follows`.
+A2. `validate` accepts a token whose scopes include `chat:read`, with or without `user:read:follows`; rejects one without `chat:read`. `onReady` also receives `userID` (validate's `user_id`) and `scopes`.
+
+### Global (tests/suggestions-global.test.js harness, extended)
+G1. Signed in with `user:read:follows`: when Open Stream is ready, global makes one followed-live request (Helix /streams/followed, user_id from validate) and one followed-channels request (Helix /channels/followed, first page of 100). Both are cached with the 60 s rule; reopening within 60 s makes neither.
+G2. Signed in without `user:read:follows` (an old token): no follow requests; global posts `suggestions-follows {state:'needs-sign-in'}` once per open. Signed out: no follow requests and no such message.
+G3. **Rows** (`suggestions {text, rows}`): the people from history and from follows, each once (a login in both is one row). Row keys: `provider, login, displayName, live` (as before). Nothing from history's visits or scores.
+G4. **Order at rest:** live people first; within live, people in history by history order, then follows by viewers (desc). Then not-live history people in history order, then offline follows newest `lastAt` first, then follows with no known `lastAt` by display name. Up to 50 rows.
+G5. **Order while typing:** only people whose login or display name matches (history.query's prefix and word-start rules, applied to follows too). Prefix matches before word-start matches; within each, the G4 order.
+G6. **Details** (`suggestions-status {status, details}`): `status` as before (`login: true|false`). `details[login]` is `{title, category, viewers}` for a live person and `{lastAt}` (ISO string) for an offline person when known. Follows' live details come from the followed-live answer (no extra request). History people's details come from the existing batched status request(s): no request per person, and still none per keystroke.
+G7. When status or follows change who is live, global posts a new `suggestions` for the current text in G4/G5 order.
+G8. Privacy: no follow request or detail request carries anything but logins/user id and the token in Authorization; a failed follow request leaves history rows and status working (no throw, no stale follows posted as live).
+
+### Page (tests/suggestions-page.test.js)
+P1. **Row content** (mock A, `direction-a/a.js`/`a.css`): an avatar showing the display name's first letter; the live mark on the avatar (live, offline = none, unknown = ring); the name; for a live person "category · title" and the viewer count in compact form (12345 → "12.3K"); for an offline person with `lastAt`, a short age ("2d", "3w") and the broadcasts chevron. No reason text.
+P2. **Selection follows the top until the person moves:** before any arrow key, a new `suggestions` list leaves the first row selected (so Return opens the new top); after an arrow key, selection is by identity (test 13).
+P3. A selected live row keeps its live mark as a live mark (the element keeps its live state/class); it is not restyled as a plain dot.
+P4. `suggestions-follows {state:'needs-sign-in'}` shows one quiet line below the list: "Sign in to Twitch again to include who you follow." It is not an option (arrows skip it; VoiceOver reads it as a note).
+P5. Details arriving update the row in place (same element), as status does.
+
+### Phase 3 decisions on the test writer's questions (lead, 2026-11-24 ~22:40)
+1. **Follows' `lastAt`:** GQL `user(login){lastBroadcast{startedAt}}`, aliased, up to 50 logins per request, for the offline people on the first page of follows (100). Helix has no batched equivalent. This is the one undocumented lookup used while signed in, and only for ages; if it fails, ages are simply absent. Record in PRIVACY.md at merge.
+2. **History people's `lastAt` signed in:** the same GQL batch (test 5b's "no GQL signed in" holds for live status, not for ages).
+3. **Offline follows are `live: false`** once the followed-live answer is in (that list is complete).
+4. **Carrier:** follows' live details travel in `suggestions-status` like any other.
+5. **Accepted scope sets are exactly** `{chat:read}` or `{chat:read, user:read:follows}`, in any order; anything else is rejected (the broad-token test stands).
+6. **Players still get `{token, login, clientID}`;** global keeps `userID` and `scopes` to itself.
+7. Rows past the first status batch may stay unknown (ring) for now; a later batch is a follow-up.
+8. One cap of 50 rows for every list.
+9. Typing resets "the person has moved": after typing, selection follows the top again. The P4 note takes one row's height inside the fixed window. P1's formats follow mock A's sample data.
+10. A login in both history and follows shows Twitch's display name from follows.
+
+### Phase 3b (lead, 2026-11-24 ~23:00)
+Offline details gain `lastTitle` (GQL `lastBroadcast{title}`, checked live tonight), and an offline row shows it as its second line, as mock A did. P1d's earlier "age and name, nothing else" was a third drift from mock A by the lead's contract (after rule 11 and the follows); G6 and P1d amended.
+
+## Phase 3c (lead, 2026-11-25 ~00:10): fixes from the Opus design review (P3-1, P3-2) and the Opus backend review (B1–B8)
+Reviews: scratchpad `opus-74-design-review.md` ("Phase 3") and the backend reviewer's report (probe harness at scratchpad `probe74/`).
+- **C1 (P3-1) The order settles once.** For each open, global posts the first `suggestions` only after status (and, with the follows scope, follows) have answered or 450 ms have passed, whichever is first; cached answers count. After that first post the rows' order never changes while the window shows the same text: later answers travel only in `suggestions-status` (marks and details). A new text or a reopen gets the fresh G4/G5 order. Supersedes G7's repost.
+- **C2 (B1) Open Stream reads the saved sign-in itself.** Opening Open Stream with a saved Keychain grant and no player connected validates it and, with the follows scope, fetches follows. Global may hold the credentials while Open Stream is showing or a player uses them; it drops them as before when neither does.
+- **C3 (P3-2, B5) One action to include follows.** When the grant lacks `user:read:follows` (or no grant exists), the note is a button, "Include who you follow". It posts `follows-connect`; global forgets the old grant (as Sign out does), starts the device flow with both scopes, and posts `follows-code {userCode, verificationUri}` to the page, which shows the code with a button that opens the Twitch page. The person completes sign-in on Twitch; on success the follows load in the open window. The lead never completes an authorization.
+- **C4 (B2, B3) Account and late answers.** A sign-in, sign-out or reopen while Open Stream shows refreshes status and follows for the showing form; a still-current cache refresh is published to whichever form is showing and ready.
+- **C5 (B4) A detail or age error never wipes live status.** Live status and details/ages are separate queries (or errors are scoped by path): an error on `lastBroadcast` or a title loses only that.
+- **C6 (B6) `user_id` must match `/^\d+$/`;** otherwise follows are treated as needs-sign-in.
+- **C7 (B8) `suggestions-status` carries status and details only for the logins in the rows sent** (≤50).
+- **C8 (B7):** record in CHANGELOG/release notes that rolling back to an older build asks for a new sign-in.
+- **3c decisions on the writer's questions (lead):** the writer's readings 1, 3, 4, 5, 6, 8, 9, 10, 11 are adopted as written in the tests. (2) Typing before the first list: the first list is posted for whatever text is current when it posts. (7) A device flow still pending when Open Stream closes is cancelled; global then drops credentials as C2 says.
+
+## Phase 3d (lead, 2026-11-25 ~01:00): fixes from both 3c re-checks
+Design re-check P3c-1 and backend re-check MAJOR 1–2 (scratchpad `opus-74-design-review.md` "Phase 3c"; probes `probe74r2/`). The lead's C3 ("forgets the old grant, as Sign out does") caused D1; D-032 step-back: the recurring class is still the lead's own contract text, so each rule below names what must stay unchanged.
+- **D1 Adding follows never signs anyone out.** follows-connect keeps the old grant and every player's chat as they are. Only when the new grant validates with both scopes is it saved, sent as `auth-ready` ({token, login, clientID}) to every player that had the old one, and the old token revoked. Cancel, close, expiry or failure leave Keychain, players and chat exactly as before. Supersedes C3's "forgets".
+- **D2 A late follows answer still reaches the list.** After the first list, follow-only people from a late answer are appended below the rows already shown (rows above never move; the selected row and the row under the pointer stay); their marks and details follow in `suggestions-status`.
+- **D3 Caches outlive the window for 60 s without a player.** Closing Open Stream drops the credentials as before but keeps the status and follows caches for 60 s, so a reopen within 60 s shows them at once (then refreshes per G1).
+- **D4 Return before the first list is not lost:** with typed text it submits the text; with an empty field it opens the first list's top when the list arrives.
+- **D5 A slow validate is a late answer, not an account change:** no re-sort; D2 applies.
+- **3d decisions (lead):** the writer's readings 1–3, 5, 6 adopted as pinned. (4) Appended follow-only people keep the G4 order among themselves (live by viewers, then offline by newest lastAt, then name).

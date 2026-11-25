@@ -265,7 +265,7 @@ async function channelsStatus(logins, credentials, deps) {
   }
   const {http} = deps;
   const outcome = await raceOnMain(() => credentials
-    ? helixBatch(http, logins, credentials)
+    ? requestForOwner(deps, () => helixBatch(http, logins, credentials))
     : gqlBatch(http, logins), STATUS_TIMEOUT_MS, {value: unknown}, deps);
   return outcome.error || !outcome.value ? unknown : outcome.value;
 }
@@ -383,9 +383,9 @@ async function followedSuggestions(credentials, deps) {
   const outcome = await raceOnMain(async () => {
     const helix = createHelix({http: deps.http, clientID: credentials.clientID, token: credentials.token});
     const request = {userID: credentials.userID};
-    const [live, channels] = await Promise.all([helix.followedLive(request), helix.followedChannels(request)]);
+    const [live, channels] = await Promise.all([helix.followedLive(request), helix.followedChannelsPage(request)]);
     const rows = new Map(), status = new Map(), details = new Map();
-    for (const channel of channels) {
+    for (const channel of channels.rows) {
       if (!LOGIN_PATTERN.test(channel.login)) continue;
       const login = channel.login.toLowerCase();
       rows.set(login, {provider: 'twitch', login, displayName: cleanTitle(channel.name) || login});
@@ -398,9 +398,133 @@ async function followedSuggestions(credentials, deps) {
       status.set(login, true);
       details.set(login, liveDetails(stream.title, stream.game, stream.viewers));
     }
-    return {rows: [...rows.values()], status: Object.fromEntries(status), details: Object.fromEntries(details)};
+    return {rows: [...rows.values()], status: Object.fromEntries(status), details: Object.fromEntries(details), cursor: channels.cursor};
   }, REQUEST_TIMEOUT_MS, {value: null}, deps);
   return outcome.value || null;
 }
 
-module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions};
+// F3: check immediately before issuing each actual request, including after
+// an asynchronous response. IINA 1.5.1's standaloneWindow.isOpen() already
+// dispatches its visibility read through Utility.executeOnMainThread.
+function requestForOwner(deps, start) {
+  return !deps.canRequest || deps.canRequest() ? start() : null;
+}
+
+// F6: the first page was already fetched for the at-rest list. Read at most
+// nine more pages, each with an owner check and one overall deadline. Keep successful
+// membership even if a subsequent page fails.
+async function remainingFollowedChannels(credentials, cursor, deps) {
+  const rows = [];
+  const helix = createHelix({http: deps.http, clientID: credentials.clientID, token: credentials.token});
+  let active = true;
+  await raceOnMain(async () => {
+    for (let page = 1; active && page < 10 && cursor; page++) {
+      const reply = await requestForOwner(deps, () => helix.followedChannelsPage({userID: credentials.userID, after: cursor}));
+      if (!active || !reply) break;
+      for (const channel of reply.rows) {
+        if (LOGIN_PATTERN.test(channel.login)) rows.push(channel.login.toLowerCase());
+      }
+      cursor = reply.cursor;
+    }
+  }, REQUEST_TIMEOUT_MS, {value: null}, deps);
+  active = false;
+  return rows;
+}
+
+// #74 phase 2: validate at the actual request boundary as well as before
+// scheduling. Only trimmed search text, never an address, can leave here.
+function searchText(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return /^[\p{L}\p{M}\p{Nd}_ ]{2,40}$/u.test(text) ? text : null;
+}
+
+function searchRow(login, name, live, details) {
+  if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) return null;
+  return {provider: 'twitch', login: login.toLowerCase(), displayName: cleanTitle(name) || login, live, details};
+}
+
+async function gqlSearch(http, text, deps) {
+  const query = `query{searchFor(userQuery:${JSON.stringify(text)},platform:"web"){channels{edges{item{... on User{login displayName stream{viewersCount title game{displayName}} lastBroadcast{startedAt title}}}}}}}`;
+  const response = await postWithTimeout(http, {headers: {'Client-Id': WEB_CLIENT_ID, 'Content-Type': 'application/json'}, data: {query}}, deps);
+  const body = bodyOf(response);
+  const edges = body?.data?.searchFor?.channels?.edges;
+  if (!isSuccess(response) || !Array.isArray(edges)) return null;
+  const errors = body.errors ?? [];
+  if (!Array.isArray(errors) || errors.some(error => !Array.isArray(error?.path) || !error.path.length)) return null;
+  return edges.flatMap((edge, index) => {
+    const user = edge?.item;
+    if (!user) return [];
+    const prefix = ['searchFor', 'channels', 'edges', index, 'item'];
+    // A scoped field failure loses only that field. A null stream caused by
+    // an error is not evidence that the channel is offline.
+    const failed = (...path) => errors.some(error => error.path.every((key, i) => key === [...prefix, ...path][i]));
+    const streamFailed = errors.some(error => {
+      const path = [...prefix, 'stream'];
+      return error.path.slice(0, path.length).every((key, i) => key === path[i]);
+    });
+    const stream = user.stream;
+    const live = failed('stream') ? null : stream && typeof stream === 'object' ? true
+      : stream === null && !streamFailed ? false : null;
+    let details = {};
+    if (live === true) {
+      details = liveDetails(stream.title, stream.game?.displayName, stream.viewersCount);
+      if (failed('stream', 'title')) delete details.title;
+      if (failed('stream', 'game', 'displayName')) delete details.category;
+      if (failed('stream', 'viewersCount') || !Number.isFinite(stream.viewersCount)) delete details.viewers;
+    } else if (live === false && !failed('lastBroadcast')) {
+      details = lastBroadcastDetail(user) || {};
+      if (failed('lastBroadcast', 'startedAt')) delete details.lastAt;
+      if (failed('lastBroadcast', 'title')) delete details.lastTitle;
+    }
+    const row = searchRow(user.login, user.displayName, live, details);
+    return row ? [row] : [];
+  });
+}
+
+async function helixSearch(text, credentials, deps) {
+  const {http} = deps;
+  const outcome = await raceOnMain(() => requestForOwner(deps, () => http.get('https://api.twitch.tv/helix/search/channels', {
+    params: {query: text, first: '10'},
+    headers: {Authorization: `Bearer ${credentials.token}`, 'Client-Id': credentials.clientID},
+  })), REQUEST_TIMEOUT_MS, {value: null}, deps);
+  const response = outcome.value;
+  const body = bodyOf(response);
+  if (!isSuccess(response) || !Array.isArray(body?.data)) return null;
+  const rows = body.data.slice(0, 10).flatMap(channel => {
+    if (!channel || typeof channel.is_live !== 'boolean') return [];
+    const details = channel.is_live ? {title: cleanTitle(channel.title), category: cleanTitle(channel.game_name)} : {};
+    const row = searchRow(channel.broadcaster_login, channel.display_name, channel.is_live, details);
+    return row ? [row] : [];
+  });
+  const live = [...new Set(rows.filter(row => row.live).map(row => row.login))];
+  const offline = [...new Set(rows.filter(row => !row.live).map(row => row.login))];
+  const followups = await requestForOwner(deps, () => Promise.all([
+    live.length ? channelsStatus(live, credentials, deps) : null,
+    lastBroadcasts(offline, deps),
+  ]));
+  if (!followups) return null;
+  const [streams, broadcasts] = followups;
+  // Search Channels supplies the marks, titles and categories; Get Streams
+  // supplies only missing counts. A failed detail lookup never changes a mark.
+  for (const row of rows) {
+    if (row.live) {
+      const detail = streams?.details[row.login];
+      if (detail) row.details.viewers = detail.viewers;
+    } else if (Object.hasOwn(broadcasts, row.login)) row.details = broadcasts[row.login];
+  }
+  return rows;
+}
+
+async function searchChannels(value, credentials, deps) {
+  const text = searchText(value);
+  if (text === null) return null;
+  try {
+    return credentials ? await helixSearch(text, credentials, deps) : await gqlSearch(deps.http, text, deps);
+  } catch (_) {
+    // Do not log upstream errors: they may echo typed text or headers.
+    return null;
+  }
+}
+
+module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions, remainingFollowedChannels, searchText, searchChannels};

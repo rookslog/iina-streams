@@ -9,6 +9,10 @@
 // avatar carrying the live mark, the name, the Twitch mark, "category · title" and viewers when live, and the
 // last broadcast's title, an age and the broadcasts chevron when offline. Details arrive with status
 // (suggestions-status {status, details}).
+// Phase 2 rev 2 (TESTS-74 R1-R14; look: mock-74-search variant 1): global also sends Twitch search for the typed
+// text (suggestions-search {text, known, others}). Known people it found are appended to the end of "your
+// channels"; other channels follow below a hairline. They are only ever appended, so no row moves under the person,
+// and they go at the next keystroke. A spinner in the field shows while a search is out (suggestions-search-pending).
 (function(){
  const form=document.getElementById('open-form');
  const field=document.getElementById('open-input');
@@ -18,6 +22,7 @@
  const emptyGlyph=document.getElementById('suggestions-empty');
  const announcer=document.getElementById('announce');
  const clearButton=document.getElementById('open-clear');
+ const searchSpinner=document.getElementById('search-pending');
  const SVG_NS='http://www.w3.org/2000/svg';
  // Mock A's Twitch mark (direction-a/a.js ICON.twitch).
  const TWITCH_PATH='M3.2 1 1.8 3.8V13h3.3v2h1.8l2-2h2.7L15 9.6V1H3.2Zm10.3 7.9-1.9 1.9H8.8l-1.9 1.9v-1.9H3.6V2.5h9.9v6.4ZM10.2 4.6h1.4v3.6h-1.4V4.6Zm-3.5 0h1.4v3.6H6.7V4.6Z';
@@ -28,9 +33,37 @@
  const LOADING_TEXT='Loading recent broadcasts';
  // A Return pressed before global has answered the latest text waits this long for the answer.
  const RETURN_WAIT_MS=400;
+ // R3: at most 10 other channels, and at most 10 known people appended to your channels.
+ const SEARCH_ROWS=10;
+ // R10: the two groups' names, heard by VoiceOver and never drawn.
+ const YOUR_CHANNELS='Your channels';
+ const OTHER_CHANNELS='Other channels';
+ // P-D: the search spinner shows only once a request has been out this long, so a quick answer never flickers it.
+ const SPINNER_DELAY_MS=150;
+ // R3 (src/twitch-vods.js searchText): text global may search, once trimmed. Anything else gets no other channels.
+ const SEARCHABLE=/^[\p{L}\p{M}\p{Nd}_ ]{2,40}$/u;
+ // A Twitch login (src/history.js): only such a typed name gets the Twitch mark and the broadcasts chevron (P-A).
+ const TWITCH_LOGIN=/^[A-Za-z0-9_]{1,25}$/;
+ // A word starts after a character that is not part of a word (src/history.js matchRank).
+ const WORD_CHARACTER=/[\p{L}\p{N}\p{M}]/u;
 
  // People as global last sent them, in its order. Live status never reorders them.
  let people=[];
+ // Search rows for the text in the field (R1), each carrying its own details (R12): known people appended to
+ // your channels, and other channels. searchText is that text, trimmed and lower-cased; null when there are none.
+ let known=[],others=[],searchText=null;
+ // Your channels that a list for the same text added after known people were drawn (late follows, D2): they go
+ // below the known rows, so those never move.
+ let late=[];
+ // P-B: the other channels of the last search answer. Each keystroke shows those that still match the new text, until
+ // the new answer replaces them. Emptied when the field is, on a prefill and on an account change.
+ let answered=[];
+ // A search request for the text in the field is out (R9).
+ let searchPending=false;
+ // The field's text at the last edit or prefill, to tell an edit that changes the text from one that doesn't (F2).
+ let draftText='';
+ // P-D: the spinner's delay, and whether it is showing.
+ let spinnerTimer=null,spinnerShown=false;
  let heardSuggestions=false;
  // The selected row: {login, vod}, where vod is -1 for the person row or a broadcast index under them.
  let selection=null;
@@ -120,34 +153,159 @@
   // The person opened from the list was offline: their broadcasts come under their row, and the field stays.
   if(vodsTarget==='checking'&&value.input===checkingLogin)return;
   field.value=value.input;
+  draftText=value.input;
   submitted=true;
   vodsTarget='standalone';
   selection=null;
   expanded=null;
+  dropSearch();
+  answered=[];
+  endPending();
   render();
  }
 
  // ---- Suggestions ----
 
- function onSuggestions(data){
-  const value=unwrap(data);
-  if(!value||!Array.isArray(value.rows))return;
-  const text=typeof value.text==='string'?value.text:'';
-  people=value.rows.filter(row=>row&&typeof row.login==='string'&&row.login).map(row=>({
+ // A row as global sends it (provider, login, displayName, live), keeping only fields of the right types.
+ function cleanRows(rows){
+  return rows.filter(row=>row&&typeof row.login==='string'&&row.login).map(row=>({
    login:row.login,
    provider:typeof row.provider==='string'?row.provider:'',
    displayName:typeof row.displayName==='string'&&row.displayName?row.displayName:row.login,
    live:row.live===true||row.live===false?row.live:null
   }));
+ }
+
+ // Every row on the list, in order: your channels (global's list, then known people the search found), then
+ // other channels. A login appears once.
+ function yourRows(){
+  return people.concat(known,late);
+ }
+
+ // Every row drawn: your channels, or the typed-name row in their place, then other channels (kept ones included).
+ function allRows(){
+  const typed=typedRow();
+  return yourRows().concat(typed?[typed]:[],drawnOthers(typed));
+ }
+
+ // The other channels drawn beside the typed-name row: a kept row with the typed login is that same channel, so it
+ // is not drawn twice (the typed-name row is the one that can be chosen).
+ function drawnOthers(typed){
+  if(!typed)return others;
+  const typedKey=typed.login.toLowerCase();
+  return others.filter(person=>!(person.kept&&person.login.toLowerCase()===typedKey));
+ }
+
+ // I1 / P-B′: the rows the person can select, with the arrows, the pointer or Return. Other channels kept from the
+ // text before are shown but are not among them until the answer for this text replaces them.
+ function selectableRows(){
+  return allRows().filter(person=>!person.kept);
+ }
+
+ // P-A′: when your channels are empty for the text and no selectable other channel is drawn (none yet, a search
+ // still out, an answer with nothing, a failed search, or text never searched, R4), the typed text is a row, as a
+ // channel: what Return opens. It is a placeholder, not a choice, so results that land replace it (I1's exception).
+ function typedRow(){
+  const text=field.value.trim();
+  if(!text||standalone||!heardSuggestions||awaitingText!==null)return null;
+  if(yourRows().length||others.some(person=>!person.kept))return null;
+  // A kept row whose login is the typed text is that same channel: it stands in for the typed-name row, drawn in
+  // full (avatar, live mark, details) in its place, so finishing a name never turns its row bare (lead, DUP).
+  const textKey=text.toLowerCase();
+  const same=others.find(person=>person.kept&&person.login.toLowerCase()===textKey);
+  if(same)return{...same,kept:false,typed:true,standIn:true};
+  return{login:text,provider:TWITCH_LOGIN.test(text)?'twitch':'',displayName:text,live:null,typed:true};
+ }
+
+ // The page's own match rule, as global's (src/history.js matchRank): the login or display name starts with the
+ // text, or a word of the display name does.
+ function matchesText(person,needle){
+  const login=person.login.toLowerCase();
+  const name=person.displayName.toLowerCase();
+  if(login.startsWith(needle)||name.startsWith(needle))return true;
+  let previous=null,offset=0;
+  for(const character of name){
+   if(previous!==null&&!WORD_CHARACTER.test(previous)&&name.startsWith(needle,offset))return true;
+   previous=character;
+   offset+=character.length;
+  }
+  return false;
+ }
+
+ // P-B: the other channels shown on a keystroke: the last answer's that still match the new text, if it may be
+ // searched, and that are not on your channels.
+ function othersStillMatching(text){
+  const trimmed=text.trim();
+  if(!SEARCHABLE.test(trimmed))return[];
+  const needle=trimmed.toLowerCase();
+  const yours=new Set(people.map(person=>person.login));
+  return answered.filter(person=>!yours.has(person.login)&&matchesText(person,needle));
+ }
+
+ // I1's exception: when nothing is selected, the first selectable row becomes selected (R5(c), P-A′), unless the
+ // person chose the typed text, a typed open is under way (a held or second Return would open a row drawn after the
+ // first), or the #32 list shows.
+ function selectFirstIfNone(){
+  const rows=selectableRows();
+  if(selection||textChosen||submitted||standalone||awaitingText!==null||!rows.length)return null;
+  selection={login:rows[0].login,vod:-1};
+  return rows[0];
+ }
+
+ function sameText(a,b){
+  return String(a).trim().toLowerCase()===String(b).trim().toLowerCase();
+ }
+
+ function dropSearch(){
+  people=people.concat(late);
+  late=[];
+  known=[];
+  others=[];
+  searchText=null;
+ }
+
+ function onSuggestions(data){
+  const value=unwrap(data);
+  if(!value||!Array.isArray(value.rows))return;
+  const text=typeof value.text==='string'?value.text:'';
+  let rows=cleanRows(value.rows);
+  // F4: after an account change global re-sends the list with reset:true. The drawn search rows were the old
+  // account's, so they go and the fresh list is drawn; the next search answer for this text draws afresh.
+  if(value.reset===true){
+   dropSearch();
+   answered=[];
+  }
+  if(searchText!==null&&sameText(text,searchText)){
+   // R8: a person already drawn from the search stays where they are until the next text.
+   const drawn=new Set(known.concat(others).map(row=>row.login));
+   rows=rows.filter(person=>!drawn.has(person.login));
+   const before=new Set(people.map(person=>person.login));
+   const inList=new Set(rows.map(person=>person.login));
+   people=rows.filter(person=>before.has(person.login));
+   if(others.length){
+    // R8/F5: with other channels drawn, anyone this list adds would push them down: held until the next text.
+    late=late.filter(person=>inList.has(person.login));
+   }else{
+    // D2: with only known people drawn, those it adds go below them, so no row already shown moves.
+    late=rows.filter(person=>!before.has(person.login));
+   }
+  }else{
+   people=rows;
+   late=[];
+   // Other channels kept from the text before (P-B) give way to anyone on your channels: one person once.
+   others=others.filter(row=>!rows.some(person=>person.login===row.login));
+  }
   heardSuggestions=true;
   if(awaitingText!==null&&text===awaitingText)awaitingText=null;
-  const has=login=>people.some(person=>person.login===login);
+  const shown=selectableRows();
+  const has=login=>shown.some(person=>person.login===login);
   if(expanded&&!has(expanded.login)){
    expanded=null;
    if(vodsTarget==='inline')vodsTarget='ignore';
   }
+  // A selection the person did not move follows the top (P2); one they moved stays while its row does.
   if(selection&&(!moved||!has(selection.login)))selection=null;
-  if(!selection&&!textChosen&&people.length)selection={login:people[0].login,vod:-1};
+  if(!selection&&!textChosen&&shown.length)selection={login:shown[0].login,vod:-1};
   render();
   if(earlyReturn){
    earlyReturn=false;
@@ -168,7 +326,7 @@
    if(detail)details.set(login,detail);
    else details.delete(login);
   }
-  for(const person of people){
+  for(const person of people.concat(late)){
    if(Object.prototype.hasOwnProperty.call(status,person.login)){
     const live=status[person.login];
     person.live=live===true||live===false?live:null;
@@ -176,6 +334,101 @@
    const row=optionNodes.get(key(person.login,-1));
    if(row)fillRow(row,person);
   }
+ }
+
+ // R1, R5, R7, P-B: the search answer for the text in the field; an answer for any other text is dropped. The first
+ // answer for a text replaces the other channels kept from the text before, in its order; a later one for the same
+ // text only appends, so rows already shown keep their places. The selection stays on the same person if they are
+ // still there; otherwise the first row is selected, and only then is it announced (R10).
+ function onSuggestionsSearch(data){
+  const value=unwrap(data);
+  if(!value||typeof value.text!=='string')return;
+  if(!field.value.trim()||!sameText(value.text,field.value))return;
+  const textKey=value.text.trim().toLowerCase();
+  if(searchText!==textKey){
+   known=[];
+   others=[];
+  }
+  const shown=new Set(yourRows().concat(others).map(row=>row.login));
+  // Rows not yet on the list, each with the details it carries (search rows are not updated later, R12).
+  const fresh=list=>{
+   const rows=[];
+   for(const row of Array.isArray(list)?list:[]){
+    const [clean]=cleanRows([row]);
+    if(!clean||shown.has(clean.login))continue;
+    shown.add(clean.login);
+    const detail=cleanDetail(row.details);
+    if(detail)clean.detail=detail;
+    rows.push(clean);
+   }
+   return rows;
+  };
+  // Known people go above the hairline, so once other channels are drawn they would push those down: they wait for
+  // the next text, as late follows do (R8).
+  const newKnown=others.length?[]:fresh(value.known);
+  const newOthers=fresh(value.others);
+  known=known.concat(newKnown).slice(0,SEARCH_ROWS);
+  others=others.concat(newOthers).slice(0,SEARCH_ROWS);
+  answered=others.slice();
+  searchText=textKey;
+  const rows=allRows();
+  const has=login=>rows.some(person=>person.login===login);
+  if(expanded&&!has(expanded.login)){
+   expanded=null;
+   if(vodsTarget==='inline')vodsTarget='ignore';
+  }
+  if(selection&&!has(selection.login))selection=null;
+  const picked=selectFirstIfNone();
+  render();
+  if(picked)announce(spokenName(picked));
+ }
+
+ // R9: a search request for the field's text started or ended. Messages for any other text are ignored.
+ function onSearchPending(data){
+  const value=unwrap(data);
+  if(!value||typeof value.text!=='string')return;
+  if(!sameText(value.text,field.value))return;
+  if(value.pending===true){
+   searchPending=true;
+   waitForSpinner();
+  }else{
+   endPending();
+  }
+  showSearchPending();
+ }
+
+ function waitForSpinner(){
+  if(spinnerShown||spinnerTimer!==null)return;
+  if(typeof setTimeout!=='function'){
+   spinnerShown=true;
+   showSearchPending();
+   return;
+  }
+  spinnerTimer=setTimeout(()=>{
+   spinnerTimer=null;
+   spinnerShown=searchPending;
+   showSearchPending();
+  },SPINNER_DELAY_MS);
+ }
+
+ function endPending(){
+  searchPending=false;
+  if(spinnerTimer!==null&&typeof clearTimeout==='function')clearTimeout(spinnerTimer);
+  spinnerTimer=null;
+  spinnerShown=false;
+ }
+
+ // The spinner and the listbox's busy state go together, after the delay (R9, P-D).
+ function showSearchPending(){
+  if(searchSpinner)searchSpinner.hidden=!spinnerShown;
+  if(!listbox)return;
+  if(spinnerShown)listbox.setAttribute('aria-busy','true');
+  else listbox.removeAttribute('aria-busy');
+ }
+
+ // A row's details: those its search row carried, or what suggestions-status last said about the login.
+ function detailOf(person){
+  return person.detail||details.get(person.login)||{};
  }
 
  // Only the fields a row shows, and only of the right types: the details are Twitch's text.
@@ -219,7 +472,7 @@
 
  // The VoiceOver name: name and live state, then what the row shows (mock A's spoken).
  function spokenName(person){
-  const detail=details.get(person.login)||{};
+  const detail=detailOf(person);
   if(person.live===true){
    const parts=[person.displayName+', live'];
    if(Number.isFinite(detail.viewers))parts.push(detail.viewers.toLocaleString()+' viewers');
@@ -237,8 +490,10 @@
   return'mark unknown';
  }
 
+ // The bare typed-name row opens as typed text does (the #32 list if offline), so it has no broadcasts of its own;
+ // a kept row standing in for it is a real channel and behaves as one.
  function canBrowse(person){
-  return!!person&&person.provider==='twitch';
+  return!!person&&person.provider==='twitch'&&!(person.typed&&!person.standIn)&&!person.kept;
  }
 
  function isSelected(login,vod){
@@ -256,21 +511,28 @@
   const showList=!standalone;
   if(area)area.hidden=!showList;
   if(clearButton)clearButton.hidden=field.value==='';
-  field.setAttribute('aria-expanded',String(showList&&people.length>0));
-  if(emptyGlyph)emptyGlyph.hidden=!(showList&&heardSuggestions&&!people.length&&field.value==='');
+  const yours=yourRows();
+  const typed=typedRow();
+  const count=yours.length+others.length+(typed?1:0);
+  field.setAttribute('aria-expanded',String(showList&&count>0));
+  if(emptyGlyph)emptyGlyph.hidden=!(showList&&heardSuggestions&&!count&&field.value==='');
   optionNodes=new Map();
   groupNode=null;
   if(listbox){
-   const children=[];
-   people.forEach((person,index)=>{
-    children.push(personRow(person,index));
-    if(expanded&&expanded.login===person.login){
-     groupNode=broadcastGroup(person);
-     children.push(groupNode);
-    }
-   });
-   listbox.replaceChildren(...children);
+   if(yours.length&&others.length){
+    // Both groups (R10, R13): each a named group counted on its own, with the hairline between them. The hairline
+    // is drawn only; VoiceOver hears the two group names instead.
+    const hair=el('div','hair');
+    hair.setAttribute('aria-hidden','true');
+    listbox.replaceChildren(
+     section(YOUR_CHANNELS,rowNodes(yours,0)),
+     hair,
+     section(OTHER_CHANNELS,rowNodes(others,yours.length)));
+   }else{
+    listbox.replaceChildren(...rowNodes(yours.concat(typed?[typed]:[],drawnOthers(typed)),0));
+   }
   }
+  showSearchPending();
   const active=selection&&optionNodes.get(key(selection.login,selection.vod));
   if(active&&showList){
    field.setAttribute('aria-activedescendant',active.id);
@@ -287,15 +549,40 @@
   return login+'\n'+vod;
  }
 
- function personRow(person,index){
+ // One set of rows, numbered within the set; ids count on from firstId so they stay unique across both groups.
+ // The open person's broadcasts follow their row.
+ function rowNodes(rows,firstId){
+  const nodes=[];
+  rows.forEach((person,index)=>{
+   nodes.push(personRow(person,firstId+index,index+1,rows.length));
+   if(expanded&&expanded.login===person.login){
+    groupNode=broadcastGroup(person);
+    nodes.push(groupNode);
+   }
+  });
+  return nodes;
+ }
+
+ function section(name,nodes){
+  const group=el('div','section');
+  group.setAttribute('role','group');
+  group.setAttribute('aria-label',name);
+  group.append(...nodes);
+  return group;
+ }
+
+ function personRow(person,id,position,size){
   const row=el('div','person');
   row.setAttribute('role','option');
-  row.setAttribute('id','person-'+index);
+  row.setAttribute('id','person-'+id);
   row.setAttribute('aria-selected',String(isSelected(person.login,-1)));
-  row.setAttribute('aria-posinset',String(index+1));
-  row.setAttribute('aria-setsize',String(people.length));
+  row.setAttribute('aria-posinset',String(position));
+  row.setAttribute('aria-setsize',String(size));
+  // P-B′: a kept row is drawn but cannot be chosen until the answer for this text lands.
+  if(person.kept)row.setAttribute('aria-disabled','true');
   fillRow(row,person);
   row.addEventListener('click',event=>{
+   if(person.kept)return;
    const target=event&&event.target;
    const onChevron=!!target&&typeof target.getAttribute==='function'&&/\bdisclose\b/.test(target.getAttribute('class')||'');
    if(onChevron&&canBrowse(person)){
@@ -313,13 +600,19 @@
  // "category · title" and viewers (live) or an age and the chevron (offline). Built from text, never markup.
  function fillRow(row,person){
   const open=!!expanded&&expanded.login===person.login;
-  const detail=details.get(person.login)||{};
-  row.setAttribute('class','person'+(open?' expanded':''));
+  const detail=detailOf(person);
+  // R13: an offline row is dimmed (name and avatar); live rows and rows of unknown status are not.
+  row.setAttribute('class','person'+(open?' expanded':'')+(person.live===false?' dim':'')+(person.kept?' kept':''));
   row.setAttribute('aria-label',spokenName(person));
-  const avatar=el('span','avatar',initial(person.displayName));
+  // P-A: the bare typed name is nobody yet: no avatar letter and no live mark, only the place an avatar would take.
+  // A kept row standing in for it (DUP) is drawn in full.
+  const bare=person.typed&&!person.standIn;
+  const avatar=bare?el('span','avatar typed'):el('span','avatar',initial(person.displayName));
   avatar.setAttribute('aria-hidden','true');
-  if(avatar.style&&typeof avatar.style.setProperty==='function')avatar.style.setProperty('--av',avatarColour(person.login));
-  if(person.live!==false){
+  if(!bare&&avatar.style&&typeof avatar.style.setProperty==='function'){
+   avatar.style.setProperty('--av',avatarColour(person.login));
+  }
+  if(!bare&&person.live!==false){
    const mark=el('span',markClass(person));
    if(person.live===null)mark.setAttribute('title','Status unavailable');
    avatar.append(mark);
@@ -438,10 +731,10 @@
 
  // ---- Keys and actions ----
 
- // The rows the arrow keys walk: every person, and the open person's broadcasts under them.
+ // The rows the arrow keys walk: every selectable person, and the open person's broadcasts under them.
  function stops(){
   const list=[];
-  for(const person of people){
+  for(const person of selectableRows()){
    list.push({login:person.login,vod:-1});
    if(expanded&&expanded.login===person.login&&expanded.state==='ready'){
     expanded.items.forEach((_,index)=>list.push({login:person.login,vod:index}));
@@ -476,7 +769,7 @@
  }
 
  function personFor(login){
-  return people.find(person=>person.login===login)||null;
+  return selectableRows().find(person=>person.login===login)||null;
  }
 
  // Return or a click on a person always opens them through global's live check, whatever their mark says: a
@@ -492,7 +785,8 @@
   checkingLogin=canBrowse(person)?login:null;
   checkingByPointer=!!byPointer;
   render();
-  openInput(login,checkingLogin?'checking':'standalone');
+  // The typed-name row opens the text in the field, exactly as typing it and pressing Return always has.
+  openInput(person&&person.typed&&!person.standIn?field.value:login,checkingLogin?'checking':'standalone');
  }
 
  function openSelection(){
@@ -647,19 +941,47 @@
  // Every edit is a new draft: the top match is reselected when global answers, no broadcasts are open, and
  // any pending answer is outdated.
  function onInput(){
+  // F2: an edit that leaves the trimmed, lower-cased text as it was ("ri" to "ri ", or "RI") changes nothing on
+  // the list: the search rows, the hairline, the selection and a search still out all stay.
+  const unchanged=sameText(field.value,draftText);
+  // An edit that only adds to the text cannot add to your channels (they match by prefix or word start). When they
+  // were empty for the old text, they are known to be empty for the new one, so the typed-name row is drawn for it
+  // at once instead of blinking out until the list answers.
+  const before=draftText.trim().toLowerCase();
+  const extending=!unchanged&&heardSuggestions&&awaitingText===null&&!yourRows().length&&
+   field.value.trim().toLowerCase().startsWith(before);
+  draftText=field.value;
   field.removeAttribute('aria-invalid');
   submitted=false;
   pendingInput=null;
-  selection=null;
-  textChosen=false;
   earlyReturn=false;
-  moved=false;
+  if(unchanged){
+   // Broadcasts still close, as on any edit; a selection inside them goes back to their person.
+   if(selection&&selection.vod>=0)selection={login:selection.login,vod:-1};
+  }else{
+   selection=null;
+   textChosen=false;
+   moved=false;
+  }
   expanded=null;
   checkingLogin=null;
   vodsTarget='ignore';
-  awaitingText=field.value;
+  awaitingText=extending?null:field.value;
+  // R6 and P-B: at the keystroke, known people the search found go, and so do other channels that no longer match,
+  // so no stale result is ever selectable; those that still match stay until the new answer replaces them. Your
+  // channels' own rows stay until the new list. A search still out is for the old text, so the spinner goes too.
+  if(!unchanged){
+   // P-B′: shown, not selectable, until the answer for the new text replaces them.
+   const kept=othersStillMatching(field.value).map(person=>({...person,kept:true}));
+   dropSearch();
+   others=kept;
+   if(!field.value.trim())answered=[];
+   endPending();
+  }
   announce('');
   clearOfflineVods();
+  // With your channels known empty (an extending edit), the typed-name row is selected as it is drawn (I1).
+  selectFirstIfNone();
   render();
   // #67 F-session: a new draft outdates any pending answer for the old text.
   post('open-edit',{});
@@ -783,6 +1105,8 @@
  iina.onMessage('offline-vods',onOfflineVods);
  iina.onMessage('suggestions',onSuggestions);
  iina.onMessage('suggestions-status',onSuggestionsStatus);
+ iina.onMessage('suggestions-search',onSuggestionsSearch);
+ iina.onMessage('suggestions-search-pending',onSearchPending);
  focusField();
  // Global holds page messages until the listeners above exist (loadFile clears them in IINA 1.5.1).
  post('open-ready',{});

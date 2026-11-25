@@ -238,15 +238,16 @@ async function followedLive(config, request) {
   return mapped;
 }
 
-// The quick list uses only the first page of followed channels; live streams
-// remain paginated independently so a live channel outside that page is included.
-async function followedChannels(config, request) {
+// The at-rest quick list uses the first page; search can request subsequent
+// pages for membership without re-fetching the first page.
+async function followedChannelsPage(config, request) {
   const userID = request && request.userID;
   if (!isString(userID) || !/^\d+$/.test(userID)) {
     throw new TwitchHelixError('MALFORMED');
   }
-  const body = await getJSON(config, '/channels/followed',
-    {user_id: userID, first: FOLLOWED_PAGE_SIZE}, 'followed-channels');
+  const params = {user_id: userID, first: FOLLOWED_PAGE_SIZE};
+  if (typeof request.after === 'string' && request.after) params.after = request.after;
+  const body = await getJSON(config, '/channels/followed', params, 'followed-channels');
   const mapped = dataArray(body, 'followed-channels', config).map(channel => {
     if (!channel || !isString(channel.broadcaster_login) || !isString(channel.broadcaster_name)) {
       throw new TwitchHelixError('MALFORMED');
@@ -254,7 +255,7 @@ async function followedChannels(config, request) {
     return {login: channel.broadcaster_login, name: channel.broadcaster_name};
   });
   config.logLine('followed-channels', {count: mapped.length});
-  return mapped;
+  return {rows: mapped, cursor: mapped.length ? nextCursor(body) : ''};
 }
 
 // ---- recent VODs ----
@@ -320,7 +321,8 @@ function createHelix(options) {
   const config = {http, clientID, token, logLine: makeLogger(log)};
   return {
     followedLive: request => followedLive(config, request),
-    followedChannels: request => followedChannels(config, request),
+    followedChannels: async request => (await followedChannelsPage(config, request)).rows,
+    followedChannelsPage: request => followedChannelsPage(config, request),
     recentVODs: request => recentVODs(config, request),
   };
 }

@@ -4,7 +4,7 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentBroadcasts,channelStatus,channelsStatus,lastBroadcasts,followedSuggestions}=require('./src/twitch-vods.js');
+const {recentBroadcasts,channelStatus,channelsStatus,lastBroadcasts,followedSuggestions,searchText,searchChannels}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
 const {createHistory,matchRank}=require('./src/history.js');
@@ -222,6 +222,8 @@ const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28,SUGGESTION_LIMIT=50;
 const SUGGESTION_HEIGHT=OPEN_HEIGHT+SUGGESTION_ROWS*SUGGESTION_ROW_HEIGHT;
 const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000,FIRST_SUGGESTION_WAIT_MS=450;
+const SEARCH_PAUSE_MS=250,SEARCH_CACHE_MS=60000,SEARCH_LIMIT=10;
+const searchCache=new Map();
 // Separate caches: followed channels are account data, not watch history.
 // A pending cache remains current across a close/reopen, but never across
 // account changes. All results are applied on the main thread.
@@ -331,7 +333,7 @@ function showOpenWindow(){
  }
  openRun++;
  if(formInstance)releaseOpenForm();
- formInstance={posted:false,rows:[],text:null,deadline:null,lease:null,followsState:null};
+ formInstance={posted:false,rows:[],text:null,deadline:null,lease:null,followsState:null,search:null};
  openPageReady=false;
  openQueue=[];
  openWindow.loadFile(OPEN_PAGE);
@@ -354,6 +356,7 @@ function releaseOpenForm(){
  if(form){
   if(form.deadline!==null)timers.clearTimeout(form.deadline);
   if(form.lease!==null)timers.clearTimeout(form.lease);
+  cancelSearch(form);
  }
  if(!audience.size){
   passiveRestore=null;
@@ -561,6 +564,7 @@ function postSuggestions(text){
  }
  postOpenPage('suggestions',envelope({text,rows:form.rows}));
  postVisibleSuggestionStatus(form);
+ publishSearchAnswer(form);
 }
 
 function postVisibleSuggestionStatus(form){
@@ -577,7 +581,85 @@ function onOpenQuery(data){
  if(!form||!data||typeof data.text!=='string')return;
  onOpenEdit();
  suggestionText=data.text;
+ scheduleSearch(form,suggestionText);
  if(form.posted)postSuggestions(suggestionText);
+}
+
+// A query owns one debounce and one answer. The form identity and query
+// identity fence both timer callbacks and late HTTP completions.
+function cancelSearch(form){
+ if(form.search?.timer!==null&&form.search?.timer!==undefined)timers.clearTimeout(form.search.timer);
+ form.search=null;
+}
+
+function scheduleSearch(form,value){
+ cancelSearch(form);
+ const text=searchText(value);
+ if(text===null)return;
+ const search={text,timer:null,answer:null,published:false,othersDrawn:false,known:new Set()};
+ form.search=search;
+ search.timer=timers.setTimeout(()=>{
+  search.timer=null;
+  if(isCurrentSearch(form,search))runSearch(form,search);
+ },SEARCH_PAUSE_MS);
+}
+
+function isCurrentSearch(form,search){
+ return form===showingReadyForm()&&form.search===search;
+}
+
+async function runSearch(form,search){
+ const account=credentials;
+ const key=JSON.stringify([accountKey(account),search.text.toLowerCase()]);
+ const now=Date.now();
+ for(const [cachedKey,cached] of searchCache){
+  if(now-cached.at>=SEARCH_CACHE_MS)searchCache.delete(cachedKey);
+ }
+ const cached=searchCache.get(key);
+ if(cached){
+  search.answer=cached.rows;
+  publishSearchAnswer(form);
+  return;
+ }
+ postOpenPage('suggestions-search-pending',envelope({text:search.text,pending:true}));
+ const rows=await searchChannels(search.text,account,suggestionDeps);
+ onMainThread(()=>{
+  if(rows!==null){
+   searchCache.set(key,{at:Date.now(),rows});
+   // Keep the memory-only cache bounded even during rapid typing.
+   if(searchCache.size>100)searchCache.delete(searchCache.keys().next().value);
+  }
+  if(!isCurrentSearch(form,search))return;
+  search.answer=rows;
+  publishSearchAnswer(form);
+  postOpenPage('suggestions-search-pending',envelope({text:search.text,pending:false}));
+ });
+}
+
+function publishSearchAnswer(form){
+ const search=form.search;
+ if(!search||!isCurrentSearch(form,search)||!form.posted||search.published||search.answer===null)return;
+ const displayed=new Set(form.rows.filter(row=>row.provider==='twitch').map(row=>row.login));
+ const knownLogins=new Set(history.query('',{provider:'twitch'}).map(row=>row.login));
+ if(cacheVisible())for(const row of follows.rows)knownLogins.add(row.login);
+ const known=[],others=[],seen=new Set(displayed);
+ for(const row of search.answer){
+  if(seen.has(row.login))continue;
+  seen.add(row.login);
+  if(knownLogins.has(row.login))known.push(row);
+  else others.push(row);
+ }
+ const exact=search.text.toLowerCase();
+ others.sort((a,b)=>{
+  if((a.login===exact)!==(b.login===exact))return a.login===exact?-1:1;
+  if((a.live===true)!==(b.live===true))return a.live===true?-1:1;
+  return a.live===true?(b.details.viewers??0)-(a.details.viewers??0):0;
+ });
+ const appended=known.slice(0,SEARCH_LIMIT),otherRows=others.slice(0,SEARCH_LIMIT);
+ search.published=true;
+ search.othersDrawn=otherRows.length>0;
+ search.known=new Set(appended.map(row=>row.login));
+ postOpenPage('suggestions-search',envelope({text:search.text,known:appended,others:otherRows}));
 }
 
 function publishSuggestionUpdate(){
@@ -591,9 +673,11 @@ function publishSuggestionUpdate(){
 // Once the followed list and its offline sort keys have answered, append
 // only follow-only matches, in G4/G5 order, without shifting any existing row.
 function appendLateFollows(form){
+ if(form.search?.othersDrawn)return false;
  if(!cacheVisible()||follows.pending||!follows.rows.length||form.rows.length>=SUGGESTION_LIMIT)return false;
  const key=row=>row.provider+'\n'+row.login;
  const displayed=new Set(form.rows.map(key));
+ for(const login of form.search?.known??[])displayed.add('twitch\n'+login);
  const watched=new Set(history.query('').map(key));
  const followed=new Set(follows.rows.map(key));
  const extra=rankedSuggestions(form.text,Infinity).filter(row=>followed.has(key(row))&&!watched.has(key(row))&&!displayed.has(key(row)))

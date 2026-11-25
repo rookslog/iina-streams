@@ -403,4 +403,98 @@ async function followedSuggestions(credentials, deps) {
   return outcome.value || null;
 }
 
-module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions};
+// #74 phase 2: validate at the actual request boundary as well as before
+// scheduling. Only trimmed search text, never an address, can leave here.
+function searchText(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return /^[\p{L}\p{Nd}_ ]{2,40}$/u.test(text) ? text : null;
+}
+
+function searchRow(login, name, live, details) {
+  if (typeof login !== 'string' || !LOGIN_PATTERN.test(login)) return null;
+  return {provider: 'twitch', login: login.toLowerCase(), displayName: cleanTitle(name) || login, live, details};
+}
+
+async function gqlSearch(http, text, deps) {
+  const query = `query{searchFor(userQuery:${JSON.stringify(text)},platform:"web"){channels{edges{item{... on User{login displayName stream{viewersCount title game{displayName}} lastBroadcast{startedAt title}}}}}}}`;
+  const response = await postWithTimeout(http, {headers: {'Client-Id': WEB_CLIENT_ID, 'Content-Type': 'application/json'}, data: {query}}, deps);
+  const body = bodyOf(response);
+  const edges = body?.data?.searchFor?.channels?.edges;
+  if (!isSuccess(response) || !Array.isArray(edges)) return null;
+  const errors = body.errors ?? [];
+  if (!Array.isArray(errors) || errors.some(error => !Array.isArray(error?.path) || !error.path.length)) return null;
+  return edges.flatMap((edge, index) => {
+    const user = edge?.item;
+    if (!user) return [];
+    const prefix = ['searchFor', 'channels', 'edges', index, 'item'];
+    // A scoped field failure loses only that field. A null stream caused by
+    // an error is not evidence that the channel is offline.
+    const failed = (...path) => errors.some(error => error.path.every((key, i) => key === [...prefix, ...path][i]));
+    const streamFailed = errors.some(error => {
+      const path = [...prefix, 'stream'];
+      return error.path.slice(0, path.length).every((key, i) => key === path[i]);
+    });
+    const stream = user.stream;
+    const live = failed('stream') ? null : stream && typeof stream === 'object' ? true
+      : stream === null && !streamFailed ? false : null;
+    let details = {};
+    if (live === true) {
+      details = liveDetails(stream.title, stream.game?.displayName, stream.viewersCount);
+      if (failed('stream', 'title')) delete details.title;
+      if (failed('stream', 'game', 'displayName')) delete details.category;
+      if (failed('stream', 'viewersCount') || !Number.isFinite(stream.viewersCount)) delete details.viewers;
+    } else if (live === false && !failed('lastBroadcast')) {
+      details = lastBroadcastDetail(user) || {};
+      if (failed('lastBroadcast', 'startedAt')) delete details.lastAt;
+      if (failed('lastBroadcast', 'title')) delete details.lastTitle;
+    }
+    const row = searchRow(user.login, user.displayName, live, details);
+    return row ? [row] : [];
+  });
+}
+
+async function helixSearch(text, credentials, deps) {
+  const {http} = deps;
+  const outcome = await raceOnMain(() => http.get('https://api.twitch.tv/helix/search/channels', {
+    params: {query: text, first: '10'},
+    headers: {Authorization: `Bearer ${credentials.token}`, 'Client-Id': credentials.clientID},
+  }), REQUEST_TIMEOUT_MS, {value: null}, deps);
+  const response = outcome.value;
+  const body = bodyOf(response);
+  if (!isSuccess(response) || !Array.isArray(body?.data)) return null;
+  const rows = body.data.slice(0, 10).flatMap(channel => {
+    if (!channel || typeof channel.is_live !== 'boolean') return [];
+    const details = channel.is_live ? {title: cleanTitle(channel.title), category: cleanTitle(channel.game_name)} : {};
+    const row = searchRow(channel.broadcaster_login, channel.display_name, channel.is_live, details);
+    return row ? [row] : [];
+  });
+  const live = [...new Set(rows.filter(row => row.live).map(row => row.login))];
+  const offline = [...new Set(rows.filter(row => !row.live).map(row => row.login))];
+  const [streams, broadcasts] = await Promise.all([
+    live.length ? channelsStatus(live, credentials, deps) : null,
+    lastBroadcasts(offline, deps),
+  ]);
+  // Search Channels supplies the marks, titles and categories; Get Streams
+  // supplies only missing counts. A failed detail lookup never changes a mark.
+  for (const row of rows) {
+    if (row.live) {
+      const detail = streams?.details[row.login];
+      if (detail) row.details.viewers = detail.viewers;
+    } else if (Object.hasOwn(broadcasts, row.login)) row.details = broadcasts[row.login];
+  }
+  return rows;
+}
+
+async function searchChannels(value, credentials, deps) {
+  const text = searchText(value);
+  if (text === null) return null;
+  try {
+    return credentials ? await helixSearch(text, credentials, deps) : await gqlSearch(deps.http, text, deps);
+  } catch (_) {
+    // Do not log upstream errors: they may echo typed text or headers.
+    return null;
+  }
+}
+
+module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus, lastBroadcasts, followedSuggestions, searchText, searchChannels};

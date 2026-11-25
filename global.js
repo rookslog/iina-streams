@@ -16,7 +16,7 @@ const timers=createTimers(setTimeout,clearTimeout);
 const audience=new Set(),managed=new Set(),adopted=new Set(),sessions=new Map();
 // Sessions come from one counter, so a label IINA reuses for an idle core never repeats an old session.
 let lastSession=0;
-let credentials=null;
+let credentials=null,searchAccountRevision=0;
 const qaEvents=[];
 // The user's own Twitch app Client ID, when they entered one.
 const CLIENT_FILE='@data/twitch-client.json';
@@ -186,6 +186,7 @@ const auth=new TwitchAuth({
  onReady:c=>{
   const restored=!!passiveRestore;
   const changed=!credentials||accountKey(credentials)!==accountKey(c);
+  if(changed)searchAccountRevision++;
   credentials=c;
   passiveRestore=null;
   if(cacheAccount!==accountKey(c))resetSuggestionCaches(c);
@@ -201,6 +202,7 @@ const auth=new TwitchAuth({
  },
  onStop:()=>{
   const hadCredentials=!!credentials;
+  if(hadCredentials)searchAccountRevision++;
   credentials=null;
   if(hadCredentials&&!idleAuthStop){
    resetSuggestionCaches();
@@ -445,7 +447,7 @@ function refreshShowingAccount(signedOut=false,forceNote=false,restored=false){
  publishFollowsState(form,forceNote);
  // Explicit account changes reset both groups; ordinary passive restoration
  // remains a late answer unless a search has already started under another account.
- const resetSearch=!restored||(form.search?.started&&form.search.account!==credentials);
+ const resetSearch=!restored||(form.search?.started&&form.search.revision!==searchAccountRevision);
  if(resetSearch){
   if(form.posted){
    form.resetPending=true;
@@ -632,15 +634,17 @@ function isCurrentSearch(form,search){
  return form===showingReadyForm()&&form.search===search;
 }
 
-function searchOwner(form,account){return form===showingReadyForm()&&credentials===account;}
+// Re-validation replaces the credential object without changing the account.
+// A revision changes only on account transitions, including sign-out and back.
+function searchOwner(form,revision){return form===showingReadyForm()&&revision===searchAccountRevision;}
 
-function ensureFollowedMembership(form,account){
+function ensureFollowedMembership(form,account,revision){
  const cache=follows;
- if(!searchOwner(form,account)||!canReadFollows(account)||!cacheVisible()||!cache.cursor)return Promise.resolve();
+ if(!searchOwner(form,revision)||!canReadFollows(account)||!cacheVisible()||!cache.cursor)return Promise.resolve();
  if(cache.membership)return cache.membership;
- const deps={...suggestionDeps,canRequest:()=>searchOwner(form,account)&&follows===cache};
+ const deps={...suggestionDeps,canRequest:()=>searchOwner(form,revision)&&follows===cache};
  cache.membership=remainingFollowedChannels(account,cache.cursor,deps).then(logins=>new Promise(resolve=>onMainThread(()=>{
-  if(cache===follows&&searchOwner(form,account)){
+  if(cache===follows&&searchOwner(form,revision)){
    for(const login of logins)cache.extraKnown.add(login);
    cache.cursor=''; // F6 bounds each follow snapshot to ten pages total.
   }
@@ -652,8 +656,10 @@ function ensureFollowedMembership(form,account){
 
 function runSearch(form,search){
  const account=credentials;
+ const revision=searchAccountRevision;
  search.started=true;
  search.account=account;
+ search.revision=revision;
  const key=JSON.stringify([accountKey(account),normalizedQuery(search.text)]);
  const now=Date.now();
  for(const [cachedKey,cached] of searchCache){
@@ -661,8 +667,8 @@ function runSearch(form,search){
  }
  const cached=searchCache.get(key);
  if(cached){
-  ensureFollowedMembership(form,account).then(()=>onMainThread(()=>{
-   if(!isCurrentSearch(form,search)||!searchOwner(form,account))return;
+  ensureFollowedMembership(form,account,revision).then(()=>onMainThread(()=>{
+   if(!isCurrentSearch(form,search)||!searchOwner(form,revision))return;
    search.answer=cached.rows;
    publishSearchAnswer(form);
   }));
@@ -674,18 +680,18 @@ function runSearch(form,search){
  // the transport (IINA has no abort).
  const existing=searchInflight.get(key);
  if(existing){existing.waiter={form,search};return;}
- const entry={form,account,waiter:{form,search}};
+ const entry={form,account,revision,waiter:{form,search}};
  searchInflight.set(key,entry);
  executeSearch(key,entry,search.text);
 }
 
 async function executeSearch(key,entry,text){
- const {form,account}=entry;
- const deps={...suggestionDeps,canRequest:()=>searchOwner(form,account)};
- const [rows]=await Promise.all([searchChannels(text,account,deps),ensureFollowedMembership(form,account)]);
+ const {form,account,revision}=entry;
+ const deps={...suggestionDeps,canRequest:()=>searchOwner(form,revision)};
+ const [rows]=await Promise.all([searchChannels(text,account,deps),ensureFollowedMembership(form,account,revision)]);
  onMainThread(()=>{
   if(searchInflight.get(key)===entry)searchInflight.delete(key);
-  const ownerCurrent=searchOwner(form,account);
+  const ownerCurrent=searchOwner(form,revision);
   if(rows!==null&&ownerCurrent){
    searchCache.set(key,{at:Date.now(),rows});
    // Keep the memory-only cache bounded even during rapid typing.
@@ -697,7 +703,7 @@ async function executeSearch(key,entry,text){
    // A later window/account may be waiting on the same key, but the old
    // owner's chain cannot send any more authenticated requests.
    setSearchPending(waiter.form,waiter.search,false);
-   if(searchOwner(waiter.form,waiter.search.account))runSearch(waiter.form,waiter.search);
+   if(searchOwner(waiter.form,waiter.search.revision))runSearch(waiter.form,waiter.search);
    return;
   }
   waiter.search.answer=rows;
@@ -709,14 +715,14 @@ async function executeSearch(key,entry,text){
 function publishSearchAnswer(form){
  const search=form.search;
  if(!search||!isCurrentSearch(form,search)||!form.posted||search.published||search.answer===null)return;
- if(!searchOwner(form,search.account))return;
+ if(!searchOwner(form,search.revision))return;
  // The first follows page can arrive while the search is out. If its
  // cursor is known before this paint, finish membership before splitting
  // the rows. A genuinely late follows answer still obeys F5.
  if(cacheVisible()&&follows.cursor&&canReadFollows(search.account)){
   if(!search.membershipWait){
    search.membershipWait=true;
-   ensureFollowedMembership(form,search.account).then(()=>onMainThread(()=>{
+   ensureFollowedMembership(form,search.account,search.revision).then(()=>onMainThread(()=>{
     search.membershipWait=false;
     if(isCurrentSearch(form,search))publishSearchAnswer(form);
    }));

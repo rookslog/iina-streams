@@ -220,3 +220,4 @@ Same source of truth (the chosen mock, `mock-74-search/`, variant 1) but **R13 s
   - **P-D The spinner** shows only if a request is out for more than 150 ms, and under Reduce Motion it does not rotate and does not read as a letter.
   - **N3 amended:** a full login typed opens that channel when none of your channels matches the text; otherwise Return keeps your top row (R5(a)).
   - Not changed, recorded: Return in the same tick an answer lands can open the row just drawn (exact match first limits the harm); known people found by search sit at the end of your channels even when live (W-22's class); VoiceOver may announce a first other-channel row twice (native N4 decides).
+  - **Lead (2026-11-25):** the page's 'late follows below known rows' guard (10c5efb test) stays as a defensive page guard although F5 makes global never send that list.

@@ -439,7 +439,6 @@
   if(typeof detail.category==='string')clean.category=detail.category;
   if(Number.isFinite(detail.viewers))clean.viewers=Math.max(0,Math.floor(detail.viewers));
   if(typeof detail.lastAt==='string'&&!Number.isNaN(Date.parse(detail.lastAt)))clean.lastAt=detail.lastAt;
-  if(typeof detail.lastTitle==='string'&&detail.lastTitle.trim())clean.lastTitle=detail.lastTitle;
   return Object.keys(clean).length?clean:null;
  }
 
@@ -597,7 +596,7 @@
  }
 
  // A row's content, mock A's: avatar (initial, with the live mark on it), name, Twitch mark, then either
- // "category · title" and viewers (live) or an age and the chevron (offline). Built from text, never markup.
+ // "category · title" and viewers (live) or an age and the chevron (offline, O2). Built from text, never markup.
  function fillRow(row,person){
   const open=!!expanded&&expanded.login===person.login;
   const detail=detailOf(person);
@@ -626,8 +625,8 @@
    sub=[detail.category,detail.title].filter(Boolean).join(' · ');
    if(Number.isFinite(detail.viewers))meta=compact(detail.viewers);
   }else if(person.live===false){
-   // Mock A's offline row: the last broadcast's title as the second line, when known, and its age.
-   if(detail.lastTitle)sub=detail.lastTitle;
+   // O2 (operator's third try): an offline row shows only the age of its last broadcast, and the chevron, never
+   // that broadcast's title: they are offline, and a title can carry an emoji that reads as the live mark.
    if(detail.lastAt)meta=age(detail.lastAt);
   }
   const subNode=el('span','sub',sub);

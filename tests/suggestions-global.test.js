@@ -138,6 +138,13 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
       user.lastBroadcast = lastAtOf(login) ? {startedAt: lastAtOf(login),
         ...(/lastBroadcast\{[^}]*title/.test(flatQuery) && lastTitle ? {title: lastTitle} : {})} : null;
     }
+    // Added 2026-11-25 (phase 2 rev 3, O1): `followers{totalCount}` when the query selects it. details.<login>.followers:
+    // a number answers {totalCount}; null answers followers:null (Twitch hides or fails it); absent omits the field.
+    if (/followers\{[^}]*totalCount/.test(flatQuery)) {
+      const total = (control.details[login] || {}).followers;
+      if (total === null) user.followers = null;
+      else if (total !== undefined) user.followers = {totalCount: total};
+    }
     return user;
   };
 
@@ -1732,14 +1739,17 @@ for (const [mode, signedIn] of MODES) {
   });
 }
 
-test('R1. an exact login match for the typed text (trimmed, case-insensitive) leads O, even when offline', async () => {
+// Amended 2026-11-25 (phase 2 rev 3, TESTS-74): O1 supersedes "an exact login match leads O, even when offline". Here the
+// exact match is offline, so it sorts like any offline row; with no follower totals known it follows the live rows and
+// keeps Twitch's order after them. The exact-live and follower cases are in the O1 tests below.
+test('R1/O1. an exact login match (trimmed, case-insensitive) that is offline no longer leads O: live rows come first', async () => {
   for (const [, signedIn] of MODES) {
     const r = await searchRig({signedIn});
     await r.ask(' RinnyRuns ');
     await r.typeSettled(' RinnyRuns ');
     const answer = searchAnswers(r, 'rinnyruns')[0];
     assert.ok(answer, 'answered');
-    assert.deepEqual(logins(answer.others).slice(0, 3), ['rinnyruns', 'rivenshade', 'riptidejoe']);
+    assert.deepEqual(logins(answer.others).slice(0, 3), ['rivenshade', 'riptidejoe', 'rinnyruns']);
   }
 });
 
@@ -2244,4 +2254,123 @@ test('N1b. a signed-in search held across the hourly re-validation of the same a
   assert.equal(searchAnswers(r).length, 1, 'the answer for the current text is posted once');
   assert.deepEqual(searchPending(r), [true, false], 'with its pending pair closed');
   assert.deepEqual(logins(searchAnswers(r)[0].others), EXPECTED_RI['signed in'].others);
+});
+
+
+// =====================================================================================================================
+// Phase 2 rev 3 (TESTS-74, "Phase 2 rev 3", O1; operator's third try, WAITING W-21 update 2026-11-25 ~05:20).
+// O1: others are live first by viewers, then offline by follower total, highest first. Totals come from the anonymous
+// GQL batch that fetches ages (`followers{totalCount}`), in that same request. An exact login match leads only when it
+// is live. A failed or missing total sorts that row after rows that have one, in the search's own order.
+// Fake: `followers{totalCount}` is answered per login from details.<login>.followers (number; null; absent), only when
+// the query selects it (loadGlobal). The operator's case, typed "ohne", is the fixture. Twitch's order has the exact
+// "ohne" first, as Helix did.
+// =====================================================================================================================
+
+const OHNE_NAMES = {ohne: 'ohne', ohnepixel247: 'ohnePixel247', ohnepixel: 'ohnePixel', ohnesorge: 'ohnesorge',
+  ohnemark: 'ohnemark', ohnetwo: 'ohnetwo'};
+const OHNE_RESULTS = ['ohne', 'ohnesorge', 'ohnepixel247', 'ohnemark', 'ohnepixel', 'ohnetwo']
+  .map(login => ({login, name: OHNE_NAMES[login]}));
+const OHNE_DETAILS = {
+  ohne: {lastAt: '2026-11-24T10:00:00Z', lastTitle: 'hello', followers: 1200},
+  ohnepixel247: {title: 'ohnePixel 24/7', category: 'Just Chatting', viewers: 65, followers: 24000},
+  ohnepixel: {lastAt: '2026-11-20T10:00:00Z', lastTitle: 'cs2 case opening', followers: 3270000},
+  ohnesorge: {lastAt: '2026-11-22T10:00:00Z', lastTitle: 'a', followers: 800},
+  ohnemark: {lastAt: '2026-11-21T10:00:00Z', lastTitle: 'b', followers: 5400},
+  ohnetwo: {lastAt: '2026-11-19T10:00:00Z', lastTitle: 'c', followers: 90},
+};
+
+async function ohneRig({signedIn, details = {}, live = ['ohnepixel247'], ...extra} = {}) {
+  const merged = Object.fromEntries(Object.keys(OHNE_DETAILS).map(login =>
+    [login, {...OHNE_DETAILS[login], ...(details[login] ?? {})}]));
+  return searchRig({signedIn, people: [], liveLogins: live, details: merged, searchResults: OHNE_RESULTS, ...extra});
+}
+
+async function othersFor(r, text) {
+  await r.ask(text);
+  await r.typeSettled(text);
+  const answer = searchAnswers(r, text)[0];
+  assert.ok(answer, `a suggestions-search message for "${text}"`);
+  return logins(answer.others);
+}
+
+for (const [mode, signedIn] of MODES) {
+  test(`O1. ${mode}: "ohne": the live one first, then offline by followers, highest first (the operator's case)`, async () => {
+    const r = await ohneRig({signedIn});
+    assert.deepEqual(await othersFor(r, 'ohne'),
+      ['ohnepixel247', 'ohnepixel', 'ohnemark', 'ohne', 'ohnesorge', 'ohnetwo']);
+  });
+
+  test(`O1. ${mode}: live rows go by viewers, and every live row precedes every offline one whatever its followers`, async () => {
+    const r = await ohneRig({signedIn, live: ['ohnepixel247', 'ohnetwo', 'ohnesorge'], details: {
+      ohnepixel247: {viewers: 65}, ohnetwo: {title: 't', category: 'c', viewers: 900, followers: 90},
+      ohnesorge: {title: 't', category: 'c', viewers: 12, followers: 800}}});
+    assert.deepEqual(await othersFor(r, 'ohne'),
+      ['ohnetwo', 'ohnepixel247', 'ohnesorge', 'ohnepixel', 'ohnemark', 'ohne']);
+  });
+
+  test(`O1. ${mode}: an exact login match leads when it is live, even with fewer viewers`, async () => {
+    const r = await ohneRig({signedIn, live: ['ohne', 'ohnepixel247'],
+      details: {ohne: {title: 't', category: 'c', viewers: 5, followers: 1200}}});
+    assert.deepEqual((await othersFor(r, ' OHNE ')).slice(0, 3), ['ohne', 'ohnepixel247', 'ohnepixel']);
+  });
+
+  test(`O1. ${mode}: an offline exact match sorts by its followers like any offline row, below every live row`, async () => {
+    const few = await ohneRig({signedIn});
+    const fewOrder = await othersFor(few, 'ohne');
+    assert.equal(fewOrder.indexOf('ohne') > fewOrder.indexOf('ohnepixel'), true, 'few followers: after ohnepixel');
+    const many = await ohneRig({signedIn, details: {ohne: {followers: 9000000}}});
+    assert.deepEqual((await othersFor(many, 'ohne')).slice(0, 3), ['ohnepixel247', 'ohne', 'ohnepixel'],
+      'the most followers: first among offline, still below the live row');
+  });
+
+  test(`O1. ${mode}: a missing or null total sorts after every row with a total, in the search's own order`, async () => {
+    const r = await ohneRig({signedIn, details: {ohnesorge: {followers: undefined}, ohnemark: {followers: null},
+      ohnetwo: {followers: 0}}});
+    // Twitch's order: ohne, ohnesorge, ohnepixel247, ohnemark, ohnepixel, ohnetwo. A total of 0 is a total.
+    assert.deepEqual(await othersFor(r, 'ohne'),
+      ['ohnepixel247', 'ohnepixel', 'ohne', 'ohnetwo', 'ohnesorge', 'ohnemark']);
+  });
+}
+
+test('O1. signed in: a failed age lookup loses every total: offline rows keep the search\'s own order after the live one', async () => {
+  const r = await ohneRig({signedIn: true, searchPartFail: 'ages'});
+  assert.deepEqual(await othersFor(r, 'ohne'),
+    ['ohnepixel247', 'ohne', 'ohnesorge', 'ohnemark', 'ohnepixel', 'ohnetwo']);
+});
+
+test('O1. signed out: the totals come in the searchFor request that also fetches ages: anonymous, one request, nothing added', async () => {
+  const r = await ohneRig({signedIn: false});
+  await r.ask('ohne');
+  const before = r.calls().length;
+  await r.typeSettled('ohne');
+  const added = r.calls().slice(before);
+  assert.equal(added.length, 1, `exactly one request, got ${added.length}`);
+  const [call] = added;
+  assert.equal(call.url, GQL);
+  assert.equal(call.options.headers?.Authorization, undefined, 'no token');
+  const flat = call.options.data.query.replace(/\s+/g, '');
+  assert.ok(/lastBroadcast\{[^}]*startedAt/.test(flat), 'the same request fetches ages');
+  assert.ok(/followers\{[^}]*totalCount/.test(flat), 'and follower totals');
+});
+
+test('O1. signed in: the totals come in the one anonymous GQL age request; Helix is not asked for them; no extra request', async () => {
+  const r = await ohneRig({signedIn: true});
+  await r.ask('ohne');
+  const before = r.calls().length;
+  await r.typeSettled('ohne');
+  const added = r.calls().slice(before);
+  assert.equal(added.length, 3, `search, /streams, one age batch; got ${added.length}`);
+  const ages = added.filter(call => call.url === GQL);
+  assert.equal(ages.length, 1, 'one GQL request');
+  const [call] = ages;
+  assert.equal(call.options.headers?.Authorization, undefined, 'anonymous: no Authorization');
+  const flat = call.options.data.query.replace(/\s+/g, '');
+  assert.ok(/lastBroadcast\{[^}]*startedAt/.test(flat), 'it is the age request');
+  assert.ok(/followers\{[^}]*totalCount/.test(flat), 'it selects followers{totalCount}');
+  const asked = quoted(call.options.data.query);
+  assert.ok(asked.includes('ohnepixel') && asked.includes('ohne'), 'for the offline results');
+  for (const helix of added.filter(c => c.url !== GQL)) {
+    assert.ok(!/follow/i.test(helix.url), 'no Helix follower request');
+  }
 });

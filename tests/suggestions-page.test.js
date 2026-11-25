@@ -335,13 +335,15 @@ test('P1d. an offline row with lastAt shows a short age ("2d", "3w") and the bro
   });
   const [two, three, none] = f.options();
   // Amended 2026-11-24 (lead, phase 3b): as in mock A, an offline row shows its last broadcast's title when known.
-  assert.ok(leafTexts(f, two).includes('Rhythm game requests'), 'the last broadcast title is the second line');
+  // Amended 2026-11-25 (phase 2 rev 3, TESTS-74, O2): it no longer does; an offline row shows no title text.
+  assert.ok(!leafTexts(f, two).includes('Rhythm game requests'), 'no last broadcast title on an offline row');
   assert.ok(leafTexts(f, two).includes('2d'), 'two days ago is 2d');
   assert.ok(leafTexts(f, three).includes('3w'), 'three weeks ago is 3w');
   for (const row of [two, three]) {
     assert.ok(f.all(row).some(node => /disclos|chev/i.test(String(node.className))), 'the broadcasts chevron');
   }
-  assert.equal(leftover(f, two, ['2d', 'Brindle', 'B', 'Rhythm game requests']), '', 'name, last title and age, nothing else');
+  // Amended 2026-11-25 (phase 2 rev 3, TESTS-74, O2): the last title is no longer one of the pieces.
+  assert.equal(leftover(f, two, ['2d', 'Brindle', 'B']), '', 'name and age, nothing else (the last title is not shown)');
   assert.equal(leftover(f, three, ['3w', 'Wrenfield', 'W']), '', 'no last title known: name and age only');
   assert.equal(leftover(f, none, ['Hollowell', 'H']), '', 'no lastAt: no age, no placeholder');
 });
@@ -902,7 +904,8 @@ test('R13. offline rows are dimmed, in Y and in O; live rows and rows with unkno
   assert.ok(!dimmed(byName.Unsure), 'unknown status in Y is not dimmed');
 });
 
-test('R12/R13. O rows read from the row itself: live shows category, title and viewers; offline shows last title and age', () => {
+// Amended 2026-11-25 (phase 2 rev 3, TESTS-74, O2): offline rows show name and age, no title.
+test('R12/R13/O2. O rows read from the row itself: live shows category, title and viewers; offline shows age and no title', () => {
   const f = pageFixture();
   frameB(f);
   const [, , riven, , inny] = f.options();
@@ -910,7 +913,7 @@ test('R12/R13. O rows read from the row itself: live shows category, title and v
   assert.ok(live.includes('Valorant · ranked grind to radiant'), `live second line: ${JSON.stringify(live)}`);
   assert.ok(live.includes('15.4K'), 'viewers, compact');
   const offline = leafTexts(f, inny);
-  assert.ok(offline.includes('knitting night'), `offline second line: ${JSON.stringify(offline)}`);
+  assert.ok(!offline.includes('knitting night'), `offline row has no title: ${JSON.stringify(offline)}`);
   assert.ok(offline.includes('4d'), 'offline age');
   assert.ok(String(attr(riven, 'aria-label')).includes('live'), 'spoken name says live');
 });
@@ -1697,4 +1700,56 @@ test('BLINK. with your channels empty, an extending edit draws the typed-name ro
   assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzqxy'], 'again for the next extending letter');
   f.suggest([], 'zzqxy');
   assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzqxy'], 'and it stays when the list answers');
+});
+
+
+// Phase 2 rev 3 (TESTS-74, "Phase 2 rev 3", O2; operator's third try). An offline row shows its name, its age and the
+// broadcasts chevron, and no title text, in your channels and in other channels alike. A live row keeps
+// "category · title" and the viewer count. Row data still carries lastTitle (global's contract is unchanged); the page
+// must not draw it.
+const hasChevron = (f, option) => f.all(option).some(node => /disclos|chev/i.test(String(node.className)));
+const noTitleText = (f, option, titles) => {
+  const texts = leafTexts(f, option).join(' | ');
+  for (const title of titles) assert.ok(!texts.includes(title), `no "${title}" on an offline row: ${texts}`);
+};
+
+test('O2. offline row in your channels: name, age and the broadcasts chevron, no title; live row keeps category, title, viewers', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], 'ri');
+  f.deliver('suggestions-status', {status: {riverlark: true, rimecraft: false},
+    details: {riverlark: SR.riverlark.details, rimecraft: SR.rimecraft.details}});
+  const [live, offline] = f.options();
+  assert.ok(leafTexts(f, live).includes('Outer Wilds · first time through, no spoilers'), 'live: category · title');
+  assert.ok(leafTexts(f, live).includes('2.1K'), 'live: viewers');
+  noTitleText(f, offline, ['Frostpunk 2, the long night', 'Frostpunk']);
+  assert.ok(leafTexts(f, offline).includes('2d'), 'offline: age');
+  assert.ok(hasChevron(f, offline), 'offline: the broadcasts chevron');
+  assert.equal(leftover(f, offline, ['2d', 'Rimecraft', 'R']), '', 'name and age, nothing else');
+});
+
+test('O2. offline row in other channels: name, age and the broadcasts chevron, no title; live row keeps category, title, viewers', () => {
+  const f = pageFixture();
+  frameB(f);
+  const byName = Object.fromEntries(f.options().map(option => [attr(option, 'aria-label').split(',')[0], option]));
+  const [riven, inny] = [byName.RivenShade, byName.rinnyruns];
+  assert.ok(riven && inny, 'fixture: a live and an offline other-channel row');
+  assert.ok(leafTexts(f, riven).includes('Valorant · ranked grind to radiant'), 'live: category · title');
+  assert.ok(leafTexts(f, riven).includes('15.4K'), 'live: viewers');
+  noTitleText(f, inny, ['knitting night', 'knitting']);
+  assert.ok(leafTexts(f, inny).includes('4d'), 'offline: age');
+  assert.ok(hasChevron(f, inny), 'offline: the broadcasts chevron');
+  assert.equal(leftover(f, inny, ['4d', 'rinnyruns', 'R', 'r']), '', 'name and age, nothing else');
+});
+
+test('O2. a known person the search appends to Y (offline) is drawn without a title as well', () => {
+  const f = pageFixture();
+  f.type('ri');
+  f.suggest([yRow(SR.riverlark)], 'ri');
+  searchAnswer(f, 'ri', [SR.rimecraft], []);
+  const rime = f.options().find(option => String(attr(option, 'aria-label')).startsWith('Rimecraft'));
+  assert.ok(rime, 'fixture: the appended known row');
+  noTitleText(f, rime, ['Frostpunk 2, the long night']);
+  assert.ok(leafTexts(f, rime).includes('2d'));
+  assert.ok(hasChevron(f, rime));
 });

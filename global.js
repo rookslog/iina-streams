@@ -744,9 +744,14 @@ function publishSearchAnswer(form){
  }
  const exact=search.text.toLowerCase();
  others.sort((a,b)=>{
-  if((a.login===exact)!==(b.login===exact))return a.login===exact?-1:1;
   if((a.live===true)!==(b.live===true))return a.live===true?-1:1;
-  return a.live===true?(b.details.viewers??0)-(a.details.viewers??0):0;
+  if(a.live===true){
+   if((a.login===exact)!==(b.login===exact))return a.login===exact?-1:1;
+   return (b.details.viewers??0)-(a.details.viewers??0);
+  }
+  // Zero is a known total; missing totals follow all known totals. Stable
+  // sorting keeps Twitch's order for rows with no total (and for ties).
+  return (b.details.followers??-1)-(a.details.followers??-1);
  });
  const appended=known.slice(0,SEARCH_LIMIT),otherRows=others.slice(0,SEARCH_LIMIT);
  search.published=true;

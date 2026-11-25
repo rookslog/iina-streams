@@ -82,41 +82,30 @@ function nextSession(key){
 
 // `id` is a reply key from acceptSender. IINA's global.postMessage takes a player id or a label string
 // (JavascriptAPIGlobal.swift L105-111, IINA v1.5.1).
-function postChild(id,name,data,done=()=>{}){
- if(!isOpen(id)){done();return;}
+function postChild(id,name,data){
+ if(!isOpen(id))return;
  let wire;
  try{
   wire=JSON.stringify(data);
  // Unserializable data cannot reach the child; dropping the message is safe.
  }catch(_){
-  done();return;
+  return;
  }
- if(typeof wire!=='string'||wire.length>8192){done();return;}
+ if(typeof wire!=='string'||wire.length>8192)return;
  const token=name==='auth-ready'&&data.token,session=sessions.get(id);
  // Match the successful native probe: use a primitive payload after the
  // originating child call has returned. Never enqueue native objects.
  timers.setTimeout(()=>{
-  try{
-   if(!isOpen(id)||session!==sessions.get(id))return;
-   if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
-   if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
-   app.postMessage(id,name,wire);
-  }finally{done();}
+  if(!isOpen(id)||session!==sessions.get(id))return;
+  if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
+  if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
+  app.postMessage(id,name,wire);
  },0);
 }
 
-function sendAll(name,data,done){
+function sendAll(name,data){
  if(name==='auth-state')qaTrace('auth-state',{state:data.phase,targets:Array.from(audience)});
- if(!done){
-  for(const id of audience)postChild(id,name,data);
-  return;
- }
- // An upgrade's revoke is gated on the actual delivery turns (or a
- // player closing/retiring before its turn), not just on queue order.
- const targets=Array.from(audience);
- let pending=targets.length;
- if(!pending){done();return;}
- for(const id of targets)postChild(id,name,data,()=>{if(--pending===0)done();});
+ for(const id of audience)postChild(id,name,data);
 }
 
 function normalizeHttpResponse(response){
@@ -195,23 +184,20 @@ const auth=new TwitchAuth({
  now:()=>Date.now(),
  onState:s=>sendAll('auth-state',s),
  onReady:c=>{
-  const completedFlow=followsFlow&&followsFlow.adopting?followsFlow:null;
-  const restored=!!passiveRestore&&!completedFlow;
+  const restored=!!passiveRestore;
   const changed=!credentials||accountKey(credentials)!==accountKey(c);
   credentials=c;
   passiveRestore=null;
-  if(completedFlow)followsFlow=null;
   if(cacheAccount!==accountKey(c))resetSuggestionCaches(c);
-  if(changed||completedFlow||restored){
+  if(changed||restored){
    const form=formInstance;
    if(form)onMainThread(()=>{
     if(credentials!==c||formInstance!==form)return;
-    refreshShowingAccount(false,!!completedFlow,restored);
+    refreshShowingAccount(false,false,restored);
     keepOpenFormLease(form);
    });
   }
-  if(completedFlow)completedFlow.delivered=new Promise(resolve=>sendAll('auth-ready',playerCredentials(c),resolve));
-  else sendAll('auth-ready',playerCredentials(c));
+  sendAll('auth-ready',playerCredentials(c));
  },
  onStop:()=>{
   const hadCredentials=!!credentials;
@@ -242,7 +228,7 @@ const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000,FIRST_SUGGESTION_WAIT_MS=450
 function emptyHistoryStatus(){return {at:-Infinity,pending:false,status:{},details:{}};}
 function emptyFollows(){return {at:-Infinity,pending:false,rows:[],status:{},details:{}};}
 let historyStatus=emptyHistoryStatus(),follows=emptyFollows(),suggestionText='';
-let passiveRestore=null,followsFlow=null,idleAuthStop=false,cacheAccount=null;
+let passiveRestore=null,idleAuthStop=false,cacheAccount=null;
 function canReadFollows(c){
  return !!c&&typeof c.userID==='string'&&/^\d+$/.test(c.userID)&&Array.isArray(c.scopes)&&c.scopes.includes('user:read:follows');
 }
@@ -355,8 +341,6 @@ function showOpenWindow(){
  listen(openWindow,'standaloneWindow','open-edit',onOpenEdit);
  listen(openWindow,'standaloneWindow','open-query',onOpenQuery);
  listen(openWindow,'standaloneWindow','open-vods',onOpenVods);
- listen(openWindow,'standaloneWindow','follows-connect',onFollowsConnect);
- listen(openWindow,'standaloneWindow','follows-open',onFollowsOpen);
  openWindow.setProperty({title:'Open Stream',resizable:false});
  openWindow.setFrame(OPEN_WIDTH,SUGGESTION_HEIGHT);
  openWindow.open();
@@ -371,9 +355,6 @@ function releaseOpenForm(){
   if(form.deadline!==null)timers.clearTimeout(form.deadline);
   if(form.lease!==null)timers.clearTimeout(form.lease);
  }
- // A flow initiated from this window is not allowed to outlive it, even
- // when another player is present. Ordinary player auth remains independent.
- if(followsFlow&&followsFlow.form===form)cancelFollowsFlow(followsFlow);
  if(!audience.size){
   passiveRestore=null;
   if(credentials||['waiting','authorizing'].includes(auth.snapshot().phase))stopIdleAuth();
@@ -387,10 +368,10 @@ function closeOpenWindow(){
 }
 
 // IINA exposes isOpen, but not a standalone-window close callback. While the
-// form owns a grant or pending authorization, check its lease so a native
+// form owns a grant or pending saved-grant restoration, check its lease so a native
 // title-bar close has the same lifetime semantics as open-cancel.
 function keepOpenFormLease(form){
- if(!form||form.lease!==null||(!credentials&&!passiveRestore&&!followsFlow))return;
+ if(!form||form.lease!==null||(!credentials&&!passiveRestore))return;
  form.lease=timers.setTimeout(()=>{
   form.lease=null;
   if(form!==formInstance)return;
@@ -801,7 +782,7 @@ async function onAuthConnect(data,label){
   postChild(id,'auth-ready',playerCredentials(credentials));
   return;
  }
- if(followsFlow||['waiting','authorizing'].includes(auth.snapshot().phase)){
+ if(['waiting','authorizing'].includes(auth.snapshot().phase)){
   postChild(id,'auth-state',auth.snapshot());
   return;
  }
@@ -830,77 +811,6 @@ function chooseClientID(explicit){
  const builtIn=String(BuiltInApp&&BuiltInApp.clientID||'');
  if(!clientID&&/^[A-Za-z0-9]{10,64}$/.test(builtIn))clientID=builtIn;
  return clientID;
-}
-
-// Only this page action can initiate the follows scope upgrade. The
-// verification address comes from TwitchAuth's validated device response,
-// never from a page message.
-function onFollowsConnect(){
- const form=showingReadyForm();
- if(!form||canReadFollows(credentials)||followsFlow)return;
- const clientID=chooseClientID(credentials?.clientID||savedGrantClient());
- const flow={form,adopting:false};
- // The candidate uses the same device protocol but has no access to the
- // saved grant, Keychain writer, player audience or active refresh timer.
- flow.auth=new TwitchAuth({
-  request,
-  diagnostic:code=>gLog('auth-diagnostic',{code}),
-  read:()=>null,
-  write:()=>true,
-  setTimer:timers.setTimeout,
-  clearTimer:timers.clearTimeout,
-  now:()=>Date.now(),
-  acceptValidated:data=>canReadFollows({userID:data.user_id,scopes:data.scopes}),
-  onState:state=>onMainThread(()=>publishFollowsAuthState(flow,state)),
-  onReady:()=>onMainThread(()=>completeFollowsFlow(flow))
- });
- followsFlow=flow;
- keepOpenFormLease(form);
- flow.auth.connect(clientID,{skipStored:true});
-}
-
-function cancelFollowsFlow(flow){
- if(flow!==followsFlow)return;
- followsFlow=null;
- flow.auth.stop();
-}
-
-function completeFollowsFlow(flow){
- if(flow!==followsFlow||flow.form!==showingReadyForm())return;
- flow.adopting=true;
- const result=auth.adoptValidated(flow.auth);
- if(!result.adopted){
-  cancelFollowsFlow(flow);
-  publishFollowsState(flow.form,true);
-  return;
- }
- // adoptValidated saved the replacement. Wait for the old audience's
- // auth-ready deliveries before revoking, without clearing the new grant.
- if(result.previous)flow.delivered.then(()=>onMainThread(()=>{
-  if(credentials?.token!==result.previous.token)
-   request('/revoke','POST',{client_id:result.previous.clientID,token:result.previous.token},{});
- }));
-}
-
-function publishFollowsAuthState(flow,state){
- const current=flow.auth.snapshot();
- if(flow!==followsFlow||flow.form!==showingReadyForm()||state.phase!==current.phase)return;
- if(state.phase==='waiting'){
-  if(state.userCode!==current.userCode||state.verificationURI!==current.verificationURI)return;
-  flow.codePublished=true;
-  postOpenPage('follows-code',envelope({userCode:state.userCode,verificationUri:state.verificationURI}));
- }else if(state.phase==='error'||state.phase==='needs-client'){
-  cancelFollowsFlow(flow);
-  publishFollowsState(flow.form,true);
- }
-}
-
-function onFollowsOpen(){
- const flow=followsFlow;
- if(!flow||!flow.codePublished||flow.form!==showingReadyForm())return;
- const state=flow.auth.snapshot();
- if(state.phase!=='waiting')return;
- if(/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(state.verificationURI||''))utils.open(state.verificationURI);
 }
 
 function onAuthProbe(_,label){
@@ -955,9 +865,8 @@ async function onAuthForget(_,label){
  // The requester's session now. If that label retires or reconnects during the revoke, the reply is dropped
  // rather than landing on a successor controller (r2 #4).
  const session=sessions.get(id);
- const interrupted=!!(followsFlow||passiveRestore);
+ const interrupted=!!passiveRestore;
  const form=formInstance;
- if(followsFlow)cancelFollowsFlow(followsFlow);
  passiveRestore=null;
  const hadCredentials=!!credentials;
  if(!hadCredentials&&cacheAccount!==null)resetSuggestionCaches();

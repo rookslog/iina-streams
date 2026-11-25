@@ -1516,8 +1516,8 @@ function runI1Sequence(seed, steps) {
     } else if (roll < 0.27) {
       kind = 'person'; name = 'arrow';
       const key = pick(['ArrowDown', 'ArrowDown', 'ArrowUp']);
-      f.press(key);
-      personMoved = true; chosen = i1Snapshot(f).sel;
+      // Amended 2026-11-25 (lead, from the page builder's report): an arrow the page ignores (not prevented) is no move.
+      if (f.press(key)) { personMoved = true; chosen = i1Snapshot(f).sel; }
       log.push(key);
     } else if (roll < 0.31) {
       kind = 'person'; name = 'click';
@@ -1564,6 +1564,7 @@ function runI1Sequence(seed, steps) {
           rows = yList.concat(subset(I1_POOL.filter(login => !yList.includes(login)), 2));
         }
         yList = rows;
+        for (const login of rows) kept.delete(login); // Amended 2026-11-25 (lead): a kept login listed in your channels is no longer kept.
         f.deliver('suggestions', {text, rows: rows.map(login => row(login)), ...(reset ? {reset: true} : {})});
         if (reset) { kept = new Set(); lastOthers = new Set(); }
         needList = false;
@@ -1622,7 +1623,8 @@ function runI1Sequence(seed, steps) {
         fail(`the selection changed from ${prev.sel} to ${now.sel} on a ${name} step the person did not make`);
       }
     }
-    if (kind !== 'person' && personMoved && chosen !== null && !reset) {
+    // Amended 2026-11-25 (lead): the typed-name row is a placeholder (TESTS-74 step-back readings), never a pick.
+    if (kind !== 'person' && personMoved && chosen !== null && !reset && !isTyped(chosen)) {
       const was = prev.rows.indexOf(chosen);
       const is = now.rows.indexOf(chosen);
       if (prev.sel === chosen && (is === -1 || is !== was)) {
@@ -1636,7 +1638,7 @@ function runI1Sequence(seed, steps) {
 
 test('I1. the selection invariant holds over seeded pseudo-random message and input sequences (300 sequences of 30 steps)', t => {
   const started = Date.now();
-  const sequences = 300;
+  const sequences = 1000;
   const steps = 30;
   for (let seed = 1; seed <= sequences; seed++) runI1Sequence(seed, steps);
   t.diagnostic(`I1: ${sequences} sequences, ${sequences * steps} steps, ${Date.now() - started} ms`);

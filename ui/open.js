@@ -62,8 +62,6 @@
  let searchPending=false;
  // The field's text at the last edit or prefill, to tell an edit that changes the text from one that doesn't (F2).
  let draftText='';
- // The text, trimmed and lower-cased, whose search ended with no answer (it failed): nothing more will come (P-A).
- let searchEnded=null;
  // P-D: the spinner's delay, and whether it is showing.
  let spinnerTimer=null,spinnerShown=false;
  let heardSuggestions=false;
@@ -184,19 +182,25 @@
   return people.concat(known,late);
  }
 
+ // Every row drawn: your channels, or the typed-name row in their place, then other channels (kept ones included).
  function allRows(){
   const typed=typedRow();
-  return yourRows().concat(others,typed?[typed]:[]);
+  return yourRows().concat(typed?[typed]:[],others);
  }
 
- // P-A: when nothing matches the text (your channels are empty and the search answered with nothing, failed, or was
- // never sent, R4), the typed text is the one row, as a channel: what Return opens. While a search is out, nothing.
+ // I1 / P-B′: the rows the person can select, with the arrows, the pointer or Return. Other channels kept from the
+ // text before are shown but are not among them until the answer for this text replaces them.
+ function selectableRows(){
+  return allRows().filter(person=>!person.kept);
+ }
+
+ // P-A′: when your channels are empty for the text and no selectable other channel is drawn (none yet, a search
+ // still out, an answer with nothing, a failed search, or text never searched, R4), the typed text is a row, as a
+ // channel: what Return opens. It is a placeholder, not a choice, so results that land replace it (I1's exception).
  function typedRow(){
   const text=field.value.trim();
   if(!text||standalone||!heardSuggestions||awaitingText!==null)return null;
-  if(yourRows().length||others.length||searchPending)return null;
-  const textKey=text.toLowerCase();
-  if(SEARCHABLE.test(text)&&searchText!==textKey&&searchEnded!==textKey)return null;
+  if(yourRows().length||others.some(person=>!person.kept))return null;
   return{login:text,provider:TWITCH_LOGIN.test(text)?'twitch':'',displayName:text,live:null,typed:true};
  }
 
@@ -225,10 +229,11 @@
   return answered.filter(person=>!yours.has(person.login)&&matchesText(person,needle));
  }
 
- // The first row becomes selected when nothing is (R5(c), P-A), unless the person chose the typed text, a typed
- // open is under way (a held or second Return would open a row drawn after the first), or the #32 list shows.
+ // I1's exception: when nothing is selected, the first selectable row becomes selected (R5(c), P-A′), unless the
+ // person chose the typed text, a typed open is under way (a held or second Return would open a row drawn after the
+ // first), or the #32 list shows.
  function selectFirstIfNone(){
-  const rows=allRows();
+  const rows=selectableRows();
   if(selection||textChosen||submitted||standalone||awaitingText!==null||!rows.length)return null;
   selection={login:rows[0].login,vod:-1};
   return rows[0];
@@ -244,7 +249,6 @@
   known=[];
   others=[];
   searchText=null;
-  searchEnded=null;
  }
 
  function onSuggestions(data){
@@ -280,12 +284,13 @@
   }
   heardSuggestions=true;
   if(awaitingText!==null&&text===awaitingText)awaitingText=null;
-  const shown=allRows();
+  const shown=selectableRows();
   const has=login=>shown.some(person=>person.login===login);
   if(expanded&&!has(expanded.login)){
    expanded=null;
    if(vodsTarget==='inline')vodsTarget='ignore';
   }
+  // A selection the person did not move follows the top (P2); one they moved stays while its row does.
   if(selection&&(!moved||!has(selection.login)))selection=null;
   if(!selection&&!textChosen&&shown.length)selection={login:shown[0].login,vod:-1};
   render();
@@ -370,23 +375,13 @@
   const value=unwrap(data);
   if(!value||typeof value.text!=='string')return;
   if(!sameText(value.text,field.value))return;
-  const typedBefore=typedRow()!==null;
   if(value.pending===true){
    searchPending=true;
    waitForSpinner();
   }else{
    endPending();
-   // Global sends the answer before the end, so an end with no answer is a failed search (P-A).
-   const textKey=value.text.trim().toLowerCase();
-   if(searchText!==textKey)searchEnded=textKey;
   }
-  if((typedRow()!==null)===typedBefore){
-   showSearchPending();
-   return;
-  }
-  const picked=selectFirstIfNone();
-  render();
-  if(picked)announce(spokenName(picked));
+  showSearchPending();
  }
 
  function waitForSpinner(){
@@ -482,8 +477,9 @@
   return'mark unknown';
  }
 
+ // The typed-name row opens as typed text does (the #32 list if offline), so it has no broadcasts of its own.
  function canBrowse(person){
-  return!!person&&person.provider==='twitch';
+  return!!person&&person.provider==='twitch'&&!person.typed&&!person.kept;
  }
 
  function isSelected(login,vod){
@@ -519,7 +515,7 @@
      hair,
      section(OTHER_CHANNELS,rowNodes(others,yours.length)));
    }else{
-    listbox.replaceChildren(...rowNodes(yours.concat(others,typed?[typed]:[]),0));
+    listbox.replaceChildren(...rowNodes(yours.concat(typed?[typed]:[],others),0));
    }
   }
   showSearchPending();
@@ -568,8 +564,11 @@
   row.setAttribute('aria-selected',String(isSelected(person.login,-1)));
   row.setAttribute('aria-posinset',String(position));
   row.setAttribute('aria-setsize',String(size));
+  // P-B′: a kept row is drawn but cannot be chosen until the answer for this text lands.
+  if(person.kept)row.setAttribute('aria-disabled','true');
   fillRow(row,person);
   row.addEventListener('click',event=>{
+   if(person.kept)return;
    const target=event&&event.target;
    const onChevron=!!target&&typeof target.getAttribute==='function'&&/\bdisclose\b/.test(target.getAttribute('class')||'');
    if(onChevron&&canBrowse(person)){
@@ -589,7 +588,7 @@
   const open=!!expanded&&expanded.login===person.login;
   const detail=detailOf(person);
   // R13: an offline row is dimmed (name and avatar); live rows and rows of unknown status are not.
-  row.setAttribute('class','person'+(open?' expanded':'')+(person.live===false?' dim':''));
+  row.setAttribute('class','person'+(open?' expanded':'')+(person.live===false?' dim':'')+(person.kept?' kept':''));
   row.setAttribute('aria-label',spokenName(person));
   // P-A: the typed name is nobody yet: no avatar letter and no live mark, only the place an avatar would take.
   const avatar=person.typed?el('span','avatar typed'):el('span','avatar',initial(person.displayName));
@@ -716,10 +715,10 @@
 
  // ---- Keys and actions ----
 
- // The rows the arrow keys walk: every person, and the open person's broadcasts under them.
+ // The rows the arrow keys walk: every selectable person, and the open person's broadcasts under them.
  function stops(){
   const list=[];
-  for(const person of allRows()){
+  for(const person of selectableRows()){
    list.push({login:person.login,vod:-1});
    if(expanded&&expanded.login===person.login&&expanded.state==='ready'){
     expanded.items.forEach((_,index)=>list.push({login:person.login,vod:index}));
@@ -754,7 +753,7 @@
  }
 
  function personFor(login){
-  return allRows().find(person=>person.login===login)||null;
+  return selectableRows().find(person=>person.login===login)||null;
  }
 
  // Return or a click on a person always opens them through global's live check, whatever their mark says: a
@@ -770,7 +769,8 @@
   checkingLogin=canBrowse(person)?login:null;
   checkingByPointer=!!byPointer;
   render();
-  openInput(login,checkingLogin?'checking':'standalone');
+  // The typed-name row opens the text in the field, exactly as typing it and pressing Return always has.
+  openInput(person&&person.typed?field.value:login,checkingLogin?'checking':'standalone');
  }
 
  function openSelection(){
@@ -949,7 +949,8 @@
   // so no stale result is ever selectable; those that still match stay until the new answer replaces them. Your
   // channels' own rows stay until the new list. A search still out is for the old text, so the spinner goes too.
   if(!unchanged){
-   const kept=othersStillMatching(field.value);
+   // P-B′: shown, not selectable, until the answer for the new text replaces them.
+   const kept=othersStillMatching(field.value).map(person=>({...person,kept:true}));
    dropSearch();
    others=kept;
    if(!field.value.trim())answered=[];

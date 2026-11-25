@@ -11,11 +11,14 @@ stage is kept for `rollback`. Nothing here enables, reloads, launches or quits I
 and nothing touches the stable or beta identities.
 """
 import argparse
+from contextlib import contextmanager
+import fcntl
 import importlib.util
 import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -75,10 +78,12 @@ def _owned_stage(stage):
         return True
     if stage.is_symlink() or not stage.is_dir():
         return False
-    return all(p.name in {'current', 'previous', '.DS_Store'} or p.name.startswith('.incoming-') for p in stage.iterdir())
+    return all(p.name in {'current', 'previous', '.DS_Store'} or p.name.startswith('.incoming-')
+               or (p.name in {'pending.json', 'auto.lock', 'auto.log'} and p.is_file() and not p.is_symlink())
+               for p in stage.iterdir())
 
 
-def deploy(stage=DEFAULT_STAGE, tests=run_tests, qa=False):
+def deploy(stage=DEFAULT_STAGE, tests=run_tests, qa=False, before_swap=None):
     stage = Path(stage)
     if not _owned_stage(stage):
         raise DevError(f'{stage} holds files this tool did not create; nothing was changed.')
@@ -102,6 +107,12 @@ def deploy(stage=DEFAULT_STAGE, tests=run_tests, qa=False):
         'stagedAt': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
     })
     (incoming / 'BUILD.json').write_text(json.dumps(record, indent=2) + '\n')
+    if before_swap is not None:
+        try:
+            before_swap(record)
+        except Exception:
+            shutil.rmtree(incoming)
+            raise
     current, previous = stage / 'current', stage / 'previous'
     if previous.exists():
         shutil.rmtree(previous)
@@ -176,8 +187,176 @@ def _iina_running():
     try:
         out = subprocess.run(['pgrep', '-x', 'IINA'], capture_output=True, text=True, timeout=5)
     except (OSError, subprocess.TimeoutExpired):
+        return True  # Unknown process state is not permission to replace live files.
+    return out.returncode != 1  # pgrep: 1 means no matching process.
+
+
+def auto_decision(branch, running):
+    if branch != 'next':
+        return 'skip'
+    return 'queue' if running else 'deploy'
+
+
+@contextmanager
+def _auto_guard(stage):
+    """Serialize short queue/lease updates, not the wait or the build."""
+    fd = os.open(stage, os.O_RDONLY)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
+
+
+def _lock_alive(lock):
+    try:
+        pid = json.loads(lock.read_text())['pid']
+        if not isinstance(pid, int) or pid <= 0:
+            return False
+        os.kill(pid, 0)
+    except (FileNotFoundError, ProcessLookupError, ValueError, KeyError, TypeError):
         return False
-    return out.returncode == 0
+    except PermissionError:
+        return True
+    return True
+
+
+def _auto_log(stage, message):
+    with (stage / 'auto.log').open('a') as log:
+        print(f'{time.strftime("%Y-%m-%dT%H:%M:%S%z")} {message}', file=log)
+
+
+class _AutoRetry(Exception):
+    """The conditions for staging changed while building."""
+
+
+def auto_run(stage, branch, running, deploy, sleep, max_wait_seconds=12*3600):
+    """Coalesce next commits and stage the latest checkout once IINA is closed."""
+    if auto_decision(branch, False) == 'skip':
+        return 'skipped'
+    owned = acquired = False
+    try:
+        stage = Path(stage)
+        if stage.is_symlink() or (stage.exists() and not stage.is_dir()):
+            raise DevError(f'{stage} is not an owned stage; nothing was changed.')
+        stage.mkdir(parents=True, exist_ok=True)
+        pending, lock = stage / 'pending.json', stage / 'auto.lock'
+        with _auto_guard(stage):
+            if not _owned_stage(stage):
+                raise DevError(f'{stage} is not an owned stage; nothing was changed.')
+            owned = True
+            pending.write_text(json.dumps({'branch': branch, 'requestedAt': time.time_ns()}) + '\n')
+            if _lock_alive(lock):
+                _auto_log(stage, 'Already waiting; pending build updated.')
+                return 'already-waiting'
+            lock.write_text(json.dumps({'pid': os.getpid()}) + '\n')
+            acquired = True
+
+        waited = 0
+        _auto_log(stage, 'Automatic update requested.')
+        while True:
+            while running():
+                if waited >= max_wait_seconds:
+                    _auto_log(stage, 'Wait limit reached; build remains pending.')
+                    return 'gave-up'
+                interval = min(10, max_wait_seconds - waited)
+                sleep(interval)
+                waited += interval
+            with _auto_guard(stage):
+                request = pending.read_text()
+            try:
+                deploy(stage, qa=True)
+            except _AutoRetry as error:
+                _auto_log(stage, str(error))
+                if waited >= max_wait_seconds:
+                    return 'gave-up'
+                interval = min(10, max_wait_seconds - waited)
+                sleep(interval)
+                waited += interval
+                continue
+            with _auto_guard(stage):
+                if pending.read_text() != request:
+                    # Another commit arrived during the build, not just while waiting.
+                    continue
+                pending.unlink()
+                lock.unlink()
+                acquired = False
+            _auto_log(stage, 'Deployed Streams Dev with the QA harness.')
+            return 'deployed'
+    except Exception as error:
+        try:
+            if owned:
+                _auto_log(stage, f'Automatic update failed: {error}')
+            else:
+                print(f'Automatic update failed: {error}', file=sys.stderr)
+        except Exception:
+            pass
+        return 'failed'
+    finally:
+        if acquired:
+            try:
+                with _auto_guard(stage):
+                    lock.unlink(missing_ok=True)
+            except OSError:
+                pass  # The next invocation can recover a dead PID's lock.
+
+
+def _auto_deploy(stage, qa=False):
+    """Recheck the live conditions immediately before replacing the stage."""
+    if _git('rev-parse', '--abbrev-ref', 'HEAD') != 'next':
+        raise DevError('Checkout is no longer on next; build remains pending.')
+    head = _git('rev-parse', 'HEAD')
+    if not head:
+        raise DevError('Could not resolve HEAD; build remains pending.')
+
+    def before_swap(record):
+        if _git('rev-parse', '--abbrev-ref', 'HEAD') != 'next':
+            raise DevError('Checkout is no longer on next; build remains pending.')
+        if _iina_running() or head != record.get('sourceCommit') or _git('rev-parse', 'HEAD') != head:
+            raise _AutoRetry('IINA reopened or HEAD changed during the build; retrying.')
+
+    return deploy(stage, qa=qa, before_swap=before_swap)
+
+
+def install_auto_hooks(hooks_dir):
+    """Append our marked shell snippet to the shared repository hooks."""
+    hooks_dir = Path(hooks_dir)
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    marker = '# BEGIN IINA Streams Dev auto update'
+    # Git invokes non-bare repository hooks from the triggering worktree root.
+    # Resolve that root at invocation, not the worktree that installed the hook.
+    snippet = f'''{marker}
+if [ "$(git rev-parse --abbrev-ref HEAD)" = next ]; then
+    streams_stage={shlex.quote(str(DEFAULT_STAGE))}
+    if [ ! -L "$streams_stage" ] && mkdir -p "$streams_stage" && [ ! -L "$streams_stage/auto.log" ]; then
+        (
+            # Do not inherit a short-lived commit index or worktree override.
+            unset $(git rev-parse --local-env-vars)
+            exec nohup python3 -B "$(pwd)/scripts/dev.py" auto
+        ) >> "$streams_stage/auto.log" 2>&1 < /dev/null &
+    fi
+fi
+# END IINA Streams Dev auto update
+'''
+    hooks = [(hooks_dir / name) for name in ('post-commit', 'post-merge')]
+    originals = [hook.read_text() if hook.exists() else '#!/bin/sh\n' for hook in hooks]
+    for hook, existing in zip(hooks, originals):
+        if existing.startswith('#!') and marker not in existing:
+            interpreter = shlex.split(existing.splitlines()[0][2:])
+            if interpreter and Path(interpreter[0]).name == 'env':
+                interpreter = interpreter[1:]
+                if interpreter and interpreter[0] == '-S':
+                    interpreter = interpreter[1:]
+            if not interpreter or Path(interpreter[0]).name not in {'sh', 'bash', 'dash', 'zsh', 'ksh'}:
+                raise DevError(f'{hook} is not a shell hook; cannot append shell commands safely.')
+    for hook, existing in zip(hooks, originals):
+        if marker not in existing:
+            if hook.exists():
+                with hook.open('a') as stream:
+                    stream.write('\n\n' + snippet)
+            else:
+                hook.write_text(existing + '\n' + snippet)
+        hook.chmod(hook.stat().st_mode | 0o111)
 
 
 def live_warning(running=_iina_running, enabled=_enabled_pref):
@@ -200,6 +379,7 @@ def status(plugins=DEFAULT_PLUGINS, stage=DEFAULT_STAGE, read_prefs=True):
         'thisWorktreeHead': head,
         'stagedMatchesHead': bool(staged and head and staged.get('sourceCommit') == head and not staged.get('sourceDirty')),
         'previousStaged': bool(_read_build(Path(stage) / 'previous')),
+        'pending': (Path(stage) / 'pending.json').exists(),
     }
 
 
@@ -209,7 +389,7 @@ RELOAD_HINT = ('Next: quit IINA (Cmd-Q) and reopen it. Do NOT use Plugin › Rel
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=['deploy', 'link', 'unlink', 'status', 'rollback'])
+    parser.add_argument('command', choices=['deploy', 'link', 'unlink', 'status', 'rollback', 'auto', 'install-hooks'])
     parser.add_argument('--plugins-dir', default=str(DEFAULT_PLUGINS))
     parser.add_argument('--stage-dir', default=str(DEFAULT_STAGE))
     parser.add_argument('--qa', action='store_true',
@@ -229,6 +409,18 @@ def main(argv=None):
                 warning = live_warning()
                 if warning:
                     print(warning, file=sys.stderr)
+        elif args.command == 'auto':
+            result = auto_run(args.stage_dir, _git('rev-parse', '--abbrev-ref', 'HEAD'),
+                              _iina_running, _auto_deploy, time.sleep)
+            print(result)
+            return 3 if result == 'failed' else 0
+        elif args.command == 'install-hooks':
+            common_dir = _git('rev-parse', '--git-common-dir')
+            if not common_dir:
+                raise DevError('Could not locate the repository common directory.')
+            hooks = ROOT / common_dir / 'hooks'
+            install_auto_hooks(hooks)
+            print(f'Installed automatic Dev update hooks in {hooks}.')
         elif args.command == 'rollback':
             record = rollback(args.stage_dir)
             print(f"Restored {record and record.get('version')}. " + RELOAD_HINT)

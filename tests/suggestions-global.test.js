@@ -237,7 +237,8 @@ test('2. typing: open-query "oh" answers with query("oh")\'s first 20 rows, with
   const expected = r.oracle('oh');
   assert.ok(expected.length > 8, 'fixture: more than 8 matches');
   assert.deepEqual(answer.rows.map(identity), expected.slice(0, 20));
-  assert.ok(!answer.rows.some(row => row.login === 'mroh'), 'word-start matches rank after the prefix matches');
+  const mroh = answer.rows.findIndex(row => row.login === 'mroh');
+  assert.ok(mroh === -1 || answer.rows.slice(mroh).every(row => !row.login.startsWith('oh')), 'word-start matches rank after every prefix match');
   for (const row of answer.rows) {
     assert.deepEqual(Object.keys(row).sort(), ['displayName', 'live', 'login', 'provider'], 'no visits, no scores');
     assert.ok([true, false, null].includes(row.live), 'live is true, false or null');
@@ -293,7 +294,7 @@ test('5a. signed out: one batched GQL request listing the logins, answered as su
   assert.deepEqual(statuses[0], {status: statusMap(logins, ['p01', 'p03'])});
   const later = await r.ask('');
   assert.deepEqual(later.rows.map(row => [row.login, row.live]),
-    r.oracle('').slice(0, 8).map(row => [row.login, ['p01', 'p03'].includes(row.login)]), 'later suggestions carry cached live');
+    r.oracle('').slice(0, 20).map(row => [row.login, ['p01', 'p03'].includes(row.login)]), 'later suggestions carry cached live');
   assert.equal(r.statusRequests(), 1, 'asking again makes no request');
 });
 
@@ -351,7 +352,7 @@ test('5d. a success also holds the 60 s rule, and reopening serves the cached li
   const reopened = r.messages('suggestions').at(-1);
   assert.equal(reopened.text, '');
   assert.deepEqual(reopened.rows.map(row => [row.login, row.live]),
-    r.oracle('').slice(0, 8).map(row => [row.login, row.login === 'p01']), 'cached values on the reopened page');
+    r.oracle('').slice(0, 20).map(row => [row.login, row.login === 'p01']), 'cached values on the reopened page');
   r.shim.timers.advance(29999);
   await r.reopen();
   assert.equal(r.statusRequests(), 1, 'still one at 59.999 s');
@@ -466,8 +467,8 @@ test('9. paused history still serves suggestions; cleared history serves rows: [
   await paused.showOpen();
   const first = paused.messages('suggestions').find(message => message.text === '');
   assert.ok(first, 'a paused history answers open-ready');
-  assert.deepEqual(first.rows.map(identity), paused.oracle('').slice(0, 8));
-  assert.deepEqual((await paused.ask('oh')).rows.map(identity), paused.oracle('oh').slice(0, 8));
+  assert.deepEqual(first.rows.map(identity), paused.oracle('').slice(0, 20));
+  assert.deepEqual((await paused.ask('oh')).rows.map(identity), paused.oracle('oh').slice(0, 20));
 
   const cleared = loadGlobal();
   await cleared.showOpen();
@@ -486,7 +487,7 @@ test('10. speed: answering open-query with 500 people takes under 20 ms of handl
   const r = loadGlobal({people});
   await r.showOpen();
   const answer = await r.ask('a');
-  assert.equal(answer.rows.length, 8, 'fixture: 500 matches, 8 answered');
+  assert.equal(answer.rows.length, 20, 'fixture: 500 matches, 20 answered');
   const times = [];
   for (let run = 0; run < 5; run++) {
     const start = performance.now();

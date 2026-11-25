@@ -249,8 +249,10 @@ test('12. Return: with a selection it posts open-stream {input: login}', () => {
   const f = pageFixture();
   f.suggest();
   f.press('ArrowDown');
+  f.press('ArrowDown');
   f.press('Enter');
-  assert.deepEqual(f.posts('open-stream'), [{input: 'ohmwrecker'}], 'one open-stream, with the selected login');
+  // Oh Baby's status is unknown, so Return runs today's open (the live check); an offline mark skips it (below).
+  assert.deepEqual(f.posts('open-stream'), [{input: 'ohbaby'}], 'one open-stream, with the selected login');
 });
 
 test('12. Return: typing "oh" then Return opens the top match, not the typed text', () => {
@@ -265,8 +267,7 @@ test('12. Return: on a person known to be offline it opens their broadcasts in t
   // Lead, 2026-11-24 ~20:55, after the design review (finding 3): the old path shrank the window to a spinner,
   // then showed the #32 list with another key model. An offline person's broadcasts open inline, as with →.
   const f = pageFixture();
-  f.suggest();
-  f.deliver('suggestions-status', {status: {ohnepixel: true, ohmwrecker: false}});
+  f.suggest();  // OhmWrecker's row already carries live: false; any offline mark (row or status) skips the check
   f.press('ArrowDown');
   f.press('Enter');
   assert.deepEqual(f.posts('open-vods'), [{login: 'ohmwrecker'}]);

@@ -71,7 +71,7 @@
  // The #32 list is showing in place of the suggestions, and its state.
  let standalone=false,standaloneState='idle';
  // The text of the latest open-query that global has not answered yet, and a Return waiting for that answer.
- let awaitingText=null,returnPending=false,returnTimer=null;
+ let awaitingText=null,returnPending=false,returnTimer=null,earlyReturn=false;
  let optionNodes=new Map(),groupNode=null;
  // The selected row last scrolled into view, so a status update never scrolls the list under the pointer.
  let revealedKey=null;
@@ -158,6 +158,10 @@
   if(selection&&(!moved||!has(selection.login)))selection=null;
   if(!selection&&!textChosen&&people.length)selection={login:people[0].login,vod:-1};
   render();
+  if(earlyReturn){
+   earlyReturn=false;
+   if(selection&&field.value==='')openSelection();
+  }
   if(returnPending&&awaitingText===null)finishReturn();
  }
 
@@ -657,6 +661,7 @@
   pendingInput=null;
   selection=null;
   textChosen=false;
+  earlyReturn=false;
   moved=false;
   expanded=null;
   checkingLogin=null;
@@ -681,6 +686,13 @@
  // it waits for that answer, briefly, so it never opens the top match of an older text.
  function onReturn(event){
   if(standalone)return;
+  // D4: Return on an empty field before global's first list (up to 450 ms after opening, C1) waits for that
+  // list and opens its top row once; an empty list opens nothing. With text, the text is submitted as before.
+  if(!heardSuggestions&&field.value===''){
+   event.preventDefault();
+   earlyReturn=true;
+   return;
+  }
   if(awaitingText!==null&&typeof setTimeout==='function'){
    event.preventDefault();
    returnPending=true;

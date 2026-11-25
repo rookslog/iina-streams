@@ -1605,6 +1605,10 @@ function runI1Sequence(seed, steps) {
 
     const now = i1Snapshot(f);
     if (now.selCount > 1) fail('more than one row is selected');
+    // At most one row carries the selected look (aria-selected or a selected-state class), and it is the activedescendant.
+    const looks = f.options().filter(option => attr(option, 'aria-selected') === 'true' || classOf(option).some(token => STATE_CLASS.test(token)));
+    if (looks.length > 1) fail(`${looks.length} rows carry the selected look`);
+    if (looks.length === 1 && looks[0].id !== now.active) fail('the row with the selected look is not the aria-activedescendant');
     if (now.sel === null && now.active !== null) fail('aria-activedescendant names a row but none is selected');
     if (now.sel !== null && now.active !== now.selectedId) fail('aria-activedescendant is not the selected row');
     if (kept.size && now.sel !== null && kept.has(now.sel)) fail(`kept row ${now.sel} is selected (kept rows are not selectable)`);
@@ -1642,4 +1646,39 @@ test('I1. the selection invariant holds over seeded pseudo-random message and in
   const steps = 30;
   for (let seed = 1; seed <= sequences; seed++) runI1Sequence(seed, steps);
   t.diagnostic(`I1: ${sequences} sequences, ${sequences * steps} steps, ${Date.now() - started} ms`);
+});
+
+
+// ---- Final design clearance (TESTS-74, probes DUP and BLINK in search-review/r4.mjs), 2026-11-25 ----
+
+test('DUP. typing the last letter of the name of a kept row: one row selected, the typed-name row; the kept row with that login is not drawn', () => {
+  const f = pageFixture();
+  f.type('rivenshad');
+  f.suggest([], 'rivenshad');
+  searchAnswer(f, 'rivenshad', [], [SR.rivenshade]);
+  f.type('rivenshade');
+  f.suggest([], 'rivenshade');
+  const named = f.options().filter(option => rowName(f, option).toLowerCase() === 'rivenshade');
+  assert.equal(named.length, 1, `one row for "rivenshade", not ${f.options().map(option => rowName(f, option)).join(', ')}`);
+  assert.equal(f.options().length, 1, 'and nothing else');
+  const looks = f.options().filter(option => attr(option, 'aria-selected') === 'true');
+  assert.equal(looks.length, 1, 'exactly one row is drawn as selected');
+  assert.equal(looks[0], named[0], 'it is the typed-name row');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), looks[0].id, 'aria-activedescendant points at it');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'rivenshade'}], 'Return opens "rivenshade"');
+});
+
+test('BLINK. with your channels empty, an extending edit draws the typed-name row for the new text at once, before the list answers', () => {
+  const f = pageFixture();
+  f.type('zzq');
+  f.suggest([], 'zzq');
+  assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzq'], 'fixture: the typed-name row is drawn');
+  f.type('zzqx');
+  assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzqx'], 'drawn for "zzqx" at the keystroke');
+  assert.deepEqual(f.selected(), f.options(), 'and selected');
+  f.type('zzqxy');
+  assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzqxy'], 'again for the next extending letter');
+  f.suggest([], 'zzqxy');
+  assert.deepEqual(f.options().map(option => rowName(f, option)), ['zzqxy'], 'and it stays when the list answers');
 });

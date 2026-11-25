@@ -38,6 +38,14 @@
  // R10: the two groups' names, heard by VoiceOver and never drawn.
  const YOUR_CHANNELS='Your channels';
  const OTHER_CHANNELS='Other channels';
+ // P-D: the search spinner shows only once a request has been out this long, so a quick answer never flickers it.
+ const SPINNER_DELAY_MS=150;
+ // R3 (src/twitch-vods.js searchText): text global may search, once trimmed. Anything else gets no other channels.
+ const SEARCHABLE=/^[\p{L}\p{M}\p{Nd}_ ]{2,40}$/u;
+ // A Twitch login (src/history.js): only such a typed name gets the Twitch mark and the broadcasts chevron (P-A).
+ const TWITCH_LOGIN=/^[A-Za-z0-9_]{1,25}$/;
+ // A word starts after a character that is not part of a word (src/history.js matchRank).
+ const WORD_CHARACTER=/[\p{L}\p{N}\p{M}]/u;
 
  // People as global last sent them, in its order. Live status never reorders them.
  let people=[];
@@ -47,10 +55,17 @@
  // Your channels that a list for the same text added after known people were drawn (late follows, D2): they go
  // below the known rows, so those never move.
  let late=[];
+ // P-B: the other channels of the last search answer. Each keystroke shows those that still match the new text, until
+ // the new answer replaces them. Emptied when the field is, on a prefill and on an account change.
+ let answered=[];
  // A search request for the text in the field is out (R9).
  let searchPending=false;
  // The field's text at the last edit or prefill, to tell an edit that changes the text from one that doesn't (F2).
  let draftText='';
+ // The text, trimmed and lower-cased, whose search ended with no answer (it failed): nothing more will come (P-A).
+ let searchEnded=null;
+ // P-D: the spinner's delay, and whether it is showing.
+ let spinnerTimer=null,spinnerShown=false;
  let heardSuggestions=false;
  // The selected row: {login, vod}, where vod is -1 for the person row or a broadcast index under them.
  let selection=null;
@@ -146,7 +161,8 @@
   selection=null;
   expanded=null;
   dropSearch();
-  searchPending=false;
+  answered=[];
+  endPending();
   render();
  }
 
@@ -169,7 +185,53 @@
  }
 
  function allRows(){
-  return yourRows().concat(others);
+  const typed=typedRow();
+  return yourRows().concat(others,typed?[typed]:[]);
+ }
+
+ // P-A: when nothing matches the text (your channels are empty and the search answered with nothing, failed, or was
+ // never sent, R4), the typed text is the one row, as a channel: what Return opens. While a search is out, nothing.
+ function typedRow(){
+  const text=field.value.trim();
+  if(!text||standalone||!heardSuggestions||awaitingText!==null)return null;
+  if(yourRows().length||others.length||searchPending)return null;
+  const textKey=text.toLowerCase();
+  if(SEARCHABLE.test(text)&&searchText!==textKey&&searchEnded!==textKey)return null;
+  return{login:text,provider:TWITCH_LOGIN.test(text)?'twitch':'',displayName:text,live:null,typed:true};
+ }
+
+ // The page's own match rule, as global's (src/history.js matchRank): the login or display name starts with the
+ // text, or a word of the display name does.
+ function matchesText(person,needle){
+  const login=person.login.toLowerCase();
+  const name=person.displayName.toLowerCase();
+  if(login.startsWith(needle)||name.startsWith(needle))return true;
+  let previous=null,offset=0;
+  for(const character of name){
+   if(previous!==null&&!WORD_CHARACTER.test(previous)&&name.startsWith(needle,offset))return true;
+   previous=character;
+   offset+=character.length;
+  }
+  return false;
+ }
+
+ // P-B: the other channels shown on a keystroke: the last answer's that still match the new text, if it may be
+ // searched, and that are not on your channels.
+ function othersStillMatching(text){
+  const trimmed=text.trim();
+  if(!SEARCHABLE.test(trimmed))return[];
+  const needle=trimmed.toLowerCase();
+  const yours=new Set(people.map(person=>person.login));
+  return answered.filter(person=>!yours.has(person.login)&&matchesText(person,needle));
+ }
+
+ // The first row becomes selected when nothing is (R5(c), P-A), unless the person chose the typed text, a typed
+ // open is under way (a held or second Return would open a row drawn after the first), or the #32 list shows.
+ function selectFirstIfNone(){
+  const rows=allRows();
+  if(selection||textChosen||submitted||standalone||awaitingText!==null||!rows.length)return null;
+  selection={login:rows[0].login,vod:-1};
+  return rows[0];
  }
 
  function sameText(a,b){
@@ -182,6 +244,7 @@
   known=[];
   others=[];
   searchText=null;
+  searchEnded=null;
  }
 
  function onSuggestions(data){
@@ -191,7 +254,10 @@
   let rows=cleanRows(value.rows);
   // F4: after an account change global re-sends the list with reset:true. The drawn search rows were the old
   // account's, so they go and the fresh list is drawn; the next search answer for this text draws afresh.
-  if(value.reset===true)dropSearch();
+  if(value.reset===true){
+   dropSearch();
+   answered=[];
+  }
   if(searchText!==null&&sameText(text,searchText)){
    // R8: a person already drawn from the search stays where they are until the next text.
    const drawn=new Set(known.concat(others).map(row=>row.login));
@@ -209,6 +275,8 @@
   }else{
    people=rows;
    late=[];
+   // Other channels kept from the text before (P-B) give way to anyone on your channels: one person once.
+   others=others.filter(row=>!rows.some(person=>person.login===row.login));
   }
   heardSuggestions=true;
   if(awaitingText!==null&&text===awaitingText)awaitingText=null;
@@ -250,14 +318,20 @@
   }
  }
 
- // R1, R5, R7: the search answer for the text in the field. Its rows are appended, never inserted, so rows already
- // shown keep their places; an answer for any other text is dropped. With rows on your channels the selection
- // stays where it is; with none, the first row is selected as it is drawn, and only then is it announced (R10).
+ // R1, R5, R7, P-B: the search answer for the text in the field; an answer for any other text is dropped. The first
+ // answer for a text replaces the other channels kept from the text before, in its order; a later one for the same
+ // text only appends, so rows already shown keep their places. The selection stays on the same person if they are
+ // still there; otherwise the first row is selected, and only then is it announced (R10).
  function onSuggestionsSearch(data){
   const value=unwrap(data);
   if(!value||typeof value.text!=='string')return;
   if(!field.value.trim()||!sameText(value.text,field.value))return;
-  const shown=new Set(allRows().map(row=>row.login));
+  const textKey=value.text.trim().toLowerCase();
+  if(searchText!==textKey){
+   known=[];
+   others=[];
+  }
+  const shown=new Set(yourRows().concat(others).map(row=>row.login));
   // Rows not yet on the list, each with the details it carries (search rows are not updated later, R12).
   const fresh=list=>{
    const rows=[];
@@ -277,18 +351,18 @@
   const newOthers=fresh(value.others);
   known=known.concat(newKnown).slice(0,SEARCH_ROWS);
   others=others.concat(newOthers).slice(0,SEARCH_ROWS);
-  searchText=value.text.trim().toLowerCase();
-  let selectedNow=false;
+  answered=others.slice();
+  searchText=textKey;
   const rows=allRows();
-  // Not while the typed text is being opened (a held or second Return would open a row drawn after the first) or
-  // while the #32 list hides the suggestions.
-  const free=!submitted&&!standalone;
-  if(free&&awaitingText===null&&!selection&&!textChosen&&rows.length){
-   selection={login:rows[0].login,vod:-1};
-   selectedNow=true;
+  const has=login=>rows.some(person=>person.login===login);
+  if(expanded&&!has(expanded.login)){
+   expanded=null;
+   if(vodsTarget==='inline')vodsTarget='ignore';
   }
+  if(selection&&!has(selection.login))selection=null;
+  const picked=selectFirstIfNone();
   render();
-  if(selectedNow)announce(spokenName(rows[0]));
+  if(picked)announce(spokenName(picked));
  }
 
  // R9: a search request for the field's text started or ended. Messages for any other text are ignored.
@@ -296,14 +370,51 @@
   const value=unwrap(data);
   if(!value||typeof value.text!=='string')return;
   if(!sameText(value.text,field.value))return;
-  searchPending=value.pending===true;
-  showSearchPending();
+  const typedBefore=typedRow()!==null;
+  if(value.pending===true){
+   searchPending=true;
+   waitForSpinner();
+  }else{
+   endPending();
+   // Global sends the answer before the end, so an end with no answer is a failed search (P-A).
+   const textKey=value.text.trim().toLowerCase();
+   if(searchText!==textKey)searchEnded=textKey;
+  }
+  if((typedRow()!==null)===typedBefore){
+   showSearchPending();
+   return;
+  }
+  const picked=selectFirstIfNone();
+  render();
+  if(picked)announce(spokenName(picked));
  }
 
+ function waitForSpinner(){
+  if(spinnerShown||spinnerTimer!==null)return;
+  if(typeof setTimeout!=='function'){
+   spinnerShown=true;
+   showSearchPending();
+   return;
+  }
+  spinnerTimer=setTimeout(()=>{
+   spinnerTimer=null;
+   spinnerShown=searchPending;
+   showSearchPending();
+  },SPINNER_DELAY_MS);
+ }
+
+ function endPending(){
+  searchPending=false;
+  if(spinnerTimer!==null&&typeof clearTimeout==='function')clearTimeout(spinnerTimer);
+  spinnerTimer=null;
+  spinnerShown=false;
+ }
+
+ // The spinner and the listbox's busy state go together, after the delay (R9, P-D).
  function showSearchPending(){
-  if(searchSpinner)searchSpinner.hidden=!searchPending;
+  if(searchSpinner)searchSpinner.hidden=!spinnerShown;
   if(!listbox)return;
-  if(searchPending)listbox.setAttribute('aria-busy','true');
+  if(spinnerShown)listbox.setAttribute('aria-busy','true');
   else listbox.removeAttribute('aria-busy');
  }
 
@@ -391,7 +502,8 @@
   if(area)area.hidden=!showList;
   if(clearButton)clearButton.hidden=field.value==='';
   const yours=yourRows();
-  const count=yours.length+others.length;
+  const typed=typedRow();
+  const count=yours.length+others.length+(typed?1:0);
   field.setAttribute('aria-expanded',String(showList&&count>0));
   if(emptyGlyph)emptyGlyph.hidden=!(showList&&heardSuggestions&&!count&&field.value==='');
   optionNodes=new Map();
@@ -407,7 +519,7 @@
      hair,
      section(OTHER_CHANNELS,rowNodes(others,yours.length)));
    }else{
-    listbox.replaceChildren(...rowNodes(yours.concat(others),0));
+    listbox.replaceChildren(...rowNodes(yours.concat(others,typed?[typed]:[]),0));
    }
   }
   showSearchPending();
@@ -479,10 +591,13 @@
   // R13: an offline row is dimmed (name and avatar); live rows and rows of unknown status are not.
   row.setAttribute('class','person'+(open?' expanded':'')+(person.live===false?' dim':''));
   row.setAttribute('aria-label',spokenName(person));
-  const avatar=el('span','avatar',initial(person.displayName));
+  // P-A: the typed name is nobody yet: no avatar letter and no live mark, only the place an avatar would take.
+  const avatar=person.typed?el('span','avatar typed'):el('span','avatar',initial(person.displayName));
   avatar.setAttribute('aria-hidden','true');
-  if(avatar.style&&typeof avatar.style.setProperty==='function')avatar.style.setProperty('--av',avatarColour(person.login));
-  if(person.live!==false){
+  if(!person.typed&&avatar.style&&typeof avatar.style.setProperty==='function'){
+   avatar.style.setProperty('--av',avatarColour(person.login));
+  }
+  if(!person.typed&&person.live!==false){
    const mark=el('span',markClass(person));
    if(person.live===null)mark.setAttribute('title','Status unavailable');
    avatar.append(mark);
@@ -830,11 +945,15 @@
   checkingLogin=null;
   vodsTarget='ignore';
   awaitingText=field.value;
-  // R6: the old text's search rows go at the keystroke, so no stale result is ever selectable; your channels' own
-  // rows stay until the new list. A search still out is for the old text, so the spinner goes too.
+  // R6 and P-B: at the keystroke, known people the search found go, and so do other channels that no longer match,
+  // so no stale result is ever selectable; those that still match stay until the new answer replaces them. Your
+  // channels' own rows stay until the new list. A search still out is for the old text, so the spinner goes too.
   if(!unchanged){
+   const kept=othersStillMatching(field.value);
    dropSearch();
-   searchPending=false;
+   others=kept;
+   if(!field.value.trim())answered=[];
+   endPending();
   }
   announce('');
   clearOfflineVods();

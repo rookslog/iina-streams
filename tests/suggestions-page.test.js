@@ -744,6 +744,8 @@ const searchPending = (f, text, pending) => f.deliver('suggestions-search-pendin
 const loginsShown = f => f.options().map(option => option.getAttribute('id') && optionLogin(f, option));
 // The login of a shown option, read from the way the page names its rows: the aria-label starts with the display name.
 const NAME_TO_LOGIN = Object.fromEntries(Object.values(SR).map(row => [row.displayName, row.login]));
+// Amended 2026-11-25 (lead; the page builder found the gap): names used only by the P-B tests.
+Object.assign(NAME_TO_LOGIN, {'Rivendell': 'rivendell', 'Tidal Wave': 'xk1'});
 function optionLogin(f, option) {
   const label = String(attr(option, 'aria-label') ?? '');
   const name = Object.keys(NAME_TO_LOGIN).sort((a, b) => b.length - a.length).find(candidate => label.startsWith(candidate));

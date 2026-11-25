@@ -82,9 +82,15 @@ form .search-pending{position:absolute;right:27px;top:8px;margin:0;color:var(--s
 .person[aria-selected=true] .sub,.person[aria-selected=true] .meta,.person[aria-selected=true] .platform{color:var(--on-selection-2)}
 /* #74 search (mock-74-search, variant 1): an offline row's name and avatar are dimmed, as drawn. Live rows and rows
    whose status is unknown are not. A selected row is not dimmed, so its white text keeps its contrast on the blue. */
-.person.dim .name,.person.dim .avatar{opacity:.55}
-.person.dim[aria-selected=true] .name,.person.dim[aria-selected=true] .avatar{opacity:1}
-@media(prefers-contrast:more){.person.dim .name,.person.dim .avatar{opacity:1}}
+/* P-C: the name is dimmed by colour, not opacity, so it keeps 4.5:1 or better against the window (5.6:1 light,
+   6.3:1 dark, from these tokens); the mock's opacity .55 gave 3.5:1 in light. */
+.person.dim .name{color:var(--secondary)}
+.person.dim .avatar{opacity:.55}
+.person.dim[aria-selected=true] .name{color:inherit}
+.person.dim[aria-selected=true] .avatar{opacity:1}
+@media(prefers-contrast:more){.person.dim .avatar{opacity:1}}
+/* P-A: the typed name's row keeps the avatar's place, empty. */
+.avatar.typed{background:none}
 /* Your channels, then other channels below a hairline; drawn only when both show (R13). */
 .hair{height:1px;margin:4px 6px;background:var(--line)}
 
@@ -146,4 +152,6 @@ form .search-pending{position:absolute;right:27px;top:8px;margin:0;color:var(--s
 /* Still, the busy ring stays an open arc, so it never looks like the closed ring of an unknown status. */
 @media(prefers-reduced-motion:reduce){
  .busy-indicator{animation:none;opacity:.5}
+ form .search-pending{animation:none;width:15px;height:4px;top:12px;border:0;border-radius:0;opacity:.8;
+  background:radial-gradient(circle,currentColor 1.4px,transparent 1.8px) 0 0/5px 4px repeat-x}
 }

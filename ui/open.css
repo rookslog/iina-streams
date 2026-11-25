@@ -4,46 +4,106 @@
  --line:rgba(0,0,0,.16);
  --surface:rgba(255,255,255,.6);
  --accent:#1661c8;
+ --selection:#1661c8;
+ --on-selection:#fff;
+ --live:#ce2929;
+ --selected-live:#ffb0ae;
  --error:#aa2932;
- --secondary:rgba(0,0,0,.55);
+ --secondary:rgba(0,0,0,.68);
  --hover:rgba(0,0,0,.06);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;height:100%;overflow:hidden}
-/* A column centred in the window: the field alone, or the field over the broadcast list (B6c). Global grows
-   the window by one row height per row, so the field keeps its place. */
-body{display:flex;flex-direction:column;justify-content:center;padding:0 14px;background:transparent}
-form{flex:none}
+/* IINA's frame includes the native title bar. Reserve the rest of the original 84px
+   frame for the field, leaving 224px for eight compact rows. */
+body{display:flex;flex-direction:column;padding:0 14px;background:transparent}
+form{flex:0 0 56px;display:flex;align-items:center;position:relative}
+form::before{
+ content:"";position:absolute;left:9px;top:20px;width:9px;height:9px;
+ border:1.5px solid var(--secondary);border-radius:50%;pointer-events:none
+}
+form::after{
+ content:"";position:absolute;left:17px;top:29px;width:5px;height:1.5px;
+ background:var(--secondary);transform:rotate(45deg);transform-origin:left center;pointer-events:none
+}
 input{
  width:100%;
  min-height:28px;
- padding:4px 8px;
+ padding:4px 32px 4px 28px;
  font:inherit;
  color:inherit;
  background:var(--surface);
  border:1px solid var(--line);
  border-radius:6px;
 }
+input::placeholder{color:var(--secondary)}
+#clear-input{
+ position:absolute;right:5px;width:22px;height:22px;padding:0;border:0;
+ border-radius:50%;background:transparent;color:var(--secondary)
+}
+#clear-input::before,#clear-input::after{
+ content:"";position:absolute;left:6px;top:10px;width:10px;height:1.5px;
+ background:currentColor;transform:rotate(45deg)
+}
+#clear-input::after{transform:rotate(-45deg)}
+#clear-input:hover{background:var(--hover)}
+#clear-input:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 input:focus-visible{outline:3px solid color-mix(in srgb,var(--accent),transparent 30%);outline-offset:1px}
 /* Invalid input is shown by state, not text (#50). */
 input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error);outline-offset:0}
 @media(prefers-color-scheme:dark){
  :root{--line:rgba(255,255,255,.18);--surface:rgba(255,255,255,.08);--accent:#8ab9ff;--error:#ff929a;
-  --secondary:rgba(255,255,255,.6);--hover:rgba(255,255,255,.08)}
+  --secondary:rgba(255,255,255,.72);--hover:rgba(255,255,255,.08);--selection:#2559b5;--live:#ff5656}
 }
 @media(prefers-contrast:more){
- :root{--line:CanvasText;--surface:Canvas}
+ :root{--line:CanvasText;--surface:Canvas;--secondary:CanvasText}
 }
-/* B6c: an offline channel's recent broadcasts, under the field. Rows are plain text: title, date, length. */
-.offline-vods{margin:6px 0 0}
+.suggestions{
+ height:224px;min-height:0;overflow-y:auto;overflow-x:hidden;
+}
+.suggestion-row{
+ display:flex;align-items:center;gap:9px;height:28px;padding:0 4px 0 8px;
+ border-radius:6px;cursor:default;user-select:none
+}
+.suggestions[aria-busy=true] .suggestion-row{visibility:hidden}
+.suggestion-row:hover{background:var(--hover)}
+.suggestion-row[aria-selected=true]{background:var(--selection);color:var(--on-selection)}
+.suggestion-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-mark{width:8px;height:8px;flex:none;border-radius:50%}
+.live-mark.live{background:var(--live)}
+.live-mark.unknown{border:1.5px solid var(--secondary)}
+.suggestion-row[aria-selected=true] .live-mark.live{background:var(--selected-live)}
+.suggestion-row[aria-selected=true] .live-mark.unknown{border-color:currentColor}
+.suggestion-disclosure{
+ display:grid;place-items:center;flex:none;width:26px;height:26px;
+ border-radius:5px;opacity:0
+}
+.suggestion-disclosure::before,#broadcast-back::before{
+ content:"";width:6px;height:6px;border-top:1.5px solid currentColor;
+ border-right:1.5px solid currentColor;transform:rotate(45deg)
+}
+.suggestion-row:hover .suggestion-disclosure,.suggestion-row[aria-selected=true] .suggestion-disclosure{opacity:1}
+.suggestion-disclosure:hover{background:color-mix(in srgb,currentColor,transparent 88%)}
+/* B6c: preserve its native frame sizing for a typed channel. Browsing from a suggestion
+   instead keeps the host frame, and the same list scrolls when needed. */
+.offline-vods{display:flex;flex-direction:column;min-height:0}
+.broadcast-header{display:flex;align-items:center;gap:7px;height:28px;flex:none;font-weight:600}
+#broadcast-back{
+ display:grid;place-items:center;width:26px;height:26px;padding:0;
+ border:0;border-radius:5px;background:transparent;color:inherit
+}
+#broadcast-back::before{transform:rotate(-135deg)}
+#broadcast-back:hover{background:var(--hover)}
+#broadcast-back:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#broadcast-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .busy-indicator{display:inline-block;width:12px;height:12px;margin:8px 0 0 8px;border-radius:50%;
  border:2px solid currentColor;border-right-color:transparent;opacity:.6;animation:streams-spin .9s linear infinite}
-.busy-indicator[hidden]{display:none}
 @keyframes streams-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}}
 .muted{margin:6px 8px 0;color:var(--secondary);font-size:12px}
-.vod-list{list-style:none;margin:0;padding:0}
-.vod-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:baseline;width:100%;
+.vod-list{list-style:none;margin:0;padding:0;min-height:0;overflow-y:auto;overflow-x:hidden}
+.vod-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;width:100%;
  height:28px;padding:0 8px;border:0;border-radius:6px;font:inherit;font-size:12px;color:inherit;
  background:transparent;text-align:left}
 .vod-row:hover{background:var(--hover)}

@@ -10,9 +10,16 @@
 <body>
  <form id="open-form" aria-label="Open Stream">
   <input id="open-input" type="text" placeholder="Channel or URL" aria-label="Channel or URL" spellcheck="false"
-   autocomplete="off" autocapitalize="off" autofocus>
+   autocomplete="off" autocapitalize="off" autofocus role="combobox" aria-autocomplete="list"
+   aria-controls="suggestions" aria-expanded="false">
+  <button id="clear-input" type="button" aria-label="Clear" title="Clear" hidden></button>
  </form>
+ <div id="suggestions" class="suggestions" role="listbox" aria-label="Channels"></div>
  <div id="offline-vods" class="offline-vods" hidden>
+  <div id="broadcast-header" class="broadcast-header" hidden>
+   <button id="broadcast-back" type="button" aria-label="Back to channels" title="Back to channels"></button>
+   <span id="broadcast-name"></span>
+  </div>
   <span id="offline-busy" class="busy-indicator" role="status" aria-label="Loading recent broadcasts" hidden></span>
   <p id="offline-empty" class="muted" role="status" hidden></p>
   <ul id="offline-list" class="vod-list" aria-label="Recent broadcasts" hidden></ul>

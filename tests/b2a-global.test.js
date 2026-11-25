@@ -65,7 +65,8 @@ test('B2a global connect records all parse failures and still signs in with the 
 
   assert.deepEqual(shim.http.calls, [{
     method: 'POST', url: 'https://id.twitch.tv/oauth2/device',
-    options: {headers: {}, data: {client_id: BUILT_IN_CLIENT_ID, scopes: 'chat:read'}}
+    // Amended 2026-11-24 (phase 3, TESTS-74): A1, the device flow asks chat:read and user:read:follows.
+    options: {headers: {}, data: {client_id: BUILT_IN_CLIENT_ID, scopes: 'chat:read user:read:follows'}}
   }]);
   const states = shim.global.messages('auth-state');
   assert.ok(states.length > 0, 'the managed child must receive auth state');

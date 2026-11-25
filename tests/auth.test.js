@@ -6,7 +6,8 @@ function make(responses=[],initialSaved=null){const calls=[],timers=[],states=[]
 function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;});return{promise,resolve};}
 test('loading and stopping auth does not read secrets, contact Twitch, or schedule work',()=>{const r=make();r.auth.stop();assert.equal(r.calls.length,0);assert.equal(r.readCount(),0);assert.equal(r.timers.length,0);assert.equal(r.auth.snapshot().phase,'off');});
 test('missing client ID is a concrete setup state with no network request',async()=>{const r=make();await r.auth.connect('');assert.equal(r.calls.length,0);assert.equal(r.auth.snapshot().phase,'needs-client');});
-test('device authorization asks only chat:read and does not expose device token in state',async()=>{const r=make([{status:200,data:{device_code:'private-device',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate?public=true',interval:5,expires_in:1800}}]);await r.auth.connect('a'.repeat(30));assert.deepEqual(r.calls[0].form,{client_id:'a'.repeat(30),scopes:'chat:read'});assert.equal(r.auth.snapshot().userCode,'ABCD');assert.equal(JSON.stringify(r.states).includes('private-device'),false);assert.equal(r.timers[0].ms,5000);r.auth.stop();assert.equal(r.timers[0].cancelled,true);});
+// Amended 2026-11-24 (phase 3, TESTS-74): A1, the device flow now asks for chat:read and user:read:follows (one new sign-in).
+test('device authorization asks chat:read and user:read:follows (A1) and does not expose device token in state',async()=>{const r=make([{status:200,data:{device_code:'private-device',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate?public=true',interval:5,expires_in:1800}}]);await r.auth.connect('a'.repeat(30));assert.deepEqual(r.calls[0].form,{client_id:'a'.repeat(30),scopes:'chat:read user:read:follows'});assert.equal(r.auth.snapshot().userCode,'ABCD');assert.equal(JSON.stringify(r.states).includes('private-device'),false);assert.equal(r.timers[0].ms,5000);r.auth.stop();assert.equal(r.timers[0].cancelled,true);});
 test('a pending device code keeps polling and connects after approval',async()=>{
  const client='a'.repeat(30);
  const r=make([
@@ -103,4 +104,47 @@ test('a second Sign out finds nothing to revoke and reports no uncertainty',asyn
  const r=make([],SIGNED_OUT);
  assert.deepEqual(await r.auth.forget(),{removed:true,revoked:true,stale:false});
  assert.equal(r.calls.length,0);assert.equal(r.auth.snapshot().message,'');
+});
+// TESTS-74 phase 3 (2026-11-24), A2: validate accepts chat:read with or without user:read:follows, rejects a token
+// without chat:read; onReady also receives userID (validate's user_id) and scopes. The broad-token test above
+// (chat:edit rejected) is left as it was: the design names only these three cases.
+async function validated(scopes){
+ const client='a'.repeat(30);
+ const r=make([{status:200,data:{device_code:'code',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate',interval:5,expires_in:1800}},{status:200,data:{access_token:'x'.repeat(30),refresh_token:'r'.repeat(30),expires_in:14400}},{status:200,data:{client_id:client,login:'reader',user_id:'77001',scopes,expires_in:14400}}]);
+ await r.auth.connect(client);await r.timers[0].fn();
+ return r;
+}
+test('A2: a token with chat:read and user:read:follows is accepted, and onReady gets userID and scopes',async()=>{
+ const scopes=['chat:read','user:read:follows'];
+ const r=await validated(scopes);
+ assert.equal(r.auth.snapshot().phase,'ready','chat:read plus user:read:follows validates');
+ assert.equal(r.writes.length,1);
+ const ready=r.ready.at(-1);
+ assert.equal(ready.login,'reader');
+ assert.equal(ready.userID,'77001','userID is the validate response\'s user_id');
+ assert.deepEqual(ready.scopes,scopes);
+});
+test('A2: a token with chat:read alone is accepted, and onReady gets userID and its scopes',async()=>{
+ const r=await validated(['chat:read']);
+ assert.equal(r.auth.snapshot().phase,'ready');
+ const ready=r.ready.at(-1);
+ assert.equal(ready.userID,'77001','userID is the validate response\'s user_id');
+ assert.deepEqual(ready.scopes,['chat:read']);
+});
+test('A2: a token without chat:read is rejected even with user:read:follows; a token with chat:read still validates',async()=>{
+ const accepted=await validated(['user:read:follows','chat:read']);
+ assert.equal(accepted.auth.snapshot().phase,'ready','scope order does not matter');
+ const rejected=await validated(['user:read:follows']);
+ assert.equal(rejected.auth.snapshot().phase,'error');
+ assert.equal(rejected.ready.filter(Boolean).length,0);
+ assert.equal(rejected.writes.length,0);
+});
+test('A1: the token poll names the same scopes as the device request',async()=>{
+ const client='a'.repeat(30);
+ const r=make([{status:200,data:{device_code:'code',user_code:'ABCD',verification_uri:'https://www.twitch.tv/activate',interval:5,expires_in:1800}},{status:400,data:{status:400,message:'authorization_pending'}}]);
+ await r.auth.connect(client);await r.timers[0].fn();
+ assert.deepEqual(r.calls.map(call=>call.path),['/device','/token']);
+ assert.equal(r.calls[0].form.scopes,'chat:read user:read:follows');
+ assert.equal(r.calls[1].form.scopes,'chat:read user:read:follows');
+ r.auth.stop();
 });

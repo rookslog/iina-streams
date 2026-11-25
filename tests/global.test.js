@@ -215,12 +215,13 @@ test('IINA HTTP rejection preserves Twitch authorization_pending and the global 
   assert.equal(r.auth.snapshot().message, '');  // the code panel and status line carry this state; no extra narration
 });
 
-test('real authorization orchestration requests only chat:read in a POST form after explicit opt-in', async () => {
+// Amended 2026-11-24 (phase 3, TESTS-74): A1, the device flow now asks for chat:read and user:read:follows (one new sign-in).
+test('real authorization orchestration requests chat:read and user:read:follows in a POST form after explicit opt-in', async () => {
   const r = harness(); await r.open('example');
   r.setResponse({statusCode: 200, data: {device_code: 'offline-device-code', user_code: 'ABCD-EFGH', verification_uri: 'https://www.twitch.tv/activate', expires_in: 1800, interval: 5}});
   await r.handlers.get('auth-connect')({clientID: 'a'.repeat(30)}, r.label());
   assert.equal(r.httpCalls.length, 1);
-  assert.deepEqual(r.httpCalls[0], {method: 'POST', url: 'https://id.twitch.tv/oauth2/device', options: {headers: {}, data: {client_id: 'a'.repeat(30), scopes: 'chat:read'}}});
+  assert.deepEqual(r.httpCalls[0], {method: 'POST', url: 'https://id.twitch.tv/oauth2/device', options: {headers: {}, data: {client_id: 'a'.repeat(30), scopes: 'chat:read user:read:follows'}}});
   assert.equal(r.keychainReads.length, 1); assert.equal(r.timers.filter(timer => timer.delay > 0).length, 1);
   assert.equal(r.auth.snapshot().phase, 'waiting');
   assert.equal(JSON.stringify(r.messages).includes('offline-device-code'), false);

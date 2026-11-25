@@ -121,3 +121,15 @@ P2. **Selection follows the top until the person moves:** before any arrow key, 
 P3. A selected live row keeps its live mark as a live mark (the element keeps its live state/class); it is not restyled as a plain dot.
 P4. `suggestions-follows {state:'needs-sign-in'}` shows one quiet line below the list: "Sign in to Twitch again to include who you follow." It is not an option (arrows skip it; VoiceOver reads it as a note).
 P5. Details arriving update the row in place (same element), as status does.
+
+### Phase 3 decisions on the test writer's questions (lead, 2026-11-24 ~22:40)
+1. **Follows' `lastAt`:** GQL `user(login){lastBroadcast{startedAt}}`, aliased, up to 50 logins per request, for the offline people on the first page of follows (100). Helix has no batched equivalent. This is the one undocumented lookup used while signed in, and only for ages; if it fails, ages are simply absent. Record in PRIVACY.md at merge.
+2. **History people's `lastAt` signed in:** the same GQL batch (test 5b's "no GQL signed in" holds for live status, not for ages).
+3. **Offline follows are `live: false`** once the followed-live answer is in (that list is complete).
+4. **Carrier:** follows' live details travel in `suggestions-status` like any other.
+5. **Accepted scope sets are exactly** `{chat:read}` or `{chat:read, user:read:follows}`, in any order; anything else is rejected (the broad-token test stands).
+6. **Players still get `{token, login, clientID}`;** global keeps `userID` and `scopes` to itself.
+7. Rows past the first status batch may stay unknown (ring) for now; a later batch is a follow-up.
+8. One cap of 50 rows for every list.
+9. Typing resets "the person has moved": after typing, selection follows the top again. The P4 note takes one row's height inside the fixed window. P1's formats follow mock A's sample data.
+10. A login in both history and follows shows Twitch's display name from follows.

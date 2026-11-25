@@ -28,7 +28,6 @@ const HELIX = /^https:\/\/api\.twitch\.tv\/helix\/streams(\?|$)/;
 const ARCHIVE_URL = 'https://www.twitch.tv/videos/1234567890';
 const CLEAR = 'Clear Watch History';
 const SAVED = {clientID: 'c'.repeat(30), access_token: 'saved-suggest-token', refresh_token: 'saved-suggest-refresh'};
-const VALIDATED = {statusCode: 200, data: {client_id: SAVED.clientID, login: 'reader', scopes: ['chat:read'], expires_in: 5000}};
 
 // ---- history fixtures ----
 
@@ -76,13 +75,52 @@ function quoted(query) {
 
 // ---- global fixture ----
 
+// Phase 3 (TESTS-74, 2026-11-24) extends the fakes. What they model, and from where:
+// - GQL answers carry only the fields the query text asks for (a query that keeps `stream{id}` gets no title), as
+//   Twitch's GraphQL does. Shape: anonymous user(login){stream{title viewersCount game{displayName}} lastBroadcast
+//   {startedAt}}, checked live 2026-11-24 (TESTS-74 phase 3).
+// - Helix /streams, /streams/followed and /channels/followed answer with Twitch's documented field names
+//   (user_login, user_name, title, game_name, viewer_count; broadcaster_login, broadcaster_name, followed_at).
+// - The two followed endpoints need a user token with user:read:follows (else 401 "Missing scope"), and a user_id equal
+//   to the token's own; a params map with a non-string value is dropped whole, as IINA's `as? [String: String]` does
+//   (src/twitch-helix.js header). Policy, not host: both must carry Authorization and Client-Id headers.
+// - `control.scopes` and `control.userID` are what /oauth2/validate says.
+const FOLLOWED = /\/helix\/(streams|channels)\/followed(\?|$)/;
+const USER_ID = '77001';
+const FOLLOWS_SCOPES = ['chat:read', 'user:read:follows'];
+
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
-  statusFails = false, holdStatus = false} = {}) {
+  statusFails = false, holdStatus = false, scopes = ['chat:read'], follows = [], details = {}, followsFail = false,
+  holdFollows = false, followsCursor = ''} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
   if (signedIn) shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
-  const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: []};
+  const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: [], scopes, userID: USER_ID,
+    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor};
+
+  const liveDetails = login => ({title: `Stream of ${login}`, category: 'Just Chatting', viewers: 100,
+    ...(control.details[login] || {})});
+  const lastAtOf = login => (control.details[login] || {}).lastAt || null;
+  // The stream object of a GQL answer, with only the fields the query selects.
+  const gqlStream = (query, login) => {
+    if (!control.liveLogins.has(login)) return null;
+    const flat = query.replace(/\s+/g, '');
+    const d = liveDetails(login);
+    const stream = {};
+    if (/stream\{[^}]*\bid\b/.test(flat)) stream.id = '1';
+    if (flat.includes('title')) stream.title = d.title;
+    if (flat.includes('viewersCount')) stream.viewersCount = d.viewers;
+    if (/game\{[^}]*displayName/.test(flat)) stream.game = {displayName: d.category};
+    return Object.keys(stream).length ? stream : {__typename: 'Stream'};
+  };
+  const gqlUser = (query, login) => {
+    const user = {login, stream: gqlStream(query, login)};
+    if (query.replace(/\s+/g, '').includes('lastBroadcast{startedAt')) {
+      user.lastBroadcast = lastAtOf(login) ? {startedAt: lastAtOf(login)} : null;
+    }
+    return user;
+  };
 
   const post = shim.iina.http.post;
   const get = shim.iina.http.get;
@@ -99,8 +137,8 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     } else {
       // A batched status query, in either plausible shape: users(logins:[...]) or aliased user(login:"x").
       const aliased = Array.from(query.matchAll(/(\w+):user\(login:"(\w+)"\)/g));
-      const data = {users: quoted(query).map(login => ({login, stream: control.liveLogins.has(login) ? {id: '1'} : null}))};
-      for (const [, alias, login] of aliased) data[alias] = {login, stream: control.liveLogins.has(login) ? {id: '1'} : null};
+      const data = {users: quoted(query).map(login => gqlUser(query, login))};
+      for (const [, alias, login] of aliased) data[alias] = gqlUser(query, login);
       if (control.holdStatus) {
         // Held until releaseStatus(): the answer arrives later, on its own turn.
         return new Promise(resolve => control.held.push(() => {
@@ -112,9 +150,48 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     }
     return post(url, options);
   };
+
+  // The followed endpoints' answer, or a rejection, for one request.
+  const followedAnswer = (url, options) => {
+    const headers = options?.headers ?? {};
+    const rawParams = options?.params;
+    const params = rawParams && Object.values(rawParams).every(value => typeof value === 'string') ? {...rawParams} : {};
+    for (const [key, value] of new URL(url).searchParams) params[key] = value;
+    const reject = (statusCode, message) => shim.http.rejectResponse({statusCode, reason: message, text: '',
+      data: {error: message, status: statusCode, message}});
+    if (control.followsFail) return reject(503, 'Service Unavailable');
+    if (headers.Authorization !== `Bearer ${SAVED.access_token}` || !headers['Client-Id']) return reject(401, 'Invalid OAuth token');
+    if (!control.scopes.includes('user:read:follows')) return reject(401, 'Missing scope: user:read:follows');
+    if (!params.user_id) return reject(400, 'Missing required parameter "user_id"');
+    if (params.user_id !== control.userID) return reject(400, 'The user_id must match the user ID in the user access token');
+    if (url.includes('/channels/followed')) {
+      const page = control.follows.slice(0, Number(params.first) || 20);
+      const pagination = control.followsCursor ? {cursor: control.followsCursor} : {};
+      return shim.http.setResponse({statusCode: 200, data: {total: control.follows.length, pagination,
+        data: page.map(({login, name, followedAt = '2025-03-01T12:00:00Z'}) => ({broadcaster_id: String(login.length * 1000),
+          broadcaster_login: login, broadcaster_name: name, followed_at: followedAt}))}});
+    }
+    const live = control.follows.filter(({login}) => control.liveLogins.has(login));
+    return shim.http.setResponse({statusCode: 200, data: {pagination: {}, data: live.map(({login, name}) => {
+      const d = liveDetails(login);
+      return {id: '5' + login.length, user_id: String(login.length * 1000), user_login: login, user_name: name,
+        game_id: '9', game_name: d.category, type: 'live', title: d.title, viewer_count: d.viewers,
+        started_at: '2026-11-24T09:00:00Z', thumbnail_url: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_x-{width}x{height}.jpg'};
+    }).sort((a, b) => b.viewer_count - a.viewer_count)}});
+  };
+
   shim.iina.http.get = (url, options) => {
     if (url.endsWith('/oauth2/validate')) {
-      shim.http.setResponse(VALIDATED);
+      shim.http.setResponse({statusCode: 200, data: {client_id: SAVED.clientID, login: 'reader', user_id: control.userID,
+        scopes: control.scopes, expires_in: 5000}});
+    } else if (FOLLOWED.test(url)) {
+      if (control.holdFollows) {
+        return new Promise(resolve => control.heldFollows.push(() => {
+          followedAnswer(url, options);
+          resolve(get(url, options));
+        }));
+      }
+      followedAnswer(url, options);
     } else if (HELIX.test(url)) {
       if (control.statusFails) {
         shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', text: ''});
@@ -124,7 +201,11 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
         if (Array.isArray(param)) found.push(...param);
         else if (typeof param === 'string') found.push(param);
         const live = found.filter(login => control.liveLogins.has(login));
-        shim.http.setResponse({statusCode: 200, data: {data: live.map(login => ({user_login: login, type: 'live'}))}});
+        shim.http.setResponse({statusCode: 200, data: {data: live.map(login => {
+          const d = liveDetails(login);
+          return {id: '7' + login.length, user_id: String(login.length * 1000), user_login: login, user_name: login,
+            game_name: d.category, type: 'live', title: d.title, viewer_count: d.viewers, started_at: '2026-11-24T09:00:00Z'};
+        })}});
       }
     } else if (url.includes('/helix/users')) {
       shim.http.setResponse({statusCode: 200, data: {data: [{id: '4242', login: 'ohnepixel'}]}});
@@ -181,7 +262,8 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   async function signIn() {
     await shim.global.send('auth-connect', {}, '0');
     await settle();
-    assert.ok(shim.global.posts.some(post => post.name === 'auth-ready'), 'fixture: global holds credentials');
+    assert.ok(shim.global.posts.some(post => post.name === 'auth-ready'),
+    `fixture: global holds credentials (validate accepted scopes ${control.scopes.join(' ')})`);
   }
 
   const messages = name => window.posts.filter(post => post.name === name).map(post => decode(post.data));
@@ -189,6 +271,10 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   const gqlStatus = () => calls().filter(call => call.url === GQL && call.method === 'POST'
     && !PRECHECK.test(call.options?.data?.query ?? '') && !(call.options?.data?.query ?? '').includes('videos('));
   const helixStatus = () => calls().filter(call => HELIX.test(call.url));
+  const followedLive = () => calls().filter(call => /\/helix\/streams\/followed(\?|$)/.test(call.url));
+  const followedChannels = () => calls().filter(call => /\/helix\/channels\/followed(\?|$)/.test(call.url));
+  // A held follow request counts as made.
+  const followRequests = () => followedLive().length + followedChannels().length + control.heldFollows.length;
   // A held request counts as made: the shim records it only once released.
   const statusRequests = () => gqlStatus().length + helixStatus().length + control.held.length;
   const prechecks = () => calls().filter(call => call.url === GQL && PRECHECK.test(call.options?.data?.query ?? ''));
@@ -203,6 +289,12 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     return answers.at(-1);
   }
 
+  const releaseFollows = () => {
+    const waiting = control.heldFollows.splice(0);
+    assert.ok(waiting.length, 'fixture: a follow request is waiting');
+    for (const release of waiting) release();
+  };
+
   const releaseStatus = () => {
     const next = control.held.shift();
     assert.ok(next, 'fixture: a status request is waiting');
@@ -210,24 +302,29 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   };
 
   return {
-    shim, window, control, releaseStatus, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
+    shim, window, control, releaseStatus, releaseFollows, followedLive, followedChannels, followRequests, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
     statusRequests, prechecks, archives, menuItem, oracle: oracle(text), text,
   };
 }
 
 const identity = ({provider, login, displayName}) => ({provider, login, displayName});
 
+// G4 for history-only lists: live people first, each group in history order.
+const liveFirst = (rows, live) => [...rows.filter(row => live.includes(row.login)), ...rows.filter(row => !live.includes(row.login))];
+
 // ---- tests ----
 
 // Amended 2026-11-24 ~21:00 (lead, design review): global sends up to 20 people (one status batch) and the
 // page shows 8 at a time and scrolls (TESTS-74 item 2; the operator: the quick list must scroll).
-test('1. the empty field: open-ready answers suggestions for "" with the top 20, in query("") order', async () => {
-  const r = loadGlobal({people: many(30)});
+// Amended 2026-11-24 (phase 3, TESTS-74): G4, "up to 50 rows" (one cap, history-only lists included; with nobody known
+// live the order is query("")'s). This was 20 rows; the status batch still lists 20 people (5a-5d).
+test('1. the empty field: open-ready answers suggestions for "" with the top 50, in query("") order', async () => {
+  const r = loadGlobal({people: many(60)});
   await r.showOpen();
   const first = r.messages('suggestions').find(message => message.text === '');
   assert.ok(first, 'open-ready is answered with suggestions for ""');
-  assert.deepEqual(first.rows.map(identity), r.oracle('').slice(0, 20));
-  assert.equal(first.rows.length, 20);
+  assert.deepEqual(first.rows.map(identity), r.oracle('').slice(0, 50));
+  assert.equal(first.rows.length, 50);
 });
 
 test('2. typing: open-query "oh" answers with query("oh")\'s first 20 rows, with identity fields only', async () => {
@@ -291,10 +388,17 @@ test('5a. signed out: one batched GQL request listing the logins, answered as su
   assert.ok(first.rows.every(row => row.live === null), 'live is unknown until the status arrives');
   const statuses = r.messages('suggestions-status');
   assert.equal(statuses.length, 1, 'one suggestions-status');
-  assert.deepEqual(statuses[0], {status: statusMap(logins, ['p01', 'p03'])});
+  // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details` to the message, so the status map is compared on its own;
+  // G4 puts live people first, so p03 now precedes p02 (it was in history position).
+  assert.deepEqual(statuses[0].status, statusMap(logins, ['p01', 'p03']));
   const later = await r.ask('');
-  assert.deepEqual(later.rows.map(row => [row.login, row.live]),
-    r.oracle('').slice(0, 20).map(row => [row.login, ['p01', 'p03'].includes(row.login)]), 'later suggestions carry cached live');
+  assert.deepEqual(later.rows.map(row => row.login), liveFirst(r.oracle(''), ['p01', 'p03']).map(row => row.login),
+    'live people first, then the rest in history order (all 25 of them)');
+  // The batch covered the top 20; whoever is beyond it is not known live (null or false, never true).
+  assert.deepEqual(later.rows.filter(row => logins.includes(row.login)).map(row => [row.login, row.live]),
+    later.rows.filter(row => logins.includes(row.login)).map(row => [row.login, ['p01', 'p03'].includes(row.login)]),
+    'later suggestions carry cached live');
+  assert.ok(later.rows.filter(row => !logins.includes(row.login)).every(row => row.live !== true));
   assert.equal(r.statusRequests(), 1, 'asking again makes no request');
 });
 
@@ -314,7 +418,8 @@ test('5b. signed in: one Helix GET /helix/streams with repeated user_login', asy
   assert.ok(request.options.headers['Client-Id'], 'a Client-Id header');
   const statuses = r.messages('suggestions-status');
   assert.equal(statuses.length, 1);
-  assert.deepEqual(statuses[0], {status: statusMap(logins, ['p02'])});
+  // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details` to the message.
+  assert.deepEqual(statuses[0].status, statusMap(logins, ['p02']));
 });
 
 test('5c. a failed request gives null for those logins, no retry storm, and no request within 60 s', async () => {
@@ -325,7 +430,9 @@ test('5c. a failed request gives null for those logins, no retry storm, and no r
   assertBatch(logins, r);
   const statuses = r.messages('suggestions-status');
   assert.equal(statuses.length, 1);
-  assert.deepEqual(statuses[0], {status: Object.fromEntries(logins.map(login => [login, null]))});
+  // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details`; a failed request gives none.
+  assert.deepEqual(statuses[0].status, Object.fromEntries(logins.map(login => [login, null])));
+  assert.deepEqual(Object.keys(statuses[0].details ?? {}), [], 'a failed request gives no details');
   const later = await r.ask('');
   assert.ok(later.rows.every(row => row.live === null), 'cached unknown');
 
@@ -351,8 +458,11 @@ test('5d. a success also holds the 60 s rule, and reopening serves the cached li
   assert.equal(r.statusRequests(), 1, 'reopening at 30 s asks nothing');
   const reopened = r.messages('suggestions').at(-1);
   assert.equal(reopened.text, '');
-  assert.deepEqual(reopened.rows.map(row => [row.login, row.live]),
+  // Amended 2026-11-24 (phase 3, TESTS-74): G4 caps the list at 50 (25 people are in history); p01 is live and first.
+  assert.deepEqual(reopened.rows.map(row => row.login), r.oracle('').map(row => row.login), 'all 25 people, p01 (live) already first');
+  assert.deepEqual(reopened.rows.slice(0, 20).map(row => [row.login, row.live]),
     r.oracle('').slice(0, 20).map(row => [row.login, row.login === 'p01']), 'cached values on the reopened page');
+  assert.ok(reopened.rows.slice(20).every(row => row.live !== true));
   r.shim.timers.advance(29999);
   await r.reopen();
   assert.equal(r.statusRequests(), 1, 'still one at 59.999 s');
@@ -487,7 +597,8 @@ test('10. speed: answering open-query with 500 people takes under 20 ms of handl
   const r = loadGlobal({people});
   await r.showOpen();
   const answer = await r.ask('a');
-  assert.equal(answer.rows.length, 20, 'fixture: 500 matches, 20 answered');
+  // Amended 2026-11-24 (phase 3, TESTS-74): G4, up to 50 rows.
+  assert.equal(answer.rows.length, 50, 'fixture: 500 matches, 50 answered');
   const times = [];
   for (let run = 0; run < 5; run++) {
     const start = performance.now();
@@ -511,4 +622,311 @@ test('15 (global half). the window height is fixed for the list: it does not cha
     await r.ask(text);
     assert.equal(height(), opened, `height after "${text}"`);
   }
+});
+
+// =====================================================================================================================
+// Phase 3 (TESTS-74, "your follows and mock A's rows", lead 2026-11-24): G1-G8. Written 2026-11-24 by a Sonnet agent.
+// Follows come from Helix /streams/followed and /channels/followed (needs user:read:follows, one new sign-in).
+// Where the design leaves a choice, these tests pin the weakest thing: no endpoint is required for details, request
+// counts are bounded, and the places the design is silent are listed in the hand-back, not decided here.
+// =====================================================================================================================
+
+const FOLLOW_HISTORY = () => [
+  person('quillfox', 'Quillfox', 6), person('brindle', 'Brindle', 5), person('tidalmoss', 'Tidal Moss', 4),
+  person('northpane', 'North Pane', 3), person('miss_q', 'Miss Quill', 2),
+];
+const FOLLOWS = [
+  {login: 'quillfox', name: 'Quillfox'}, {login: 'lumen_fx', name: 'Lumen FX'}, {login: 'ashgrove', name: 'Ashgrove'},
+  {login: 'thequiet', name: 'The Quiet One'}, {login: 'quartzine', name: 'Quartzine'}, {login: 'quenby', name: 'Quenby'},
+  {login: 'zephyra', name: 'Zephyra'}, {login: 'arbor_vale', name: 'Arbor Vale'},
+];
+const FOLLOW_LIVE = ['quillfox', 'tidalmoss', 'lumen_fx', 'ashgrove', 'thequiet'];
+const FOLLOW_DETAILS = {
+  quillfox: {title: 'Celeste any% attempts', category: 'Celeste', viewers: 1200},
+  tidalmoss: {title: 'Tide pool sketching', category: 'Art', viewers: 310},
+  lumen_fx: {title: 'Cozy cooking stream', category: 'Just Chatting', viewers: 9000},
+  ashgrove: {title: 'Morning ranked grind', category: 'Valorant', viewers: 40},
+  thequiet: {title: 'Quiet night walk', category: 'IRL', viewers: 700},
+  quartzine: {lastAt: '2026-11-20T18:04:11Z'},
+  quenby: {lastAt: '2026-11-22T20:10:00Z'},
+  brindle: {lastAt: '2026-11-18T16:00:00Z'},
+};
+// G4 over the fixture above: live history (history order), live follows by viewers, then the rest.
+const AT_REST = ['quillfox', 'tidalmoss', 'lumen_fx', 'thequiet', 'ashgrove',
+  'brindle', 'northpane', 'miss_q', 'quenby', 'quartzine', 'arbor_vale', 'zephyra'];
+
+async function openedWithFollows(extra = {}) {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS,
+    liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS, ...extra});
+  await r.signIn();
+  const before = r.calls().length;
+  await r.showOpen();
+  r.opened = r.calls().slice(before);
+  return r;
+}
+
+const loginsOf = answer => answer.rows.map(row => row.login);
+const lastSuggestions = (r, text) => r.messages('suggestions').filter(message => message.text === text).at(-1);
+const paramsOf = call => {
+  const params = {...(call.options?.params ?? {})};
+  for (const [key, value] of new URL(call.url).searchParams) params[key] = value;
+  return params;
+};
+const mergedStatus = (r, field) => Object.assign({}, ...r.messages('suggestions-status').map(message => message[field] ?? {}));
+
+test('G1. signed in with user:read:follows: one followed-live and one followed-channels request on open, cached for 60 s', async () => {
+  const many130 = Array.from({length: 130}, (_, index) => {
+    const two = String(index + 1).padStart(3, '0');
+    return {login: `fx${two}`, name: `Fx ${two}`};
+  });
+  const r = loadGlobal({people: many(5), signedIn: true, scopes: FOLLOWS_SCOPES, follows: many130, followsCursor: 'page-two',
+    liveLogins: ['fx003']});
+  await r.signIn();
+  await r.showOpen();
+  assert.equal(r.followedLive().length, 1, 'one followed-live request');
+  assert.equal(r.followedChannels().length, 1, 'one followed-channels request, though Twitch offers a second page');
+  const [live] = r.followedLive();
+  const [channels] = r.followedChannels();
+  assert.equal(live.method, 'GET');
+  assert.equal(new URL(live.url).origin + new URL(live.url).pathname, 'https://api.twitch.tv/helix/streams/followed');
+  assert.equal(paramsOf(live).user_id, USER_ID, 'user_id is the one validate returned');
+  assert.equal(new URL(channels.url).origin + new URL(channels.url).pathname, 'https://api.twitch.tv/helix/channels/followed');
+  assert.equal(paramsOf(channels).user_id, USER_ID);
+  assert.equal(paramsOf(channels).first, '100', 'the first page of 100');
+  for (const call of [live, channels]) {
+    assert.equal(call.options.headers.Authorization, `Bearer ${SAVED.access_token}`);
+    assert.ok(call.options.headers['Client-Id'], 'a Client-Id header');
+  }
+  assert.deepEqual(r.messages('suggestions-follows'), [], 'a token with the scope gets no sign-in note');
+
+  r.shim.timers.advance(30000);
+  await r.reopen();
+  assert.equal(r.followRequests(), 2, 'reopening at 30 s asks nothing');
+  r.shim.timers.advance(29999);
+  await r.reopen();
+  assert.equal(r.followRequests(), 2, 'still nothing at 59.999 s');
+  r.shim.timers.advance(1);
+  await r.reopen();
+  assert.equal(r.followedLive().length, 2, 'followed-live again at 60 s');
+  assert.equal(r.followedChannels().length, 2, 'followed-channels again at 60 s');
+});
+
+test('G2. signed in without user:read:follows: no follow requests, one needs-sign-in note per open; signed out: neither', async () => {
+  const old = loadGlobal({signedIn: true});
+  await old.signIn();
+  await old.showOpen();
+  assert.equal(old.followRequests(), 0, 'an old token makes no follow request');
+  assert.deepEqual(old.messages('suggestions-follows'), [{state: 'needs-sign-in'}], 'one note when the window opens');
+  for (let index = 0; index < 10; index++) await old.ask('o' + index);
+  assert.equal(old.messages('suggestions-follows').length, 1, 'typing does not repeat it');
+  await old.reopen();
+  assert.deepEqual(old.messages('suggestions-follows'), [{state: 'needs-sign-in'}, {state: 'needs-sign-in'}], 'one more per open');
+  assert.equal(old.followRequests(), 0);
+
+  const out = loadGlobal();
+  await out.showOpen();
+  await out.reopen();
+  assert.equal(out.followRequests(), 0, 'signed out: no follow request');
+  assert.deepEqual(out.messages('suggestions-follows'), [], 'signed out: no note');
+});
+
+test('G3. rows: people from history and follows, each once, with the same four keys and nothing from visits or scores', async () => {
+  const r = await openedWithFollows();
+  const answer = await r.ask('');
+  const logins = loginsOf(answer);
+  assert.equal(new Set(logins).size, logins.length, 'no login twice (quillfox is in both lists)');
+  assert.deepEqual([...logins].sort(), [...new Set([...FOLLOW_HISTORY().map(p => p.login), ...FOLLOWS.map(f => f.login)])].sort(),
+    'every person from history and every follow');
+  for (const row of answer.rows) {
+    assert.deepEqual(Object.keys(row).sort(), ['displayName', 'live', 'login', 'provider'], `${row.login}: no visits, no scores`);
+    assert.equal(row.provider, 'twitch');
+    assert.ok([true, false, null].includes(row.live));
+  }
+  const byLogin = Object.fromEntries(answer.rows.map(row => [row.login, row]));
+  assert.equal(byLogin.lumen_fx.displayName, 'Lumen FX', 'a follow\'s name comes from Twitch');
+  assert.equal(byLogin.thequiet.displayName, 'The Quiet One');
+  assert.equal(byLogin.lumen_fx.live, true, 'a followed person who is live');
+  assert.equal(byLogin.zephyra.live, false, 'a followed person who is not live (the followed-live list is complete)');
+});
+
+test('G4. order at rest, signed out: live people first, then the rest, each in history order', async () => {
+  const live = ['p05', 'p03', 'p09'];
+  const r = loadGlobal({people: many(25), liveLogins: live});
+  await r.showOpen();
+  const answer = await r.ask('');
+  assert.deepEqual(loginsOf(answer), liveFirst(r.oracle(''), live).map(row => row.login));
+  assert.deepEqual(loginsOf(answer).slice(0, 3), ['p03', 'p05', 'p09'], 'live people lead, in history order');
+});
+
+test('G4. order at rest with follows: live history, live follows by viewers; then history, offline follows by lastAt, then by name', async () => {
+  const r = await openedWithFollows();
+  assert.deepEqual(r.oracle('').map(row => row.login), ['quillfox', 'brindle', 'tidalmoss', 'northpane', 'miss_q'], 'fixture: history order');
+  const answer = await r.ask('');
+  assert.deepEqual(loginsOf(answer), AT_REST);
+});
+
+test('G4. up to 50 rows, and a live follow beats the cut; the requests do not grow with the people', async () => {
+  const follows = Array.from({length: 60}, (_, index) => {
+    const two = String(index + 1).padStart(2, '0');
+    return {login: `f${two}`, name: `Follow ${two}`};
+  });
+  const r = loadGlobal({people: many(30), signedIn: true, scopes: FOLLOWS_SCOPES, follows, liveLogins: ['f60']});
+  await r.signIn();
+  const before = r.calls().length;
+  await r.showOpen();
+  const answer = await r.ask('');
+  assert.equal(answer.rows.length, 50);
+  assert.equal(answer.rows[0].login, 'f60', 'the one live follow leads');
+  assert.equal(answer.rows[0].live, true);
+  assert.deepEqual(loginsOf(answer).slice(1, 31), r.oracle('').map(row => row.login), 'then history, in history order');
+  assert.deepEqual(loginsOf(answer).slice(31), Array.from({length: 19}, (_, index) => `f${String(index + 1).padStart(2, '0')}`),
+    'then follows with no known lastAt, by display name');
+  const used = r.calls().length - before;
+  assert.ok(used <= 8, `${used} requests for 90 people: a few batches, not one per person`);
+  for (let index = 0; index < 10; index++) await r.ask('f' + index);
+  assert.equal(r.calls().length - before, used, 'typing adds no request');
+});
+
+test('G5. order while typing, signed out: matches only; prefix before word-start; live first within each', async () => {
+  const live = ['oh05', 'mroh'];
+  const r = loadGlobal({liveLogins: live});
+  await r.showOpen();
+  const answer = await r.ask('oh');
+  const expected = ['oh05', 'oh01', 'oh02', 'oh03', 'oh04', 'oh06', 'oh07', 'oh08', 'oh09', 'oh10', 'mroh'];
+  assert.deepEqual(loginsOf(answer), expected, 'oh05 (live) leads the prefix matches; mroh (live) still follows them');
+  assert.ok(!loginsOf(answer).includes('zed'), 'no match, no row');
+});
+
+test('G5. order while typing with follows: history.query\'s matching applies to follows too', async () => {
+  const r = await openedWithFollows();
+  const answer = await r.ask('qu');
+  assert.deepEqual(loginsOf(answer), ['quillfox', 'quenby', 'quartzine', 'thequiet', 'miss_q'],
+    'prefix: live history, then offline follows newest lastAt first; word-start: live follow, then history');
+  assert.deepEqual(loginsOf(await r.ask('quiet')), ['thequiet'], 'a follow matches on a later word of its name');
+  assert.deepEqual(loginsOf(await r.ask('zzqxj')), []);
+});
+
+test('G6. signed out: details come with the status batch: live gives title, category, viewers; offline gives lastAt when known', async () => {
+  const details = {
+    p01: {title: 'Speedrun marathon day 3', category: 'Celeste', viewers: 12345},
+    p02: {lastAt: '2026-11-20T18:04:11Z'},
+  };
+  const r = loadGlobal({people: many(25), liveLogins: ['p01'], details});
+  await r.showOpen();
+  const got = mergedStatus(r, 'details');
+  assert.deepEqual(got.p01, {title: 'Speedrun marathon day 3', category: 'Celeste', viewers: 12345});
+  assert.deepEqual(Object.keys(got.p02 ?? {}), ['lastAt'], 'an offline person with a known last broadcast');
+  assert.equal(typeof got.p02.lastAt, 'string');
+  assert.equal(Date.parse(got.p02.lastAt), Date.parse('2026-11-20T18:04:11Z'), 'an ISO time for the same moment');
+  assert.equal(got.p03?.lastAt, undefined, 'unknown stays unknown (no lastAt, not 0 or NaN)');
+  assert.ok(r.statusRequests() <= 2, `${r.statusRequests()} status requests: the batch, not one per person`);
+  for (let index = 0; index < 10; index++) await r.ask('p0' + index);
+  assert.ok(r.statusRequests() <= 2, 'typing makes no request');
+});
+
+test('G6. signed in: follows\' live details come from the followed-live answer, history people\'s from the status batch', async () => {
+  const r = await openedWithFollows();
+  const got = mergedStatus(r, 'details');
+  for (const login of ['quillfox', 'tidalmoss', 'lumen_fx', 'thequiet', 'ashgrove']) {
+    const {title, category, viewers} = FOLLOW_DETAILS[login];
+    assert.deepEqual(got[login], {title, category, viewers}, login);
+  }
+  for (const login of ['lumen_fx', 'thequiet', 'ashgrove']) {
+    assert.ok(!r.opened.some(call => JSON.stringify(call).includes(login)), `no request names ${login}: its details came with the follows`);
+  }
+  assert.ok(r.opened.length <= 8, `${r.opened.length} requests on open`);
+  assert.deepEqual(mergedStatus(r, 'status').lumen_fx ?? true, true, 'a live follow is live in status, if status lists it');
+  for (const login of ['quenby', 'quartzine']) {
+    if (got[login]) assert.deepEqual(Object.keys(got[login]), ['lastAt'], `${login}: an offline person has only lastAt`);
+  }
+});
+
+test('G7. when status arrives, global posts a new suggestions for the current text, live first', async () => {
+  const r = loadGlobal({people: many(25), liveLogins: ['p03'], holdStatus: true});
+  await r.showOpen();
+  const typed = await r.ask('p0');
+  assert.deepEqual(loginsOf(typed).slice(0, 3), ['p01', 'p02', 'p03'], 'fixture: nothing is known live yet');
+  const before = r.messages('suggestions').length;
+  r.releaseStatus();
+  await r.settle();
+  const later = r.messages('suggestions').slice(before);
+  assert.ok(later.length >= 1, 'a new suggestions message follows the status');
+  assert.equal(r.messages('suggestions').at(-1).text, 'p0', 'for the text now in the field');
+  assert.deepEqual(loginsOf(r.messages('suggestions').at(-1)).slice(0, 3), ['p03', 'p01', 'p02']);
+  assert.equal(r.messages('suggestions').at(-1).rows[0].live, true);
+});
+
+test('G7. when the follows arrive, global posts a new suggestions for the current text in G5 order', async () => {
+  const r = await openedWithFollows({holdFollows: true});
+  const typed = await r.ask('qu');
+  assert.ok(!loginsOf(typed).includes('quenby'), 'fixture: the follows have not arrived');
+  const before = r.messages('suggestions').length;
+  r.releaseFollows();
+  await r.settle();
+  assert.ok(r.messages('suggestions').length > before, 'a new suggestions message follows the follows');
+  const latest = r.messages('suggestions').at(-1);
+  assert.equal(latest.text, 'qu');
+  assert.deepEqual(loginsOf(latest), ['quillfox', 'quenby', 'quartzine', 'thequiet', 'miss_q']);
+});
+
+test('G8. privacy: follow and detail requests carry only logins, the user id and the token in Authorization', async () => {
+  const r = await openedWithFollows();
+  await r.ask('zzqxj');
+  const known = new Set([...FOLLOW_HISTORY().map(p => p.login), ...FOLLOWS.map(f => f.login)]);
+  const sent = r.opened.filter(call => !call.url.startsWith('https://id.twitch.tv/'));
+  assert.ok(sent.length >= 3, 'fixture: the follows, the status and any details were requested');
+  for (const call of sent) {
+    const headers = call.options?.headers ?? {};
+    const names = Object.keys(headers).map(name => name.toLowerCase());
+    const {Authorization, ...rest} = headers;
+    const wire = JSON.stringify({...call, options: {...call.options, headers: rest}});
+    assert.ok(!wire.includes(SAVED.access_token) && !wire.includes(SAVED.refresh_token), `${call.url}: the token is only in Authorization`);
+    assert.ok(!wire.includes('zzqxj'), 'the typed text is never sent');
+    if (call.url.startsWith('https://api.twitch.tv/helix/')) {
+      assert.deepEqual(names.filter(name => !['authorization', 'client-id'].includes(name)), [], 'Helix headers');
+      const params = paramsOf(call);
+      const path = new URL(call.url).pathname;
+      if (/\/followed$/.test(path)) {
+        assert.equal(params.user_id, USER_ID);
+        assert.deepEqual(Object.keys(params).filter(key => !['user_id', 'first', 'after'].includes(key)), [], path);
+      } else if (path === '/helix/streams') {
+        assert.deepEqual(Object.keys(params), ['user_login']);
+        assert.ok(new URL(call.url).searchParams.getAll('user_login').every(login => known.has(login)));
+      }
+    } else if (call.url === GQL) {
+      assert.equal(Authorization, undefined, 'GQL stays anonymous');
+      assert.deepEqual(names.filter(name => !['client-id', 'content-type'].includes(name)), [], 'GQL headers');
+      assert.ok(quoted(call.options.data.query).every(login => known.has(login)), 'only logins in the query');
+    } else {
+      assert.fail(`unexpected request to ${call.url}`);
+    }
+  }
+});
+
+test('G8. a failed follow request leaves history rows and status working, and no earlier follow is posted as live', async () => {
+  const rejections = [];
+  const record = reason => rejections.push(reason);
+  process.on('unhandledRejection', record);
+  try {
+    const r = await openedWithFollows();
+    assert.equal((await r.ask('')).rows.find(row => row.login === 'lumen_fx')?.live, true, 'fixture: the follows worked once');
+    r.shim.timers.advance(60000);
+    r.control.followsFail = true;
+    const statusBefore = r.messages('suggestions-status').length;
+    await r.reopen();
+    assert.equal(r.followedLive().length, 2, 'the failing refresh was attempted');
+    assert.equal(r.followedChannels().length, 2);
+    const answer = await r.ask('');
+    const byLogin = Object.fromEntries(answer.rows.map(row => [row.login, row]));
+    for (const login of ['lumen_fx', 'thequiet', 'ashgrove']) {
+      assert.notEqual(byLogin[login]?.live, true, `${login} is not posted as live from a stale follow list`);
+    }
+    for (const login of FOLLOW_HISTORY().map(p => p.login)) assert.ok(byLogin[login], `${login} (history) is still a row`);
+    assert.equal(byLogin.tidalmoss.live, true, 'history status still works');
+    assert.ok(r.messages('suggestions-status').length > statusBefore, 'a status message still arrives');
+    await r.settle();
+  } finally {
+    process.off('unhandledRejection', record);
+  }
+  assert.deepEqual(rejections, [], 'no unhandled rejection');
 });

@@ -42,7 +42,8 @@ form{position:relative;flex:none}
 input{
  width:100%;
  height:28px;
- padding:4px 26px 4px 28px;
+ /* The trailing 44 px hold the search spinner and the clear button, so neither covers text (R9). */
+ padding:4px 44px 4px 28px;
  font:inherit;
  color:inherit;
  background:var(--surface);
@@ -58,6 +59,8 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .clear[hidden]{display:none}
 .clear:hover{color:var(--secondary)}
 .clear svg{width:14px;height:14px}
+/* R9: while Twitch search is out, a small spinner sits just before the clear button. The only sign; no words. */
+form .search-pending{position:absolute;right:27px;top:8px;margin:0;color:var(--secondary)}
 .clear circle{fill:currentColor}
 .clear path{fill:none;stroke:var(--window);stroke-width:1.5;stroke-linecap:round}
 
@@ -77,6 +80,13 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .sub{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--secondary);font-size:12px}
 .meta{color:var(--secondary);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
 .person[aria-selected=true] .sub,.person[aria-selected=true] .meta,.person[aria-selected=true] .platform{color:var(--on-selection-2)}
+/* #74 search (mock-74-search, variant 1): an offline row's name and avatar are dimmed, as drawn. Live rows and rows
+   whose status is unknown are not. A selected row is not dimmed, so its white text keeps its contrast on the blue. */
+.person.dim .name,.person.dim .avatar{opacity:.55}
+.person.dim[aria-selected=true] .name,.person.dim[aria-selected=true] .avatar{opacity:1}
+@media(prefers-contrast:more){.person.dim .name,.person.dim .avatar{opacity:1}}
+/* Your channels, then other channels below a hairline; drawn only when both show (R13). */
+.hair{height:1px;margin:4px 6px;background:var(--line)}
 
 /* The avatar: the name's initial on a steady hue, with the live mark on its corner. */
 .avatar{position:relative;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;

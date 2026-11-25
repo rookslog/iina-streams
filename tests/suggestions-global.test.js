@@ -2220,3 +2220,28 @@ test('F4 protocol. no other list ever carries reset: not typing, not a late-foll
   assert.ok(lists.length >= 4, 'fixture: several lists were posted');
   assert.deepEqual(lists.filter(list => Object.hasOwn(list, 'reset')).map(list => list.text), [], 'none carries reset');
 });
+
+// Backend re-review N1b (TESTS-74, 2026-11-25): the hourly re-validation of the sign-in builds a new credentials object
+// for the same account; a signed-in search that is out at that moment must not be treated as an account change. (An
+// actual change, sign-out or another login, still drops it: the F3 and F4 tests above.)
+test('N1b. a signed-in search held across the hourly re-validation of the same account still posts its answer once, pending closed', async () => {
+  const r = await searchRig({signedIn: true, searchHold: true});
+  const validatesBefore = r.validateCalls().length;
+  r.shim.timers.advance(3600000 - 400);
+  await r.settle();
+  r.window.receive('open-query', {text: 'ri'});
+  await r.settle();
+  r.shim.timers.advance(250);
+  await r.settle();
+  assert.equal(r.searchRequests(), 1, 'fixture: the Helix search is out');
+  r.shim.timers.advance(200);
+  await r.settle();
+  assert.ok(r.validateCalls().length > validatesBefore, 'fixture: the hourly validate ran while the search was out');
+  r.releaseSearch();
+  await r.settle();
+  r.shim.timers.advance(6000);
+  await r.settle();
+  assert.equal(searchAnswers(r).length, 1, 'the answer for the current text is posted once');
+  assert.deepEqual(searchPending(r), [true, false], 'with its pending pair closed');
+  assert.deepEqual(logins(searchAnswers(r)[0].others), EXPECTED_RI['signed in'].others);
+});

@@ -82,30 +82,41 @@ function nextSession(key){
 
 // `id` is a reply key from acceptSender. IINA's global.postMessage takes a player id or a label string
 // (JavascriptAPIGlobal.swift L105-111, IINA v1.5.1).
-function postChild(id,name,data){
- if(!isOpen(id))return;
+function postChild(id,name,data,done=()=>{}){
+ if(!isOpen(id)){done();return;}
  let wire;
  try{
   wire=JSON.stringify(data);
  // Unserializable data cannot reach the child; dropping the message is safe.
  }catch(_){
-  return;
+  done();return;
  }
- if(typeof wire!=='string'||wire.length>8192)return;
+ if(typeof wire!=='string'||wire.length>8192){done();return;}
  const token=name==='auth-ready'&&data.token,session=sessions.get(id);
  // Match the successful native probe: use a primitive payload after the
  // originating child call has returned. Never enqueue native objects.
  timers.setTimeout(()=>{
-  if(!isOpen(id)||session!==sessions.get(id))return;
-  if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
-  if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
-  app.postMessage(id,name,wire);
+  try{
+   if(!isOpen(id)||session!==sessions.get(id))return;
+   if((name==='auth-state'||name==='auth-ready')&&!audience.has(id))return;
+   if(name==='auth-ready'&&(!credentials||credentials.token!==token))return;
+   app.postMessage(id,name,wire);
+  }finally{done();}
  },0);
 }
 
-function sendAll(name,data){
+function sendAll(name,data,done){
  if(name==='auth-state')qaTrace('auth-state',{state:data.phase,targets:Array.from(audience)});
- for(const id of audience)postChild(id,name,data);
+ if(!done){
+  for(const id of audience)postChild(id,name,data);
+  return;
+ }
+ // An upgrade's revoke is gated on the actual delivery turns (or a
+ // player closing/retiring before its turn), not just on queue order.
+ const targets=Array.from(audience);
+ let pending=targets.length;
+ if(!pending){done();return;}
+ for(const id of targets)postChild(id,name,data,()=>{if(--pending===0)done();});
 }
 
 function normalizeHttpResponse(response){
@@ -182,32 +193,30 @@ const auth=new TwitchAuth({
  setTimer:timers.setTimeout,
  clearTimer:timers.clearTimeout,
  now:()=>Date.now(),
- onState:s=>{
-  sendAll('auth-state',s);
-  const flow=followsFlow;
-  if(flow)onMainThread(()=>publishFollowsAuthState(flow,s));
- },
+ onState:s=>sendAll('auth-state',s),
  onReady:c=>{
-  const changed=!credentials||credentials.login!==c.login||credentials.userID!==c.userID||credentials.clientID!==c.clientID||canReadFollows(credentials)!==canReadFollows(c);
+  const completedFlow=followsFlow&&followsFlow.adopting?followsFlow:null;
+  const restored=!!passiveRestore&&!completedFlow;
+  const changed=!credentials||accountKey(credentials)!==accountKey(c);
   credentials=c;
   passiveRestore=null;
-  const completedFlow=followsFlow;
-  followsFlow=null;
-  if(changed){
-   resetSuggestionCaches();
+  if(completedFlow)followsFlow=null;
+  if(cacheAccount!==accountKey(c))resetSuggestionCaches(c);
+  if(changed||completedFlow||restored){
    const form=formInstance;
    if(form)onMainThread(()=>{
     if(credentials!==c||formInstance!==form)return;
-    refreshShowingAccount(false,!!completedFlow);
+    refreshShowingAccount(false,!!completedFlow,restored);
     keepOpenFormLease(form);
    });
   }
-  sendAll('auth-ready',playerCredentials(c));
+  if(completedFlow)completedFlow.delivered=new Promise(resolve=>sendAll('auth-ready',playerCredentials(c),resolve));
+  else sendAll('auth-ready',playerCredentials(c));
  },
  onStop:()=>{
   const hadCredentials=!!credentials;
   credentials=null;
-  if(hadCredentials){
+  if(hadCredentials&&!idleAuthStop){
    resetSuggestionCaches();
    const form=formInstance;
    if(form)onMainThread(()=>{
@@ -233,14 +242,26 @@ const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000,FIRST_SUGGESTION_WAIT_MS=450
 function emptyHistoryStatus(){return {at:-Infinity,pending:false,status:{},details:{}};}
 function emptyFollows(){return {at:-Infinity,pending:false,rows:[],status:{},details:{}};}
 let historyStatus=emptyHistoryStatus(),follows=emptyFollows(),suggestionText='';
-let passiveRestore=null,followsFlow=null;
+let passiveRestore=null,followsFlow=null,idleAuthStop=false,cacheAccount=null;
 function canReadFollows(c){
  return !!c&&typeof c.userID==='string'&&/^\d+$/.test(c.userID)&&Array.isArray(c.scopes)&&c.scopes.includes('user:read:follows');
 }
 function playerCredentials({token,login,clientID}){return {token,login,clientID};}
-function resetSuggestionCaches(){
+// Cache ownership is non-secret and independent of the active credential.
+// A retained private cache is quarantined until a fresh validation confirms
+// the same account and permission. Never use it while signed out or pending.
+function accountKey(c){
+ return c?JSON.stringify([c.clientID,c.login,typeof c.userID==='string'?c.userID:'',canReadFollows(c)]):null;
+}
+function cacheVisible(){return cacheAccount===accountKey(credentials);}
+function resetSuggestionCaches(account=null){
  historyStatus=emptyHistoryStatus();
  follows=emptyFollows();
+ cacheAccount=accountKey(account);
+}
+function stopIdleAuth(){
+ idleAuthStop=true;
+ try{auth.stop();}finally{idleAuthStop=false;}
 }
 // openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
 // fresh pages and closes advance it. Every form-started check instead needs its own form instance
@@ -352,11 +373,10 @@ function releaseOpenForm(){
  }
  // A flow initiated from this window is not allowed to outlive it, even
  // when another player is present. Ordinary player auth remains independent.
- const cancelFlow=!!(followsFlow&&followsFlow.form===form);
- if(cancelFlow)followsFlow=null;
- if(cancelFlow||!audience.size){
+ if(followsFlow&&followsFlow.form===form)cancelFollowsFlow(followsFlow);
+ if(!audience.size){
   passiveRestore=null;
-  if(credentials||cancelFlow||['waiting','authorizing'].includes(auth.snapshot().phase))auth.stop();
+  if(credentials||['waiting','authorizing'].includes(auth.snapshot().phase))stopIdleAuth();
  }
 }
 
@@ -415,7 +435,10 @@ function onOpenPageReady(){
   const saved=savedGrantClient();
   if(saved)restoreForOpen(saved);
  }
- if(!passiveRestore)publishFollowsState(form);
+ if(!passiveRestore){
+  if(!credentials&&cacheAccount!==null)resetSuggestionCaches();
+  publishFollowsState(form);
+ }
  beginSuggestionCycle(form);
  keepOpenFormLease(form);
 }
@@ -430,13 +453,13 @@ function publishFollowsState(form,force=false){
  postOpenPage('suggestions-follows',envelope({state}));
 }
 
-function refreshShowingAccount(signedOut=false,forceNote=false){
+function refreshShowingAccount(signedOut=false,forceNote=false,restored=false){
  const form=showingReadyForm();
  if(!form)return;
  publishFollowsState(form,forceNote);
- // Account changes are the explicit exception to settle-once. Keep the
- // original opening deadline if the first list has not yet been posted.
- if(form.posted){
+ // Explicit account changes may replace the list. A passive restoration
+ // is just a late answer: preserve the order and append new follows only.
+ if(form.posted&&!restored){
   form.posted=false;
   form.rows=[];
   form.text=null;
@@ -452,7 +475,10 @@ function restoreForOpen(clientID){
   if(ok||passiveRestore!==restore)return;
   passiveRestore=null;
   onMainThread(()=>{
-   if(!credentials&&!passiveRestore)refreshShowingAccount();
+   if(!credentials&&!passiveRestore){
+    if(cacheAccount!==null)resetSuggestionCaches();
+    refreshShowingAccount(false,false,true);
+   }
   });
  });
 }
@@ -465,6 +491,10 @@ function beginSuggestionCycle(form,force=false){
  if(!passiveRestore){
   refreshSuggestionsStatus();
   if(canReadFollows(credentials))refreshFollows();
+ }
+ if(form.posted){
+  publishSuggestionUpdate();
+  return;
  }
  if(force||(!passiveRestore&&!historyStatus.pending&&!follows.pending)){
   settleSuggestions(form);
@@ -492,6 +522,7 @@ function postOpenPage(name,data){
 // The followed-live list is authoritative for followed people, including those
 // also present in history; history supplies the rank for watched people.
 function suggestionSnapshot(){
+ if(!cacheVisible())return {status:{},details:{}};
  const status={...historyStatus.status,...follows.status};
  const details={...historyStatus.details,...follows.details};
  // An offline follow may reuse history broadcast details, but never a conflicting live detail.
@@ -501,14 +532,14 @@ function suggestionSnapshot(){
  return {status,details};
 }
 
-function rankedSuggestions(text){
+function rankedSuggestions(text,limit=SUGGESTION_LIMIT){
  const {status,details}=suggestionSnapshot();
  const needle=text.trim().toLowerCase();
  const people=new Map();
  for(const {provider,login,displayName} of history.query('')){
   people.set(provider+'\n'+login,{provider,login,displayName,historyRank:people.size});
  }
- for(const row of follows.rows){
+ for(const row of cacheVisible()?follows.rows:[]){
   const key=row.provider+'\n'+row.login;
   const existing=people.get(key);
   people.set(key,{...row,historyRank:existing?existing.historyRank:Infinity});
@@ -531,12 +562,12 @@ function rankedSuggestions(text){
   if(a.live!==true&&a.lastAt!==b.lastAt)return b.lastAt-a.lastAt;
   return a.displayName.localeCompare(b.displayName)||a.login.localeCompare(b.login);
  });
- const rows=candidates.slice(0,SUGGESTION_LIMIT).map(({provider,login,displayName,live})=>({provider,login,displayName,live}));
+ const rows=candidates.slice(0,limit).map(({provider,login,displayName,live})=>({provider,login,displayName,live}));
  return rows;
 }
 
 // The current text owns one order. A duplicate query is answered (the page
-// can be waiting for it), but it cannot introduce or reorder late arrivals.
+// can be waiting for it), without moving any already-posted rows.
 function postSuggestions(text){
  const form=showingReadyForm();
  if(!form||!form.posted)return;
@@ -571,8 +602,25 @@ function onOpenQuery(data){
 function publishSuggestionUpdate(){
  const form=showingReadyForm();
  if(!form)return;
- if(form.posted)postVisibleSuggestionStatus(form);
- else if(!passiveRestore&&!historyStatus.pending&&!follows.pending)settleSuggestions(form);
+ if(form.posted){
+  if(!appendLateFollows(form))postVisibleSuggestionStatus(form);
+ }else if(!passiveRestore&&!historyStatus.pending&&!follows.pending)settleSuggestions(form);
+}
+
+// Once the followed list and its offline sort keys have answered, append
+// only follow-only matches, in G4/G5 order, without shifting any existing row.
+function appendLateFollows(form){
+ if(!cacheVisible()||follows.pending||!follows.rows.length||form.rows.length>=SUGGESTION_LIMIT)return false;
+ const key=row=>row.provider+'\n'+row.login;
+ const displayed=new Set(form.rows.map(key));
+ const watched=new Set(history.query('').map(key));
+ const followed=new Set(follows.rows.map(key));
+ const extra=rankedSuggestions(form.text,Infinity).filter(row=>followed.has(key(row))&&!watched.has(key(row))&&!displayed.has(key(row)))
+  .slice(0,SUGGESTION_LIMIT-form.rows.length);
+ if(!extra.length)return false;
+ form.rows.push(...extra);
+ postSuggestions(form.text);
+ return true;
 }
 
 const suggestionDeps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
@@ -791,40 +839,67 @@ function onFollowsConnect(){
  const form=showingReadyForm();
  if(!form||canReadFollows(credentials)||followsFlow)return;
  const clientID=chooseClientID(credentials?.clientID||savedGrantClient());
- const flow={form};
+ const flow={form,adopting:false};
+ // The candidate uses the same device protocol but has no access to the
+ // saved grant, Keychain writer, player audience or active refresh timer.
+ flow.auth=new TwitchAuth({
+  request,
+  diagnostic:code=>gLog('auth-diagnostic',{code}),
+  read:()=>null,
+  write:()=>true,
+  setTimer:timers.setTimeout,
+  clearTimer:timers.clearTimeout,
+  now:()=>Date.now(),
+  acceptValidated:data=>canReadFollows({userID:data.user_id,scopes:data.scopes}),
+  onState:state=>onMainThread(()=>publishFollowsAuthState(flow,state)),
+  onReady:()=>onMainThread(()=>completeFollowsFlow(flow))
+ });
  followsFlow=flow;
- passiveRestore=null;
  keepOpenFormLease(form);
- const pending=auth.forget();
- audience.clear();
- pending.then(result=>onMainThread(()=>{
-  if(followsFlow!==flow||form!==showingReadyForm())return;
-  if(!result||result.stale||!result.removed){
-   followsFlow=null;
-   publishFollowsState(form,true);
-   return;
-  }
-  auth.connect(clientID,{skipStored:true});
+ flow.auth.connect(clientID,{skipStored:true});
+}
+
+function cancelFollowsFlow(flow){
+ if(flow!==followsFlow)return;
+ followsFlow=null;
+ flow.auth.stop();
+}
+
+function completeFollowsFlow(flow){
+ if(flow!==followsFlow||flow.form!==showingReadyForm())return;
+ flow.adopting=true;
+ const result=auth.adoptValidated(flow.auth);
+ if(!result.adopted){
+  cancelFollowsFlow(flow);
+  publishFollowsState(flow.form,true);
+  return;
+ }
+ // adoptValidated saved the replacement. Wait for the old audience's
+ // auth-ready deliveries before revoking, without clearing the new grant.
+ if(result.previous)flow.delivered.then(()=>onMainThread(()=>{
+  if(credentials?.token!==result.previous.token)
+   request('/revoke','POST',{client_id:result.previous.clientID,token:result.previous.token},{});
  }));
 }
 
 function publishFollowsAuthState(flow,state){
- const current=auth.snapshot();
+ const current=flow.auth.snapshot();
  if(flow!==followsFlow||flow.form!==showingReadyForm()||state.phase!==current.phase)return;
  if(state.phase==='waiting'){
   if(state.userCode!==current.userCode||state.verificationURI!==current.verificationURI)return;
   flow.codePublished=true;
   postOpenPage('follows-code',envelope({userCode:state.userCode,verificationUri:state.verificationURI}));
  }else if(state.phase==='error'||state.phase==='needs-client'){
-  followsFlow=null;
+  cancelFollowsFlow(flow);
   publishFollowsState(flow.form,true);
  }
 }
 
 function onFollowsOpen(){
  const flow=followsFlow;
- const state=auth.snapshot();
- if(!flow||!flow.codePublished||flow.form!==showingReadyForm()||state.phase!=='waiting')return;
+ if(!flow||!flow.codePublished||flow.form!==showingReadyForm())return;
+ const state=flow.auth.snapshot();
+ if(state.phase!=='waiting')return;
  if(/^https:\/\/(?:www\.)?twitch\.tv\/activate(?:\?|$)/.test(state.verificationURI||''))utils.open(state.verificationURI);
 }
 
@@ -857,7 +932,7 @@ function onAuthDisconnect(data,label){
  const retiring=!!data&&data.retire===true&&sessions.has(id);
  const wasMember=audience.delete(id);
  if(retiring||wasMember)nextSession(id);
- if(wasMember&&!audience.size&&!formInstance)auth.stop();
+ if(wasMember&&!audience.size&&!formInstance)stopIdleAuth();
 }
 
 function onPlayerClosed(_,label){
@@ -870,7 +945,7 @@ function onPlayerClosed(_,label){
  if(typeof id==='number')managed.delete(id);
  else adopted.delete(id);
  sessions.delete(id);
- if(wasMember&&!audience.size&&!formInstance)auth.stop();
+ if(wasMember&&!audience.size&&!formInstance)stopIdleAuth();
 }
 
 async function onAuthForget(_,label){
@@ -882,9 +957,10 @@ async function onAuthForget(_,label){
  const session=sessions.get(id);
  const interrupted=!!(followsFlow||passiveRestore);
  const form=formInstance;
- followsFlow=null;
+ if(followsFlow)cancelFollowsFlow(followsFlow);
  passiveRestore=null;
  const hadCredentials=!!credentials;
+ if(!hadCredentials&&cacheAccount!==null)resetSuggestionCaches();
  const pending=auth.forget();
  if(interrupted&&!hadCredentials&&form)onMainThread(()=>{
   if(!credentials&&form===showingReadyForm())refreshShowingAccount(true,true);

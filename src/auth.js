@@ -7,14 +7,14 @@ const validScopes=scopes=>Array.isArray(scopes)&&scopes.includes('chat:read')&&(
 const SIGNED_OUT='{"signedOut":true}';
 const holdsTokens=v=>!!v&&typeof v==='object'&&(typeof v.access_token==='string'&&!!v.access_token||typeof v.refresh_token==='string'&&!!v.refresh_token);
 class TwitchAuth {
- constructor(options){this.o=options;this.generation=0;this.timer=null;this.secret=null;this.sessionOnly=false;this.lostSessionGrant=false;this.client='';this.state={phase:'off',message:'',userCode:'',verificationURI:''};}
+ constructor(options){this.o=options;this.generation=0;this.timer=null;this.secret=null;this.validated=null;this.sessionOnly=false;this.lostSessionGrant=false;this.client='';this.state={phase:'off',message:'',userCode:'',verificationURI:''};}
  snapshot(){return Object.assign({},this.state);}
  publish(phase,message,extra){this.state=Object.assign({phase,message:message||'',userCode:'',verificationURI:''},extra||{});this.o.onState(this.snapshot());}
  clearTimer(){if(this.timer!==null){this.o.clearTimer(this.timer);this.timer=null;}}
  // A grant whose Keychain save failed lives only in memory. If stop() drops it, Twitch still holds that
  // unrevoked grant and nothing here can send the revocation; forget() reports that instead of success.
- stop(){this.generation++;this.clearTimer();if(this.secret&&this.sessionOnly)this.lostSessionGrant=true;this.secret=null;this.publish('off');if(this.o.onStop)this.o.onStop();}
- fail(message){this.clearTimer();this.secret=null;this.publish('error',message);if(this.o.onStop)this.o.onStop();}
+ stop(){this.generation++;this.clearTimer();if(this.secret&&this.sessionOnly)this.lostSessionGrant=true;this.secret=null;this.validated=null;this.publish('off');if(this.o.onStop)this.o.onStop();}
+ fail(message){this.clearTimer();this.secret=null;this.validated=null;this.publish('error',message);if(this.o.onStop)this.o.onStop();}
  schedule(fn,ms,generation){this.clearTimer();this.timer=this.o.setTimer(async()=>{this.timer=null;if(generation===this.generation)await fn();},ms);}
  // Parses a stored grant. On bad JSON it reports a fixed code (never the text) and rethrows, so callers keep their behaviour.
  parseGrant(text){try{return JSON.parse(text);}catch(error){try{if(this.o.diagnostic)this.o.diagnostic('keychain-unreadable');}catch(_){/* a failing diagnostic must not change sign-in or Forget */}throw error;}}
@@ -66,11 +66,16 @@ class TwitchAuth {
   const res=await this.o.request('/validate','GET',null,{Authorization:'OAuth '+token});
   if(generation!==this.generation)return false;
   const data=res&&res.data||{};
-  if(!res||res.status!==200||data.client_id!==this.client||!/^[a-z0-9_]{3,25}$/.test(data.login||'')||!validScopes(data.scopes)||!(data.expires_in>0))return false;
+  if(!res||res.status!==200||data.client_id!==this.client||!/^[a-z0-9_]{3,25}$/.test(data.login||'')||!validScopes(data.scopes)||!(data.expires_in>0)||this.o.acceptValidated&&!this.o.acceptValidated(data))return false;
   let saved=true;if(persist)try{saved=this.o.write(JSON.stringify(this.secret))!==false;}catch(_){saved=false;}
   if(persist)this.sessionOnly=!saved;
+  this.activateValidated(generation,data,saved);
+  return true;
+ }
+ activateValidated(generation,data,saved){
+  this.validated={login:data.login,user_id:data.user_id,scopes:data.scopes.slice(),expires_in:data.expires_in};
   this.publish('ready',saved?'':'Connected for this session; Keychain storage failed.',{login:data.login});
-  this.o.onReady({token,login:data.login,clientID:this.client,userID:data.user_id,scopes:data.scopes.slice()});
+  this.o.onReady({token:this.secret.access_token,login:data.login,clientID:this.client,userID:data.user_id,scopes:data.scopes.slice()});
   const refreshBeforeExpiry=!!this.secret.refresh_token&&data.expires_in<=3660;
   const delay=Math.max(1000,Math.min(3600000,(data.expires_in-(refreshBeforeExpiry?60:0))*1000));
   this.schedule(async()=>{
@@ -80,7 +85,26 @@ class TwitchAuth {
      if(!await this.refresh(generation)&&generation===this.generation)this.fail('Twitch authorization expired. Connect again.');
     }
    }catch(_){if(generation===this.generation)this.fail('Twitch authorization could not be verified. Reconnect to resume chat.');}
-  },delay,generation);return true;
+  },delay,generation);
+ }
+ // A separate device flow may validate a replacement without touching the
+ // active grant. Adopt only a ready candidate, after its Keychain write
+ // succeeds; do not publish Off or interrupt the old grant on failure.
+ adoptValidated(candidate){
+  if(!candidate||candidate===this||candidate.state.phase!=='ready'||!candidate.secret||!candidate.validated)return {adopted:false};
+  const grant={...candidate.secret},data={...candidate.validated,scopes:candidate.validated.scopes.slice()};
+  let old=this.secret;
+  if(!old)try{old=this.o.read();if(typeof old==='string'&&old)old=this.parseGrant(old);}catch(_){old=null;}
+  const previous=old&&/^[a-zA-Z0-9]{10,64}$/.test(old.clientID||'')&&typeof old.access_token==='string'&&
+   /^[A-Za-z0-9_-]{16,512}$/.test(old.access_token)&&old.access_token!==grant.access_token?
+   {clientID:old.clientID,token:old.access_token}:null;
+  try{if(this.o.write(JSON.stringify(grant))===false)return{adopted:false};}catch(_){return{adopted:false};}
+  this.generation++;
+  this.clearTimer();
+  this.secret=grant;this.client=grant.clientID;this.sessionOnly=false;
+  candidate.stop();
+  this.activateValidated(this.generation,data,true);
+  return {adopted:true,previous};
  }
  async refresh(generation){
   if(!this.secret||!this.secret.refresh_token)return false;

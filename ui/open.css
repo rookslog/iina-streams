@@ -12,7 +12,6 @@
  --line:rgba(0,0,0,.16);
  --surface:rgba(255,255,255,.6);
  --hover:rgba(0,0,0,.045);
- --default:rgba(0,99,225,.16);
  --selection:#0063e1;
  --on-selection:#fff;
  --accent:#1661c8;
@@ -23,22 +22,15 @@
 @media(prefers-color-scheme:dark){
  :root{--label:rgba(255,255,255,.86);--secondary:rgba(255,255,255,.6);--mark:rgba(255,255,255,.55);
   --glyph:rgba(255,255,255,.2);--line:rgba(255,255,255,.18);--surface:rgba(255,255,255,.08);
-  --hover:rgba(255,255,255,.05);--default:rgba(10,110,255,.3);--selection:#0059d1;--accent:#8ab9ff;
+  --hover:rgba(255,255,255,.05);--selection:#0059d1;--accent:#8ab9ff;
   --live:#ff453a;--error:#ff929a}
 }
 /* Where WebKit exposes the system's selection colour, the highlight follows the viewer's accent colour. */
 @supports(color:-apple-system-selected-content-background){
  :root{--selection:-apple-system-selected-content-background}
 }
-/* The row Return opens by default is a pale tint of the selection colour, so it never reads as the hovered row. */
-@supports(color:color-mix(in srgb,red,blue)){
- :root{--default:color-mix(in srgb,var(--selection) 17%,transparent)}
-}
-@media(prefers-color-scheme:dark){
- @supports(color:color-mix(in srgb,red,blue)){:root{--default:color-mix(in srgb,var(--selection) 34%,transparent)}}
-}
 @media(prefers-contrast:more){
- :root{--line:CanvasText;--surface:Canvas;--secondary:CanvasText;--mark:CanvasText;--default:rgba(127,127,127,.3)}
+ :root{--line:CanvasText;--surface:Canvas;--secondary:CanvasText;--mark:CanvasText}
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden}
@@ -69,8 +61,8 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .person{display:grid;grid-template-columns:16px minmax(0,1fr) 24px;column-gap:4px;align-items:center;height:28px;
  padding:0 2px 0 4px;border-radius:6px;cursor:default;user-select:none;-webkit-user-select:none}
 .person:hover,.vod-option:hover{background:var(--hover)}
-.person[aria-selected=true],.vod-option[aria-selected=true]{background:var(--default)}
-.person.active[aria-selected=true],.vod-option.active[aria-selected=true]{background:var(--selection);color:var(--on-selection)}
+/* The selected row, the one Return opens: the top match until the arrow keys move it. */
+.person[aria-selected=true],.vod-option[aria-selected=true]{background:var(--selection);color:var(--on-selection)}
 .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* The live mark: a filled dot when live, nothing when offline, a hollow ring when the status is unknown.
@@ -79,24 +71,24 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .mark.live::before,.mark.unknown::before{content:'';width:8px;height:8px;border-radius:50%}
 .mark.live::before{background:var(--live)}
 .mark.unknown::before{border:1.5px solid var(--mark)}
-.person.active[aria-selected=true] .mark.live::before{background:var(--on-selection)}
-.person.active[aria-selected=true] .mark.unknown::before{border-color:var(--on-selection)}
+.person[aria-selected=true] .mark.live::before{background:var(--on-selection)}
+.person[aria-selected=true] .mark.unknown::before{border-color:var(--on-selection)}
 
-/* The disclosure chevron: shown on the highlighted or hovered row, turned down while the broadcasts are open. */
+/* The disclosure chevron: shown on the selected or hovered row, turned down while the broadcasts are open. */
 .disclose{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;opacity:0;color:var(--secondary)}
 .disclose::before{content:'';width:5px;height:5px;margin-left:-2px;border:solid currentColor;border-width:0 1.5px 1.5px 0;
  transform:rotate(-45deg)}
 .person:hover .disclose,.person[aria-selected=true] .disclose,.person.expanded .disclose{opacity:1}
 .person.expanded .disclose::before{margin:-3px 0 0;transform:rotate(45deg)}
-.person.active[aria-selected=true] .disclose{color:var(--on-selection)}
+.person[aria-selected=true] .disclose{color:var(--on-selection)}
 .disclose:hover{background:var(--hover)}
-.person.active[aria-selected=true] .disclose:hover{background:rgba(255,255,255,.18)}
+.person[aria-selected=true] .disclose:hover{background:rgba(255,255,255,.18)}
 
 /* A person's broadcasts, inline under their row, one step in from the names. */
-.vod-group{padding:0 0 4px}
+.vod-group{padding:0}
 .vod-option{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:baseline;height:28px;
  padding:7px 8px 0 36px;border-radius:6px;font-size:12px;cursor:default;user-select:none;-webkit-user-select:none}
-.vod-option.active[aria-selected=true] .vod-meta{color:inherit}
+.vod-option[aria-selected=true] .vod-meta{color:inherit}
 .vod-status{display:flex;align-items:center;height:28px;padding-left:36px;color:var(--secondary);font-size:12px}
 .vod-status .busy-indicator{margin:0}
 
@@ -105,9 +97,9 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .suggestions-empty[hidden]{display:none}
 .suggestions-empty svg{width:40px;height:32px;fill:none;stroke:var(--glyph);stroke-width:1.5;stroke-linecap:round}
 
-/* B6c (#32): a typed channel's recent broadcasts, when the check finds it offline. Global sizes the window to
-   the rows, and the suggestions step aside. */
-.offline-vods{flex:none;margin:8px 0 0}
+/* B6c (#32): a typed channel's recent broadcasts, when the check finds it offline. The window keeps its height,
+   the suggestions step aside, and the list scrolls in their place. */
+.offline-vods{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:8px 0 0}
 .busy-indicator{display:inline-block;flex:none;width:12px;height:12px;margin:8px 0 0 24px;border-radius:50%;
  border:2px solid currentColor;border-right-color:transparent;opacity:.6;animation:streams-spin .9s linear infinite}
 .busy-indicator[hidden]{display:none}
@@ -122,6 +114,10 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .vod-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vod-meta{color:var(--secondary);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
+/* Spoken by VoiceOver, never drawn. */
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;
+ clip:rect(0 0 0 0);white-space:nowrap}
+/* Still, the busy ring stays an open arc, so it never looks like the closed ring of an unknown status. */
 @media(prefers-reduced-motion:reduce){
- .busy-indicator{animation:none;border-right-color:currentColor;opacity:.35}
+ .busy-indicator{animation:none;opacity:.5}
 }

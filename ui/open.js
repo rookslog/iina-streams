@@ -2,7 +2,9 @@
 // The Open Stream window (#50). Global parses the input and answers only when it is invalid.
 // B6c (#32): for a channel a player found offline, global prefills the field and sends its recent broadcasts.
 // #74: the quick list. The field is a combobox driving a listbox of people from watch history; it keeps focus,
-// and the highlighted row is shown with aria-activedescendant. → opens a person's broadcasts under their row.
+// and the selected row is shown with aria-activedescendant. Whenever the list has people the top one is
+// selected, so Return opens the top match. → (or Return on someone known to be offline) opens a person's
+// broadcasts under their row. The window keeps one height (global); the list scrolls.
 (function(){
  const form=document.getElementById('open-form');
  const field=document.getElementById('open-input');
@@ -10,32 +12,48 @@
  const listbox=document.getElementById('suggestions');
  const area=document.getElementById('suggestions-area');
  const emptyGlyph=document.getElementById('suggestions-empty');
+ const announcer=document.getElementById('announce');
 
  const OFFLINE_ROWS=10;
  const EMPTY_TEXT={none:'No recent broadcasts',error:'Recent broadcasts unavailable'};
+ const LOADING_TEXT='Loading recent broadcasts';
+ // A Return pressed before global has answered the latest text waits this long for the answer.
+ const RETURN_WAIT_MS=400;
+ // A click within this many pixels of the chevron click that opened a list, after the list scrolled, is a
+ // repeat aimed at the chevron, not at whatever scrolled under the pointer.
+ const POINTER_SLOP=4;
 
  // People as global last sent them, in its order. Live status never reorders them.
  let people=[];
  let heardSuggestions=false;
- // The highlighted row: {login, vod} where vod is -1 for the person row or a broadcast index under them.
- // `taken` is false for the row highlighted by default at rest (Return opens it); the first arrow key takes
- // that highlight over in place, and it then shows in the accent colour.
+ // The selected row: {login, vod}, where vod is -1 for the person row or a broadcast index under them.
  let selection=null;
- // The person whose broadcasts are open under their row: {login, state, items}.
+ // ↑ from the top match while typing: the person chose the typed text, so nothing is reselected until the
+ // next edit and Return opens the text.
+ let textChosen=false;
+ // The person whose broadcasts are open under their row: {login, state, items, byPointer}.
  let expanded=null;
- // Who an offline-vods message is for: 'inline' (the expanded person), 'standalone' (the #32 list after a
- // submit or a prefill, and by default), or 'ignore' (an answer outdated by typing or by closing the list).
+ // Who an offline-vods message is for:
+ // 'inline'     the expanded person (after open-vods);
+ // 'checking'   a person opened from the list, while global's live check runs; an offline answer shows their
+ //              broadcasts under their row, so there is one broadcast list, with one set of keys;
+ // 'standalone' the #32 list, after a typed submit or a prefill, and by default;
+ // 'ignore'     an answer outdated by typing or by closing the list.
  let vodsTarget='standalone';
+ let checkingLogin=null;
  // A submit or prefill is pending: Escape then cancels, as it always has, instead of clearing the field.
  let submitted=false;
  // What the pending submit opens. A double click or a held Return on the same row posts it once, since
  // every post may start a player.
  let pendingInput=null;
- // The #32 list is showing in place of the suggestions.
- let standalone=false;
- let optionNodes=new Map();
- // The highlighted row last scrolled into view, so a status update never scrolls the list under the pointer.
+ // The #32 list is showing in place of the suggestions, and its state.
+ let standalone=false,standaloneState='idle';
+ // The text of the latest open-query that global has not answered yet, and a Return waiting for that answer.
+ let awaitingText=null,returnPending=false,returnTimer=null;
+ let optionNodes=new Map(),groupNode=null;
+ // The selected row last scrolled into view, so a status update never scrolls the list under the pointer.
  let revealedKey=null;
+ let guard=null;
 
  function focusField(){
   field.focus();
@@ -57,6 +75,10 @@
   return data&&typeof data==='object'?data:null;
  }
 
+ function announce(text){
+  if(announcer)announcer.textContent=text;
+ }
+
  function submit(event){
   event.preventDefault();
   const input=field.value;
@@ -64,11 +86,11 @@
   openInput(input);
  }
 
- function openInput(input){
+ function openInput(input,target='standalone'){
   if(submitted&&input===pendingInput)return;
   pendingInput=input;
   submitted=true;
-  vodsTarget='standalone';
+  vodsTarget=target;
   post('open-stream',{input});
  }
 
@@ -83,6 +105,8 @@
  function prefill(data){
   const value=unwrap(data);
   if(!value||typeof value.input!=='string')return;
+  // The person opened from the list was offline: their broadcasts come under their row, and the field stays.
+  if(vodsTarget==='checking'&&value.input===checkingLogin)return;
   field.value=value.input;
   submitted=true;
   vodsTarget='standalone';
@@ -104,18 +128,20 @@
    live:row.live===true||row.live===false?row.live:null
   }));
   heardSuggestions=true;
+  if(awaitingText!==null&&text===awaitingText)awaitingText=null;
   const has=login=>people.some(person=>person.login===login);
-  if(expanded&&!has(expanded.login))closeBroadcasts(false);
-  if(selection&&!has(selection.login)){
-   selection=selection.taken&&people.length?{login:people[0].login,vod:-1,taken:true}:null;
+  if(expanded&&!has(expanded.login)){
+   expanded=null;
+   if(vodsTarget==='inline')vodsTarget='ignore';
   }
-  if(!selection&&text===''&&field.value===''&&people.length){
-   selection={login:people[0].login,vod:-1,taken:false};
-  }
+  if(selection&&!has(selection.login))selection=null;
+  if(!selection&&!textChosen&&people.length)selection={login:people[0].login,vod:-1};
   render();
+  if(returnPending&&awaitingText===null)finishReturn();
  }
 
- // Status changes only the marks: the order, the highlight and the scroll stay.
+ // Status changes only the marks and the spoken names, in place: the rows, the selection and the scroll
+ // stay, and VoiceOver keeps its place on the selected option.
  function onSuggestionsStatus(data){
   const value=unwrap(data);
   const status=value&&value.status;
@@ -124,8 +150,12 @@
    if(!Object.prototype.hasOwnProperty.call(status,person.login))continue;
    const live=status[person.login];
    person.live=live===true||live===false?live:null;
+   const row=optionNodes.get(key(person.login,-1));
+   if(!row)continue;
+   row.setAttribute('aria-label',spokenName(person));
+   const mark=row.children&&row.children[0];
+   if(mark)mark.setAttribute('class',markClass(person));
   }
-  render();
  }
 
  function spokenName(person){
@@ -141,7 +171,7 @@
  }
 
  function canBrowse(person){
-  return person.provider==='twitch';
+  return!!person&&person.provider==='twitch';
  }
 
  function isSelected(login,vod){
@@ -161,11 +191,15 @@
   field.setAttribute('aria-expanded',String(showList&&people.length>0));
   if(emptyGlyph)emptyGlyph.hidden=!(showList&&heardSuggestions&&!people.length&&field.value==='');
   optionNodes=new Map();
+  groupNode=null;
   if(listbox){
    const children=[];
    people.forEach((person,index)=>{
     children.push(personRow(person,index));
-    if(expanded&&expanded.login===person.login)children.push(broadcastGroup(person));
+    if(expanded&&expanded.login===person.login){
+     groupNode=broadcastGroup(person);
+     children.push(groupNode);
+    }
    });
    listbox.replaceChildren(...children);
   }
@@ -173,7 +207,7 @@
   if(active&&showList){
    field.setAttribute('aria-activedescendant',active.id);
    const shown=key(selection.login,selection.vod);
-   if(shown!==revealedKey)reveal(active);
+   if(shown!==revealedKey)reveal(active,active);
    revealedKey=shown;
   }else{
    revealedKey=null;
@@ -188,7 +222,7 @@
  function personRow(person,index){
   const selected=isSelected(person.login,-1);
   const open=!!expanded&&expanded.login===person.login;
-  const row=el('div','person'+(selected&&selection.taken?' active':'')+(open?' expanded':''));
+  const row=el('div','person'+(open?' expanded':''));
   row.setAttribute('role','option');
   row.setAttribute('id','person-'+index);
   row.setAttribute('aria-selected',String(selected));
@@ -201,6 +235,8 @@
   row.append(mark,name);
   let disclose=null;
   if(canBrowse(person)){
+   // VoiceOver hears how to reach the broadcasts; the chevron says it to the eye.
+   row.setAttribute('aria-describedby',open?'hint-close':'hint-open');
    disclose=el('span','disclose');
    disclose.setAttribute('aria-hidden','true');
    disclose.setAttribute('title','Recent broadcasts');
@@ -209,12 +245,13 @@
    row.append(el('span'));
   }
   row.addEventListener('click',event=>{
+   if(guarded(event))return;
    if(disclose&&event&&event.target===disclose){
     if(open)closeBroadcasts(true);
-    else openBroadcasts(person.login);
+    else openBroadcasts(person.login,event);
     return;
    }
-   openPerson(person.login);
+   activatePerson(person.login);
   });
   optionNodes.set(key(person.login,-1),row);
   return row;
@@ -226,15 +263,15 @@
   group.setAttribute('aria-label','Recent broadcasts, '+person.displayName);
   if(expanded.state==='loading'){
    const row=el('div','vod-status');
-   row.setAttribute('role','status');
-   row.setAttribute('aria-label','Loading recent broadcasts');
+   row.setAttribute('aria-hidden','true');
    row.append(el('span','busy-indicator'));
    group.append(row);
   }else if(expanded.state==='ready'){
    expanded.items.forEach((item,index)=>group.append(broadcastOption(person,item,index)));
   }else{
+   // The words are spoken by the page's status region (announce), not from inside the listbox.
    const row=el('div','vod-status',EMPTY_TEXT[expanded.state]||EMPTY_TEXT.error);
-   row.setAttribute('role','status');
+   row.setAttribute('aria-hidden','true');
    group.append(row);
   }
   return group;
@@ -242,7 +279,7 @@
 
  function broadcastOption(person,item,index){
   const selected=isSelected(person.login,index);
-  const row=el('div','vod-option'+(selected&&selection.taken?' active':''));
+  const row=el('div','vod-option');
   row.setAttribute('role','option');
   row.setAttribute('id','broadcast-'+index);
   row.setAttribute('aria-selected',String(selected));
@@ -254,19 +291,62 @@
   row.setAttribute('aria-label',[title,date,length].filter(Boolean).join(', '));
   row.setAttribute('title',title);
   row.append(el('span','vod-title',title),el('span','vod-meta',date),el('span','vod-meta',length));
-  row.addEventListener('click',()=>openInput(String(item.url||'')));
+  row.addEventListener('click',event=>{
+   if(guarded(event))return;
+   openInput(String(item.url||''));
+  });
   optionNodes.set(key(person.login,index),row);
   return row;
  }
 
- // Keeps the highlighted row inside the list's scroll area; a person whose broadcasts open goes to the top.
- function reveal(node,top=false){
-  if(!listbox||typeof node.offsetTop!=='number'||typeof listbox.scrollTop!=='number')return;
+ // Scrolls the list as little as needed to show `first` through `last`; if they don't all fit, `first`
+ // goes to the top. Returns whether the list moved.
+ function reveal(first,last){
+  if(!listbox||!first||!last||typeof first.offsetTop!=='number'||typeof listbox.scrollTop!=='number')return false;
   const height=listbox.clientHeight||0;
-  const start=node.offsetTop,end=start+(node.offsetHeight||0);
-  if(top||start<listbox.scrollTop)listbox.scrollTop=start;
-  else if(end>listbox.scrollTop+height)listbox.scrollTop=end-height;
+  const start=first.offsetTop,end=last.offsetTop+(last.offsetHeight||0);
+  const before=listbox.scrollTop;
+  if(start<before)listbox.scrollTop=start;
+  else if(end>before+height)listbox.scrollTop=Math.min(start,end-height);
+  return listbox.scrollTop!==before;
  }
+
+ // A person and their broadcast list, as much of it as fits.
+ function revealExpanded(){
+  if(!expanded)return false;
+  return reveal(optionNodes.get(key(expanded.login,-1)),groupNode);
+ }
+
+ // ---- The pointer guard (review finding 4) ----
+ // Opening broadcasts with the pointer never scrolls at the click. When they arrive and the list has to scroll
+ // to show them, a click at the same spot, before the pointer moves, is ignored instead of playing whatever
+ // broadcast now sits under it.
+
+ function pointOf(event){
+  return event&&typeof event.clientX==='number'&&typeof event.clientY==='number'?{x:event.clientX,y:event.clientY}:null;
+ }
+
+ function near(a,b){
+  return Math.abs(a.x-b.x)<=POINTER_SLOP&&Math.abs(a.y-b.y)<=POINTER_SLOP;
+ }
+
+ function guarded(event){
+  if(!guard||!guard.armed)return false;
+  const point=pointOf(event);
+  if(point&&near(point,guard.point)){
+   guard=null;
+   return true;
+  }
+  guard=null;
+  return false;
+ }
+
+ function onPointerMove(event){
+  const point=pointOf(event);
+  if(guard&&point&&!near(point,guard.point))guard=null;
+ }
+
+ // ---- Keys and actions ----
 
  // The rows the arrow keys walk: every person, and the open person's broadcasts under them.
  function stops(){
@@ -283,19 +363,21 @@
  function moveSelection(step){
   const list=stops();
   if(!list.length)return false;
-  // With nothing highlighted, ↑ leaves the caret to the field as usual; the list doesn't wrap.
-  if(!selection&&step<0)return false;
+  guard=null;
   if(!selection){
-   selection={...list[0],taken:true};
-  }else if(!selection.taken){
-   selection={...selection,taken:true};
+   // With nothing selected (the typed text was chosen), ↓ comes back to the top match; ↑ is the field's.
+   if(step<0)return false;
+   textChosen=false;
+   selection={...list[0]};
   }else{
    const at=list.findIndex(stop=>stop.login===selection.login&&stop.vod===selection.vod);
    const next=at+step;
    if(next<0&&field.value!==''){
+    // ↑ from the top match: Return now opens the typed text, as in Safari's address field.
     selection=null;
+    textChosen=true;
    }else{
-    selection={...list[Math.max(0,Math.min(list.length-1,next))],taken:true};
+    selection={...list[Math.max(0,Math.min(list.length-1,next))]};
    }
   }
   render();
@@ -306,17 +388,27 @@
   return people.find(person=>person.login===login)||null;
  }
 
- function openPerson(login){
-  field.value=login;
-  closeBroadcasts(false);
-  selection={login,vod:-1,taken:true};
+ // Return or a click on a person. Someone known to be offline shows their broadcasts here (no live check);
+ // anyone else is opened, and if the check finds them offline their broadcasts come under their row.
+ function activatePerson(login){
+  const person=personFor(login);
+  selection={login,vod:-1};
+  if(person&&person.live===false&&canBrowse(person)){
+   if(!expanded||expanded.login!==login)openBroadcasts(login,null);
+   else render();
+   return;
+  }
+  if(expanded&&expanded.login!==login){
+   expanded=null;
+  }
+  checkingLogin=canBrowse(person)?login:null;
   render();
-  openInput(login);
+  openInput(login,checkingLogin?'checking':'standalone');
  }
 
  function openSelection(){
   if(selection.vod<0){
-   openPerson(selection.login);
+   activatePerson(selection.login);
    return;
   }
   const item=expanded&&expanded.login===selection.login&&expanded.items[selection.vod];
@@ -324,15 +416,18 @@
  }
 
  // → on a person: their broadcasts open under the row, whether or not they are live (#74).
- function openBroadcasts(login){
+ function openBroadcasts(login,pointerEvent){
   const person=personFor(login);
-  if(!person||!canBrowse(person))return;
-  expanded={login,state:'loading',items:[]};
+  if(!canBrowse(person))return;
+  const point=pointOf(pointerEvent);
+  expanded={login,state:'loading',items:[],byPointer:!!point};
+  guard=point?{point,armed:false}:null;
   vodsTarget='inline';
-  selection={login,vod:-1,taken:true};
+  selection={login,vod:-1};
   render();
-  const row=optionNodes.get(key(login,-1));
-  if(row)reveal(row,true);
+  // The keyboard brings the list into view at once; the pointer leaves the clicked row where it is.
+  if(!point)revealExpanded();
+  announce(LOADING_TEXT);
   post('open-vods',{login});
  }
 
@@ -341,32 +436,54 @@
   if(!expanded)return;
   const login=expanded.login;
   expanded=null;
+  guard=null;
   vodsTarget='ignore';
+  announce('');
   if(keepPerson){
-   selection={login,vod:-1,taken:true};
+   selection={login,vod:-1};
    post('open-edit',{});
    render();
   }
  }
 
+ // Review finding 5: when the broadcasts arrive, the person and as many of them as fit come into view.
  function showInlineVods(value){
   const items=value.state==='ready'&&Array.isArray(value.items)?value.items.slice(0,OFFLINE_ROWS):[];
   let state=value.state;
   if(state==='ready'&&!items.length)state='none';
   if(!['loading','ready','none','error'].includes(state))return;
-  expanded={login:expanded.login,state,items};
+  expanded={...expanded,state,items};
   if(selection&&selection.login===expanded.login&&selection.vod>=items.length){
-   selection={login:expanded.login,vod:-1,taken:true};
+   selection={login:expanded.login,vod:-1};
   }
   render();
+  const moved=revealExpanded();
+  if(guard)guard.armed=moved&&expanded.byPointer;
+  if(guard&&!guard.armed)guard=null;
+  if(state==='loading')announce(LOADING_TEXT);
+  else if(state==='ready')announce(items.length===1?'1 recent broadcast':items.length+' recent broadcasts');
+  else announce(EMPTY_TEXT[state]||EMPTY_TEXT.error);
  }
 
- // ---- B6c: a typed channel's broadcast list, in place of the suggestions ----
+ // ---- offline-vods: under a person, or the #32 list in place of the suggestions ----
 
  function onOfflineVods(data){
   const value=unwrap(data);
   if(!value||typeof value!=='object')return;
   if(vodsTarget==='ignore')return;
+  if(vodsTarget==='checking'){
+   const person=personFor(checkingLogin);
+   if(!person)return;
+   if(value.state!=='loading'){
+    // The check found them offline: what follows is an ordinary open list.
+    submitted=false;
+    pendingInput=null;
+    vodsTarget='inline';
+   }
+   if(!expanded||expanded.login!==person.login)expanded={login:person.login,state:'loading',items:[],byPointer:false};
+   showInlineVods(value);
+   return;
+  }
   if(vodsTarget==='inline'){
    if(expanded)showInlineVods(value);
    return;
@@ -390,6 +507,7 @@
   list.replaceChildren(...items.map(vodRow));
   list.hidden=!items.length;
   box.hidden=busy.hidden&&empty.hidden&&list.hidden;
+  standaloneState=box.hidden?'idle':String(value.state);
   const showing=!box.hidden;
   if(showing!==standalone){
    standalone=showing;
@@ -436,16 +554,22 @@
   return Math.floor(total/3600)+':'+two(Math.floor(total%3600/60))+':'+two(total%60);
  }
 
- // ---- Editing and keys ----
+ // ---- Editing ----
 
- // Every edit is a new draft: no highlight, no open broadcasts, and any pending answer is outdated.
+ // Every edit is a new draft: the top match is reselected when global answers, no broadcasts are open, and
+ // any pending answer is outdated.
  function onInput(){
   field.removeAttribute('aria-invalid');
   submitted=false;
   pendingInput=null;
   selection=null;
+  textChosen=false;
   expanded=null;
+  checkingLogin=null;
+  guard=null;
   vodsTarget='ignore';
+  awaitingText=field.value;
+  announce('');
   clearOfflineVods();
   render();
   // #67 F-session: a new draft outdates any pending answer for the old text.
@@ -460,6 +584,48 @@
   return start===end&&end===field.value.length;
  }
 
+ // Return acts on the list global has answered for the text now in the field. Pressed sooner (fast typing),
+ // it waits for that answer, briefly, so it never opens the top match of an older text.
+ function onReturn(event){
+  if(standalone)return;
+  if(awaitingText!==null&&typeof setTimeout==='function'){
+   event.preventDefault();
+   returnPending=true;
+   if(returnTimer===null)returnTimer=setTimeout(finishReturn,RETURN_WAIT_MS);
+   return;
+  }
+  if(!selection)return;
+  event.preventDefault();
+  openSelection();
+ }
+
+ function finishReturn(){
+  if(returnTimer!==null&&typeof clearTimeout==='function')clearTimeout(returnTimer);
+  returnTimer=null;
+  if(!returnPending)return;
+  returnPending=false;
+  if(selection)openSelection();
+  else if(field.value.trim())openInput(field.value);
+ }
+
+ // Escape steps back one level at a time: a pending live check is cancelled (closing, as before); open
+ // broadcasts close; a finished #32 list goes back to the quick list; a draft is cleared; then the window closes.
+ function onEscape(){
+  if(vodsTarget==='checking'&&submitted){
+   post('open-cancel',{});
+  }else if(expanded){
+   closeBroadcasts(true);
+  }else if(standalone&&standaloneState!=='loading'){
+   field.value='';
+   onInput();
+  }else if(!submitted&&field.value!==''){
+   field.value='';
+   onInput();
+  }else{
+   post('open-cancel',{});
+  }
+ }
+
  function onKeyDown(event){
   if(event.isComposing)return;
   switch(event.key){
@@ -472,14 +638,14 @@
    if(expanded&&expanded.login===selection.login){
     event.preventDefault();
     if(expanded.state==='ready'&&expanded.items.length){
-     selection={login:selection.login,vod:0,taken:true};
+     selection={login:selection.login,vod:0};
      render();
     }
     return;
    }
-   if(personFor(selection.login)&&canBrowse(personFor(selection.login))){
+   if(canBrowse(personFor(selection.login))){
     event.preventDefault();
-    openBroadcasts(selection.login);
+    openBroadcasts(selection.login,null);
    }
    return;
   case'ArrowLeft':
@@ -488,20 +654,11 @@
    closeBroadcasts(true);
    return;
   case'Enter':
-   if(standalone||!selection)return;
-   event.preventDefault();
-   openSelection();
+   onReturn(event);
    return;
   case'Escape':
    event.preventDefault();
-   if(expanded){
-    closeBroadcasts(true);
-   }else if(!submitted&&field.value!==''){
-    field.value='';
-    onInput();
-   }else{
-    post('open-cancel',{});
-   }
+   onEscape();
   }
  }
 
@@ -509,8 +666,11 @@
  field.addEventListener('input',onInput);
  document.addEventListener('keydown',onKeyDown);
  window.addEventListener('focus',focusField);
- // A click in the list leaves focus, and the caret, in the field.
- if(listbox)listbox.addEventListener('mousedown',event=>event.preventDefault());
+ if(listbox){
+  // A click in the list leaves focus, and the caret, in the field.
+  listbox.addEventListener('mousedown',event=>event.preventDefault());
+  listbox.addEventListener('mousemove',onPointerMove);
+ }
  iina.onMessage('open-error',markInvalid);
  iina.onMessage('prefill',prefill);
  iina.onMessage('offline-vods',onOfflineVods);

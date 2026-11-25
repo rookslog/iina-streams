@@ -197,11 +197,12 @@ const auth=new TwitchAuth({
 
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
-const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28;
+// The window shows eight 28 px rows and keeps that height in every state (W-12, "a fixed height that scrolls");
+// global sends up to SUGGESTION_LIMIT people, the same 20 as one live-status batch, and the page scrolls.
+const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28,SUGGESTION_LIMIT=20;
 const SUGGESTION_HEIGHT=OPEN_HEIGHT+SUGGESTION_ROWS*SUGGESTION_ROW_HEIGHT;
 const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000;
 let suggestionsStatus={},lastStatusAt=-Infinity;
-let openHeight=0;
 // openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
 // fresh pages and closes advance it. Every form-started check instead needs its own form instance
 // to still be showing (class C), while sidebar checks have no form instance.
@@ -294,8 +295,7 @@ function showOpenWindow(){
  listen(openWindow,'standaloneWindow','open-query',onOpenQuery);
  listen(openWindow,'standaloneWindow','open-vods',onOpenVods);
  openWindow.setProperty({title:'Open Stream',resizable:false});
- openHeight=SUGGESTION_HEIGHT;
- openWindow.setFrame(OPEN_WIDTH,openHeight);
+ openWindow.setFrame(OPEN_WIDTH,SUGGESTION_HEIGHT);
  openWindow.open();
 }
 
@@ -316,7 +316,7 @@ function onOpenWindowSubmit(data){
  openRun++;
  const result=openInput(data&&data.input,formInstance);
  if(result==='opened')closeOpenWindow();
- if(result==='checking')postOfflineVods({state:'loading'},1);
+ if(result==='checking')postOfflineVods({state:'loading'});
  if(result==='invalid')openWindow.postMessage('open-error',{});
 }
 
@@ -337,7 +337,7 @@ function postOpenPage(name,data){
 
 // #74: history.query owns ranking. Typing only reads local history and the last batch's marks.
 function postSuggestions(text){
- const rows=history.query(text).slice(0,SUGGESTION_ROWS).map(({provider,login,displayName})=>({
+ const rows=history.query(text).slice(0,SUGGESTION_LIMIT).map(({provider,login,displayName})=>({
   provider,login,displayName,
   live:provider==='twitch'&&Object.hasOwn(suggestionsStatus,login)?suggestionsStatus[login]:null
  }));
@@ -347,10 +347,6 @@ function postSuggestions(text){
 function onOpenQuery(data){
  if(!isFormShowing(formInstance)||!data||typeof data.text!=='string')return;
  onOpenEdit();
- if(openHeight!==SUGGESTION_HEIGHT){
-  openHeight=SUGGESTION_HEIGHT;
-  openWindow.setFrame(OPEN_WIDTH,openHeight);
- }
  postSuggestions(data.text);
 }
 
@@ -383,7 +379,6 @@ function onOpenVods(data){
 
 const OFFLINE_REPEAT_MS=10000;
 const OFFLINE_ROWS=10;
-const OFFLINE_ROW_HEIGHT=28;
 // Logins reported in the last OFFLINE_REPEAT_MS, each with the timer that forgets it.
 const recentOffline=new Map();
 
@@ -419,7 +414,7 @@ async function showOfflineVods(login,fromSuggestion=false){
  const run=++openRun;
  const form=formInstance;
  if(!fromSuggestion)postOpenPage('prefill',{input:login});
- postOfflineVods({state:'loading'},1,fromSuggestion);
+ postOfflineVods({state:'loading'});
  // Signed in: Helix first, then one GQL fallback (#75); neither rejects, and each gives up after 5 s.
  const result=await recentBroadcasts({login},{http,credentials,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
  // H-main: the list is shown from a main-thread turn, as after the live check (onMainThread).
@@ -432,15 +427,15 @@ function showArchives(run,result,login,form,fromSuggestion){
  if(run!==openRun||!isFormShowing(form))return;
  if(result.ok&&!fromSuggestion)recordOfflineHistory(login);
  if(!result.ok){
-  postOfflineVods({state:'error'},1,fromSuggestion);
+  postOfflineVods({state:'error'});
   return;
  }
  if(!result.vods.length){
-  postOfflineVods({state:'none'},1,fromSuggestion);
+  postOfflineVods({state:'none'});
   return;
  }
  const items=result.vods.slice(0,OFFLINE_ROWS).map(vodItem);
- postOfflineVods({state:'ready',items},items.length,fromSuggestion);
+ postOfflineVods({state:'ready',items});
 }
 
 function vodItem(vod){
@@ -448,11 +443,9 @@ function vodItem(vod){
 }
 
 // Titles are untrusted, and IINA 1.5.1 interpolates messages into a template literal, so the list travels
-// as an envelope (src/bridge.js). The original offline path grows by one row height per row the page shows.
-function postOfflineVods(value,rows,fromSuggestion=false){
- // Browsing broadcasts from suggestions keeps room for the suggestions when the page goes back.
- openHeight=fromSuggestion?SUGGESTION_HEIGHT:OPEN_HEIGHT+rows*OFFLINE_ROW_HEIGHT;
- openWindow.setFrame(OPEN_WIDTH,openHeight);
+// as an envelope (src/bridge.js). #74: the window keeps its fixed height (set in showOpenWindow); the page
+// scrolls the list instead of global growing or shrinking the window around it.
+function postOfflineVods(value){
  postOpenPage('offline-vods',envelope(value));
 }
 

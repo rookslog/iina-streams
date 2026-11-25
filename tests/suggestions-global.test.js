@@ -410,7 +410,7 @@ test('5b. signed in: one Helix GET /helix/streams with repeated user_login', asy
   const r = loadGlobal({people: many(25), liveLogins: ['p02'], signedIn: true});
   await r.signIn();
   await r.showOpen();
-  assert.equal(r.statusRequests(), 1, 'exactly one status request');
+  assert.equal(r.helixStatus().length, 1, 'exactly one live-status request (Helix)');
   // Amended 2026-11-24 (lead, phase 3 decision 2): signed in, live status comes only from Helix; the one GQL
   // lookup allowed is the batched age lookup (lastBroadcast), which must not ask for live status.
   const gqlLive = r.gqlStatus().filter(call => /stream\s*\{/.test(call.options?.data?.query ?? ''));
@@ -423,10 +423,9 @@ test('5b. signed in: one Helix GET /helix/streams with repeated user_login', asy
   assertBatch(logins, r);
   assert.match(request.options.headers.Authorization, /^Bearer saved-suggest-token$/);
   assert.ok(request.options.headers['Client-Id'], 'a Client-Id header');
-  const statuses = r.messages('suggestions-status');
-  assert.equal(statuses.length, 1);
-  // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details` to the message.
-  assert.deepEqual(statuses[0].status, statusMap(logins, ['p02']));
+  // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details`, and the age lookup may post a second message.
+  assert.ok(r.messages('suggestions-status').length >= 1);
+  assert.deepEqual(mergedStatus(r, 'status'), statusMap(logins, ['p02']));
 });
 
 test('5c. a failed request gives null for those logins, no retry storm, and no request within 60 s', async () => {

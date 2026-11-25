@@ -256,4 +256,44 @@ async function gqlStatus(http, login) {
   return user.stream && typeof user.stream.id === 'string' ? 'live' : 'unknown';
 }
 
-module.exports = {recentArchives, recentBroadcasts, channelStatus};
+// #74: one status batch per Open Stream refresh. Only validated history logins reach either endpoint.
+// Unlike the precheck, Helix's discovery list is sufficient for the suggestions' live marks.
+async function channelsStatus(logins, credentials, deps) {
+  const unknown = Object.fromEntries(logins.map(login => [login, null]));
+  if (!logins.length || logins.length > 20 || !logins.every(login => typeof login === 'string' && LOGIN_PATTERN.test(login))) {
+    return unknown;
+  }
+  const {http} = deps;
+  const outcome = await raceOnMain(() => credentials
+    ? helixBatch(http, logins, credentials)
+    : gqlBatch(http, logins), STATUS_TIMEOUT_MS, {value: unknown}, deps);
+  return outcome.error || !outcome.value ? unknown : outcome.value;
+}
+
+async function helixBatch(http, logins, credentials) {
+  // IINA accepts only string-valued params, so repeated keys belong in the URL itself.
+  const query = logins.map(login => 'user_login=' + encodeURIComponent(login)).join('&');
+  const response = await http.get('https://api.twitch.tv/helix/streams?' + query, {
+    headers: {Authorization: `Bearer ${credentials.token}`, 'Client-Id': credentials.clientID},
+  });
+  const body = bodyOf(response);
+  if (!isSuccess(response) || !body || !Array.isArray(body.data)) return null;
+  if (!body.data.every(stream => stream && typeof stream.user_login === 'string')) return null;
+  const live = new Set(body.data.map(stream => stream.user_login.toLowerCase()));
+  return Object.fromEntries(logins.map(login => [login, live.has(login)]));
+}
+
+async function gqlBatch(http, logins) {
+  const fields = logins.map((login, index) => `u${index}:user(login:${JSON.stringify(login)}){stream{id}}`);
+  const response = await http.post(GQL_URL, {headers: requestHeaders(), data: {query: `query{${fields.join(' ')}}`}});
+  const body = bodyOf(response);
+  if (!isSuccess(response) || !body || !body.data || Object.hasOwn(body, 'errors')) return null;
+  return Object.fromEntries(logins.map((login, index) => {
+    const user = body.data['u' + index];
+    const stream = user && user.stream;
+    const live = user && stream === null ? false : stream && typeof stream.id === 'string' ? true : null;
+    return [login, live];
+  }));
+}
+
+module.exports = {recentArchives, recentBroadcasts, channelStatus, channelsStatus};

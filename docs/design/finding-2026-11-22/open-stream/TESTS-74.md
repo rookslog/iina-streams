@@ -83,3 +83,15 @@
 - **Mutation checks:** removing the form check, the 60 s rule or the 20-login batch bound each fails tests. **Untested guard:** dropping a status batch that was pending when the person cleared their history. Without it, a cleared person's live mark could come back if they're recorded again within 60 s.
 - **For the page half (Hydrogen, design):** a plain open is 84 + 8 × 28 = 308 px tall (`SUGGESTION_HEIGHT` in `global.js`). An offline broadcast list from a typed submission still sizes the window by its row count, so it can shrink from 308 px. Choose deliberately whether it should.
 - **Privacy, at merge:** `docs/PRIVACY.md` must add `api.twitch.tv` (signed-in live status), and say that opening Open Stream sends up to 20 logins from watch history to Twitch for live marks.
+
+## Round 2 test amendments (lead, 2026-11-24 ~21:00, after the Opus design review)
+Review: scratchpad `opus-74-design-review.md` (verdict fix first; findings 1–3 traced to the lead's tests and global.js).
+- **Selection:** whenever the list has people, the first is selected, at rest and while typing; Return opens the top match (this file's native proof; mock A). The 20:00 amendment ("no automatic selection while typing") was wrong and is reverted. The first ↓ moves to the second person.
+- **Offline person + Return:** opens their broadcasts inline (`open-vods`), not the live check and the #32 list.
+- **Global sends up to 20 people** (one status batch, W-18's disclosed 20); the page shows 8 and scrolls (item 2).
+- **Fixed height through every state:** the live check and the offline list keep the 308 px window (W-12); b6c's growth expectations amended.
+- Red on 6c5da18: 11 tests, each for these reasons.
+
+## Round 3 step-back (D-032; lead, 2026-11-24 ~21:30)
+- **Recurring class:** twice in a row the lead's own test amendments, made quickly from one review finding, encoded the wrong behaviour: at 20:00 "no selection while typing" (against this file's native proof and mock A), and at 21:05 "any offline mark skips the live check" (against the status cache's one-minute age, global.js's 60 s rule). The builder's code was right to the tests both times.
+- **Repair:** before amending a test, the lead checks the amendment against this file's earlier rules and native proof and against the data's freshness (where a mark comes from, and how old it can be), and writes that check into the amendment's comment. Return now always runs the live check (R2-1); pointer opens never scroll (R2-2, working choice, Finder's disclosure-triangle behaviour; the operator may flip it).

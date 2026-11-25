@@ -9,9 +9,19 @@
 </head>
 <body>
  <form id="open-form" aria-label="Open Stream">
-  <input id="open-input" type="text" placeholder="Channel or URL" aria-label="Channel or URL" spellcheck="false"
-   autocomplete="off" autocapitalize="off" autofocus>
+  <svg class="magnifier" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><circle cx="5" cy="5" r="3.75"></circle><path d="M7.75 7.75L11 11"></path></svg>
+  <input id="open-input" type="text" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false"
+   placeholder="Channel or URL" aria-label="Channel or URL" spellcheck="false" autocomplete="off" autocapitalize="off" autofocus>
  </form>
+ <div id="suggestions-area" class="suggestions-area">
+  <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions"></div>
+  <div id="suggestions-empty" class="suggestions-empty" aria-hidden="true" hidden>
+   <svg viewBox="0 0 40 32" focusable="false"><circle cx="15" cy="11" r="5.25"></circle><path d="M4.5 28.5c0-6 4.7-10 10.5-10s10.5 4 10.5 10"></path><path d="M23.6 5.1a4.6 4.6 0 1 1 1.9 8.6"></path><path d="M28.5 18.7c4.1.9 7 4.6 7 9.8"></path></svg>
+  </div>
+ </div>
+ <span id="hint-open" hidden>Right Arrow shows recent broadcasts</span>
+ <span id="hint-close" hidden>Left Arrow hides recent broadcasts</span>
+ <div id="announce" class="visually-hidden" role="status" aria-live="polite"></div>
  <div id="offline-vods" class="offline-vods" hidden>
   <span id="offline-busy" class="busy-indicator" role="status" aria-label="Loading recent broadcasts" hidden></span>
   <p id="offline-empty" class="muted" role="status" hidden></p>

@@ -31,6 +31,9 @@ const settle = async () => {
 };
 
 // Hand-written archive response in the shape src/twitch-vods.js parses (as in b6b-twitch-vods); not captured.
+// #74 (lead, 2026-11-24): messages the Open Stream page now receives on open-ready and while typing.
+const SUGGESTION_MESSAGES = new Set(['suggestions', 'suggestions-status']);
+
 function archiveResponse(count) {
   const edges = Array.from({length: count}, (_, index) => ({node: {
     id: String(1234567890 + index), title: `Archive ${index}`, createdAt: '2026-11-20T10:31:57Z',
@@ -171,14 +174,14 @@ test('B6c the list goes loading, then ready, none or error, and the window grows
   await fixture.offline();
   fixture.win.send('open-ready', {});
   assert.deepEqual(fixture.lastList(), {state: 'loading'});
-  assert.equal(fixture.win.frames.at(-1).height, 84 + 28, 'one row of room while loading');
+  assert.equal(fixture.win.frames.at(-1).height, 84 + 8 * 28, '#74 (amended 2026-11-24): the window keeps its fixed height while loading');
 
   release(archiveResponse(12));
   await settle();
   const ready = fixture.lastList();
   assert.equal(ready.state, 'ready');
   assert.deepEqual(ready.items, Array.from({length: 10}, (_, index) => item(index)), 'at most ten rows');
-  assert.deepEqual(fixture.win.frames.at(-1), {width: 380, height: 84 + 10 * 28, x: undefined, y: undefined});
+  assert.deepEqual(fixture.win.frames.at(-1), {width: 380, height: 84 + 8 * 28, x: undefined, y: undefined}, '#74: fixed height; ten broadcasts scroll');
 
   fixture.shim.timers.advance(10000);
   fixture.shim.http.setResponse(archiveResponse(0));
@@ -190,7 +193,7 @@ test('B6c the list goes loading, then ready, none or error, and the window grows
   fixture.shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', data: null, text: ''});
   await fixture.offline();
   assert.deepEqual(fixture.lastList(), {state: 'error'});
-  assert.equal(fixture.win.frames.at(-1).height, 84 + 28);
+  assert.equal(fixture.win.frames.at(-1).height, 84 + 8 * 28);
 });
 
 test('B6c a newer source-offline makes the earlier result stale', async t => {
@@ -247,7 +250,8 @@ test('B6c a window closed natively drops a late result, and a reopened page rece
   await fixture.context.openStream();
   assert.equal(fixture.win.loads.length, 2, 'a plain Open Stream loads a fresh page');
   fixture.win.send('open-ready', {});
-  assert.deepEqual(fixture.win.posts, [], 'the fresh page receives no prefill or list from the old lookup');
+  // #74: a fresh page now receives its empty-field suggestions; nothing else, and nothing from the old lookup.
+  assert.deepEqual(fixture.win.posts.filter(post => !SUGGESTION_MESSAGES.has(post.name)), [], 'the fresh page receives no prefill or list from the old lookup');
 });
 
 test('B6c page messages wait for open-ready, and a fresh page waits again', async t => {
@@ -259,17 +263,20 @@ test('B6c page messages wait for open-ready, and a fresh page waits again', asyn
   assert.deepEqual(fixture.win.posts, [], 'nothing reaches the page before it has loaded');
 
   fixture.win.send('open-ready', {});
-  assert.deepEqual(fixture.pageMessages().map(post => post.name), ['prefill', 'offline-vods', 'offline-vods']);
+  assert.deepEqual(fixture.pageMessages().map(post => post.name).filter(name => !SUGGESTION_MESSAGES.has(name)), ['prefill', 'offline-vods', 'offline-vods']);
   assert.deepEqual(fixture.lastList(), {state: 'ready', items: [item(0), item(1)]});
 
   // A plain menu open after close loads a fresh page that receives nothing from the old lookup.
   fixture.win.send('open-cancel', {});
-  const posted = fixture.win.posts.length;
+  const others = () => fixture.win.posts.filter(post => !SUGGESTION_MESSAGES.has(post.name)).length;
+  const posted = others();
   await fixture.context.openStream();
   assert.equal(fixture.win.loads.length, 2);
   fixture.win.send('open-ready', {});
-  assert.equal(fixture.win.posts.length, posted, 'a plain Open Stream posts nothing to the page');
-  assert.deepEqual(fixture.win.frames.at(-1), {width: 380, height: 84, x: undefined, y: undefined});
+  assert.equal(others(), posted, 'a plain Open Stream posts nothing to the page but its suggestions (#74)');
+  const frame = fixture.win.frames.at(-1);
+  assert.equal(frame.width, 380);
+  assert.ok(frame.height > 84, '#74 item 15: a plain open already holds the suggestion list');
 });
 
 test('B6c clicking a row opens the broadcast through the existing open-stream path', async t => {

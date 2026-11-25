@@ -308,21 +308,54 @@ async function gqlUsers(http, logins, fields) {
   const aliases = logins.map((login, index) => `u${index}:user(login:${JSON.stringify(login)}){${fields}}`);
   const response = await http.post(GQL_URL, {headers: requestHeaders(), data: {query: `query{${aliases.join(' ')}}`}});
   const body = bodyOf(response);
-  return isSuccess(response) && body && body.data && !Object.hasOwn(body, 'errors') ? body.data : null;
+  if (!isSuccess(response) || !body || !body.data || typeof body.data !== 'object') return null;
+  const errors = Object.hasOwn(body, 'errors') ? body.errors : [];
+  // Unscoped errors cannot be attributed to a field. Scoped field errors must
+  // not take away the rest of a successful response.
+  if (!Array.isArray(errors) || errors.some(error => !Array.isArray(error?.path) || !error.path.length)) return null;
+  return {data: body.data, errors};
+}
+
+// GQL aliases are under our control; an error can cover a user, a parent
+// field, or one child. An error in one alias never invalidates another.
+function fieldFailed(reply, alias, ...path) {
+  return reply.errors.some(({path: failed}) => failed[0] === alias &&
+    failed.slice(1).every((key, index) => key === path[index]));
+}
+
+function broadcastDetail(reply, alias) {
+  const user = reply.data[alias];
+  if (!user || fieldFailed(reply, alias, 'lastBroadcast')) return null;
+  const broadcast = user.lastBroadcast;
+  if (!broadcast) return null;
+  return lastBroadcastDetail({lastBroadcast: {
+    startedAt: fieldFailed(reply, alias, 'lastBroadcast', 'startedAt') ? undefined : broadcast.startedAt,
+    title: fieldFailed(reply, alias, 'lastBroadcast', 'title') ? undefined : broadcast.title
+  }});
 }
 
 async function gqlBatch(http, logins) {
-  const data = await gqlUsers(http, logins, 'stream{id,title,viewersCount,game{displayName}} lastBroadcast{startedAt title}');
-  if (!data) return null;
+  const reply = await gqlUsers(http, logins, 'stream{id,title,viewersCount,game{displayName}} lastBroadcast{startedAt title}');
+  if (!reply) return null;
   const status = [], details = [];
   logins.forEach((login, index) => {
-    const user = data['u' + index];
+    const alias = 'u' + index;
+    const user = reply.data[alias];
     const stream = user && user.stream;
-    const live = user && stream === null ? false : stream && typeof stream.id === 'string' ? true : null;
+    const failed = fieldFailed(reply, alias, 'stream', 'id');
+    // A null stream caused by a nested field error is not proof of being offline.
+    const streamError = reply.errors.some(({path}) => path[0] === alias && path[1] === 'stream');
+    const live = failed ? null : user && stream === null && !streamError ? false
+      : stream && typeof stream.id === 'string' ? true : null;
     status.push([login, live]);
     const detail = live === true ? liveDetails(stream.title, stream.game && stream.game.displayName, stream.viewersCount)
-      : live === false ? lastBroadcastDetail(user) : null;
-    if (detail) details.push([login, detail]);
+      : live === false ? broadcastDetail(reply, alias) : null;
+    if (live === true) {
+      if (fieldFailed(reply, alias, 'stream', 'title')) delete detail.title;
+      if (fieldFailed(reply, alias, 'stream', 'viewersCount')) delete detail.viewers;
+      if (fieldFailed(reply, alias, 'stream', 'game', 'displayName')) delete detail.category;
+    }
+    if (detail && Object.keys(detail).length) details.push([login, detail]);
   });
   return {status: Object.fromEntries(status), details: Object.fromEntries(details)};
 }
@@ -338,7 +371,7 @@ async function lastBroadcasts(logins, deps) {
       REQUEST_TIMEOUT_MS, {value: null}, deps).then(({value}) => {
       if (!value) return [];
       return batch.flatMap((login, index) => {
-        const detail = lastBroadcastDetail(value['u' + index]);
+        const detail = broadcastDetail(value, 'u' + index);
         return detail ? [[login, detail]] : [];
       });
     }));

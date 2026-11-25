@@ -18,19 +18,21 @@ class TwitchAuth {
  schedule(fn,ms,generation){this.clearTimer();this.timer=this.o.setTimer(async()=>{this.timer=null;if(generation===this.generation)await fn();},ms);}
  // Parses a stored grant. On bad JSON it reports a fixed code (never the text) and rethrows, so callers keep their behaviour.
  parseGrant(text){try{return JSON.parse(text);}catch(error){try{if(this.o.diagnostic)this.o.diagnostic('keychain-unreadable');}catch(_){/* a failing diagnostic must not change sign-in or Forget */}throw error;}}
- async connect(clientID){
+ async connect(clientID,{savedOnly=false,skipStored=false}={}){
   this.stop();const generation=this.generation;this.client=String(clientID||'').trim();
   if(!/^[a-zA-Z0-9]{10,64}$/.test(this.client)){this.publish('needs-client','Enter a registered Twitch Public Client ID to connect.');return false;}
   this.publish('authorizing','Checking Twitch authorization…');
   try{
-   let stored=null;try{stored=this.o.read();if(typeof stored==='string'&&stored)stored=this.parseGrant(stored);}catch(_){/* unreadable item: treated as no saved grant, so a fresh sign-in starts */}
+   let stored=null;try{if(!skipStored)stored=this.o.read();if(typeof stored==='string'&&stored)stored=this.parseGrant(stored);}catch(_){/* unreadable item: treated as no saved grant, so a fresh sign-in starts */}
    if(stored&&stored.clientID===this.client&&typeof stored.access_token==='string'){
     this.secret=stored;this.sessionOnly=false;
     if(await this.validate(generation,false))return true;
     if(generation!==this.generation)return false;
     if(stored.refresh_token&&await this.refresh(generation))return true;
+    if(generation!==this.generation)return false;
     this.secret=null;
    }
+   if(savedOnly){this.stop();return false;}
    const res=await this.o.request('/device','POST',{client_id:this.client,scopes:SCOPE},{});
    if(generation!==this.generation)return false;
    const data=res&&res.data||{};

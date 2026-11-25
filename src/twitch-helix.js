@@ -226,7 +226,7 @@ async function fetchFollowedPages(config, userID) {
 
 async function followedLive(config, request) {
   const userID = request && request.userID;
-  if (!isString(userID) || userID === '') {
+  if (!isString(userID) || !/^\d+$/.test(userID)) {
     throw new TwitchHelixError('MALFORMED');
   }
   const streams = await fetchFollowedPages(config, userID);
@@ -242,7 +242,7 @@ async function followedLive(config, request) {
 // remain paginated independently so a live channel outside that page is included.
 async function followedChannels(config, request) {
   const userID = request && request.userID;
-  if (!isString(userID) || userID === '') {
+  if (!isString(userID) || !/^\d+$/.test(userID)) {
     throw new TwitchHelixError('MALFORMED');
   }
   const body = await getJSON(config, '/channels/followed',

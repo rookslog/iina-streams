@@ -212,3 +212,4 @@ Same source of truth (the chosen mock, `mock-74-search/`, variant 1) but **R13 s
   - **F6 (MINOR 5) The known set includes every followed channel,** paging Helix followed channels up to 10 pages.
   - **F7 (MINOR 6) R3 also accepts combining marks** (`\p{M}`), so scripts with vowel signs are searched.
   - **F8 (MINOR 7)** the failure test at `tests/suggestions-global.test.js` (~1858) must assert even when no answer is posted.
+  - **F4 protocol (lead):** on an account change, global re-sends `suggestions {text, rows, reset:true}` for the current text, then the new search answer; on `reset:true` the page drops drawn search rows (known and others) and draws the fresh Y list; without `reset`, a re-sent list never moves drawn rows (R8). The test writer's readings for F1 (pending false at close, before hiding), F3, F4 and F6 (paging by the first search, 10 pages in total) are adopted.

@@ -1075,3 +1075,21 @@ test('R8. a person drawn in O stays there when a re-sent list for the same text 
   const [yGroup, oGroup] = groups(f);
   assert.ok(f.all(oGroup).includes(f.options()[1]) && !f.all(yGroup).includes(f.options()[1]));
 });
+
+// ---- F2 page side (TESTS-74, backend review fix F2, 2026-11-25) ----
+
+test('F2. an edit that leaves the trimmed, lower-cased text unchanged keeps the drawn search rows and the selection', () => {
+  for (const edit of ['ri ', 'RI', ' Ri ']) {
+    const f = pageFixture();
+    frameB(f);
+    f.press('ArrowDown');
+    assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rimecraft'], 'fixture: the person moved to the second row');
+    f.type(edit);
+    assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade', 'riptidejoe', 'rinnyruns'], `"${edit}": rows kept at once`);
+    assert.equal(hairlines(f).length, 1, 'the hairline stays');
+    assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rimecraft'], 'and so does the selection');
+    f.suggest([yRow(SR.riverlark), yRow(SR.rimecraft)], edit);
+    assert.deepEqual(loginsShown(f), ['riverlark', 'rimecraft', 'rivenshade', 'riptidejoe', 'rinnyruns'], 'still kept when the list for it arrives');
+    assert.deepEqual(f.selected().map(option => optionLogin(f, option)), ['rimecraft']);
+  }
+});

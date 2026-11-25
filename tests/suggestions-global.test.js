@@ -97,7 +97,7 @@ const OAUTH = 'https://id.twitch.tv/oauth2';
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
   statusFails = false, holdStatus = false, scopes = ['chat:read'], follows = [], details = {}, followsFail = false,
   holdFollows = false, followsCursor = '', builtInClientID = '', gqlFieldError = null,
-  searchResults = [], searchHold = false, searchFail = false, searchPartFail = null} = {}) {
+  searchResults = [], searchHold = false, searchFail = false, searchPartFail = null, followsPaged = false} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
@@ -108,7 +108,9 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     // {login, name}, or a function of the typed text returning one. Live state and details come from liveLogins and
     // details, as for every other person. searchHold holds an answer until releaseSearch(); searchFail answers 503;
     // searchPartFail is 'streams' or 'ages': only that follow-up lookup fails (R11, C5).
-    searchResults, searchHold, searchHeld: [], searchFail, searchPartFail};
+    // Phase 2 rev 2, F6: followed channels honour `after`, as Helix does (cursor = the next offset); the older
+    // followsCursor option still answers one constant cursor.
+    searchResults, searchHold, searchHeld: [], searchFail, searchPartFail, followsPaged};
   // Only the saved grant is valid in these scenarios.
   const tokenScopes = token => token === SAVED.access_token ? control.scopes : null;
 
@@ -246,8 +248,12 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     if (!params.user_id) return reject(400, 'Missing required parameter "user_id"');
     if (params.user_id !== control.userID) return reject(400, 'The user_id must match the user ID in the user access token');
     if (url.includes('/channels/followed')) {
-      const page = control.follows.slice(0, Number(params.first) || 20);
-      const pagination = control.followsCursor ? {cursor: control.followsCursor} : {};
+      const size = Number(params.first) || 20;
+      const offset = control.followsPaged ? Number(params.after) || 0 : 0;
+      const page = control.follows.slice(offset, offset + size);
+      const pagination = control.followsPaged
+        ? (offset + size < control.follows.length ? {cursor: String(offset + size)} : {})
+        : (control.followsCursor ? {cursor: control.followsCursor} : {});
       return shim.http.setResponse({statusCode: 200, data: {total: control.follows.length, pagination,
         data: page.map(({login, name, followedAt = '2025-03-01T12:00:00Z'}) => ({broadcaster_id: String(login.length * 1000),
           broadcaster_login: login, broadcaster_name: name, followed_at: followedAt}))}});
@@ -1766,14 +1772,18 @@ test('R3. at most 10 O rows and at most 10 known people appended; O keeps the hi
 });
 
 // R3 cache.
+// Amended 2026-11-25 (phase 2 rev 2, F2, TESTS-74): an edit that leaves the trimmed, lower-cased text unchanged now
+// changes nothing (tested in F2 below), so the cache is exercised by going away and coming back ('ri', 'rix', 'ri').
 test('R3. the same trimmed, lower-cased text within 60 s is answered from the cache after the same pause, with no request', async () => {
   for (const [, signedIn] of MODES) {
     const r = await searchRig({signedIn});
     await r.ask('ri');
     await r.typeSettled('ri');
-    const requestsAfterFirst = r.searchRequests();
-    assert.equal(requestsAfterFirst, 1, 'fixture: one request');
+    assert.equal(r.searchRequests(), 1, 'fixture: one request');
     r.shim.timers.advance(30000);
+    await r.typeSettled('rix');
+    const requestsBefore = r.searchRequests();
+    assert.equal(requestsBefore, 2, 'fixture: "rix" was asked');
     const followUps = r.calls().length;
     await r.ask('RI ');
     r.window.receive('open-query', {text: 'RI '});
@@ -1784,14 +1794,14 @@ test('R3. the same trimmed, lower-cased text within 60 s is answered from the ca
     r.shim.timers.advance(1);
     await r.settle();
     assert.equal(searchAnswers(r).length, 2, 'the cached answer is posted after the same pause');
-    assert.equal(r.searchRequests(), requestsAfterFirst, 'with no request');
+    assert.equal(r.searchRequests(), requestsBefore, 'with no request');
     assert.equal(r.calls().length, followUps, 'and no other request');
     assert.deepEqual(searchAnswers(r)[1].others, searchAnswers(r)[0].others);
     assert.equal(searchPending(r).filter(Boolean).length, 1, 'the cache hit shows no pending');
-    r.shim.timers.advance(31000);
+    r.shim.timers.advance(61000);
     await r.settle();
     await r.typeSettled('ri');
-    assert.equal(r.searchRequests(), requestsAfterFirst + 1, 'after 60 s the text is asked again');
+    assert.equal(r.searchRequests(), requestsBefore + 1, 'after 60 s the text is asked again');
   }
 });
 
@@ -1855,7 +1865,10 @@ test('R9/R11. a failed search adds nothing and shows no error: pending ends, Y a
     await r.typeSettled('ri');
     assert.equal(r.searchRequests(), 1, 'fixture: the search was tried');
     assert.deepEqual(searchPending(r), [true, false]);
-    for (const answer of searchAnswers(r)) assert.deepEqual([answer.known, answer.others], [[], []], 'nothing added');
+    // Amended 2026-11-25 (F8, TESTS-74): asserts even when no answer is posted at all.
+    const added = searchAnswers(r).flatMap(answer => [...answer.known, ...answer.others]);
+    assert.deepEqual(added, [], 'nothing added to the list by a failed search');
+    assert.ok(searchAnswers(r).length <= 1, 'at most one (empty) answer');
     assert.ok(y.rows.length > 0, 'Y is unaffected');
     const again = await r.ask('riv');
     assert.ok(Array.isArray(again.rows), 'later lists still answer');
@@ -1925,3 +1938,219 @@ for (const scopes of [FOLLOWS_SCOPES, ['chat:read']]) {
     }
   });
 }
+
+// =====================================================================================================================
+// Backend review fixes F1-F8 (TESTS-74, "Phase 2 rev 2" last bullets, 2026-11-25). Scenarios from the review's probes:
+// P1/P2/P2b (unpaired pending, duplicate request), P13 (token after sign-out), P11/P5/P7 (account change), P12 (late
+// follows). The contract leaves some points open; the readings pinned here are listed in the hand-back.
+// =====================================================================================================================
+
+// The pending messages for one text, in order (trimmed, lower-cased match).
+const pendingFor = (r, text) => searchPending(r, text);
+const paired = list => list.every((value, index) => value === (index % 2 === 0)) && list.length % 2 === 0;
+
+test('F1. a request superseded by a different text still gets pending:false for its own text', async () => {
+  const r = await searchRig({searchHold: true});
+  await r.typeSettled('ri');
+  r.window.receive('open-query', {text: 'riv'});
+  await r.settle();
+  r.releaseSearch();
+  await r.settle();
+  assert.deepEqual(pendingFor(r, 'ri'), [true, false], 'the pair for "ri" is closed');
+});
+
+test('F1. a window closed while a request is out closes its pending pair at once; nothing is posted after the close', async () => {
+  const r = await searchRig({searchHold: true});
+  await r.typeSettled('ri');
+  assert.deepEqual(pendingFor(r, 'ri'), [true], 'fixture: pending is open');
+  r.window.send('open-cancel', {});
+  await r.settle();
+  assert.deepEqual(pendingFor(r, 'ri'), [true, false], 'closed with the window');
+  const posted = r.window.posts.length;
+  r.releaseSearch();
+  await r.settle();
+  assert.equal(r.window.posts.length, posted, 'and the late answer posts nothing');
+});
+
+test('F1. one request per cache key: the same text asked again while its request is out reuses it, and its pending pairs up', async () => {
+  const r = await searchRig({searchHold: true});
+  await r.typeSettled('ri');
+  await r.typeSettled('riv');
+  assert.equal(r.searchRequests(), 2, 'fixture: "ri" and "riv" are out');
+  await r.typeSettled('ri');
+  assert.equal(r.searchRequests(), 2, 'no second request for "ri" while the first is out');
+  r.releaseSearch();
+  await r.settle();
+  assert.ok(searchAnswers(r, 'ri').length >= 1, 'the answer serves the new wait');
+  assert.ok(paired(pendingFor(r, 'ri')), `every true for "ri" has its false: ${JSON.stringify(pendingFor(r, 'ri'))}`);
+  assert.ok(paired(pendingFor(r, 'riv')), 'and for "riv"');
+});
+
+test('F1. an answer, a failure, and each pair stay balanced for every text over a typing run', async () => {
+  const r = await searchRig({searchFail: true});
+  for (const text of ['ri', 'riv', 'ri', 'rid']) await r.typeSettled(text);
+  for (const text of ['ri', 'riv', 'rid']) assert.ok(paired(pendingFor(r, text)), `"${text}": ${JSON.stringify(pendingFor(r, text))}`);
+  assert.ok(pendingFor(r, 'ri').length >= 2, 'fixture: "ri" was asked');
+});
+
+for (const [change, label] of [['ri ', 'a trailing space'], ['RI', 'a case change'], [' Ri', 'a leading space and case']]) {
+  test(`F2. ${label} after the answer: no new pause, no request, no pending, no new answer`, async () => {
+    for (const [, signedIn] of MODES) {
+      const r = await searchRig({signedIn});
+      await r.ask('ri');
+      await r.typeSettled('ri');
+      const requests = r.searchRequests();
+      const answers = searchAnswers(r).length;
+      const pending = r.messages('suggestions-search-pending').length;
+      const calls = r.calls().length;
+      await r.ask(change);
+      r.shim.timers.advance(2000);
+      await r.settle();
+      assert.equal(r.searchRequests(), requests, 'no request');
+      assert.equal(r.calls().length, calls, 'no other request');
+      assert.equal(r.messages('suggestions-search-pending').length, pending, 'no pending message');
+      assert.equal(searchAnswers(r).length, answers, 'no new answer');
+    }
+  });
+}
+
+test('F2. a trailing space while the request is out: still one request, one pending pair, one answer', async () => {
+  const r = await searchRig({searchHold: true});
+  await r.typeSettled('ri');
+  await r.typeSettled('ri ');
+  assert.equal(r.searchRequests(), 1, 'one request');
+  r.releaseSearch();
+  await r.settle();
+  r.shim.timers.advance(1000);
+  await r.settle();
+  assert.deepEqual(pendingFor(r, 'ri'), [true, false], 'one pair');
+  assert.equal(searchAnswers(r).length, 1, 'one answer');
+});
+
+// F3: after sign-out, or an idle stop, no later request carries the token.
+const authedAfter = (r, since) => r.calls().slice(since)
+  .filter(call => !/\/helix\/search\/channels/.test(call.url) && call.options?.headers?.Authorization);
+
+test('F3. sign-out while a signed-in search is out: no later request carries Authorization', async () => {
+  const r = await searchRig({signedIn: true, searchHold: true});
+  await r.typeSettled('ri');
+  assert.equal(r.searchRequests(), 1, 'fixture: the Helix search is out');
+  await r.shim.global.send('auth-forget', {}, '0');
+  await r.settle();
+  const since = r.calls().length;
+  r.releaseSearch();
+  await r.settle();
+  r.shim.timers.advance(6000);
+  await r.settle();
+  assert.deepEqual(authedAfter(r, since).map(call => call.url), [], 'no /streams or other call with the token');
+});
+
+test('F3. the window closing with no player (credentials dropped) while a signed-in search is out: no later request carries Authorization', async () => {
+  const r = loadGlobal({people: SEARCH_HISTORY(), liveLogins: SEARCH_LIVE, details: SEARCH_DETAILS, searchResults: searchFixture,
+    signedIn: true, scopes: FOLLOWS_SCOPES, follows: SEARCH_FOLLOWS, searchHold: true});
+  await r.showOpen();
+  await r.ask('ri');
+  await r.typeSettled('ri');
+  assert.equal(r.searchRequests(), 1, 'fixture: the Helix search is out');
+  r.window.send('open-cancel', {});
+  await r.settle();
+  const since = r.calls().length;
+  r.releaseSearch();
+  await r.settle();
+  r.shim.timers.advance(6000);
+  await r.settle();
+  assert.deepEqual(authedAfter(r, since).map(call => call.url), []);
+});
+
+// F4: an account change resets the search.
+test('F4. sign-in while signed-out search rows are drawn: the current text is searched again as the new account, nobody twice', async () => {
+  const base = {people: SEARCH_HISTORY(), liveLogins: SEARCH_LIVE, details: SEARCH_DETAILS, searchResults: searchFixture};
+  const r = loadGlobal({...base, scopes: FOLLOWS_SCOPES, follows: SEARCH_FOLLOWS});
+  await r.showOpen();
+  await r.ask('ri');
+  await r.typeSettled('ri');
+  assert.equal(r.gqlSearch().length, 1, 'fixture: searched signed out');
+  r.shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
+  await r.signIn();
+  r.shim.timers.advance(2000);
+  await r.settle();
+  assert.equal(r.helixSearch().length, 1, 'searched again, now with Helix');
+  const answer = searchAnswers(r).at(-1);
+  assert.deepEqual([logins(answer.known), logins(answer.others)], [EXPECTED_RI['signed in'].known, EXPECTED_RI['signed in'].others]);
+  const y = r.messages('suggestions').filter(message => message.text === 'ri').at(-1);
+  const everyone = [...logins(y.rows), ...logins(answer.known), ...logins(answer.others)];
+  assert.equal(new Set(everyone).size, everyone.length, `no person twice: ${everyone.join(',')}`);
+});
+
+test('F4. sign-out while signed-in search rows are drawn: the current text is searched again anonymously, nobody twice', async () => {
+  const r = await searchRig({signedIn: true});
+  await r.ask('ri');
+  await r.typeSettled('ri');
+  assert.equal(r.helixSearch().length, 1, 'fixture: searched signed in');
+  await r.shim.global.send('auth-forget', {}, '0');
+  await r.settle();
+  r.shim.timers.advance(2000);
+  await r.settle();
+  assert.equal(r.gqlSearch().length, 1, 'searched again, anonymously');
+  const answer = searchAnswers(r).at(-1);
+  assert.deepEqual([logins(answer.known), logins(answer.others)], [EXPECTED_RI['signed out'].known, EXPECTED_RI['signed out'].others]);
+  const y = r.messages('suggestions').filter(message => message.text === 'ri').at(-1);
+  const everyone = [...logins(y.rows), ...logins(answer.known), ...logins(answer.others)];
+  assert.equal(new Set(everyone).size, everyone.length, `no person twice: ${everyone.join(',')}`);
+});
+
+// F5: late follows are held while known or other rows are drawn.
+test('F5. late follows are held while only known rows are drawn; the next text includes them', async () => {
+  const r = await searchRig({signedIn: true, holdFollows: true, searchResults: () => [{login: 'dunmore', name: 'dunmore'}]});
+  r.shim.timers.advance(450);
+  await r.settle();
+  await r.ask('ri');
+  await r.typeSettled('ri');
+  const answer = searchAnswers(r)[0];
+  assert.ok(answer && logins(answer.known).includes('dunmore') && answer.others.length === 0, 'fixture: known rows only');
+  const listsBefore = r.messages('suggestions').length;
+  r.releaseFollows();
+  await r.settle();
+  r.shim.timers.advance(100);
+  await r.settle();
+  const later = r.messages('suggestions').slice(listsBefore).filter(message => message.text === 'ri');
+  for (const list of later) assert.ok(!logins(list.rows).includes('rimecraft'), 'no late follow appended while known rows are drawn');
+  const next = await r.ask('rim');
+  assert.ok(logins(next.rows).includes('rimecraft'), 'the next text includes the follow');
+});
+
+// F6: every followed channel is known.
+test('F6. a followed channel on page 2 of followed channels is known: never in others, and paging stops at 10 pages', async () => {
+  const follows = Array.from({length: 130}, (_, index) => {
+    const three = String(index + 1).padStart(3, '0');
+    return {login: `fx${three}`, name: `Fx ${three}`};
+  });
+  const r = loadGlobal({people: many(3), signedIn: true, scopes: FOLLOWS_SCOPES, follows, followsPaged: true,
+    searchResults: () => [{login: 'fx125', name: 'Fx 125'}, {login: 'stranger1', name: 'Stranger One'}]});
+  await r.signIn();
+  await r.showOpen();
+  await r.ask('fx125');
+  await r.typeSettled('fx125');
+  const answer = searchAnswers(r, 'fx125')[0];
+  assert.ok(answer, 'answered');
+  assert.ok(!logins(answer.others).includes('fx125'), 'a followed channel is never "other"');
+  assert.ok(logins(answer.known).includes('fx125'), 'it is known');
+  assert.deepEqual(logins(answer.others), ['stranger1']);
+  const endless = loadGlobal({people: many(3), signedIn: true, scopes: FOLLOWS_SCOPES, followsCursor: 'more',
+    follows: Array.from({length: 100}, (_, index) => ({login: `ff${index}`, name: `Ff ${index}`})),
+    searchResults: () => [{login: 'stranger1', name: 'Stranger One'}]});
+  await endless.signIn();
+  await endless.showOpen();
+  await endless.ask('str');
+  await endless.typeSettled('str');
+  assert.equal(endless.followedChannels().length, 10, 'with a cursor that never ends, 10 pages are read and no more');
+});
+
+// F7: combining marks.
+test('F7. text with combining marks (a Hindi word with vowel signs) is searched', async () => {
+  const r = await searchRig();
+  const word = '\u0939\u093f\u0902\u0926\u0940';
+  await r.typeSettled(word);
+  assert.equal(r.searchRequests(), 1, 'one search request');
+  assert.equal(r.searchTextOfCall(r.gqlSearch()[0]), word);
+});

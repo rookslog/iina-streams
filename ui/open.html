@@ -16,7 +16,12 @@
  </form>
  <div id="suggestions-area" class="suggestions-area">
   <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions"></div>
-  <p id="follows-note" class="follows-note" role="note" hidden></p>
+  <div id="follows" class="follows" aria-live="polite" hidden>
+   <button id="follows-connect" class="push" type="button" hidden></button>
+   <span id="follows-busy" class="busy-indicator" role="status" aria-label="Connecting to Twitch" hidden></span>
+   <span id="follows-code" class="follows-code" hidden></span>
+   <button id="follows-open" class="push" type="button" hidden></button>
+  </div>
   <div id="suggestions-empty" class="suggestions-empty" aria-hidden="true" hidden>
    <svg viewBox="0 0 40 32" focusable="false"><circle cx="15" cy="11" r="5.25"></circle><path d="M4.5 28.5c0-6 4.7-10 10.5-10s10.5 4 10.5 10"></path><path d="M23.6 5.1a4.6 4.6 0 1 1 1.9 8.6"></path><path d="M28.5 18.7c4.1.9 7 4.6 7 9.8"></path></svg>
   </div>

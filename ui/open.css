@@ -110,10 +110,19 @@ input[aria-invalid=true]{border-color:var(--error);outline:2px solid var(--error
 .vod-status{display:flex;align-items:center;height:28px;padding-left:41px;color:var(--secondary);font-size:12px}
 .vod-status .busy-indicator{margin:0}
 
-/* P4: the follows note, one row high, under the list. A note, not a row. */
-.follows-note{height:28px;margin:0;padding:0 6px;border-top:1px solid var(--line);line-height:27px;font-size:12px;
- color:var(--secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.follows-note[hidden]{display:none}
+/* P4 (phase 3c): the follows row, one row high, under the list. Not a row of the list: an action, then the
+   code and the button that opens Twitch for it. The push buttons are the small bordered macOS kind. */
+.follows{display:flex;align-items:center;gap:8px;height:28px;padding:0 6px;border-top:1px solid var(--line)}
+.follows[hidden]{display:none}
+.follows .busy-indicator{margin:0}
+.push{flex:none;height:22px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);
+ font:inherit;font-size:12px;color:inherit;cursor:default;box-shadow:0 .5px 1px rgba(0,0,0,.08)}
+.push[hidden]{display:none}
+.push:active{background:var(--hover)}
+.push:focus-visible{outline:3px solid color-mix(in srgb,var(--accent),transparent 30%);outline-offset:1px}
+.follows-code{flex:none;font-size:13px;font-weight:650;letter-spacing:.08em;font-variant-numeric:tabular-nums;
+ user-select:all;-webkit-user-select:all;cursor:text}
+.follows-code[hidden]{display:none}
 
 /* No history yet: the people glyph stands where people will be. No words. */
 .suggestions-empty{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}

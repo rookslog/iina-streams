@@ -18,8 +18,15 @@
  const emptyGlyph=document.getElementById('suggestions-empty');
  const announcer=document.getElementById('announce');
  const clearButton=document.getElementById('open-clear');
- const followsNote=document.getElementById('follows-note');
- const SIGN_IN_AGAIN='Sign in to Twitch again to include who you follow.';
+ // Phase 3c (C3): the follows row under the list. One action, then the device code and the button that opens
+ // Twitch's page for it.
+ const followsRow=document.getElementById('follows');
+ const followsConnect=document.getElementById('follows-connect');
+ const followsBusy=document.getElementById('follows-busy');
+ const followsCode=document.getElementById('follows-code');
+ const followsOpen=document.getElementById('follows-open');
+ const INCLUDE_FOLLOWS='Include who you follow';
+ const ENTER_CODE='Enter Code on Twitch';
  const SVG_NS='http://www.w3.org/2000/svg';
  // Mock A's Twitch mark (direction-a/a.js ICON.twitch).
  const TWITCH_PATH='M3.2 1 1.8 3.8V13h3.3v2h1.8l2-2h2.7L15 9.6V1H3.2Zm10.3 7.9-1.9 1.9H8.8l-1.9 1.9v-1.9H3.6V2.5h9.9v6.4ZM10.2 4.6h1.4v3.6h-1.4V4.6Zm-3.5 0h1.4v3.6H6.7V4.6Z';
@@ -748,16 +755,58 @@
   }
  }
 
- // P4: an old sign-in can't read follows. One quiet line under the list, taking one row of its height, says
- // so; it is a note, not a row, so the arrows and the selection never reach it.
+ // P4 (phase 3c, C3): when the sign-in can't read follows, one row under the list, taking one row of its
+ // height, offers the one action that fixes it. It is not an option: the arrows and the selection never reach
+ // it, and Tab does. The row has three states: 'offer' (the button), 'connecting' (a spinner until global sends
+ // the code) and 'code' (the code and the button that opens Twitch). Connecting is never offered while a code is
+ // pending, since a second device flow would void the code on screen. Any other suggestions-follows state
+ // ('ready' and the rest) takes the row away.
+ let followsState='none',followsUserCode='';
+
  function onFollows(data){
   const value=unwrap(data);
-  const show=!!value&&value.state==='needs-sign-in';
-  if(followsNote){
-   followsNote.textContent=show?SIGN_IN_AGAIN:'';
-   followsNote.hidden=!show;
+  showFollows(value&&value.state==='needs-sign-in'?'offer':'none');
+ }
+
+ function onFollowsCode(data){
+  const value=unwrap(data);
+  const code=value&&typeof value.userCode==='string'?value.userCode.trim():'';
+  if(!code||code.length>32)return;
+  followsUserCode=code;
+  showFollows('code');
+ }
+
+ function showFollows(state){
+  followsState=state;
+  if(state!=='code')followsUserCode='';
+  const shown=state!=='none';
+  if(followsRow)followsRow.hidden=!shown;
+  if(followsConnect){
+   followsConnect.textContent=INCLUDE_FOLLOWS;
+   followsConnect.hidden=state!=='offer';
   }
-  if(area)area.setAttribute('class','suggestions-area'+(show?' with-note':''));
+  if(followsBusy)followsBusy.hidden=state!=='connecting';
+  if(followsCode){
+   followsCode.textContent=followsUserCode;
+   followsCode.hidden=state!=='code';
+  }
+  if(followsOpen){
+   followsOpen.textContent=ENTER_CODE;
+   followsOpen.hidden=state!=='code';
+  }
+  if(area)area.setAttribute('class','suggestions-area'+(shown?' with-note':''));
+ }
+
+ function onFollowsConnect(){
+  if(followsState!=='offer')return;
+  showFollows('connecting');
+  focusField();
+  post('follows-connect',{});
+ }
+
+ function onFollowsOpen(){
+  if(followsState!=='code')return;
+  post('follows-open',{});
  }
 
  // The field's clear button (mock A): the same as clearing with Escape, and focus stays in the field.
@@ -773,6 +822,8 @@
   clearButton.addEventListener('mousedown',event=>event.preventDefault());
   clearButton.addEventListener('click',onClear);
  }
+ if(followsConnect)followsConnect.addEventListener('click',onFollowsConnect);
+ if(followsOpen)followsOpen.addEventListener('click',onFollowsOpen);
  field.addEventListener('input',onInput);
  document.addEventListener('keydown',onKeyDown);
  window.addEventListener('focus',focusField);
@@ -786,6 +837,7 @@
  iina.onMessage('suggestions',onSuggestions);
  iina.onMessage('suggestions-status',onSuggestionsStatus);
  iina.onMessage('suggestions-follows',onFollows);
+ iina.onMessage('follows-code',onFollowsCode);
  focusField();
  // Global holds page messages until the listeners above exist (loadFile clears them in IINA 1.5.1).
  post('open-ready',{});

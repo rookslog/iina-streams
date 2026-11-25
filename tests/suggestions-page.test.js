@@ -225,7 +225,12 @@ test('12a. typing posts open-query {text}', () => {
 test('12. combobox: the field keeps focus; arrows move the selection with aria-activedescendant and aria-selected', () => {
   const f = pageFixture();
   f.suggest();
-  assert.equal(f.selected().length, 0, 'no selection before an arrow key');
+  // Amended 2026-11-24 (lead, provisional, the operator to confirm): with an empty field the first person is
+  // selected, so Return opens them in one step (the quick list). Typing clears it; arrows select again.
+  assert.deepEqual(f.selected(), [f.options()[0]], 'the first person is selected at rest');
+  f.type('o');
+  f.suggest();
+  assert.equal(f.selected().length, 0, 'no automatic selection while typing: Return submits the text');
   assert.equal(f.press('ArrowDown'), true, 'ArrowDown does not move the caret');
   assert.deepEqual(f.selected(), [f.options()[0]]);
   assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
@@ -301,7 +306,16 @@ test('13. selection by identity: status and a new list that still has the login 
   assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[0].id);
 });
 
-for (const key of ['ArrowRight', 'Tab']) {
+// Amended 2026-11-24 (lead, provisional): Tab is the Mac's focus key, so only ArrowRight opens broadcasts.
+test('14. broadcasts: Tab on a selected row moves focus and posts nothing', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.press('ArrowDown');
+  assert.equal(f.press('Tab'), false, 'Tab keeps its default (focus moves)');
+  assert.deepEqual(f.posts('open-vods'), []);
+});
+
+for (const key of ['ArrowRight']) {
   test(`14. broadcasts: ${key} on a selected row posts open-vods {login}`, () => {
     const f = pageFixture();
     f.suggest();

@@ -208,6 +208,41 @@ class TwitchAcquisitionTests(unittest.TestCase):
                     acquire.twitch_page('2922164492')
                 self.assertEqual(raised.exception.code, expected)
 
+    def test_emote_fragments_become_the_live_emotes_tag(self):
+        # #87 (lead, 2026-11-24): past-broadcast chat carries emotes the way live chat does, as the IRC
+        # `emotes` tag ("id:start-end,start-end/id:start-end", positions in Unicode code points, end inclusive).
+        # Shape checked against a real VideoCommentsByOffsetOrCursor page the same night: each emote fragment
+        # is {'text': name, 'emote': {'emoteID': '80958', 'from': 35, 'id': ..., '__typename': 'EmbeddedEmote'}}.
+        def tag_map(tag):
+            out = {}
+            for group in filter(None, (tag or '').split('/')):
+                emote_id, ranges = group.split(':')
+                out[emote_id] = sorted(tuple(int(n) for n in r.split('-')) for r in ranges.split(','))
+            return out
+        node = edge(body='')
+        node['node']['message']['fragments'] = [
+            {'text': 'hi '},
+            {'text': 'sumLove', 'emote': {'emoteID': '80958', 'from': 3, 'id': 'x1', '__typename': 'EmbeddedEmote'}},
+            {'text': ' \U0001F389 '},
+            {'text': 'Kappa', 'emote': {'emoteID': '25'}},
+            {'text': ' '},
+            {'text': 'sumLove', 'emote': {'emoteID': '80958'}},
+        ]
+        out = acquire.normalize_twitch_comment(node)
+        self.assertEqual(out['text'], 'hi sumLove \U0001F389 Kappa sumLove')
+        self.assertEqual(tag_map(out['emotes']), {'80958': [(3, 9), (19, 25)], '25': [(13, 17)]})
+
+        plain = acquire.normalize_twitch_comment(edge(body='no emotes here'))
+        self.assertEqual(plain.get('emotes', ''), '', 'a message without emote fragments carries no tag')
+
+        hostile = edge(body='')
+        hostile['node']['message']['fragments'] = [
+            {'text': 'a '}, {'text': 'Bad', 'emote': {'emoteID': '../x:1-2/'}}, {'text': ' b'},
+            {'text': 'Num', 'emote': {'emoteID': 25}}, {'text': 'Empty', 'emote': {}}]
+        out = acquire.normalize_twitch_comment(hostile)
+        self.assertEqual(out['text'], 'a Bad bNumEmpty', 'text is kept whatever the emote field holds')
+        self.assertEqual(out.get('emotes', ''), '', 'ids outside [A-Za-z0-9_]{1,64} (or not strings) are dropped')
+
     def test_invalid_nodes_do_not_invent_replay_timestamps(self):
         for value in [-1, float('nan'), None, True, 2592001]:
             self.assertIsNone(acquire.normalize_twitch_comment(edge(seconds=value)))

@@ -65,3 +65,15 @@ test('returned text remains literal and caller mutations cannot poison cached hi
  first[0].text='mutated';first[0].badges.push('bad');
  const second=replay.windowAt(0);assert.equal(second[0].text,'<img src=x onerror=attack()>');assert.deepEqual(second[0].badges,['moderator']);
 });
+
+test('#87: a row\'s emotes tag survives the playback window, as live chat\'s does',()=>{
+ // Lead, 2026-11-24: the acquire helper now writes `emotes` (the IRC tag); Replay must not drop it.
+ const tag='80958:3-9/25:11-15';
+ const {replay}=setup([[row('a',0,{text:'hi sumLove Kappa',emotes:tag}),row('b',1,{text:'plain'}),row('c',2,{text:'odd',emotes:7}),row('d',3,{text:'long',emotes:'25:0-1/'.repeat(400)})]]);
+ const shown=replay.windowAt(5);
+ assert.deepEqual(shown.map(x=>x.id),['a','b','c','d'],'rows with a missing or unusable tag are still shown');
+ assert.equal(shown[0].emotes,tag);
+ assert.equal('emotes' in shown[1],false);
+ assert.equal('emotes' in shown[2],false,'a non-string tag is dropped, not passed on');
+ assert.equal('emotes' in shown[3],false,'a tag over 2048 characters is dropped (safeMessage\'s bound)');
+});

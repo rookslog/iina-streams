@@ -291,6 +291,10 @@ class Importer:
                'color': value.get('color') if isinstance(value.get('color'), str) and COLOR.fullmatch(value['color']) else '',
                'badges': [text(b, 40) for b in value.get('badges', [])[:16] if isinstance(b, str)] if isinstance(value.get('badges'), list) else [],
                'kind': 'message'}
+        emotes = value.get('emotes')
+        # Do not keep offsets if text normalization has changed the message.
+        if isinstance(emotes, str) and len(emotes) <= 2048 and emotes.isascii() and body == value.get('text'):
+            row['emotes'] = emotes
         deleted = None
         if 'deletedAt' in value:
             deleted = seconds(value['deletedAt'])

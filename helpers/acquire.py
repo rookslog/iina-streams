@@ -500,8 +500,24 @@ def normalize_twitch_comment(edge):
     fragments = message.get('fragments')
     if not isinstance(fragments, list):
         return None
-    body = ''.join(f.get('text', '') for f in fragments[:3000]
-                   if isinstance(f, dict) and isinstance(f.get('text'), str))[:16000]
+    parts, emotes, size = [], {}, 0
+    for fragment in fragments[:3000]:
+        if not isinstance(fragment, dict) or not isinstance(fragment.get('text'), str):
+            continue
+        fragment_text = fragment['text']
+        piece = fragment_text[:16000 - size]
+        end = size + len(piece)
+        emote = fragment.get('emote')
+        emote_id = emote.get('emoteID') if isinstance(emote, dict) else None
+        # Python string offsets count Unicode code points, as the IRC tag requires.
+        if (piece and len(piece) == len(fragment_text) and isinstance(emote_id, str)
+                and re.fullmatch(r'[A-Za-z0-9_]{1,64}', emote_id)):
+            emotes.setdefault(emote_id, []).append(f'{size}-{end - 1}')
+        parts.append(piece)
+        size = end
+        if size == 16000:
+            break
+    body = ''.join(parts)
     if not body.strip():
         return None
     author = (commenter.get('displayName') or commenter.get('login')) if isinstance(commenter, dict) else None
@@ -512,9 +528,12 @@ def normalize_twitch_comment(edge):
     badge_ids = [b['id'][:40] for b in badges[:16]
                  if isinstance(b, dict) and isinstance(b.get('id'), str)] if isinstance(badges, list) else []
     identifier = node.get('id')
-    return {'id': identifier[:256] if isinstance(identifier, str) else '',
+    row = {'id': identifier[:256] if isinstance(identifier, str) else '',
             'time': when, 'author': author[:128] if isinstance(author, str) else 'Unknown',
             'text': body, 'color': user_color, 'badges': badge_ids}
+    if emotes:
+        row['emotes'] = '/'.join(emote_id + ':' + ','.join(ranges) for emote_id, ranges in emotes.items())
+    return row
 
 
 def twitch_acquire(url, output, *, at=0, fetch_page=twitch_page, on_published=None):

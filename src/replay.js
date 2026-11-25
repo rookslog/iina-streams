@@ -51,6 +51,7 @@ class Replay {
    for(const row of raw){
     if(!row||!timestamp(row.time)||row.time<previous||row.time<chunk.start||row.time>chunk.end||typeof row.id!=='string'||!row.id.length||row.id.length>256||typeof row.author!=='string'||row.author.length>128||typeof row.text!=='string'||!row.text.length||row.text.length>16000||typeof row.color!=='string'||(row.color!==''&&!/^#[0-9a-fA-F]{6}$/.test(row.color))||!Array.isArray(row.badges)||row.badges.length>16||row.badges.some(b=>typeof b!=='string'||b.length>40)||row.kind!=='message'||(row.deletedAt!==undefined&&(!timestamp(row.deletedAt)||row.deletedAt<row.time)))throw Error();
     const clean={id:row.id,time:row.time,author:row.author,text:row.text,color:row.color,badges:row.badges.slice(),kind:'message'};
+    if(typeof row.emotes==='string'&&row.emotes.length<=2048)clean.emotes=row.emotes;
     if(row.deletedAt!==undefined)clean.deletedAt=row.deletedAt;
     size+=bytes(JSON.stringify(clean))+(rows.length?1:0);if(size>MAX_BYTES)throw Error();
     rows.push(clean);previous=row.time;

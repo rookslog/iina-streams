@@ -89,6 +89,24 @@ class ReplayImportTests(unittest.TestCase):
         self.assertEqual(index['provenance']['format'], 'iina-streams-replay-v1')
         self.assertFalse(index['provenance']['verified'])
 
+    def test_emotes_tag_survives_import_only_when_the_text_is_unchanged(self):
+        # #87 (lead, 2026-11-24): acquired Twitch rows carry the live `emotes` tag; the importer stores it with the
+        # row (Codex found this stage dropped it), but only when the stored text is the text the offsets index.
+        rows = [
+            {'id': 'a', 'time': 1, 'author': 'S', 'text': 'hi sumLove', 'emotes': '80958:3-9'},
+            {'id': 'b', 'time': 2, 'author': 'S', 'text': 'plain'},
+            {'id': 'c', 'time': 3, 'author': 'S', 'text': 'odd', 'emotes': 7},
+            {'id': 'd', 'time': 4, 'author': 'S', 'text': 'long', 'emotes': '25:0-1/' * 400},
+            {'id': 'e', 'time': 5, 'author': 'S', 'text': 'x' * 20000, 'emotes': '25:0-1'},
+        ]
+        response, _, out = self.invoke(json.dumps({'version': 1, 'provider': 'generic', 'records': rows}))
+        _, actual = self.unpack(response, out)
+        by_id = {x['id']: x for x in actual}
+        self.assertEqual(by_id['a'].get('emotes'), '80958:3-9')
+        for key in 'bcd':
+            self.assertNotIn('emotes', by_id[key], key)
+        self.assertNotIn('emotes', by_id['e'], 'text shortened on import: the offsets no longer index it')
+
     def test_gzip_and_large_embedded_assets_are_streamed_without_decoding_assets(self):
         # Regressions: extension-only gzip detection, materializing unknown asset trees.
         root = {'video': {'id': '2'}, 'comments': [{'_id': 'x', 'content_offset_seconds': 0, 'message': {'fragments': [{'text': 'Fallback fragments'}]}}], 'embeddedData': {'firstParty': [{'data': 'x' * (3 * 1048576)}]}}

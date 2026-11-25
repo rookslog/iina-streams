@@ -16,6 +16,7 @@ const {join} = require('node:path');
 const {performance} = require('node:perf_hooks');
 const {createIina} = require('./support/iina-shim.js');
 const {createHistory} = require('../src/history.js');
+const {SIGNED_OUT} = require('../src/auth.js');
 
 const SCRIPT = join(__dirname, '../global.js');
 const requireFromGlobal = createRequire(SCRIPT);
@@ -88,16 +89,29 @@ function quoted(query) {
 const FOLLOWED = /\/helix\/(streams|channels)\/followed(\?|$)/;
 const USER_ID = '77001';
 const FOLLOWS_SCOPES = ['chat:read', 'user:read:follows'];
+const NEW_TOKEN = 'new-follows-token-0001';
+const NEW_REFRESH = 'new-follows-refresh-0001';
+const USER_CODE = 'WXYZ-1234';
+const DEVICE_CODE = 'device-code-secret-9f3a';
+const VERIFICATION_URI = 'https://www.twitch.tv/activate?public=true';
+const OAUTH = 'https://id.twitch.tv/oauth2';
 
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
   statusFails = false, holdStatus = false, scopes = ['chat:read'], follows = [], details = {}, followsFail = false,
-  holdFollows = false, followsCursor = ''} = {}) {
+  holdFollows = false, followsCursor = '', builtInClientID = '', gqlFieldError = null} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
   if (signedIn) shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
   const control = {liveLogins: new Set(liveLogins), statusFails, precheck, holdStatus, held: [], scopes, userID: USER_ID,
-    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor};
+    follows, details, followsFail, holdFollows, heldFollows: [], followsCursor, gqlFieldError,
+    // The device flow of Phase 3c (C3). `approve` is the person finishing sign-in on Twitch; until then the poll is
+    // authorization_pending. The new grant's scopes are `newScopes`. Shapes: src/auth.js and tests/auth.test.js.
+    oauth: {approve: false, issued: false, deviceForm: null, newScopes: FOLLOWS_SCOPES, newToken: NEW_TOKEN,
+      newRefresh: NEW_REFRESH, userCode: USER_CODE, deviceCode: DEVICE_CODE, verificationUri: VERIFICATION_URI}};
+  // The scopes a token carries: the saved one, or the one a finished device flow issued. Anything else is invalid.
+  const tokenScopes = token => token === SAVED.access_token ? control.scopes
+    : token === control.oauth.newToken && control.oauth.issued ? control.oauth.newScopes : null;
 
   const liveDetails = login => ({title: `Stream of ${login}`, category: 'Just Chatting', viewers: 100,
     ...(control.details[login] || {})});
@@ -130,6 +144,29 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   const get = shim.iina.http.get;
   shim.iina.http.post = (url, options) => {
     const query = options?.data?.query ?? '';
+    if (url.startsWith(OAUTH + '/')) {
+      const form = options?.data ?? {};
+      const path = url.slice(OAUTH.length);
+      if (path === '/device') {
+        control.oauth.deviceForm = form;
+        shim.http.setResponse({statusCode: 200, data: {device_code: control.oauth.deviceCode, user_code: control.oauth.userCode,
+          verification_uri: control.oauth.verificationUri, expires_in: 1800, interval: 5}});
+      } else if (path === '/token' && form.grant_type === 'urn:ietf:params:oauth:grant-type:device_code') {
+        if (control.oauth.approve) {
+          control.oauth.issued = true;
+          shim.http.setResponse({statusCode: 200, data: {access_token: control.oauth.newToken,
+            refresh_token: control.oauth.newRefresh, expires_in: 14400, token_type: 'bearer'}});
+        } else {
+          shim.http.rejectResponse({statusCode: 400, reason: 'Bad Request', text: '',
+            data: {status: 400, message: 'authorization_pending'}});
+        }
+      } else if (path === '/revoke') {
+        shim.http.setResponse({statusCode: 200, data: {}});
+      } else {
+        shim.http.rejectResponse({statusCode: 404, reason: 'Not Found', text: ''});
+      }
+      return post(url, options);
+    }
     if (url === GQL && PRECHECK.test(query)) {
       const stream = control.precheck === 'live' ? {id: '42'} : null;
       shim.http.setResponse({statusCode: 200, data: {data: {user: {stream}}}});
@@ -143,14 +180,25 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
       const aliased = Array.from(query.matchAll(/(\w+):user\(login:"(\w+)"\)/g));
       const data = {users: quoted(query).map(login => gqlUser(query, login))};
       for (const [, alias, login] of aliased) data[alias] = gqlUser(query, login);
-      if (control.holdStatus) {
+      // Phase 3c, C5: one field fails, as GraphQL reports it: the field is null and `errors` names its path. Only a
+      // query that selects lastBroadcast can hit it, so a query without it is untouched.
+      let errors;
+      if (control.gqlFieldError && /lastBroadcast\{/.test(query.replace(/\s+/g, ''))) {
+        const index = quoted(query).indexOf(control.gqlFieldError);
+        const alias = aliased.find(([, , login]) => login === control.gqlFieldError)?.[1];
+        if (alias) data[alias].lastBroadcast = null;
+        if (index >= 0) data.users[index].lastBroadcast = null;
+        errors = [{message: 'Service error', path: [alias ?? 'users', ...(alias ? [] : [index]), 'lastBroadcast']}];
+      }
+      // Amended 2026-11-25 (phase 3c, TESTS-74): only the live-status query is held; an age lookup (C5) is not.
+      if (control.holdStatus && /stream\{/.test(query.replace(/\s+/g, ''))) {
         // Held until releaseStatus(): the answer arrives later, on its own turn.
         return new Promise(resolve => control.held.push(() => {
-          shim.http.setResponse({statusCode: 200, data: {data}});
+          shim.http.setResponse({statusCode: 200, data: {data, ...(errors ? {errors} : {})}});
           resolve(post(url, options));
         }));
       }
-      shim.http.setResponse({statusCode: 200, data: {data}});
+      shim.http.setResponse({statusCode: 200, data: {data, ...(errors ? {errors} : {})}});
     }
     return post(url, options);
   };
@@ -164,8 +212,9 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     const reject = (statusCode, message) => shim.http.rejectResponse({statusCode, reason: message, text: '',
       data: {error: message, status: statusCode, message}});
     if (control.followsFail) return reject(503, 'Service Unavailable');
-    if (headers.Authorization !== `Bearer ${SAVED.access_token}` || !headers['Client-Id']) return reject(401, 'Invalid OAuth token');
-    if (!control.scopes.includes('user:read:follows')) return reject(401, 'Missing scope: user:read:follows');
+    const scopes = tokenScopes(String(headers.Authorization ?? '').replace(/^Bearer /, ''));
+    if (!scopes || !headers['Client-Id']) return reject(401, 'Invalid OAuth token');
+    if (!scopes.includes('user:read:follows')) return reject(401, 'Missing scope: user:read:follows');
     if (!params.user_id) return reject(400, 'Missing required parameter "user_id"');
     if (params.user_id !== control.userID) return reject(400, 'The user_id must match the user ID in the user access token');
     if (url.includes('/channels/followed')) {
@@ -186,8 +235,15 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
 
   shim.iina.http.get = (url, options) => {
     if (url.endsWith('/oauth2/validate')) {
-      shim.http.setResponse({statusCode: 200, data: {client_id: SAVED.clientID, login: 'reader', user_id: control.userID,
-        scopes: control.scopes, expires_in: 5000}});
+      const token = String(options?.headers?.Authorization ?? '').replace(/^OAuth /, '');
+      const scopes = tokenScopes(token);
+      if (!scopes) {
+        shim.http.rejectResponse({statusCode: 401, reason: 'Unauthorized', text: '', data: {status: 401, message: 'invalid access token'}});
+      } else {
+        const fresh = token === control.oauth.newToken;
+        shim.http.setResponse({statusCode: 200, data: {client_id: fresh ? control.oauth.deviceForm.client_id : SAVED.clientID,
+          login: 'reader', user_id: control.userID, scopes, expires_in: 5000}});
+      }
     } else if (FOLLOWED.test(url)) {
       if (control.holdFollows) {
         return new Promise(resolve => control.heldFollows.push(() => {
@@ -226,7 +282,7 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
     globals: {Date: class extends Date { static now() { return START * 1000 + shim.timers.now; } }},
     require(name) {
       if (name === './config.js') return {identifier: ID, variant: 'unified', qa: false};
-      if (name === './src/twitch-app.js') return {clientID: ''};
+      if (name === './src/twitch-app.js') return {clientID: builtInClientID};
       return requireFromGlobal(name);
     },
   });
@@ -272,8 +328,12 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
 
   const messages = name => window.posts.filter(post => post.name === name).map(post => decode(post.data));
   const calls = () => shim.http.calls;
-  const gqlStatus = () => calls().filter(call => call.url === GQL && call.method === 'POST'
+  // Amended 2026-11-25 (phase 3c, TESTS-74): C5 lets the age lookup be its own query, so a request that selects no
+  // `stream` is an age lookup (gqlAges), not a live-status request; 5a-5e count live-status requests.
+  const gqlAll = () => calls().filter(call => call.url === GQL && call.method === 'POST'
     && !PRECHECK.test(call.options?.data?.query ?? '') && !(call.options?.data?.query ?? '').includes('videos('));
+  const gqlStatus = () => gqlAll().filter(call => /stream\{/.test(call.options.data.query.replace(/\s+/g, '')));
+  const gqlAges = () => gqlAll().filter(call => !/stream\{/.test(call.options.data.query.replace(/\s+/g, '')));
   const helixStatus = () => calls().filter(call => HELIX.test(call.url));
   const followedLive = () => calls().filter(call => /\/helix\/streams\/followed(\?|$)/.test(call.url));
   const followedChannels = () => calls().filter(call => /\/helix\/channels\/followed(\?|$)/.test(call.url));
@@ -281,6 +341,8 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   const followRequests = () => followedLive().length + followedChannels().length + control.heldFollows.length;
   // A held request counts as made: the shim records it only once released.
   const statusRequests = () => gqlStatus().length + helixStatus().length + control.held.length;
+  const oauthCalls = path => calls().filter(call => call.url === OAUTH + path);
+  const validateCalls = () => calls().filter(call => call.url === OAUTH + '/validate');
   const prechecks = () => calls().filter(call => call.url === GQL && PRECHECK.test(call.options?.data?.query ?? ''));
   const archives = () => calls().filter(call => (call.options?.data?.query ?? '').includes('videos('));
 
@@ -307,7 +369,7 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
 
   return {
     shim, window, control, releaseStatus, releaseFollows, followedLive, followedChannels, followRequests, showOpen, reopen, signIn, settle, ask, messages, calls, gqlStatus, helixStatus,
-    statusRequests, prechecks, archives, menuItem, oracle: oracle(text), text,
+    statusRequests, prechecks, archives, menuItem, oracle: oracle(text), text, oauthCalls, validateCalls, gqlAll, gqlAges,
   };
 }
 
@@ -389,7 +451,11 @@ test('5a. signed out: one batched GQL request listing the logins, answered as su
 
   const first = r.messages('suggestions').find(message => message.text === '');
   assert.ok(first, 'suggestions arrive first');
-  assert.ok(first.rows.every(row => row.live === null), 'live is unknown until the status arrives');
+  // Amended 2026-11-25 (phase 3c, TESTS-74): C1, the first list waits for the status answer (or 450 ms), so here, where
+  // the answer is immediate, it already carries the marks, live people first. It was "unknown until the status arrives".
+  assert.deepEqual(first.rows.filter(row => logins.includes(row.login)).map(row => [row.login, row.live]),
+    liveFirst(r.oracle('').slice(0, 20), ['p01', 'p03']).map(row => [row.login, ['p01', 'p03'].includes(row.login)]),
+    'the first list has the status answer in it');
   const statuses = r.messages('suggestions-status');
   assert.equal(statuses.length, 1, 'one suggestions-status');
   // Amended 2026-11-24 (phase 3, TESTS-74): G6 adds `details` to the message, so the status map is compared on its own;
@@ -717,7 +783,7 @@ test('G1. signed in with user:read:follows: one followed-live and one followed-c
   assert.equal(r.followedChannels().length, 2, 'followed-channels again at 60 s');
 });
 
-test('G2. signed in without user:read:follows: no follow requests, one needs-sign-in note per open; signed out: neither', async () => {
+test('G2. signed in without user:read:follows: no follow requests, one needs-sign-in note per open; signed out: the same note', async () => {
   const old = loadGlobal({signedIn: true});
   await old.signIn();
   await old.showOpen();
@@ -729,11 +795,14 @@ test('G2. signed in without user:read:follows: no follow requests, one needs-sig
   assert.deepEqual(old.messages('suggestions-follows'), [{state: 'needs-sign-in'}, {state: 'needs-sign-in'}], 'one more per open');
   assert.equal(old.followRequests(), 0);
 
+  // Amended 2026-11-25 (phase 3c, TESTS-74): C3, "or no grant exists": a signed-out person gets the same note (the page
+  // shows it as the one-action button "Include who you follow"), once per open, and still no follow request.
   const out = loadGlobal();
   await out.showOpen();
+  assert.deepEqual(out.messages('suggestions-follows'), [{state: 'needs-sign-in'}], 'signed out: the note, once');
   await out.reopen();
+  assert.deepEqual(out.messages('suggestions-follows'), [{state: 'needs-sign-in'}, {state: 'needs-sign-in'}], 'and once per open');
   assert.equal(out.followRequests(), 0, 'signed out: no follow request');
-  assert.deepEqual(out.messages('suggestions-follows'), [], 'signed out: no note');
 });
 
 test('G3. rows: people from history and follows, each once, with the same four keys and nothing from visits or scores', async () => {
@@ -849,33 +918,7 @@ test('G6. signed in: follows\' live details come from the followed-live answer, 
   }
 });
 
-test('G7. when status arrives, global posts a new suggestions for the current text, live first', async () => {
-  const r = loadGlobal({people: many(25), liveLogins: ['p03'], holdStatus: true});
-  await r.showOpen();
-  const typed = await r.ask('p0');
-  assert.deepEqual(loginsOf(typed).slice(0, 3), ['p01', 'p02', 'p03'], 'fixture: nothing is known live yet');
-  const before = r.messages('suggestions').length;
-  r.releaseStatus();
-  await r.settle();
-  const later = r.messages('suggestions').slice(before);
-  assert.ok(later.length >= 1, 'a new suggestions message follows the status');
-  assert.equal(r.messages('suggestions').at(-1).text, 'p0', 'for the text now in the field');
-  assert.deepEqual(loginsOf(r.messages('suggestions').at(-1)).slice(0, 3), ['p03', 'p01', 'p02']);
-  assert.equal(r.messages('suggestions').at(-1).rows[0].live, true);
-});
-
-test('G7. when the follows arrive, global posts a new suggestions for the current text in G5 order', async () => {
-  const r = await openedWithFollows({holdFollows: true});
-  const typed = await r.ask('qu');
-  assert.ok(!loginsOf(typed).includes('quenby'), 'fixture: the follows have not arrived');
-  const before = r.messages('suggestions').length;
-  r.releaseFollows();
-  await r.settle();
-  assert.ok(r.messages('suggestions').length > before, 'a new suggestions message follows the follows');
-  const latest = r.messages('suggestions').at(-1);
-  assert.equal(latest.text, 'qu');
-  assert.deepEqual(loginsOf(latest), ['quillfox', 'quenby', 'quartzine', 'thequiet', 'miss_q']);
-});
+// G7 (the repost when status or follows arrive) was superseded by C1 on 2026-11-25 (phase 3c); see the C1 tests below.
 
 test('G8. privacy: follow and detail requests carry only logins, the user id and the token in Authorization', async () => {
   const r = await openedWithFollows();
@@ -937,4 +980,315 @@ test('G8. a failed follow request leaves history rows and status working, and no
     process.off('unhandledRejection', record);
   }
   assert.deepEqual(rejections, [], 'no unhandled rejection');
+});
+
+
+// =====================================================================================================================
+// Phase 3c (TESTS-74, lead 2026-11-25): C1-C7, from the design review (P3-1, P3-2) and the backend review (B1-B8).
+// Written 2026-11-25 by a Sonnet agent. The scenarios PROBE-1/2/3/5b/7 come from the backend reviewer's harness.
+// =====================================================================================================================
+
+const FOLLOW_ONLY = ['lumen_fx', 'ashgrove', 'thequiet', 'quartzine', 'quenby', 'zephyra', 'arbor_vale'];
+const suggestionsFor = (r, text) => r.messages('suggestions').filter(message => message.text === text);
+const signOut = async r => {
+  await r.shim.global.send('auth-forget', {}, '0');
+  await r.settle();
+};
+// Every login named by a suggestions-status message: its status keys and its detail keys.
+const statusKeys = message => [...Object.keys(message.status ?? {}), ...Object.keys(message.details ?? {})];
+const FIRST_POST_WAIT_MS = 450;
+
+// ---- C1: the order settles once ----
+
+test('C1. the first list waits for the status answer, or 450 ms; the answer then travels only as status, never as a re-sort', async () => {
+  const r = loadGlobal({people: many(25), liveLogins: ['p03'], holdStatus: true});
+  await r.showOpen();
+  assert.equal(r.statusRequests(), 1, 'fixture: the status request is out and held');
+  assert.equal(r.messages('suggestions').length, 0, 'nothing is posted while the answer is pending');
+  r.shim.timers.advance(FIRST_POST_WAIT_MS - 1);
+  await r.settle();
+  assert.equal(r.messages('suggestions').length, 0, 'still nothing at 449 ms');
+  r.shim.timers.advance(1);
+  await r.settle();
+  assert.equal(suggestionsFor(r, '').length, 1, 'at 450 ms the first list goes');
+  const first = suggestionsFor(r, '')[0];
+  assert.deepEqual(loginsOf(first), r.oracle('').map(row => row.login), 'in history order: nothing is known live');
+  assert.ok(first.rows.every(row => row.live === null), 'marks unknown');
+
+  r.releaseStatus();
+  await r.settle();
+  assert.equal(suggestionsFor(r, '').length, 1, 'the late answer posts no new list for the same text');
+  assert.equal(r.messages('suggestions-status').at(-1).status.p03, true, 'it travels as status');
+  assert.equal((await r.ask('p0')).rows[0].login, 'p03', 'a new text gets the fresh order, live first');
+
+  const posted = r.messages('suggestions').length;
+  await r.reopen();
+  assert.equal(r.messages('suggestions').length, posted + 1, 'a reopen posts at once: the answer is cached');
+  assert.equal(r.messages('suggestions').at(-1).rows[0].login, 'p03', 'with the fresh order');
+});
+
+test('C1. answers that come at once make the first list: one post, already in order, and no re-sort after it', async () => {
+  const r = loadGlobal({people: many(25), liveLogins: ['p03', 'p07']});
+  await r.showOpen();
+  assert.equal(suggestionsFor(r, '').length, 1, 'one list for the opening text');
+  assert.deepEqual(loginsOf(suggestionsFor(r, '')[0]).slice(0, 3), ['p03', 'p07', 'p01'], 'live first, with no wait for the 450 ms');
+  assert.equal(suggestionsFor(r, '')[0].rows[0].live, true, 'and with its mark');
+  r.shim.timers.advance(5000);
+  await r.settle();
+  assert.equal(suggestionsFor(r, '').length, 1, 'nothing more arrives later');
+});
+
+test('C1. with follows: one list, in full order, once status and follows have answered', async () => {
+  const r = await openedWithFollows();
+  assert.equal(suggestionsFor(r, '').length, 1, 'one list for the opening text, not one per answer');
+  assert.deepEqual(loginsOf(suggestionsFor(r, '')[0]), AT_REST);
+});
+
+test('C1. a follows answer after the 450 ms changes no order: it travels as status, and the next text or a reopen use it', async () => {
+  const r = await openedWithFollows({holdFollows: true});
+  assert.equal(r.followRequests(), 2, 'fixture: both follow requests are out and held');
+  assert.equal(r.messages('suggestions').length, 0, 'the list waits for the follows too');
+  r.shim.timers.advance(FIRST_POST_WAIT_MS - 1);
+  await r.settle();
+  assert.equal(r.messages('suggestions').length, 0, 'still waiting at 449 ms');
+  r.shim.timers.advance(1);
+  await r.settle();
+  assert.deepEqual(loginsOf(suggestionsFor(r, '')[0]), ['quillfox', 'tidalmoss', 'brindle', 'northpane', 'miss_q'],
+    'at 450 ms: the people from history, live first, as far as is known');
+
+  r.releaseFollows();
+  await r.settle();
+  assert.equal(suggestionsFor(r, '').length, 1, 'the follows landing posts no new list');
+  assert.deepEqual(loginsOf(await r.ask('qu')), ['quillfox', 'quenby', 'quartzine', 'thequiet', 'miss_q'], 'the next text has them');
+  await r.reopen();
+  assert.deepEqual(loginsOf(r.messages('suggestions').at(-1)), AT_REST, 'and so does a reopen, at once');
+});
+
+// ---- C2: Open Stream reads the saved sign-in itself ----
+
+test('C2. a saved follows grant with no player connected: Open Stream validates it, uses Helix, and loads follows', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS,
+    liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS});
+  await r.showOpen();
+  assert.equal(r.validateCalls().length, 1, 'the saved grant was validated');
+  assert.equal(r.followedLive().length, 1, 'one followed-live request');
+  assert.equal(r.followedChannels().length, 1, 'one followed-channels request');
+  assert.equal(r.helixStatus().length, 1, 'live status through Helix (D-034), as for a signed-in player');
+  assert.deepEqual(loginsOf(suggestionsFor(r, '')[0]), AT_REST, 'the follows are in the first list');
+  assert.deepEqual(r.messages('suggestions-follows'), [], 'no note');
+  assert.deepEqual(r.shim.global.posts.filter(post => /^auth-/.test(post.name)), [], 'no player was told anything');
+});
+
+test('C2. a saved grant without the follows scope, no player: the note, and no follow request', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, follows: FOLLOWS, liveLogins: FOLLOW_LIVE});
+  await r.showOpen();
+  assert.equal(r.validateCalls().length, 1, 'the saved grant was validated');
+  assert.deepEqual(r.messages('suggestions-follows'), [{state: 'needs-sign-in'}]);
+  assert.equal(r.followRequests(), 0);
+  assert.equal(r.helixStatus().length, 1, 'its token is good for live status');
+});
+
+test('C2. global holds the credentials while Open Stream shows or a player uses them, and drops them when neither does', async () => {
+  const alone = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS});
+  await alone.showOpen();
+  assert.equal(alone.validateCalls().length, 1, 'fixture: Open Stream read the grant');
+  alone.window.send('open-cancel', {});
+  alone.shim.timers.advance(3700000);
+  await alone.settle();
+  assert.equal(alone.validateCalls().length, 1, 'closed, with no player: the grant is dropped, so nothing validates it again');
+
+  const held = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS});
+  await held.signIn();
+  assert.equal(held.validateCalls().length, 1);
+  await held.showOpen();
+  held.window.send('open-cancel', {});
+  held.shim.timers.advance(3700000);
+  await held.settle();
+  assert.equal(held.validateCalls().length, 2, 'a player still uses it: Open Stream closing does not drop it');
+});
+
+// ---- C3: one action to include follows ----
+
+test('C3. follows-connect forgets the old grant and starts the device flow with both scopes, and the page gets the code', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
+  await r.showOpen();
+  r.window.receive('follows-connect', {});
+  await r.settle();
+  const [revoke] = r.oauthCalls('/revoke');
+  assert.ok(revoke, 'the old grant was revoked, as Sign out does');
+  assert.deepEqual(revoke.options.data, {client_id: SAVED.clientID, token: SAVED.access_token});
+  assert.equal(r.shim.keychain.get('twitch-readonly', 'oauth'), SIGNED_OUT, 'and the Keychain no longer holds it');
+  assert.equal(r.oauthCalls('/device').length, 1, 'one device request');
+  assert.deepEqual(r.oauthCalls('/device')[0].options.data, {client_id: SAVED.clientID, scopes: 'chat:read user:read:follows'},
+    'the same Twitch app as the old grant, both scopes');
+  assert.deepEqual(r.messages('follows-code'), [{userCode: USER_CODE, verificationUri: VERIFICATION_URI}],
+    'the page gets the code and the address, and nothing else');
+  assert.ok(!JSON.stringify(r.window.posts).includes(DEVICE_CODE), 'the device code never reaches the page');
+  assert.deepEqual(r.shim.utils.opened, [], 'nothing opens until the person clicks');
+});
+
+test('C3. with no saved grant the same action starts the flow with the built-in app, and revokes nothing', async () => {
+  const builtIn = 'b'.repeat(30);
+  const r = loadGlobal({people: FOLLOW_HISTORY(), builtInClientID: builtIn});
+  await r.showOpen();
+  r.window.receive('follows-connect', {});
+  await r.settle();
+  assert.equal(r.oauthCalls('/revoke').length, 0, 'nothing to revoke');
+  assert.deepEqual(r.oauthCalls('/device').map(call => call.options.data), [{client_id: builtIn, scopes: 'chat:read user:read:follows'}]);
+  assert.deepEqual(r.messages('follows-code'), [{userCode: USER_CODE, verificationUri: VERIFICATION_URI}]);
+});
+
+test('C3. the page\'s open button opens Twitch\'s activation page once there is a code, and not before', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
+  await r.showOpen();
+  r.window.receive('follows-open', {});
+  await r.settle();
+  assert.deepEqual(r.shim.utils.opened, [], 'no code yet: nothing opens');
+  r.window.receive('follows-connect', {});
+  await r.settle();
+  assert.deepEqual(r.shim.utils.opened, [], 'the code alone opens nothing');
+  r.window.receive('follows-open', {});
+  await r.settle();
+  assert.deepEqual(r.shim.utils.opened, [VERIFICATION_URI], 'the click opens the address global was given');
+});
+
+test('C3. until the person approves on Twitch nothing loads; on approval the follows load into the open window', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, follows: FOLLOWS, liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS});
+  await r.showOpen();
+  r.window.receive('follows-connect', {});
+  await r.settle();
+  r.shim.timers.advance(5000);
+  await r.settle();
+  assert.equal(r.oauthCalls('/token').length, 1, 'the flow polls');
+  assert.equal(r.followRequests(), 0, 'authorization_pending: no follows yet');
+  assert.ok(!loginsOf(r.messages('suggestions').at(-1)).includes('lumen_fx'));
+
+  r.control.oauth.approve = true;
+  r.shim.timers.advance(5000);
+  for (let turn = 0; turn < 3; turn++) await r.settle();
+  assert.equal(r.followedLive().length, 1, 'followed-live, once');
+  assert.equal(r.followedChannels().length, 1, 'followed-channels, once');
+  for (const call of [...r.followedLive(), ...r.followedChannels()]) {
+    assert.equal(call.options.headers.Authorization, `Bearer ${NEW_TOKEN}`, 'with the new grant');
+  }
+  const latest = r.messages('suggestions').at(-1);
+  assert.equal(latest.text, '');
+  assert.ok(FOLLOW_ONLY.every(login => loginsOf(latest).includes(login)), 'the list in the open window now has the follows');
+  const last = r.messages('suggestions-follows').at(-1);
+  assert.ok(last && last.state !== 'needs-sign-in',
+    'the last follows message is not needs-sign-in: the page drops the button and the code (it takes any other state)');
+  assert.ok(JSON.parse(r.shim.keychain.get('twitch-readonly', 'oauth')).access_token === NEW_TOKEN, 'the new grant is saved');
+});
+
+// ---- C4: account changes and late answers while Open Stream shows ----
+
+test('C4. sign-out while open: follow-only people leave the list, live status is asked again, and the note returns', async () => {
+  const r = await openedWithFollows();
+  assert.ok(loginsOf(lastSuggestions(r, '')).includes('lumen_fx'), 'fixture: the follows are in the list');
+  const liveRequests = () => r.gqlStatus().filter(call => /stream\{/.test(call.options.data.query)).length;
+  const before = liveRequests();
+  const notes = r.messages('suggestions-follows').length;
+  await signOut(r);
+  const rows = loginsOf(lastSuggestions(r, ''));
+  assert.deepEqual(rows.filter(login => FOLLOW_ONLY.includes(login)), [], 'no follow-only person stays');
+  assert.deepEqual([...rows].sort(), FOLLOW_HISTORY().map(p => p.login).sort(), 'the people from history stay');
+  assert.ok(liveRequests() > before, 'live status is asked again, now without the account (anonymous GQL)');
+  const status = r.messages('suggestions-status').at(-1);
+  assert.equal(status.status.quillfox, true, 'and its answer reaches the page');
+  assert.deepEqual(statusKeys(status).filter(login => FOLLOW_ONLY.includes(login)), [], 'with nothing about people who are gone');
+  assert.equal(r.messages('suggestions-follows').length, notes + 1, 'the page is told the follows are off');
+});
+
+test('C4. sign-in while open: the follows are asked for the showing form and its list gets them', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), scopes: FOLLOWS_SCOPES, follows: FOLLOWS, liveLogins: FOLLOW_LIVE,
+    details: FOLLOW_DETAILS});
+  await r.showOpen();
+  assert.equal(r.followRequests(), 0, 'fixture: nothing to ask while signed out');
+  r.shim.keychain.seed('twitch-readonly', 'oauth', JSON.stringify(SAVED));
+  await r.signIn();
+  await r.settle();
+  assert.equal(r.followedLive().length, 1);
+  assert.equal(r.followedChannels().length, 1);
+  assert.ok(r.helixStatus().length >= 1, 'live status through the account now');
+  assert.ok(loginsOf(lastSuggestions(r, '')).includes('lumen_fx'), 'the open list has the follows');
+});
+
+test('C4. closing and reopening while the follows are in flight: the answer reaches the reopened window', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS,
+    liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS, holdFollows: true});
+  await r.signIn();
+  await r.showOpen();
+  r.window.send('open-cancel', {});
+  await r.showOpen();
+  assert.equal(r.followRequests(), 2, 'the reopen asks nothing: the first requests are still current');
+  r.releaseFollows();
+  for (let turn = 0; turn < 2; turn++) await r.settle();
+  assert.deepEqual(loginsOf(lastSuggestions(r, '')), AT_REST, 'the reopened window\'s first list has the follows');
+});
+
+// ---- C5: a detail or age error never wipes live status ----
+
+test('C5. signed out: an error on one person\'s last broadcast leaves everyone\'s live status', async () => {
+  const r = loadGlobal({people: many(25), liveLogins: ['p01', 'p03'], gqlFieldError: 'p02',
+    details: {p01: {title: 'Open mic', category: 'Music', viewers: 40}, p02: {lastAt: '2026-11-20T18:04:11Z'}}});
+  await r.showOpen();
+  const batch = r.oracle('').slice(0, 20).map(row => row.login);
+  assert.ok(r.gqlAll().some(call => /lastBroadcast/.test(call.options.data.query)), 'fixture: the field that errs was asked for');
+  assert.deepEqual(mergedStatus(r, 'status'), statusMap(batch, ['p01', 'p03']), 'live status is intact for all 20');
+  assert.deepEqual(mergedStatus(r, 'details').p01, {title: 'Open mic', category: 'Music', viewers: 40}, 'and so are live details');
+  assert.equal(mergedStatus(r, 'details').p02?.lastAt, undefined, 'only the one age is lost');
+  assert.deepEqual(loginsOf(suggestionsFor(r, '')[0]).slice(0, 2), ['p01', 'p03'], 'the list still puts the live people first');
+});
+
+test('C5. signed in: an error in the age lookup leaves Helix live status', async () => {
+  const r = await openedWithFollows({gqlFieldError: 'northpane'});
+  const status = mergedStatus(r, 'status');
+  assert.equal(status.quillfox, true);
+  assert.equal(status.tidalmoss, true);
+  assert.equal(status.brindle, false);
+  const details = mergedStatus(r, 'details');
+  assert.equal(details.northpane?.lastAt, undefined, 'fixture: the one age that errs is lost');
+  assert.equal(details.brindle?.lastAt, FOLLOW_DETAILS.brindle.lastAt, 'the other ages in that lookup survive');
+  assert.equal(details.quenby?.lastAt, FOLLOW_DETAILS.quenby.lastAt, 'and so do the follows\' ages');
+});
+
+// ---- C6: user_id must be digits ----
+
+for (const bad of ['abc', '77001x', '../users', '12 34', '', undefined]) {
+  test(`C6. a validate user_id of ${JSON.stringify(bad)} makes no follow request and counts as needing sign-in`, async () => {
+    const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, scopes: FOLLOWS_SCOPES, follows: FOLLOWS, liveLogins: FOLLOW_LIVE});
+    r.control.userID = bad;
+    await r.shim.global.send('auth-connect', {}, '0');
+    await r.settle();
+    await r.showOpen();
+    assert.equal(r.followRequests(), 0, 'no follow request');
+    assert.ok(!JSON.stringify(r.calls()).includes('user_id'), 'and no user_id leaves global');
+    assert.deepEqual(r.messages('suggestions-follows'), [{state: 'needs-sign-in'}]);
+    assert.ok(!loginsOf(suggestionsFor(r, '').at(-1)).includes('lumen_fx'), 'no follow in the list');
+  });
+}
+
+// ---- C7: status and details only for the people in the rows sent ----
+
+test('C7. suggestions-status names only people in the rows sent, at most 50 in each part', async () => {
+  const follows = Array.from({length: 60}, (_, index) => {
+    const two = String(index + 1).padStart(2, '0');
+    return {login: `f${two}`, name: `Follow ${two}`};
+  });
+  const r = loadGlobal({people: many(30), signedIn: true, scopes: FOLLOWS_SCOPES, follows, liveLogins: ['f60', 'p02'],
+    details: {f59: {lastAt: '2026-11-21T10:00:00Z'}, f58: {lastAt: '2026-11-22T10:00:00Z'}}});
+  await r.signIn();
+  await r.showOpen();
+  await r.ask('f0');
+  await r.ask('');
+  const sent = new Set(r.messages('suggestions').flatMap(message => loginsOf(message)));
+  assert.ok(sent.size >= 50, 'fixture: the lists sent cover at least 50 people');
+  const statuses = r.messages('suggestions-status');
+  assert.ok(statuses.length >= 1, 'fixture: status was published');
+  for (const message of statuses) {
+    assert.ok(Object.keys(message.status ?? {}).length <= 50, 'at most 50 in status');
+    assert.ok(Object.keys(message.details ?? {}).length <= 50, 'at most 50 in details');
+    assert.deepEqual(statusKeys(message).filter(login => !sent.has(login)), [], 'only people in a list that was sent');
+  }
+  assert.equal(mergedStatus(r, 'status').f60, true, 'fixture: a person who is in the list has status');
 });

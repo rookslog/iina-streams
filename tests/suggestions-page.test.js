@@ -389,33 +389,78 @@ test('P3. a selected live row keeps its live mark as a live mark: same classes, 
     'no rule for a selected row repaints the live mark (it would read as a plain dot)');
 });
 
-// ---- P4: "Sign in to Twitch again to include who you follow." ----
+// ---- P4: one action to include who you follow (phase 3c, C3) ----
+// Amended 2026-11-25 (phase 3c, TESTS-74): P4's quiet line "Sign in to Twitch again to include who you follow." is
+// now a button, "Include who you follow" (C3, review P3-2: a note with no way to act was a dead end). It is still
+// below the list, not a row, and skipped by the arrows; it is no longer role=note, since it is an action.
 
-const SIGN_IN_AGAIN = 'Sign in to Twitch again to include who you follow.';
+const INCLUDE_FOLLOWS = 'Include who you follow';
+const CODE = {userCode: 'WXYZ-1234', verificationUri: 'https://www.twitch.tv/activate?public=true'};
 
-test('P4. suggestions-follows needs-sign-in shows one quiet line below the list: a note, not an option', () => {
+const visibleButtons = f => f.visibleNodes().filter(node => node.tagName === 'BUTTON');
+const buttonNamed = (f, text) => visibleButtons(f).filter(node => node.textContent.trim() === text);
+
+test('P4. suggestions-follows needs-sign-in shows one button below the list: an action, not an option', () => {
   const f = pageFixture();
   f.suggest();
-  const lines = () => f.visibleNodes().filter(node => node.ownText.trim() === SIGN_IN_AGAIN);
-  assert.equal(lines().length, 0, 'nothing before the message');
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 0, 'nothing before the message');
   f.deliver('suggestions-follows', {state: 'needs-sign-in'});
-  assert.equal(lines().length, 1, 'one line');
-  const [line] = lines();
+  const found = buttonNamed(f, INCLUDE_FOLLOWS);
+  assert.equal(found.length, 1, 'one button, "Include who you follow"');
+  const [button] = found;
   const box = f.listbox();
   const everything = f.all();
-  assert.ok(!f.all(box).includes(line), 'outside the listbox');
-  assert.ok(everything.indexOf(line) > everything.lastIndexOf(f.all(box).at(-1)), 'below the list');
-  const notes = [];
-  for (let node = line; node; node = node.parentNode) if (attr(node, 'role') === 'note') notes.push(node);
-  assert.ok(notes.length > 0, 'VoiceOver reads it as a note (role=note)');
+  assert.ok(!f.all(box).includes(button), 'outside the listbox');
+  assert.ok(everything.indexOf(button) > everything.lastIndexOf(f.all(box).at(-1)), 'below the list');
   assert.equal(f.options().length, 3, 'it is not a row');
-  assert.ok(f.options().every(option => !option.textContent.includes(SIGN_IN_AGAIN)));
+  assert.ok(f.options().every(option => !option.textContent.includes(INCLUDE_FOLLOWS)));
   for (let index = 0; index < 5; index++) f.press('ArrowDown');
   assert.deepEqual(f.selected(), [f.options()[2]], 'the arrows stop at the last person');
   assert.equal(f.field.getAttribute('aria-activedescendant'), f.options()[2].id);
   f.deliver('suggestions-follows', {state: 'needs-sign-in'});
   f.suggest(ROWS, 'oh');
-  assert.equal(lines().length, 1, 'still one line after a repeat and a new list');
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'still one button after a repeat and a new list');
+});
+
+test('P4. clicking "Include who you follow" posts follows-connect', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  assert.deepEqual(f.posts('follows-connect'), [], 'nothing until the click');
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'the "Include who you follow" button is shown');
+  buttonNamed(f, INCLUDE_FOLLOWS)[0].click();
+  assert.deepEqual(f.posts('follows-connect'), [{}]);
+});
+
+test('P4. follows-code shows the code and a button that opens the Twitch page; connecting is not offered again', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  assert.equal(buttonNamed(f, INCLUDE_FOLLOWS).length, 1, 'the "Include who you follow" button is shown');
+  buttonNamed(f, INCLUDE_FOLLOWS)[0].click();
+  f.deliver('follows-code', CODE);
+  const codes = f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode);
+  assert.equal(codes.length, 1, 'the code is shown once');
+  assert.ok(!f.all(f.listbox()).includes(codes[0]), 'outside the listbox');
+  assert.equal(f.options().length, 3, 'and it is not a row');
+  assert.ok(visibleButtons(f).length >= 1, 'a button is shown');
+  // Every button the person could press: only the one that opens Twitch may act, and connecting must not start again,
+  // since a second device flow would void the code on screen.
+  for (const button of visibleButtons(f)) button.click();
+  assert.deepEqual(f.posts('follows-open'), [{}], 'a button posts follows-open');
+  assert.equal(f.posts('follows-connect').length, 1, 'no second follows-connect: the first click was the only one');
+});
+
+test('P4. any other suggestions-follows state takes the button and the code away', () => {
+  const f = pageFixture();
+  f.suggest();
+  f.deliver('suggestions-follows', {state: 'needs-sign-in'});
+  f.deliver('follows-code', CODE);
+  assert.equal(f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode).length, 1, 'fixture: the code is showing');
+  f.deliver('suggestions-follows', {state: 'ready'});
+  assert.equal(f.visibleNodes().filter(node => node.ownText.trim() === CODE.userCode).length, 0, 'the code is gone');
+  assert.deepEqual(visibleButtons(f), [], 'and so is every button');
+  assert.equal(f.options().length, 3);
 });
 
 // ---- P5: details arrive in place ----

@@ -147,3 +147,4 @@ Reviews: scratchpad `opus-74-design-review.md` ("Phase 3") and the backend revie
 - **C6 (B6) `user_id` must match `/^\d+$/`;** otherwise follows are treated as needs-sign-in.
 - **C7 (B8) `suggestions-status` carries status and details only for the logins in the rows sent** (≤50).
 - **C8 (B7):** record in CHANGELOG/release notes that rolling back to an older build asks for a new sign-in.
+- **3c decisions on the writer's questions (lead):** the writer's readings 1, 3, 4, 5, 6, 8, 9, 10, 11 are adopted as written in the tests. (2) Typing before the first list: the first list is posted for whatever text is current when it posts. (7) A device flow still pending when Open Stream closes is cancelled; global then drops credentials as C2 says.

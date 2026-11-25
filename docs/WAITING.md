@@ -369,6 +369,19 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **What the answer changes:** the tests and build of #74 phase 2; the backend's now-unused follows sign-in path is removed in the same round.
 - **Answered 2026-11-25 (operator):** "I'll go with your recommended approach, and then we'll see." Option 1, provisional; revisit after their real follows load.
 
+### W-24. People upgrading from an older Streams sign-in get no follows, with no sign why (#74; before release)
+- **What it is:** a decision before #74's follows ship. Sign-in now asks Twitch for chat and follows. Anyone who signed in before (beta testers, you) keeps a chat-only grant, and Twitch keeps its permissions on refresh, so their Open Stream silently shows no follows until they sign out and in. The Open Stream button that fixed this is gone (W-21, your second try), rightly; nothing replaces it yet. Raised by the lead's advisor, 2026-11-25.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **A. The player's Streams panel offers the renewal** where Sign out is, only while the grant lacks follows | the account place you named; one click | one control in the panel, shown to upgraders only |
+  | **B. A release note** ("sign out and in once to see who you follow") | nothing to build | most people won't read it |
+  | **C. Ask once, automatically,** at the next sign-in check | no new control | an unasked Twitch page appearing |
+
+- **Recommendation (lead):** A, with B in the release notes. Load-bearing assumption: few people hold the old grant (beta testers), so a control shown only to them costs little. What would flip it: if you'd rather keep the panel unchanged, B alone.
+- **What the answer changes:** a small panel change and its tests before 0.6.0; Streams Dev on your Mac is unaffected once you renew.
+
 ## Answered
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.

@@ -38,7 +38,11 @@ For each change:
 
 Other commands: `npm run dev:status` (link, enabled flag, staged commit vs this worktree's HEAD), `npm run dev:rollback` (swap back to the previous staged build), `npm run dev:unlink`.
 
-To automate the Dev loop on `next`, run `npm run dev:install-hooks` once. The shared repository's post-commit and post-merge hooks start `scripts/dev.py auto` in the background from the triggering worktree. Other branches are ignored. If IINA is open, a pending build waits for IINA to quit; otherwise the latest checkout is built and staged immediately with the QA harness and both test suites. Wait until `dev:status` no longer reports `pending` before reopening IINA. If the build fails or the 12-hour wait expires, the request remains pending; inspect `auto.log` in the stage directory and retry with `npm run dev:auto` on `next`. Do not run a manual deploy or rollback alongside the automatic build.
+To automate the Dev loop on `next`, run `npm run dev:install-hooks` once. The shared repository's post-commit and post-merge hooks start `scripts/dev.py auto` in the background from the triggering worktree. Other branches are ignored. If IINA is open, the build waits for IINA to quit; otherwise it starts immediately. Automatic builds test and stage a clean snapshot of `next`'s HEAD and always include the QA harness. Uncommitted changes only enter a manual build. Manual deploy and rollback refuse while the automatic worker holds the stage lock.
+
+- Wait until `npm run dev:status` shows `pending: null` before reopening IINA. A pending request reports its `state` (`waiting` or `failed`) and `reason`; `stageLockActive` tells you whether a stage operation still holds the lock. Check `auto.log` in the stage directory for the latest run's bounded output.
+- If a build fails, the 12-hour wait expires, or a worker stops with a request still pending, run `npm run dev:auto` on `next` to retry. This command runs in the foreground; the installed hooks run in the background.
+- To turn off new automatic requests, run `npm run dev:uninstall-hooks` (or `python3 -B scripts/dev.py uninstall-hooks`). This removes only the marked hook blocks; any already-running worker is unaffected.
 
 The stage lives at `~/Library/Application Support/iina-streams-dev/{current,previous}`. It is outside every worktree, so any worktree can deploy without relinking. `scripts/dev.py` never enables, reloads, launches or quits IINA, and it refuses to touch any link, folder or identity it did not create.
 

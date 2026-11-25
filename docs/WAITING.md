@@ -330,6 +330,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
   4. Broadcasts inline vs a separate window: on 2026-11-23 you liked "reachable inline"; tonight you lean toward a separate window for an offline person's broadcasts, "later". Kept as is for now; to decide with the People screen (#76).
 - **Next (lead):** add followed channels to the quick list when signed in, live first (test-first; part of #30), then the side-by-side.
 - **Also said:** automatic Dev updates, go ahead.
+- **Update 2026-11-24 ~22:00 (lead):** compared the build with mock A as you liked it (independent Opus reviewer, headless Chrome, same data; side by side at scratchpad `compare-74/index.html`). The main difference is the row: mock A shows an avatar with the live dot, a bold name, category and title, viewers or how long ago they streamed; the build shows a bare name. That came from the lead's own test plan (TESTS-74 rule 11, "only the display name and a live mark... no reasons, counts or labels"), which over-read your 2026-11-23 "drop the why-it's-here text" and the minimize-text rule: titles, categories, viewers and ages are values, not reasons. Also drift: follows missing; the live dot turns white when selected; lighter type; no clear button. **Lead's working choice:** restore mock A's row and your follows (live first, reading 2 above), keep the fixed height, the keyboard model and the review fixes. Reversible; you can redirect at any point.
 
 ## Answered
 

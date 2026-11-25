@@ -56,7 +56,7 @@
 
 ## Page tests (`tests/suggestions-page.test.js`, the fake DOM used by `tests/b6c-open-page.test.js`)
 
-11. **Rows.** Each row shows only the display name and a live mark: a filled dot when live, none when offline, a hollow ring when unknown. No other visible text, so no reasons, counts or labels.
+11. **Rows.** *(Superseded 2026-11-24 ~22:00, W-21: this rule over-read the operator's "drop the why-it's-here text"; mock A's values return: avatar with live dot, name, category and title, viewers or last-streamed age.)* Each row shows only the display name and a live mark: a filled dot when live, none when offline, a hollow ring when unknown. No other visible text, so no reasons, counts or labels.
 12. **Combobox.** The field keeps focus. ↓ and ↑ move the selection, which is shown with `aria-activedescendant` and `aria-selected`.
     - **Return:**
       - with a selection, sends `open-stream {input: login}`;

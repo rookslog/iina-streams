@@ -209,6 +209,11 @@
   const text=field.value.trim();
   if(!text||standalone||!heardSuggestions||awaitingText!==null)return null;
   if(yourRows().length||others.some(person=>!person.kept))return null;
+  // A kept row whose login is the typed text is that same channel: it stands in for the typed-name row, drawn in
+  // full (avatar, live mark, details) in its place, so finishing a name never turns its row bare (lead, DUP).
+  const textKey=text.toLowerCase();
+  const same=others.find(person=>person.kept&&person.login.toLowerCase()===textKey);
+  if(same)return{...same,kept:false,typed:true,standIn:true};
   return{login:text,provider:TWITCH_LOGIN.test(text)?'twitch':'',displayName:text,live:null,typed:true};
  }
 
@@ -485,9 +490,10 @@
   return'mark unknown';
  }
 
- // The typed-name row opens as typed text does (the #32 list if offline), so it has no broadcasts of its own.
+ // The bare typed-name row opens as typed text does (the #32 list if offline), so it has no broadcasts of its own;
+ // a kept row standing in for it is a real channel and behaves as one.
  function canBrowse(person){
-  return!!person&&person.provider==='twitch'&&!person.typed&&!person.kept;
+  return!!person&&person.provider==='twitch'&&!(person.typed&&!person.standIn)&&!person.kept;
  }
 
  function isSelected(login,vod){
@@ -598,13 +604,15 @@
   // R13: an offline row is dimmed (name and avatar); live rows and rows of unknown status are not.
   row.setAttribute('class','person'+(open?' expanded':'')+(person.live===false?' dim':'')+(person.kept?' kept':''));
   row.setAttribute('aria-label',spokenName(person));
-  // P-A: the typed name is nobody yet: no avatar letter and no live mark, only the place an avatar would take.
-  const avatar=person.typed?el('span','avatar typed'):el('span','avatar',initial(person.displayName));
+  // P-A: the bare typed name is nobody yet: no avatar letter and no live mark, only the place an avatar would take.
+  // A kept row standing in for it (DUP) is drawn in full.
+  const bare=person.typed&&!person.standIn;
+  const avatar=bare?el('span','avatar typed'):el('span','avatar',initial(person.displayName));
   avatar.setAttribute('aria-hidden','true');
-  if(!person.typed&&avatar.style&&typeof avatar.style.setProperty==='function'){
+  if(!bare&&avatar.style&&typeof avatar.style.setProperty==='function'){
    avatar.style.setProperty('--av',avatarColour(person.login));
   }
-  if(!person.typed&&person.live!==false){
+  if(!bare&&person.live!==false){
    const mark=el('span',markClass(person));
    if(person.live===null)mark.setAttribute('title','Status unavailable');
    avatar.append(mark);
@@ -778,7 +786,7 @@
   checkingByPointer=!!byPointer;
   render();
   // The typed-name row opens the text in the field, exactly as typing it and pressing Return always has.
-  openInput(person&&person.typed?field.value:login,checkingLogin?'checking':'standalone');
+  openInput(person&&person.typed&&!person.standIn?field.value:login,checkingLogin?'checking':'standalone');
  }
 
  function openSelection(){

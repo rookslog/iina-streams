@@ -3,8 +3,12 @@
 // B6c (#32): for a channel a player found offline, global prefills the field and sends its recent broadcasts.
 // #74: the quick list. The field is a combobox driving a listbox of people from watch history; it keeps focus,
 // and the selected row is shown with aria-activedescendant. Whenever the list has people the top one is
-// selected, so Return opens the top match. → (or Return on someone known to be offline) opens a person's
-// broadcasts under their row. The window keeps one height (global); the list scrolls.
+// selected, so Return opens the top match through global's live check. → opens a person's broadcasts under
+// their row, as does an offline answer to that check. The window keeps one height (global); the list scrolls.
+// Phase 3 (W-21): each row is mock A's (docs/design/finding-2026-11-22/open-stream/direction-a): an initial
+// avatar carrying the live mark, the name, the Twitch mark, "category · title" and viewers when live, and the
+// last broadcast's title, an age and the broadcasts chevron when offline. Details arrive with status
+// (suggestions-status {status, details}).
 (function(){
  const form=document.getElementById('open-form');
  const field=document.getElementById('open-input');
@@ -13,6 +17,13 @@
  const area=document.getElementById('suggestions-area');
  const emptyGlyph=document.getElementById('suggestions-empty');
  const announcer=document.getElementById('announce');
+ const clearButton=document.getElementById('open-clear');
+ const followsNote=document.getElementById('follows-note');
+ const SIGN_IN_AGAIN='Sign in to Twitch again to include who you follow.';
+ const SVG_NS='http://www.w3.org/2000/svg';
+ // Mock A's Twitch mark (direction-a/a.js ICON.twitch).
+ const TWITCH_PATH='M3.2 1 1.8 3.8V13h3.3v2h1.8l2-2h2.7L15 9.6V1H3.2Zm10.3 7.9-1.9 1.9H8.8l-1.9 1.9v-1.9H3.6V2.5h9.9v6.4ZM10.2 4.6h1.4v3.6h-1.4V4.6Zm-3.5 0h1.4v3.6H6.7V4.6Z';
+ const DAY_MS=86400000;
 
  const OFFLINE_ROWS=10;
  const EMPTY_TEXT={none:'No recent broadcasts',error:'Recent broadcasts unavailable'};
@@ -28,6 +39,13 @@
  // ↑ from the top match while typing: the person chose the typed text, so nothing is reselected until the
  // next edit and Return opens the text.
  let textChosen=false;
+ // The person moved the selection (an arrow key, or opening someone): new lists then keep that person
+ // selected wherever they move. Until then the top row stays selected, so Return opens the new top (P2).
+ // Typing resets it.
+ let moved=false;
+ // What global last said about each login: {title, category, viewers} when live, {lastAt} when offline.
+ // Kept across lists, so a row keeps its details while the person types (P5b).
+ const details=new Map();
  // The person whose broadcasts are open under their row: {login, state, items, byPointer}.
  let expanded=null;
  // Who an offline-vods message is for:
@@ -130,39 +148,90 @@
    expanded=null;
    if(vodsTarget==='inline')vodsTarget='ignore';
   }
-  if(selection&&!has(selection.login))selection=null;
+  if(selection&&(!moved||!has(selection.login)))selection=null;
   if(!selection&&!textChosen&&people.length)selection={login:people[0].login,vod:-1};
   render();
   if(returnPending&&awaitingText===null)finishReturn();
  }
 
- // Status changes only the marks and the spoken names, in place: the rows, the selection and the scroll
- // stay, and VoiceOver keeps its place on the selected option.
+ // Status and details change the rows in place: the same elements, so the selection, the scroll and
+ // VoiceOver's place on the selected option all stay (P5).
  function onSuggestionsStatus(data){
   const value=unwrap(data);
-  const status=value&&value.status;
-  if(!status||typeof status!=='object')return;
+  if(!value||typeof value!=='object')return;
+  const status=value.status&&typeof value.status==='object'?value.status:{};
+  const more=value.details&&typeof value.details==='object'?value.details:{};
+  for(const login of Object.keys(more)){
+   const detail=cleanDetail(more[login]);
+   if(detail)details.set(login,detail);
+   else details.delete(login);
+  }
   for(const person of people){
-   if(!Object.prototype.hasOwnProperty.call(status,person.login))continue;
-   const live=status[person.login];
-   person.live=live===true||live===false?live:null;
+   if(Object.prototype.hasOwnProperty.call(status,person.login)){
+    const live=status[person.login];
+    person.live=live===true||live===false?live:null;
+   }
    const row=optionNodes.get(key(person.login,-1));
-   if(!row)continue;
-   row.setAttribute('aria-label',spokenName(person));
-   const mark=row.children&&row.children[0];
-   if(mark)mark.setAttribute('class',markClass(person));
+   if(row)fillRow(row,person);
   }
  }
 
+ // Only the fields a row shows, and only of the right types: the details are Twitch's text.
+ function cleanDetail(detail){
+  if(!detail||typeof detail!=='object')return null;
+  const clean={};
+  if(typeof detail.title==='string')clean.title=detail.title;
+  if(typeof detail.category==='string')clean.category=detail.category;
+  if(Number.isFinite(detail.viewers))clean.viewers=Math.max(0,Math.floor(detail.viewers));
+  if(typeof detail.lastAt==='string'&&!Number.isNaN(Date.parse(detail.lastAt)))clean.lastAt=detail.lastAt;
+  if(typeof detail.lastTitle==='string'&&detail.lastTitle.trim())clean.lastTitle=detail.lastTitle;
+  return Object.keys(clean).length?clean:null;
+ }
+
+ // 950, 1.5K, 12.3K, 312K (mock A's sample-data.js compact).
+ function compact(count){
+  if(count>=10000)return(count/1000).toFixed(count>=100000?0:1).replace(/\.0$/,'')+'K';
+  if(count>=1000)return(count/1000).toFixed(1).replace(/\.0$/,'')+'K';
+  return String(count);
+ }
+
+ // Days up to two weeks, then weeks: "today", "2d", "3w" (mock A's ago).
+ function daysSince(lastAt){
+  return Math.round((Date.now()-Date.parse(lastAt))/DAY_MS);
+ }
+
+ function age(lastAt){
+  const days=daysSince(lastAt);
+  if(days<1)return'today';
+  if(days<14)return days+'d';
+  return Math.round(days/7)+'w';
+ }
+
+ function ageSpoken(lastAt){
+  const days=daysSince(lastAt);
+  if(days<1)return'today';
+  if(days===1)return'yesterday';
+  if(days<14)return days+' days ago';
+  return Math.round(days/7)+' weeks ago';
+ }
+
+ // The VoiceOver name: name and live state, then what the row shows (mock A's spoken).
  function spokenName(person){
-  if(person.live===true)return person.displayName+', live';
-  if(person.live===false)return person.displayName+', offline';
+  const detail=details.get(person.login)||{};
+  if(person.live===true){
+   const parts=[person.displayName+', live'];
+   if(Number.isFinite(detail.viewers))parts.push(detail.viewers.toLocaleString()+' viewers');
+   if(detail.category)parts.push(detail.category);
+   return parts.join(', ');
+  }
+  if(person.live===false){
+   return person.displayName+', offline'+(detail.lastAt?', last live '+ageSpoken(detail.lastAt):'');
+  }
   return person.displayName;
  }
 
  function markClass(person){
   if(person.live===true)return'mark live';
-  if(person.live===false)return'mark';
   return'mark unknown';
  }
 
@@ -184,6 +253,7 @@
  function render(){
   const showList=!standalone;
   if(area)area.hidden=!showList;
+  if(clearButton)clearButton.hidden=field.value==='';
   field.setAttribute('aria-expanded',String(showList&&people.length>0));
   if(emptyGlyph)emptyGlyph.hidden=!(showList&&heardSuggestions&&!people.length&&field.value==='');
   optionNodes=new Map();
@@ -216,33 +286,18 @@
  }
 
  function personRow(person,index){
-  const selected=isSelected(person.login,-1);
-  const open=!!expanded&&expanded.login===person.login;
-  const row=el('div','person'+(open?' expanded':''));
+  const row=el('div','person');
   row.setAttribute('role','option');
   row.setAttribute('id','person-'+index);
-  row.setAttribute('aria-selected',String(selected));
-  row.setAttribute('aria-label',spokenName(person));
+  row.setAttribute('aria-selected',String(isSelected(person.login,-1)));
   row.setAttribute('aria-posinset',String(index+1));
   row.setAttribute('aria-setsize',String(people.length));
-  const mark=el('span',markClass(person));
-  mark.setAttribute('aria-hidden','true');
-  const name=el('span','name',person.displayName);
-  row.append(mark,name);
-  let disclose=null;
-  if(canBrowse(person)){
-   // VoiceOver hears how to reach the broadcasts; the chevron says it to the eye.
-   row.setAttribute('aria-describedby',open?'hint-close':'hint-open');
-   disclose=el('span','disclose');
-   disclose.setAttribute('aria-hidden','true');
-   disclose.setAttribute('title','Recent broadcasts');
-   row.append(disclose);
-  }else{
-   row.append(el('span'));
-  }
+  fillRow(row,person);
   row.addEventListener('click',event=>{
-   if(disclose&&event&&event.target===disclose){
-    if(open)closeBroadcasts(true);
+   const target=event&&event.target;
+   const onChevron=!!target&&typeof target.getAttribute==='function'&&/\bdisclose\b/.test(target.getAttribute('class')||'');
+   if(onChevron&&canBrowse(person)){
+    if(expanded&&expanded.login===person.login)closeBroadcasts(true);
     else openBroadcasts(person.login,true);
     return;
    }
@@ -250,6 +305,76 @@
   });
   optionNodes.set(key(person.login,-1),row);
   return row;
+ }
+
+ // A row's content, mock A's: avatar (initial, with the live mark on it), name, Twitch mark, then either
+ // "category · title" and viewers (live) or an age and the chevron (offline). Built from text, never markup.
+ function fillRow(row,person){
+  const open=!!expanded&&expanded.login===person.login;
+  const detail=details.get(person.login)||{};
+  row.setAttribute('class','person'+(open?' expanded':''));
+  row.setAttribute('aria-label',spokenName(person));
+  const avatar=el('span','avatar',initial(person.displayName));
+  avatar.setAttribute('aria-hidden','true');
+  if(avatar.style&&typeof avatar.style.setProperty==='function')avatar.style.setProperty('--av',avatarColour(person.login));
+  if(person.live!==false){
+   const mark=el('span',markClass(person));
+   if(person.live===null)mark.setAttribute('title','Status unavailable');
+   avatar.append(mark);
+  }
+  const name=el('span','name',person.displayName);
+  const platform=el('span','platform');
+  platform.setAttribute('aria-hidden','true');
+  if(person.provider==='twitch')platform.append(...twitchMark());
+  let sub='',meta='';
+  if(person.live===true){
+   sub=[detail.category,detail.title].filter(Boolean).join(' · ');
+   if(Number.isFinite(detail.viewers))meta=compact(detail.viewers);
+  }else if(person.live===false){
+   // Mock A's offline row: the last broadcast's title as the second line, when known, and its age.
+   if(detail.lastTitle)sub=detail.lastTitle;
+   if(detail.lastAt)meta=age(detail.lastAt);
+  }
+  const subNode=el('span','sub',sub);
+  if(sub)subNode.setAttribute('title',sub);
+  const metaNode=el('span','meta',meta);
+  let tail;
+  if(canBrowse(person)){
+   // VoiceOver hears how to reach the broadcasts; the chevron says it to the eye. Offline rows always show it
+   // (mock A's "2d ›"); live rows show it on hover, so the selected live row isn't a bar ending in "›".
+   row.setAttribute('aria-describedby',open?'hint-close':'hint-open');
+   tail=el('span',person.live===false?'disclose shown':'disclose');
+   tail.setAttribute('aria-hidden','true');
+   tail.setAttribute('title','Recent broadcasts');
+  }else{
+   row.removeAttribute('aria-describedby');
+   tail=el('span');
+  }
+  row.replaceChildren(avatar,name,platform,subNode,metaNode,tail);
+ }
+
+ function initial(name){
+  const first=Array.from(String(name).trim())[0]||'?';
+  return first.toLocaleUpperCase();
+ }
+
+ // A steady hue per login (mock A's hue), dark enough for a white initial.
+ function avatarColour(login){
+  const hue=Array.from(login).reduce((sum,char)=>(sum*31+char.charCodeAt(0))%360,7);
+  return'hsl('+hue+' 34% 34%)';
+ }
+
+ function twitchMark(){
+  if(typeof document.createElementNS!=='function')return[];
+  const svg=document.createElementNS(SVG_NS,'svg');
+  svg.setAttribute('viewBox','0 0 16 16');
+  svg.setAttribute('focusable','false');
+  const path=document.createElementNS(SVG_NS,'path');
+  path.setAttribute('fill','currentColor');
+  path.setAttribute('fill-rule','evenodd');
+  path.setAttribute('d',TWITCH_PATH);
+  svg.append(path);
+  return[svg];
  }
 
  function broadcastGroup(person){
@@ -330,10 +455,12 @@
    // With nothing selected (the typed text was chosen), ↓ comes back to the top match; ↑ is the field's.
    if(step<0)return false;
    textChosen=false;
+   moved=true;
    selection={...list[0]};
   }else{
    const at=list.findIndex(stop=>stop.login===selection.login&&stop.vod===selection.vod);
    const next=at+step;
+   moved=true;
    if(next<0&&field.value!==''){
     // ↑ from the top match: Return now opens the typed text, as in Safari's address field.
     selection=null;
@@ -356,6 +483,7 @@
  function activatePerson(login,byPointer){
   const person=personFor(login);
   selection={login,vod:-1};
+  moved=true;
   if(expanded&&expanded.login!==login){
    expanded=null;
   }
@@ -384,6 +512,7 @@
   expanded={login,state:'loading',items:[],byPointer:!!byPointer};
   vodsTarget='inline';
   selection={login,vod:-1};
+  moved=true;
   render();
   if(!byPointer)revealExpanded();
   announce(LOADING_TEXT);
@@ -521,6 +650,7 @@
   pendingInput=null;
   selection=null;
   textChosen=false;
+  moved=false;
   expanded=null;
   checkingLogin=null;
   vodsTarget='ignore';
@@ -618,7 +748,31 @@
   }
  }
 
+ // P4: an old sign-in can't read follows. One quiet line under the list, taking one row of its height, says
+ // so; it is a note, not a row, so the arrows and the selection never reach it.
+ function onFollows(data){
+  const value=unwrap(data);
+  const show=!!value&&value.state==='needs-sign-in';
+  if(followsNote){
+   followsNote.textContent=show?SIGN_IN_AGAIN:'';
+   followsNote.hidden=!show;
+  }
+  if(area)area.setAttribute('class','suggestions-area'+(show?' with-note':''));
+ }
+
+ // The field's clear button (mock A): the same as clearing with Escape, and focus stays in the field.
+ function onClear(){
+  if(field.value==='')return;
+  field.value='';
+  onInput();
+  focusField();
+ }
+
  form.addEventListener('submit',submit);
+ if(clearButton){
+  clearButton.addEventListener('mousedown',event=>event.preventDefault());
+  clearButton.addEventListener('click',onClear);
+ }
  field.addEventListener('input',onInput);
  document.addEventListener('keydown',onKeyDown);
  window.addEventListener('focus',focusField);
@@ -631,6 +785,7 @@
  iina.onMessage('offline-vods',onOfflineVods);
  iina.onMessage('suggestions',onSuggestions);
  iina.onMessage('suggestions-status',onSuggestionsStatus);
+ iina.onMessage('suggestions-follows',onFollows);
  focusField();
  // Global holds page messages until the listeners above exist (loadFile clears them in IINA 1.5.1).
  post('open-ready',{});

@@ -3,9 +3,9 @@
 // Twitch Helix client for the Following list (#30) and a channel's recent VODs (#32).
 //
 //   createHelix({http, clientID, token, log})
-//     -> {followedLive({userID}), recentVODs({login})}
+//     -> {followedLive({userID}), followedChannels({userID}), recentVODs({login})}
 //
-// Both methods resolve to arrays, or reject with an Error whose `code` is one of NEEDS_PERMISSION,
+// These methods resolve to arrays, or reject with an Error whose `code` is one of NEEDS_PERMISSION,
 // SIGNED_OUT, RATE_LIMITED, NETWORK or MALFORMED. RATE_LIMITED also carries `resetAt`, the raw
 // Ratelimit-Reset header string (a Unix epoch), or '' when the host gave no headers.
 //
@@ -238,6 +238,25 @@ async function followedLive(config, request) {
   return mapped;
 }
 
+// The quick list uses only the first page of followed channels; live streams
+// remain paginated independently so a live channel outside that page is included.
+async function followedChannels(config, request) {
+  const userID = request && request.userID;
+  if (!isString(userID) || userID === '') {
+    throw new TwitchHelixError('MALFORMED');
+  }
+  const body = await getJSON(config, '/channels/followed',
+    {user_id: userID, first: FOLLOWED_PAGE_SIZE}, 'followed-channels');
+  const mapped = dataArray(body, 'followed-channels', config).map(channel => {
+    if (!channel || !isString(channel.broadcaster_login) || !isString(channel.broadcaster_name)) {
+      throw new TwitchHelixError('MALFORMED');
+    }
+    return {login: channel.broadcaster_login, name: channel.broadcaster_name};
+  });
+  config.logLine('followed-channels', {count: mapped.length});
+  return mapped;
+}
+
 // ---- recent VODs ----
 
 function mapVideo(video) {
@@ -301,6 +320,7 @@ function createHelix(options) {
   const config = {http, clientID, token, logLine: makeLogger(log)};
   return {
     followedLive: request => followedLive(config, request),
+    followedChannels: request => followedChannels(config, request),
     recentVODs: request => recentVODs(config, request),
   };
 }

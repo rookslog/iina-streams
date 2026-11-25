@@ -4,10 +4,10 @@ const Sources=require('./src/source.js');
 const {TwitchAuth}=require('./src/auth.js');
 const BuiltInApp=require('./src/twitch-app.js');
 const {create:createTimers}=require('./src/timers.js');
-const {recentBroadcasts,channelStatus,channelsStatus}=require('./src/twitch-vods.js');
+const {recentBroadcasts,channelStatus,channelsStatus,lastBroadcasts,followedSuggestions}=require('./src/twitch-vods.js');
 const {envelope}=require('./src/bridge.js');
 const {listen}=require('./src/listeners.js');
-const {createHistory}=require('./src/history.js');
+const {createHistory,matchRank}=require('./src/history.js');
 const {global:app,menu,utils,file,http,standaloneWindow:openWindow}=iina;
 const timers=createTimers(setTimeout,clearTimeout);
 // Players that requested auth state, players this entry created, and each player's message session.
@@ -184,11 +184,14 @@ const auth=new TwitchAuth({
  now:()=>Date.now(),
  onState:s=>sendAll('auth-state',s),
  onReady:c=>{
+  const changed=!credentials||credentials.login!==c.login||credentials.userID!==c.userID||credentials.clientID!==c.clientID||canReadFollows(credentials)!==canReadFollows(c);
   credentials=c;
-  sendAll('auth-ready',c);
+  if(changed)resetSuggestionCaches();
+  sendAll('auth-ready',playerCredentials(c));
  },
  onStop:()=>{
   credentials=null;
+  resetSuggestionCaches();
   sendAll('auth-stop',{});
  }
 });
@@ -198,11 +201,24 @@ const auth=new TwitchAuth({
 const OPEN_PAGE='ui/open.html';
 const OPEN_WIDTH=380,OPEN_HEIGHT=84;
 // The window shows eight 28 px rows and keeps that height in every state (W-12, "a fixed height that scrolls");
-// global sends up to SUGGESTION_LIMIT people, the same 20 as one live-status batch, and the page scrolls.
-const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28,SUGGESTION_LIMIT=20;
+// Global sends up to 50 people; the history status batch still covers 20.
+const SUGGESTION_ROWS=8,SUGGESTION_ROW_HEIGHT=28,SUGGESTION_LIMIT=50;
 const SUGGESTION_HEIGHT=OPEN_HEIGHT+SUGGESTION_ROWS*SUGGESTION_ROW_HEIGHT;
 const STATUS_BATCH_SIZE=20,STATUS_INTERVAL_MS=60000;
-let suggestionsStatus={},lastStatusAt=-Infinity;
+// Separate caches: followed channels are account data, not watch history.
+function emptyHistoryStatus(){return {at:-Infinity,status:{},details:{}};}
+function emptyFollows(){return {at:-Infinity,rows:[],status:{},details:{}};}
+let historyStatus=emptyHistoryStatus(),follows=emptyFollows(),suggestionText='';
+function canReadFollows(c){return !!c&&Array.isArray(c.scopes)&&c.scopes.includes('user:read:follows');}
+function playerCredentials({token,login,clientID}){return {token,login,clientID};}
+function resetSuggestionCaches(){
+ historyStatus=emptyHistoryStatus();
+ follows=emptyFollows();
+ // A sign-out or account change must also remove private rows from a page already open.
+ onMainThread(()=>{
+  if(formInstance&&isFormShowing(formInstance)&&openPageReady)postSuggestions(suggestionText);
+ });
+}
 // openRun fences updates to the current draft (F-session, #67). Submits, edits, newer offline lookups,
 // fresh pages and closes advance it. Every form-started check instead needs its own form instance
 // to still be showing (class C), while sidebar checks have no form instance.
@@ -326,8 +342,17 @@ function onOpenPageReady(){
  const queued=openQueue;
  openQueue=[];
  for(const message of queued)openWindow.postMessage(message.name,message.data);
- postSuggestions('');
+ suggestionText='';
+ const now=Date.now();
+ // Never present an old private list as current while its refresh is pending.
+ if(now-follows.at>=STATUS_INTERVAL_MS)follows=emptyFollows();
+ if(now-historyStatus.at>=STATUS_INTERVAL_MS)historyStatus=emptyHistoryStatus();
+ postSuggestions(suggestionText);
+ const cached=suggestionSnapshot();
+ if(Object.keys(cached.status).length)postOpenPage('suggestions-status',envelope(cached));
+ if(credentials&&!canReadFollows(credentials))postOpenPage('suggestions-follows',envelope({state:'needs-sign-in'}));
  refreshSuggestionsStatus(formInstance);
+ if(canReadFollows(credentials))refreshFollows(formInstance);
 }
 
 function postOpenPage(name,data){
@@ -335,35 +360,115 @@ function postOpenPage(name,data){
  else openQueue.push({name,data});
 }
 
-// #74: history.query owns ranking. Typing only reads local history and the last batch's marks.
+// #74: match ranks use the same prefix/word-start rules as history.query.
+// The followed-live list is authoritative for followed people, including those
+// also present in history; history supplies the rank for watched people.
+function suggestionSnapshot(){
+ const status={...historyStatus.status,...follows.status};
+ const details={...historyStatus.details,...follows.details};
+ // An offline follow may reuse history broadcast details, but never a conflicting live detail.
+ for(const login of Object.keys(follows.status)){
+  if(follows.status[login]===false&&details[login]&&!details[login].lastAt&&!details[login].lastTitle)delete details[login];
+ }
+ return {status,details};
+}
+
 function postSuggestions(text){
- const rows=history.query(text).slice(0,SUGGESTION_LIMIT).map(({provider,login,displayName})=>({
-  provider,login,displayName,
-  live:provider==='twitch'&&Object.hasOwn(suggestionsStatus,login)?suggestionsStatus[login]:null
- }));
+ const {status,details}=suggestionSnapshot();
+ const needle=text.trim().toLowerCase();
+ const people=new Map();
+ for(const {provider,login,displayName} of history.query('')){
+  people.set(provider+'\n'+login,{provider,login,displayName,historyRank:people.size});
+ }
+ for(const row of follows.rows){
+  const key=row.provider+'\n'+row.login;
+  const existing=people.get(key);
+  people.set(key,{...row,historyRank:existing?existing.historyRank:Infinity});
+ }
+ const candidates=[];
+ for(const person of people.values()){
+  const rank=needle===''?0:matchRank(person,needle);
+  if(rank===null)continue;
+  const live=person.provider==='twitch'&&Object.hasOwn(status,person.login)?status[person.login]:null;
+  const detail=person.provider==='twitch'?details[person.login]:null;
+  const lastAt=Date.parse(detail?.lastAt);
+  candidates.push({...person,rank,live,viewers:detail?.viewers||0,lastAt:Number.isFinite(lastAt)?lastAt:-Infinity});
+ }
+ candidates.sort((a,b)=>{
+  if(a.rank!==b.rank)return a.rank-b.rank;
+  if((a.live===true)!==(b.live===true))return a.live===true?-1:1;
+  if(a.historyRank!==b.historyRank)return a.historyRank-b.historyRank;
+  if(a.historyRank!==Infinity)return 0;
+  if(a.live===true&&a.viewers!==b.viewers)return b.viewers-a.viewers;
+  if(a.live!==true&&a.lastAt!==b.lastAt)return b.lastAt-a.lastAt;
+  return a.displayName.localeCompare(b.displayName)||a.login.localeCompare(b.login);
+ });
+ const rows=candidates.slice(0,SUGGESTION_LIMIT).map(({provider,login,displayName,live})=>({provider,login,displayName,live}));
  postOpenPage('suggestions',envelope({text,rows}));
 }
 
 function onOpenQuery(data){
  if(!isFormShowing(formInstance)||!data||typeof data.text!=='string')return;
  onOpenEdit();
- postSuggestions(data.text);
+ suggestionText=data.text;
+ postSuggestions(suggestionText);
 }
+
+function publishSuggestionUpdate(form){
+ if(!isFormShowing(form))return;
+ postOpenPage('suggestions-status',envelope(suggestionSnapshot()));
+ postSuggestions(suggestionText);
+}
+
+const suggestionDeps={http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout};
 
 async function refreshSuggestionsStatus(form){
  const now=Date.now();
- if(now-lastStatusAt<STATUS_INTERVAL_MS)return;
+ if(now-historyStatus.at<STATUS_INTERVAL_MS)return;
  const logins=history.query('',{provider:'twitch'}).slice(0,STATUS_BATCH_SIZE).map(person=>person.login);
  if(!logins.length)return;
- lastStatusAt=now;
- const previous=suggestionsStatus;
- const status=await channelsStatus(logins,credentials,{http,setTimeout:timers.setTimeout,clearTimeout:timers.clearTimeout});
+ const cache=historyStatus;
+ const account=credentials;
+ cache.at=now;
+ const result=await channelsStatus(logins,account,suggestionDeps);
  onMainThread(()=>{
-  // Clear Watch History invalidates the pending batch.
-  if(suggestionsStatus!==previous)return;
-  suggestionsStatus=status;
-  // Class C: cache global status even after close, but publish only to the originating form.
-  if(isFormShowing(form))postOpenPage('suggestions-status',envelope({status}));
+  // Clear Watch History and auth changes invalidate pending batches.
+  if(historyStatus!==cache)return;
+  cache.status=result.status;
+  cache.details=result.details;
+  publishSuggestionUpdate(form);
+ });
+ // Publish Helix status immediately; an unavailable broadcast-detail lookup must not delay it.
+ if(!account||historyStatus!==cache)return;
+ const broadcasts=await lastBroadcasts(logins.filter(login=>result.status[login]===false),suggestionDeps);
+ if(!Object.keys(broadcasts).length)return;
+ onMainThread(()=>{
+  if(historyStatus!==cache)return;
+  cache.details={...cache.details,...broadcasts};
+  if(isFormShowing(form))postOpenPage('suggestions-status',envelope(suggestionSnapshot()));
+ });
+}
+
+async function refreshFollows(form){
+ const now=Date.now();
+ if(now-follows.at<STATUS_INTERVAL_MS)return;
+ const cache=follows;
+ const account=credentials;
+ cache.at=now;
+ const result=await followedSuggestions(account,suggestionDeps);
+ if(follows!==cache||!result)return;
+ // Publish the live list before waiting for the optional last-broadcast details.
+ onMainThread(()=>{
+  if(follows!==cache)return;
+  Object.assign(cache,result);
+  publishSuggestionUpdate(form);
+ });
+ const broadcasts=await lastBroadcasts(result.rows.filter(row=>result.status[row.login]===false).map(row=>row.login),suggestionDeps);
+ if(!Object.keys(broadcasts).length)return;
+ onMainThread(()=>{
+  if(follows!==cache)return;
+  cache.details={...cache.details,...broadcasts};
+  publishSuggestionUpdate(form);
  });
 }
 
@@ -484,7 +589,7 @@ async function onAuthConnect(data,label){
  audience.add(id);
  if(credentials){
   postChild(id,'auth-state',auth.snapshot());
-  postChild(id,'auth-ready',credentials);
+  postChild(id,'auth-ready',playerCredentials(credentials));
   return;
  }
  if(['waiting','authorizing'].includes(auth.snapshot().phase)){
@@ -669,7 +774,7 @@ function toggleHistoryPause(){
 
 function clearHistory(){
  history.clear();
- suggestionsStatus={};
+ historyStatus=emptyHistoryStatus();
  windowVisits.clear();
  scheduleMenuRebuild();
 }

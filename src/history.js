@@ -671,4 +671,4 @@ function createHistory({storage, now, random = Math.random}) {
   };
 }
 
-module.exports = {createHistory, HISTORY_FILE, BACKUP_FILE};
+module.exports = {createHistory, HISTORY_FILE, BACKUP_FILE, matchRank};

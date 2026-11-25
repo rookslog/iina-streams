@@ -1,5 +1,6 @@
 "use strict";
-const SCOPE='chat:read';
+const SCOPE='chat:read user:read:follows';
+const validScopes=scopes=>Array.isArray(scopes)&&scopes.includes('chat:read')&&(scopes.length===1||scopes.length===2&&scopes.includes('user:read:follows'));
 // Sign out overwrites the saved grant with this marker. Writing '' does not erase it: macOS
 // SecItemUpdate with empty data reports success but keeps the old contents (probed 2026-11-22),
 // so an empty write left the refresh token behind and the next Sign in silently reused it.
@@ -49,7 +50,7 @@ class TwitchAuth {
    const data=res&&res.data||{};
    if(res&&res.status===200&&/^[A-Za-z0-9_-]{16,512}$/.test(data.access_token||'')){
     this.secret={clientID:this.client,access_token:data.access_token,refresh_token:data.refresh_token||''};
-    if(!await this.validate(generation,true)&&generation===this.generation)this.fail('The token does not grant only read-only chat for this application.');return;
+    if(!await this.validate(generation,true)&&generation===this.generation)this.fail('The token does not grant the expected read-only Twitch permissions for this application.');return;
    }
    if(['authorization_pending','slow_down'].includes(data.message)||['authorization_pending','slow_down'].includes(data.error)){
     const delay=(data.message==='slow_down'||data.error==='slow_down')?Math.min(60000,interval+5000):interval;
@@ -63,11 +64,11 @@ class TwitchAuth {
   const res=await this.o.request('/validate','GET',null,{Authorization:'OAuth '+token});
   if(generation!==this.generation)return false;
   const data=res&&res.data||{};
-  if(!res||res.status!==200||data.client_id!==this.client||!/^[a-z0-9_]{3,25}$/.test(data.login||'')||!Array.isArray(data.scopes)||data.scopes.length!==1||data.scopes[0]!==SCOPE||!(data.expires_in>0))return false;
+  if(!res||res.status!==200||data.client_id!==this.client||!/^[a-z0-9_]{3,25}$/.test(data.login||'')||!validScopes(data.scopes)||!(data.expires_in>0))return false;
   let saved=true;if(persist)try{saved=this.o.write(JSON.stringify(this.secret))!==false;}catch(_){saved=false;}
   if(persist)this.sessionOnly=!saved;
   this.publish('ready',saved?'':'Connected for this session; Keychain storage failed.',{login:data.login});
-  this.o.onReady({token,login:data.login,clientID:this.client});
+  this.o.onReady({token,login:data.login,clientID:this.client,userID:data.user_id,scopes:data.scopes.slice()});
   const refreshBeforeExpiry=!!this.secret.refresh_token&&data.expires_in<=3660;
   const delay=Math.max(1000,Math.min(3600000,(data.expires_in-(refreshBeforeExpiry?60:0))*1000));
   this.schedule(async()=>{

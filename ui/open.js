@@ -185,7 +185,15 @@
  // Every row drawn: your channels, or the typed-name row in their place, then other channels (kept ones included).
  function allRows(){
   const typed=typedRow();
-  return yourRows().concat(typed?[typed]:[],others);
+  return yourRows().concat(typed?[typed]:[],drawnOthers(typed));
+ }
+
+ // The other channels drawn beside the typed-name row: a kept row with the typed login is that same channel, so it
+ // is not drawn twice (the typed-name row is the one that can be chosen).
+ function drawnOthers(typed){
+  if(!typed)return others;
+  const typedKey=typed.login.toLowerCase();
+  return others.filter(person=>!(person.kept&&person.login.toLowerCase()===typedKey));
  }
 
  // I1 / P-B′: the rows the person can select, with the arrows, the pointer or Return. Other channels kept from the
@@ -515,7 +523,7 @@
      hair,
      section(OTHER_CHANNELS,rowNodes(others,yours.length)));
    }else{
-    listbox.replaceChildren(...rowNodes(yours.concat(typed?[typed]:[],others),0));
+    listbox.replaceChildren(...rowNodes(yours.concat(typed?[typed]:[],drawnOthers(typed)),0));
    }
   }
   showSearchPending();
@@ -928,6 +936,12 @@
   // F2: an edit that leaves the trimmed, lower-cased text as it was ("ri" to "ri ", or "RI") changes nothing on
   // the list: the search rows, the hairline, the selection and a search still out all stay.
   const unchanged=sameText(field.value,draftText);
+  // An edit that only adds to the text cannot add to your channels (they match by prefix or word start). When they
+  // were empty for the old text, they are known to be empty for the new one, so the typed-name row is drawn for it
+  // at once instead of blinking out until the list answers.
+  const before=draftText.trim().toLowerCase();
+  const extending=!unchanged&&heardSuggestions&&awaitingText===null&&!yourRows().length&&
+   field.value.trim().toLowerCase().startsWith(before);
   draftText=field.value;
   field.removeAttribute('aria-invalid');
   submitted=false;
@@ -944,7 +958,7 @@
   expanded=null;
   checkingLogin=null;
   vodsTarget='ignore';
-  awaitingText=field.value;
+  awaitingText=extending?null:field.value;
   // R6 and P-B: at the keystroke, known people the search found go, and so do other channels that no longer match,
   // so no stale result is ever selectable; those that still match stay until the new answer replaces them. Your
   // channels' own rows stay until the new list. A search still out is for the old text, so the spinner goes too.
@@ -958,6 +972,8 @@
   }
   announce('');
   clearOfflineVods();
+  // With your channels known empty (an extending edit), the typed-name row is selected as it is drawn (I1).
+  selectFirstIfNone();
   render();
   // #67 F-session: a new draft outdates any pending answer for the old text.
   post('open-edit',{});

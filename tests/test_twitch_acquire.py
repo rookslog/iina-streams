@@ -243,6 +243,16 @@ class TwitchAcquisitionTests(unittest.TestCase):
         self.assertEqual(out['text'], 'a Bad bNumEmpty', 'text is kept whatever the emote field holds')
         self.assertEqual(out.get('emotes', ''), '', 'ids outside [A-Za-z0-9_]{1,64} (or not strings) are dropped')
 
+    def test_an_emote_cut_by_the_text_cap_gets_no_range(self):
+        # #87 (lead, from the Claude review): text stops at 16000 characters; an emote cut mid-name is not tagged.
+        def with_fragments(fragments):
+            node = edge(body='')
+            node['node']['message']['fragments'] = fragments
+            return acquire.normalize_twitch_comment(node)
+        kappa = {'text': 'Kappa', 'emote': {'emoteID': '25'}}
+        self.assertEqual(with_fragments([{'text': 'x' * 15998}, kappa]).get('emotes', ''), '')
+        self.assertEqual(with_fragments([{'text': 'x' * 15995}, kappa])['emotes'], '25:15995-15999')
+
     def test_invalid_nodes_do_not_invent_replay_timestamps(self):
         for value in [-1, float('nan'), None, True, 2592001]:
             self.assertIsNone(acquire.normalize_twitch_comment(edge(seconds=value)))

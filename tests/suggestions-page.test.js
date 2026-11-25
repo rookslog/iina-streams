@@ -699,3 +699,39 @@ test('16. VoiceOver: combobox field with aria-controls on a listbox; options nam
     assert.equal(attr(option, 'aria-setsize'), '3', 'aria-setsize');
   });
 });
+
+// ---- Phase 3d (TESTS-74, 2026-11-25), D4: a Return before the first list is not lost ----
+// The re-check (P3c-2): for up to 450 ms after the window opens there is no list, and Return fell through to a form
+// that ignores an empty field, so the viewer who pressed the shortcut and Return at once got nothing.
+
+test('D4. Return on an empty field before the first list waits for it, then opens the list\'s top row', () => {
+  const f = pageFixture();
+  assert.equal(f.options().length, 0, 'fixture: no list has arrived');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [], 'nothing is opened with no list to open from');
+  assert.equal(f.field.getAttribute('aria-invalid'), null, 'and the empty field is not flagged as an error');
+  f.suggest();
+  assert.deepEqual(f.posts('open-stream'), [{input: ROWS[0].login}], 'the list arrives: its top row opens, once');
+  f.suggest(ROWS, '');
+  assert.equal(f.posts('open-stream').length, 1, 'a later list does not open anything again');
+});
+
+test('D4. an empty answer to that Return opens nothing, and a later Return still works', () => {
+  const f = pageFixture();
+  f.press('Enter');
+  f.suggest([], '');
+  assert.deepEqual(f.posts('open-stream'), [], 'no rows: nothing to open');
+  f.suggest(ROWS, '');
+  assert.deepEqual(f.posts('open-stream'), [], 'the Return was answered; a list that comes later is not opened by it');
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: ROWS[0].login}], 'a Return with a list on screen opens the top row, as before');
+});
+
+test('D4. Return with text in the field and no list yet submits the text', () => {
+  const f = pageFixture();
+  f.field.value = 'https://www.twitch.tv/someone';
+  f.press('Enter');
+  assert.deepEqual(f.posts('open-stream'), [{input: 'https://www.twitch.tv/someone'}], 'the text, at once, with no list');
+  f.suggest(ROWS, '');
+  assert.equal(f.posts('open-stream').length, 1, 'and the list that arrives later opens nothing more');
+});

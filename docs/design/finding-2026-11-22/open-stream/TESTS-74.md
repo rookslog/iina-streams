@@ -156,3 +156,4 @@ Design re-check P3c-1 and backend re-check MAJOR 1–2 (scratchpad `opus-74-desi
 - **D3 Caches outlive the window for 60 s without a player.** Closing Open Stream drops the credentials as before but keeps the status and follows caches for 60 s, so a reopen within 60 s shows them at once (then refreshes per G1).
 - **D4 Return before the first list is not lost:** with typed text it submits the text; with an empty field it opens the first list's top when the list arrives.
 - **D5 A slow validate is a late answer, not an account change:** no re-sort; D2 applies.
+- **3d decisions (lead):** the writer's readings 1–3, 5, 6 adopted as pinned. (4) Appended follow-only people keep the G4 order among themselves (live by viewers, then offline by newest lastAt, then name).

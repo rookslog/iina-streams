@@ -148,3 +148,11 @@ Reviews: scratchpad `opus-74-design-review.md` ("Phase 3") and the backend revie
 - **C7 (B8) `suggestions-status` carries status and details only for the logins in the rows sent** (≤50).
 - **C8 (B7):** record in CHANGELOG/release notes that rolling back to an older build asks for a new sign-in.
 - **3c decisions on the writer's questions (lead):** the writer's readings 1, 3, 4, 5, 6, 8, 9, 10, 11 are adopted as written in the tests. (2) Typing before the first list: the first list is posted for whatever text is current when it posts. (7) A device flow still pending when Open Stream closes is cancelled; global then drops credentials as C2 says.
+
+## Phase 3d (lead, 2026-11-25 ~01:00): fixes from both 3c re-checks
+Design re-check P3c-1 and backend re-check MAJOR 1–2 (scratchpad `opus-74-design-review.md` "Phase 3c"; probes `probe74r2/`). The lead's C3 ("forgets the old grant, as Sign out does") caused D1; D-032 step-back: the recurring class is still the lead's own contract text, so each rule below names what must stay unchanged.
+- **D1 Adding follows never signs anyone out.** follows-connect keeps the old grant and every player's chat as they are. Only when the new grant validates with both scopes is it saved, sent as `auth-ready` ({token, login, clientID}) to every player that had the old one, and the old token revoked. Cancel, close, expiry or failure leave Keychain, players and chat exactly as before. Supersedes C3's "forgets".
+- **D2 A late follows answer still reaches the list.** After the first list, follow-only people from a late answer are appended below the rows already shown (rows above never move; the selected row and the row under the pointer stay); their marks and details follow in `suggestions-status`.
+- **D3 Caches outlive the window for 60 s without a player.** Closing Open Stream drops the credentials as before but keeps the status and follows caches for 60 s, so a reopen within 60 s shows them at once (then refreshes per G1).
+- **D4 Return before the first list is not lost:** with typed text it submits the text; with an empty field it opens the first list's top when the list arrives.
+- **D5 A slow validate is a late answer, not an account change:** no re-sort; D2 applies.

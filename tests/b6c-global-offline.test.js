@@ -174,14 +174,14 @@ test('B6c the list goes loading, then ready, none or error, and the window grows
   await fixture.offline();
   fixture.win.send('open-ready', {});
   assert.deepEqual(fixture.lastList(), {state: 'loading'});
-  assert.equal(fixture.win.frames.at(-1).height, 84 + 28, 'one row of room while loading');
+  assert.equal(fixture.win.frames.at(-1).height, 84 + 8 * 28, '#74 (amended 2026-11-24): the window keeps its fixed height while loading');
 
   release(archiveResponse(12));
   await settle();
   const ready = fixture.lastList();
   assert.equal(ready.state, 'ready');
   assert.deepEqual(ready.items, Array.from({length: 10}, (_, index) => item(index)), 'at most ten rows');
-  assert.deepEqual(fixture.win.frames.at(-1), {width: 380, height: 84 + 10 * 28, x: undefined, y: undefined});
+  assert.deepEqual(fixture.win.frames.at(-1), {width: 380, height: 84 + 8 * 28, x: undefined, y: undefined}, '#74: fixed height; ten broadcasts scroll');
 
   fixture.shim.timers.advance(10000);
   fixture.shim.http.setResponse(archiveResponse(0));
@@ -193,7 +193,7 @@ test('B6c the list goes loading, then ready, none or error, and the window grows
   fixture.shim.http.rejectResponse({statusCode: 503, reason: 'Service Unavailable', data: null, text: ''});
   await fixture.offline();
   assert.deepEqual(fixture.lastList(), {state: 'error'});
-  assert.equal(fixture.win.frames.at(-1).height, 84 + 28);
+  assert.equal(fixture.win.frames.at(-1).height, 84 + 8 * 28);
 });
 
 test('B6c a newer source-offline makes the earlier result stale', async t => {

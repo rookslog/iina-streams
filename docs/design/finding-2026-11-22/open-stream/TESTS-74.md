@@ -83,3 +83,11 @@
 - **Mutation checks:** removing the form check, the 60 s rule or the 20-login batch bound each fails tests. **Untested guard:** dropping a status batch that was pending when the person cleared their history. Without it, a cleared person's live mark could come back if they're recorded again within 60 s.
 - **For the page half (Hydrogen, design):** a plain open is 84 + 8 × 28 = 308 px tall (`SUGGESTION_HEIGHT` in `global.js`). An offline broadcast list from a typed submission still sizes the window by its row count, so it can shrink from 308 px. Choose deliberately whether it should.
 - **Privacy, at merge:** `docs/PRIVACY.md` must add `api.twitch.tv` (signed-in live status), and say that opening Open Stream sends up to 20 logins from watch history to Twitch for live marks.
+
+## Round 2 test amendments (lead, 2026-11-24 ~21:00, after the Opus design review)
+Review: scratchpad `opus-74-design-review.md` (verdict fix first; findings 1–3 traced to the lead's tests and global.js).
+- **Selection:** whenever the list has people, the first is selected, at rest and while typing; Return opens the top match (this file's native proof; mock A). The 20:00 amendment ("no automatic selection while typing") was wrong and is reverted. The first ↓ moves to the second person.
+- **Offline person + Return:** opens their broadcasts inline (`open-vods`), not the live check and the #32 list.
+- **Global sends up to 20 people** (one status batch, W-18's disclosed 20); the page shows 8 and scrolls (item 2).
+- **Fixed height through every state:** the live check and the offline list keep the 308 px window (W-12); b6c's growth expectations amended.
+- Red on 6c5da18: 11 tests, each for these reasons.

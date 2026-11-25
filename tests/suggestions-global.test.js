@@ -219,22 +219,24 @@ const identity = ({provider, login, displayName}) => ({provider, login, displayN
 
 // ---- tests ----
 
-test('1. the empty field: open-ready answers suggestions for "" with the top 8, in query("") order', async () => {
-  const r = loadGlobal();
+// Amended 2026-11-24 ~21:00 (lead, design review): global sends up to 20 people (one status batch) and the
+// page shows 8 at a time and scrolls (TESTS-74 item 2; the operator: the quick list must scroll).
+test('1. the empty field: open-ready answers suggestions for "" with the top 20, in query("") order', async () => {
+  const r = loadGlobal({people: many(30)});
   await r.showOpen();
   const first = r.messages('suggestions').find(message => message.text === '');
   assert.ok(first, 'open-ready is answered with suggestions for ""');
-  assert.deepEqual(first.rows.map(identity), r.oracle('').slice(0, 8));
-  assert.equal(first.rows.length, 8);
+  assert.deepEqual(first.rows.map(identity), r.oracle('').slice(0, 20));
+  assert.equal(first.rows.length, 20);
 });
 
-test('2. typing: open-query "oh" answers with query("oh")\'s first 8 rows, with identity fields only', async () => {
+test('2. typing: open-query "oh" answers with query("oh")\'s first 20 rows, with identity fields only', async () => {
   const r = loadGlobal();
   await r.showOpen();
   const answer = await r.ask('oh');
   const expected = r.oracle('oh');
   assert.ok(expected.length > 8, 'fixture: more than 8 matches');
-  assert.deepEqual(answer.rows.map(identity), expected.slice(0, 8));
+  assert.deepEqual(answer.rows.map(identity), expected.slice(0, 20));
   assert.ok(!answer.rows.some(row => row.login === 'mroh'), 'word-start matches rank after the prefix matches');
   for (const row of answer.rows) {
     assert.deepEqual(Object.keys(row).sort(), ['displayName', 'live', 'login', 'provider'], 'no visits, no scores');
@@ -412,6 +414,19 @@ test('7. opening is unchanged: open-stream {input} runs the precheck, then opens
   const list = offline.messages('offline-vods').at(-1);
   assert.equal(list.state, 'ready');
   assert.deepEqual(list.items.map(({url}) => url), [ARCHIVE_URL]);
+});
+
+test('7b. the window keeps its height through a live check and the offline list that follows (no shrink to a spinner)', async () => {
+  // Lead, 2026-11-24 ~21:00, design review finding 3: the check used to shrink the window to 112 px, then regrow.
+  const r = loadGlobal({precheck: 'offline'});
+  await r.showOpen();
+  const frames = () => r.shim.standaloneWindow.frames;
+  const opened = frames().at(-1).height;
+  const before = frames().length;
+  r.window.send('open-stream', {input: 'ohnepixel'});
+  await r.settle();
+  assert.equal(r.messages('offline-vods').at(-1).state, 'ready', 'the offline list arrived');
+  for (const frame of frames().slice(before)) assert.equal(frame.height, opened, 'every resize keeps the opened height');
 });
 
 test('8. open-vods {login} answers offline-vods with recent broadcasts, whether the person is live or not', async () => {

@@ -286,6 +286,11 @@ function lastBroadcastDetail(user) {
   return Object.keys(details).length ? details : null;
 }
 
+function followerTotal(user) {
+  const total = user?.followers?.totalCount;
+  return Number.isSafeInteger(total) && total >= 0 ? total : undefined;
+}
+
 async function helixBatch(http, logins, credentials) {
   // IINA accepts only string-valued params, so repeated keys belong in the URL itself.
   const query = logins.map(login => 'user_login=' + encodeURIComponent(login)).join('&');
@@ -362,17 +367,23 @@ async function gqlBatch(http, logins) {
 
 // Last-broadcast details are not available as a Helix batch. Each anonymous query carries at
 // most 50 validated logins and never an account credential or typed text.
-async function lastBroadcasts(logins, deps) {
+async function lastBroadcasts(logins, deps, {includeFollowers = false} = {}) {
   const unique = [...new Set(logins)].filter(login => typeof login === 'string' && LOGIN_PATTERN.test(login));
   const batches = [];
+  const fields = 'lastBroadcast{startedAt title}' + (includeFollowers ? ' followers{totalCount}' : '');
   for (let offset = 0; offset < unique.length; offset += 50) {
     const batch = unique.slice(offset, offset + 50);
-    batches.push(raceOnMain(() => gqlUsers(deps.http, batch, 'lastBroadcast{startedAt title}'),
+    batches.push(raceOnMain(() => gqlUsers(deps.http, batch, fields),
       REQUEST_TIMEOUT_MS, {value: null}, deps).then(({value}) => {
       if (!value) return [];
       return batch.flatMap((login, index) => {
-        const detail = broadcastDetail(value, 'u' + index);
-        return detail ? [[login, detail]] : [];
+        const alias = 'u' + index;
+        const detail = broadcastDetail(value, alias) || {};
+        if (includeFollowers && !fieldFailed(value, alias, 'followers', 'totalCount')) {
+          const total = followerTotal(value.data[alias]);
+          if (total !== undefined) detail.followers = total;
+        }
+        return Object.keys(detail).length ? [[login, detail]] : [];
       });
     }));
   }
@@ -445,7 +456,7 @@ function searchRow(login, name, live, details) {
 }
 
 async function gqlSearch(http, text, deps) {
-  const query = `query{searchFor(userQuery:${JSON.stringify(text)},platform:"web"){channels{edges{item{... on User{login displayName stream{viewersCount title game{displayName}} lastBroadcast{startedAt title}}}}}}}`;
+  const query = `query{searchFor(userQuery:${JSON.stringify(text)},platform:"web"){channels{edges{item{... on User{login displayName stream{viewersCount title game{displayName}} lastBroadcast{startedAt title} followers{totalCount}}}}}}}`;
   const response = await postWithTimeout(http, {headers: {'Client-Id': WEB_CLIENT_ID, 'Content-Type': 'application/json'}, data: {query}}, deps);
   const body = bodyOf(response);
   const edges = body?.data?.searchFor?.channels?.edges;
@@ -477,6 +488,10 @@ async function gqlSearch(http, text, deps) {
       if (failed('lastBroadcast', 'startedAt')) delete details.lastAt;
       if (failed('lastBroadcast', 'title')) delete details.lastTitle;
     }
+    if (live !== true && !failed('followers', 'totalCount')) {
+      const total = followerTotal(user);
+      if (total !== undefined) details.followers = total;
+    }
     const row = searchRow(user.login, user.displayName, live, details);
     return row ? [row] : [];
   });
@@ -501,7 +516,7 @@ async function helixSearch(text, credentials, deps) {
   const offline = [...new Set(rows.filter(row => !row.live).map(row => row.login))];
   const followups = await requestForOwner(deps, () => Promise.all([
     live.length ? channelsStatus(live, credentials, deps) : null,
-    lastBroadcasts(offline, deps),
+    lastBroadcasts(offline, deps, {includeFollowers: true}),
   ]));
   if (!followups) return null;
   const [streams, broadcasts] = followups;

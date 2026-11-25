@@ -294,17 +294,78 @@ reasoning behind each one, the recommendation … assumptions that are being mad
 - **Source of truth:** each project's waiting file, in that fixed format. The asks ledger becomes an
   index over those files rather than a second copy, which removes the drift `obs-20261121T032740-be3153`
   found (inferred).
-- **Viewer, in order of preference:**
-  1. **A Sheprd mod.** Sheprd is the app Herdr's panes run in. The mod would add a sidebar list of open
-     items across projects, a panel showing one item expanded, and links that open the file at its
-     line, beside the panes you already watch. Mods support sidebar sections and panels, per the
-     `herdr-mods` skill's description (unbuilt).
-  2. **A Claude Code plugin command, `/waiting [id]`.** It prints one item in full when you ask, so
-     the context is pulled on demand rather than pushed every turn, plus the gap-aware hook from
-     section 2.
-  3. **A published claude.ai page backed by a database**, for reading on a phone.
+- **Viewer: one Claude Code plugin (a "mod"), in three parts.** Corrected 2026-11-22: the operator
+  runs Claude Code in Ovis, not Sheprd. A Claude Code mod works in any terminal that runs Claude
+  Code, and on its desktop and mobile surfaces. Each capability below is from this build's plugin
+  API types (2.1.330); none is built:
+  1. **An auto-linker.** A `ui.render` hook on `AssistantMessage` may rewrite how a reply is drawn,
+     and "a rewrite changes the drawing and leaves the stored message alone". The model writes a
+     short reference (`W-7`, `docs/WAITING.md:63`, a relative path). The mod resolves it against the
+     session's folder and the project's waiting file, finding the `### W-7.` heading at draw time
+     so line numbers never drift, and draws a clickable link (`Link`, an OSC 8 hyperlink in a
+     terminal). That removes the output tokens of absolute paths.
+  2. **A waiting pane beside the chat** (`$.ui.open` with a `Pane` render): the open items from the
+     project's waiting file, each expandable to its full entry and its dated updates. An optional row
+     above the prompt (`AbovePrompt`) could say how many items are new or changed.
+  3. **A `/waiting [id]` command** (`$.command.register`) that prints one item in full on request, so
+     the context is pulled when wanted, not pushed every turn. The gap-aware hook from section 2 fits
+     here too, through `prompt.submit` or `prompt.compose`.
+
+  A published claude.ai page backed by a database stays an option for reading on a phone.
+  **Unchecked, and it could sink the auto-linker:** whether Ovis opens OSC 8 hyperlinks and
+  `file:line` targets. The sonic-affinity-lab complaint that links don't open at the spot
+  (`obs-20261122T195028-db0380`) may be the terminal's doing.
+  **Link test, 2026-11-23 (observed, from the operator's screenshot):** clicking a link to
+  `docs/WAITING.md` opened Ovis's file viewer with "Several files are named WAITING.md". It listed
+  this one and a copy in an agent worktree (`.claude/worktrees/agent-…/docs/WAITING.md`). So Ovis
+  resolves a link by file name, even when the link gives the full path. It doesn't refuse: it offers
+  a choice. The operator's point is that the choice is ambiguous, because they may not know which
+  copy is meant. Of the repository's 12 worktrees (`git worktree list`, 2026-11-23), only two sit
+  inside the project folder, both under `.claude/worktrees/`, and only those collided (inferred: the
+  chooser listed one of them and none of the copies in `iina-streams-wt/`). The `agent-` names
+  suggest Claude Code's own subagent worktree option made them. The fix is to keep worktrees outside
+  the project folder, as the lead already does for its own (`iina-streams-wt/`), and to remove each
+  when its work is merged. That belongs to the IINA lead.
+  **Context cost of `/waiting`:** a command's answer can set `isTextDisplayOnly`: "the output row is
+  drawn and kept, and goes in no request" (API types). So `/waiting W-7` need not enter the model's
+  context, and the pane never does (inferred: it's UI only). Both are untested.
+- **Citation resolver: the core of the plugin (added 2026-11-23 at the operator's request).** Agents
+  cite only an id: `W-7` (waiting item), `D-33` (decision), `R-4` (requirement), `#57` (issue),
+  `obs-…` (signal). The plugin turns each into a link when the reply is drawn. A small per-project
+  map (for example `.claude/citations.json`) says, for each prefix, which file holds it and what its
+  heading looks like (`### W-7.` in `docs/WAITING.md`). Issues go to their GitHub URL and signals
+  to the ledger. The plugin finds the heading at draw time and stores no line number, so a link can't
+  drift to the wrong entry. That drift happened tonight: this proposal cited D1 at line 358, and its
+  own later edits moved D1 to line 390, so the operator landed on the wrong entry
+  (`obs-20261123T054433-234887`). Entries cite each other the same way, and the pane can show what
+  cites an entry ("cited by"). That is the useful core of spec-driven development (ids and
+  traceability across requirement, decision, issue and test) without the rest of its process.
+  Markdown can stay the storage while ids sit in headings. The history and cross-links argue for an
+  event store later, with Markdown as a generated view, as the signal ledger already does.
+- **A central index for root and for every agent (the operator's idea, 2026-11-23).** One store,
+  updated automatically, holds the open waiting items, recent decisions and recent signals of every
+  project, each with its author, session and dated history.
+  - **Who reads it:** root reads it to stay current on all projects. The operator uses it through
+    the pane. Any agent uses it to onboard to a project: what's open, what was decided lately, what
+    went wrong lately.
+  - **Fed from what exists:** each project's waiting file and decision log; PWE's asks ledger
+    (`asks.py`); the signal ledger, whose events already carry the session and the exact message.
+  - **Pulled, not pushed:** a session gets a few lines at most at start, and more only on request
+    (`/situate` or the pane), because loading it into every session wastes usage when it isn't needed
+    (`obs-20261120T212838-589361`).
+  - **Ids need a project prefix.** PWE's ledger numbers asks globally (W-264), while IINA Streams
+    numbers its own (W-1 to W-13), so "W-7" alone is ambiguous across projects (observed in both
+    files). The resolver would read `iina:W-7`, or take the project from the session's folder.
+  - **Who may write:** any agent whose work needs the operator adds an entry addressed to the
+    operator, and the store records which agent and session wrote or updated it. Items that affect
+    every project, such as D2 and D3 in this proposal (the global style setting and the global
+    decision rule), belong in root's list, even when they arose in one project.
+  - **The risk is the one the situation map met** (8 events under `situation-map-built-not-used`): an
+    index nobody opens. The resolver and the pane put it on the path both the operator and the
+    agents already use.
 - **First step:** agree the field format, convert the two trial projects' waiting files to it, and
-  build the read-only `/waiting` command. Then check whether your confusion questions fall further.
+  test link opening in Ovis, then build the
+  auto-linker and the read-only `/waiting` command as one mod. Then check whether your confusion questions fall further.
 - **The main risk** is a viewer nobody opens. The theme `situation-map-built-not-used` has 8 events
   since 5 Oct (e.g. `obs-20261023T143055-1ebe8d`: "dead on arrival. All this effort for nothing").
   So the viewer has to sit where you already look, and agents have to link into it.
@@ -391,7 +452,7 @@ main folder, not a worktree. Subagents never get a style either way.
 sonic-affinity-lab. Its repository is private, so committing publishes nothing. Check by listing the
 working folder of each Claude pane in Herdr.
 
-**Answered 2026-11-22, about 21:40 EST:** "Yes, switch the trial on." Option A was installed in
+**Answered 2026-11-22, about 22:25 EST:** "Yes, switch the trial on." Option A was installed in
 both projects by copying the draft. The check in section 5 quoted the style in `iina-streams` and
 `sonic-affinity-lab`, and printed `NONE` in PWE. Running sessions there get it only after a restart.
 Interactive loading is unchecked until a restarted lead is asked. The draft also names both waiting
@@ -452,10 +513,8 @@ which the leads' audit of their waiting files would show.
   on Dionysus, are stored elsewhere and unchecked.
 - **Auto-linking, for the plugin (section 6).** You want the model to write a short reference, such
   as `WAITING.md#W-7` or a relative path, and have something turn it into a clickable link. That
-  saves the output tokens of absolute paths. Candidates: a Sheprd link rule or mod that resolves
-  short references against the session's folder, or a Claude Code hook. Whether a hook can rewrite
-  displayed text is unchecked, and I don't know of one that can. Until then the style keeps absolute
-  `path:line`.
+  saves the output tokens of absolute paths. A Claude Code mod can do it: the auto-linker in section 6
+  (observed in the API types, not built). Until it exists the style keeps absolute `path:line`.
 - **Item history.** You want every update to a waiting item kept. The draft now asks for a dated
   update line under the item instead of overwriting it. The viewer in section 6 would store updates
   as events, as the signal ledger does, and show the current state with its history.

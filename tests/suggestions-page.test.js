@@ -1531,7 +1531,7 @@ function runI1Sequence(seed, steps) {
         for (const post of f.posts('open-stream').slice(before)) posted.add(norm(post.input));
         const after = i1Snapshot(f);
         if (after.sel !== null && after.sel === target) { personMoved = true; chosen = after.sel; }
-        if (kept.has(target) && f.posts('open-stream').length > before) fail(`a click opened kept row ${target}`);
+        if (kept.has(target) && norm(target) !== norm(text) && f.posts('open-stream').length > before) fail(`a click opened kept row ${target}`);
       } else {
         log.push('click (no rows)');
       }
@@ -1611,7 +1611,9 @@ function runI1Sequence(seed, steps) {
     if (looks.length === 1 && looks[0].id !== now.active) fail('the row with the selected look is not the aria-activedescendant');
     if (now.sel === null && now.active !== null) fail('aria-activedescendant names a row but none is selected');
     if (now.sel !== null && now.active !== now.selectedId) fail('aria-activedescendant is not the selected row');
-    if (kept.size && now.sel !== null && kept.has(now.sel)) fail(`kept row ${now.sel} is selected (kept rows are not selectable)`);
+    // A kept row whose login equals the typed text is the typed-name placeholder drawn in full, and may be selected as
+    // that placeholder; any other kept row is never selected. (The pool never equals a typed text, so this stays strict.)
+    if (kept.size && now.sel !== null && kept.has(now.sel) && norm(now.sel) !== norm(text)) fail(`kept row ${now.sel} is selected (kept rows are not selectable)`);
     // The first list after an edit is the answer to that edit: it may remove what the person had picked meanwhile.
     if (editResponse) {
       if (chosen !== null && !now.rows.includes(chosen)) chosen = null;
@@ -1651,22 +1653,36 @@ test('I1. the selection invariant holds over seeded pseudo-random message and in
 
 // ---- Final design clearance (TESTS-74, probes DUP and BLINK in search-review/r4.mjs), 2026-11-25 ----
 
-test('DUP. typing the last letter of the name of a kept row: one row selected, the typed-name row; the kept row with that login is not drawn', () => {
+// Amended 2026-11-25 (lead's point fix, TESTS-74): a kept row whose login equals the typed text (case-insensitive) is the
+// typed-name placeholder drawn in full: its display name, live mark and details, as the one selected row.
+test('DUP. typing the last letter of the name of a kept row: that person is drawn once, in full, as the one selected row', () => {
   const f = pageFixture();
   f.type('rivenshad');
   f.suggest([], 'rivenshad');
   searchAnswer(f, 'rivenshad', [], [SR.rivenshade]);
   f.type('rivenshade');
   f.suggest([], 'rivenshade');
-  const named = f.options().filter(option => rowName(f, option).toLowerCase() === 'rivenshade');
-  assert.equal(named.length, 1, `one row for "rivenshade", not ${f.options().map(option => rowName(f, option)).join(', ')}`);
-  assert.equal(f.options().length, 1, 'and nothing else');
+  assert.equal(f.options().length, 1, `one row, not ${f.options().map(option => rowName(f, option)).join(', ')}`);
+  const [row] = f.options();
+  assert.equal(rowName(f, row), 'RivenShade', 'it shows the display name, not the typed text');
+  assert.ok(f.all(row).some(node => classOf(node).includes('mark') && classOf(node).includes('live')), 'with its live mark');
+  const texts = leafTexts(f, row);
+  assert.ok(texts.includes('Valorant · ranked grind to radiant'), `and its details: ${JSON.stringify(texts)}`);
+  assert.ok(texts.includes('15.4K'), 'and its viewers');
   const looks = f.options().filter(option => attr(option, 'aria-selected') === 'true');
-  assert.equal(looks.length, 1, 'exactly one row is drawn as selected');
-  assert.equal(looks[0], named[0], 'it is the typed-name row');
-  assert.equal(f.field.getAttribute('aria-activedescendant'), looks[0].id, 'aria-activedescendant points at it');
+  assert.deepEqual(looks, [row], 'it is the one selected row');
+  assert.equal(f.field.getAttribute('aria-activedescendant'), row.id, 'and the aria-activedescendant');
   f.press('Enter');
   assert.deepEqual(f.posts('open-stream'), [{input: 'rivenshade'}], 'Return opens "rivenshade"');
+  const landed = pageFixture();
+  landed.type('rivenshad');
+  landed.suggest([], 'rivenshad');
+  searchAnswer(landed, 'rivenshad', [], [SR.rivenshade]);
+  landed.type('rivenshade');
+  landed.suggest([], 'rivenshade');
+  searchAnswer(landed, 'rivenshade', [], [SR.rivenshade]);
+  assert.deepEqual(landed.options().map(option => rowName(landed, option)), ['RivenShade'], 'when the answer lands: still one row');
+  assert.deepEqual(landed.selected(), landed.options(), 'the same person stays the selected first row');
 });
 
 test('BLINK. with your channels empty, an extending edit draws the typed-name row for the new text at once, before the list answers', () => {

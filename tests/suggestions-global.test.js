@@ -1119,81 +1119,8 @@ test('C2. global holds the credentials while Open Stream shows or a player uses 
   assert.equal(held.validateCalls().length, 2, 'a player still uses it: Open Stream closing does not drop it');
 });
 
-// ---- C3: one action to include follows ----
-
-// Amended 2026-11-25 (phase 3d, TESTS-74): D1 supersedes C3's "forgets the old grant". This test pinned a revoke and the
-// signed-out marker at the click; it now pins that the click revokes nothing and writes nothing (D1 has the rest).
-test('C3. follows-connect starts the device flow with both scopes and the page gets the code; the old grant is untouched', async () => {
-  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
-  await r.showOpen();
-  const keychain = r.shim.keychain.get('twitch-readonly', 'oauth');
-  const writes = r.shim.keychain.writes.length;
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  assert.deepEqual(r.oauthCalls('/revoke'), [], 'the old grant is not revoked at the click (D1)');
-  assert.equal(r.shim.keychain.get('twitch-readonly', 'oauth'), keychain, 'and the Keychain still holds it');
-  assert.deepEqual(r.shim.keychain.writes.slice(writes), [], 'nothing was written');
-  assert.equal(r.oauthCalls('/device').length, 1, 'one device request');
-  assert.deepEqual(r.oauthCalls('/device')[0].options.data, {client_id: SAVED.clientID, scopes: 'chat:read user:read:follows'},
-    'the same Twitch app as the old grant, both scopes');
-  assert.deepEqual(r.messages('follows-code'), [{userCode: USER_CODE, verificationUri: VERIFICATION_URI}],
-    'the page gets the code and the address, and nothing else');
-  assert.ok(!JSON.stringify(r.window.posts).includes(DEVICE_CODE), 'the device code never reaches the page');
-  assert.deepEqual(r.shim.utils.opened, [], 'nothing opens until the person clicks');
-});
-
-test('C3. with no saved grant the same action starts the flow with the built-in app, and revokes nothing', async () => {
-  const builtIn = 'b'.repeat(30);
-  const r = loadGlobal({people: FOLLOW_HISTORY(), builtInClientID: builtIn});
-  await r.showOpen();
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  assert.equal(r.oauthCalls('/revoke').length, 0, 'nothing to revoke');
-  assert.deepEqual(r.oauthCalls('/device').map(call => call.options.data), [{client_id: builtIn, scopes: 'chat:read user:read:follows'}]);
-  assert.deepEqual(r.messages('follows-code'), [{userCode: USER_CODE, verificationUri: VERIFICATION_URI}]);
-});
-
-test('C3. the page\'s open button opens Twitch\'s activation page once there is a code, and not before', async () => {
-  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
-  await r.showOpen();
-  r.window.receive('follows-open', {});
-  await r.settle();
-  assert.deepEqual(r.shim.utils.opened, [], 'no code yet: nothing opens');
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  assert.deepEqual(r.shim.utils.opened, [], 'the code alone opens nothing');
-  r.window.receive('follows-open', {});
-  await r.settle();
-  assert.deepEqual(r.shim.utils.opened, [VERIFICATION_URI], 'the click opens the address global was given');
-});
-
-test('C3. until the person approves on Twitch nothing loads; on approval the follows load into the open window', async () => {
-  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, follows: FOLLOWS, liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS});
-  await r.showOpen();
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  r.shim.timers.advance(5000);
-  await r.settle();
-  assert.equal(r.oauthCalls('/token').length, 1, 'the flow polls');
-  assert.equal(r.followRequests(), 0, 'authorization_pending: no follows yet');
-  assert.ok(!loginsOf(r.messages('suggestions').at(-1)).includes('lumen_fx'));
-
-  r.control.oauth.approve = true;
-  r.shim.timers.advance(5000);
-  for (let turn = 0; turn < 3; turn++) await r.settle();
-  assert.equal(r.followedLive().length, 1, 'followed-live, once');
-  assert.equal(r.followedChannels().length, 1, 'followed-channels, once');
-  for (const call of [...r.followedLive(), ...r.followedChannels()]) {
-    assert.equal(call.options.headers.Authorization, `Bearer ${NEW_TOKEN}`, 'with the new grant');
-  }
-  const latest = r.messages('suggestions').at(-1);
-  assert.equal(latest.text, '');
-  assert.ok(FOLLOW_ONLY.every(login => loginsOf(latest).includes(login)), 'the list in the open window now has the follows');
-  const last = r.messages('suggestions-follows').at(-1);
-  assert.ok(last && last.state !== 'needs-sign-in',
-    'the last follows message is not needs-sign-in: the page drops the button and the code (it takes any other state)');
-  assert.ok(JSON.parse(r.shim.keychain.get('twitch-readonly', 'oauth')).access_token === NEW_TOKEN, 'the new grant is saved');
-});
+// Removed 2026-11-25 (lead): the follows sign-in from Open Stream is gone (operator, W-21 update); sign-in in the player's panel asks for both permissions.
+// (C3: four tests; D1: four tests and the four-ends loop, eight cases.)
 
 // ---- C4: account changes and late answers while Open Stream shows ----
 
@@ -1314,7 +1241,6 @@ test('C7. suggestions-status names only people in the rows sent, at most 50 in e
 // =====================================================================================================================
 
 const authPosts = (r, since = 0) => r.shim.global.posts.slice(since).filter(post => /^auth-/.test(post.name));
-const postsTo = (r, label, name) => r.shim.global.posts.filter(post => String(post.target) === label && post.name === name);
 const connectPlayer = async (r, label) => {
   await r.shim.global.send('auth-connect', {}, label);
   await r.settle();
@@ -1322,160 +1248,32 @@ const connectPlayer = async (r, label) => {
 const settleTimes = async (r, times = 4) => {
   for (let turn = 0; turn < times; turn++) await r.settle();
 };
-// Two players on the old grant ('0' and '1'); '2' never connects.
-async function withPlayers(extra = {}) {
-  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, follows: FOLLOWS, liveLogins: FOLLOW_LIVE,
-    details: FOLLOW_DETAILS, ...extra});
+// Removed 2026-11-25 (lead): the follows sign-in from Open Stream is gone (operator, W-21 update); sign-in in the player's panel asks for both permissions.
+
+test('the page\'s follows-connect and follows-open start no sign-in: no device request, no revoke, no Keychain write, no address, no auth message', async () => {
+  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
   await r.signIn();
   await connectPlayer(r, '1');
-  return r;
-}
-const worldNow = r => ({keychain: r.shim.keychain.get('twitch-readonly', 'oauth'), writes: r.shim.keychain.writes.length,
-  posts: r.shim.global.posts.length});
-
-// ---- D1: adding follows never signs anyone out ----
-
-function assertUntouched(r, before, why) {
-  assert.deepEqual(r.oauthCalls('/revoke'), [], `${why}: nothing is revoked`);
-  assert.equal(r.shim.keychain.get('twitch-readonly', 'oauth'), before.keychain, `${why}: the Keychain holds the same grant`);
-  assert.deepEqual(r.shim.keychain.writes.slice(before.writes), [], `${why}: nothing is written to the Keychain`);
-  assert.deepEqual(authPosts(r, before.posts).map(post => [post.target, post.name]), [], `${why}: no player is told anything`);
-}
-
-const D1_ENDS = {
-  'open-cancel': async r => {
-    r.window.send('open-cancel', {});
-    await r.settle();
-  },
-  'a title-bar close': async r => {
-    r.window.visible = false;
-    r.shim.timers.advance(2000);
-    await r.settle();
-  },
-  'the code expiring': async r => {
-    for (let step = 0; step < 365; step++) {
-      r.shim.timers.advance(5000);
-      await r.settle();
-    }
-  },
-  'the person declining on Twitch': async r => {
-    r.control.oauth.deny = true;
-    r.shim.timers.advance(5000);
-    await settleTimes(r);
-  },
-};
-
-test('D1. before success nothing changes: a code on screen, players keep chat, the Keychain keeps the grant, nothing is revoked', async () => {
-  const r = await withPlayers();
   await r.showOpen();
-  const before = worldNow(r);
+  assert.deepEqual(r.messages('suggestions-follows'), [{state: 'needs-sign-in'}], 'fixture: a saved grant without the follows scope');
+  const keychain = r.shim.keychain.get('twitch-readonly', 'oauth');
+  const writes = r.shim.keychain.writes.length;
+  const posts = r.shim.global.posts.length;
+  const requests = r.calls().length;
   r.window.receive('follows-connect', {});
   await r.settle();
-  assert.equal(r.messages('follows-code').length, 1, 'fixture: the code is on screen');
-  r.shim.timers.advance(5000);
+  r.window.receive('follows-open', {});
   await r.settle();
-  assert.equal(r.oauthCalls('/token').length, 1, 'fixture: the flow is polling, still pending');
-  assertUntouched(r, before, 'pending');
-  const posted = JSON.stringify(r.shim.global.posts);
-  assert.ok(!posted.includes(USER_CODE) && !posted.includes(DEVICE_CODE), 'no player ever sees the flow\'s code');
-  await connectPlayer(r, '2');
-  const ready = postsTo(r, '2', 'auth-ready');
-  assert.equal(ready.length, 1, 'a player that connects now still finds the old grant');
-  assert.equal(JSON.parse(ready[0].data).token, SAVED.access_token);
-});
-
-test('D1. on success: the new grant is saved, each player that had the old one gets auth-ready with exactly {token, login, clientID}, then the old token is revoked', async () => {
-  const r = await withPlayers({scopes: ['chat:read']});
-  await r.showOpen();
-  r.window.receive('follows-connect', {});
+  r.shim.timers.advance(10000);
   await r.settle();
-  const before = worldNow(r);
-  r.control.oauth.approve = true;
-  r.shim.timers.advance(5000);
-  await settleTimes(r, 6);
-  const saved = JSON.parse(r.shim.keychain.get('twitch-readonly', 'oauth'));
-  assert.deepEqual([saved.access_token, saved.refresh_token, saved.clientID], [NEW_TOKEN, NEW_REFRESH, SAVED.clientID], 'the new grant is saved');
-  assert.ok(!r.shim.keychain.writes.slice(before.writes).some(write => write.value === SIGNED_OUT), 'never the signed-out marker');
-  for (const label of ['0', '1']) {
-    const ready = postsTo(r, label, 'auth-ready');
-    assert.equal(ready.length, 2, `player ${label}: the old auth-ready, then one more`);
-    assert.deepEqual(JSON.parse(ready.at(-1).data), {token: NEW_TOKEN, login: 'reader', clientID: SAVED.clientID},
-      `player ${label}: exactly token, login and clientID`);
-  }
-  assert.deepEqual(postsTo(r, '2', 'auth-ready'), [], 'a player that never connected is told nothing');
-  assert.deepEqual(authPosts(r, before.posts).filter(post => ['auth-stop', 'auth-forgotten'].includes(post.name)), [],
-    'nobody is signed out on the way');
-  assert.deepEqual(authPosts(r, before.posts).filter(post => post.name === 'auth-state'
-    && ['waiting', 'authorizing', 'error', 'off'].includes(JSON.parse(post.data).phase)), [], 'and no player sees a sign-in state');
-  assert.equal(r.control.revokes.length, 1, 'the old token is revoked, once');
-  const [revoke] = r.control.revokes;
-  assert.equal(revoke.token, SAVED.access_token, 'the old token, not the new one');
-  assert.equal(JSON.parse(revoke.keychain).access_token, NEW_TOKEN, 'only after the new grant was saved');
-  await connectPlayer(r, '3');
-  assert.equal(JSON.parse(postsTo(r, '3', 'auth-ready')[0].data).token, NEW_TOKEN, 'a later player gets the new grant');
-});
-
-test('D1. on success with no player: the new grant is saved, then the old token is revoked, and the signed-out marker never appears', async () => {
-  const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true, follows: FOLLOWS, liveLogins: FOLLOW_LIVE, details: FOLLOW_DETAILS});
-  await r.showOpen();
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  const before = worldNow(r);
-  r.control.oauth.approve = true;
-  r.shim.timers.advance(5000);
-  await settleTimes(r, 6);
-  assert.equal(JSON.parse(r.shim.keychain.get('twitch-readonly', 'oauth')).access_token, NEW_TOKEN);
-  assert.ok(!r.shim.keychain.writes.slice(before.writes).some(write => write.value === SIGNED_OUT));
-  assert.equal(r.control.revokes.length, 1);
-  assert.equal(r.control.revokes[0].token, SAVED.access_token);
-  assert.equal(JSON.parse(r.control.revokes[0].keychain).access_token, NEW_TOKEN, 'after the save');
-  assert.ok(FOLLOW_ONLY.every(login => loginsOf(lastSuggestions(r, '')).includes(login)), 'and the follows load');
-});
-
-for (const [end, finish] of Object.entries(D1_ENDS)) {
-  test(`D1. ${end} with players: the Keychain, the players and their chat stay exactly as before`, async () => {
-    const r = await withPlayers();
-    await r.showOpen();
-    r.window.receive('follows-connect', {});
-    await r.settle();
-    const before = worldNow(r);
-    await finish(r);
-    assertUntouched(r, before, end);
-    await connectPlayer(r, '2');
-    assert.equal(JSON.parse(postsTo(r, '2', 'auth-ready')[0].data).token, SAVED.access_token, 'the old grant is still the one in use');
-  });
-
-  test(`D1. ${end} with no player: the saved grant stays, and the next open uses it`, async () => {
-    const r = loadGlobal({people: FOLLOW_HISTORY(), signedIn: true});
-    await r.showOpen();
-    r.window.receive('follows-connect', {});
-    await r.settle();
-    const before = worldNow(r);
-    await finish(r);
-    assertUntouched(r, before, end);
-    await r.showOpen();
-    const lastValidate = r.validateCalls().at(-1);
-    assert.equal(lastValidate.options.headers.Authorization, `OAuth ${SAVED.access_token}`, 'the next open validates the old grant');
-  });
-}
-
-// Whether TwitchAuth saves the grant before global can look at its scopes is the builder's to handle, so this pins the
-// outcome (what the Keychain holds at the end, who is told, what is revoked), not that nothing is written on the way.
-test('D1. a new grant without the follows scope is not adopted: the Keychain ends with the old grant, nobody is told, the old token stays valid', async () => {
-  const r = await withPlayers();
-  await r.showOpen();
-  r.window.receive('follows-connect', {});
-  await r.settle();
-  const before = worldNow(r);
-  r.control.oauth.newScopes = ['chat:read'];
-  r.control.oauth.approve = true;
-  r.shim.timers.advance(5000);
-  await settleTimes(r, 6);
-  assert.equal(r.oauthCalls('/token').length, 1, 'fixture: the new grant was issued');
-  assert.equal(r.shim.keychain.get('twitch-readonly', 'oauth'), before.keychain, 'the Keychain ends holding the old grant');
-  assert.ok(!JSON.stringify(r.shim.global.posts.slice(before.posts)).includes(NEW_TOKEN), 'no player is sent the new token');
-  assert.deepEqual(authPosts(r, before.posts).filter(post => ['auth-stop', 'auth-forgotten'].includes(post.name)), [], 'nobody is signed out');
-  assert.ok(!r.control.revokes.some(revoke => revoke.token === SAVED.access_token), 'the old token is not revoked');
+  assert.deepEqual(r.oauthCalls('/device'), [], 'no device-code request to id.twitch.tv');
+  assert.deepEqual(r.oauthCalls('/revoke'), [], 'nothing is revoked');
+  assert.equal(r.shim.keychain.get('twitch-readonly', 'oauth'), keychain, 'the Keychain holds the same grant');
+  assert.deepEqual(r.shim.keychain.writes.slice(writes), [], 'nothing is written to the Keychain');
+  assert.deepEqual(r.shim.utils.opened, [], 'no address is opened');
+  assert.deepEqual(authPosts(r, posts).map(post => [post.target, post.name]), [], 'no player is sent an auth message');
+  assert.deepEqual(r.messages('follows-code'), [], 'the page is given no code');
+  assert.equal(r.calls().length, requests, 'and no request of any kind follows');
 });
 
 // ---- D2: a late follows answer still reaches the list ----

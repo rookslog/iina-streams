@@ -97,7 +97,7 @@ const OAUTH = 'https://id.twitch.tv/oauth2';
 function loadGlobal({people = twelve(), paused = false, signedIn = false, precheck = 'live', liveLogins = [],
   statusFails = false, holdStatus = false, scopes = ['chat:read'], follows = [], details = {}, followsFail = false,
   holdFollows = false, followsCursor = '', builtInClientID = '', gqlFieldError = null,
-  searchResults = [], searchHold = false, searchFail = false, searchPartFail = null, followsPaged = false} = {}) {
+  searchResults = [], searchHold = false, searchFail = false, searchPartFail = null, followsPaged = false, qa = false} = {}) {
   const shim = createIina({role: 'global', identifier: ID});
   const text = historyFile(people, paused);
   shim.file.seed(FILE, text);
@@ -351,7 +351,7 @@ function loadGlobal({people = twelve(), paused = false, signedIn = false, preche
   shim.runScript(SCRIPT, {
     globals: {Date: class extends Date { static now() { return START * 1000 + shim.timers.now; } }},
     require(name) {
-      if (name === './config.js') return {identifier: ID, variant: 'unified', qa: false};
+      if (name === './config.js') return {identifier: ID, variant: 'unified', qa};
       if (name === './src/twitch-app.js') return {clientID: builtInClientID};
       return requireFromGlobal(name);
     },
@@ -2374,3 +2374,67 @@ test('O1. signed in: the totals come in the one anonymous GQL age request; Helix
     assert.ok(!/follow/i.test(helix.url), 'no Helix follower request');
   }
 });
+
+// #91 (lead, 2026-11-27): Dev's diagnostic build records whether follows loaded, so a native "no follows" report
+// can be told apart: not requested (and why), requested and failed, or loaded. Counts only, never a login.
+const followsTrace = r => {
+  const text = r.shim.file.get('@data/qa-global.json');
+  const events = text ? JSON.parse(text) : [];
+  return {text: text || '', follows: events.filter(e => e.phase === 'follows'), skips: events.filter(e => e.phase === 'follows-skip')};
+};
+
+test('T91-1. diagnostic build, follows load: one follows event with counts and no login', async () => {
+  const people = [{login: 'tfa', name: 'Tfa'}, {login: 'tfb', name: 'Tfb'}, {login: 'tfc', name: 'Tfc'}];
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, follows: people, liveLogins: ['tfb'], qa: true});
+  await r.signIn();
+  await r.showOpen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 1, `one follows event, got ${t.follows.length}`);
+  assert.equal(t.follows[0].ok, true);
+  assert.equal(t.follows[0].rows, 3, 'all three follows');
+  assert.equal(t.follows[0].live, 1, 'one of them live');
+  for (const login of ['tfa', 'tfb', 'tfc']) assert.ok(!t.text.includes(login), `no login in the trace (${login})`);
+});
+
+test('T91-2. diagnostic build, the follows request fails: one follows event with ok false', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, follows: [{login: 'tfa', name: 'Tfa'}],
+    followsFail: true, qa: true});
+  await r.signIn();
+  await r.showOpen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 1, `one follows event, got ${t.follows.length}`);
+  assert.equal(t.follows[0].ok, false);
+  assert.equal(t.follows[0].rows, 0);
+});
+
+test('T91-3. diagnostic build, signed in without the follows permission: one skip event naming the reason, once', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: ['chat:read'], qa: true});
+  await r.signIn();
+  await r.showOpen();
+  await r.reopen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 0, 'nothing was requested');
+  assert.equal(t.skips.length, 1, `one skip event however often Open Stream opens, got ${t.skips.length}`);
+  assert.equal(t.skips[0].reason, 'no-follows-permission');
+});
+
+test('T91-4. diagnostic build, signed out: one skip event, reason signed-out', async () => {
+  const r = loadGlobal({people: many(2), qa: true});
+  await r.showOpen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.skips.length, 1, `one skip event, got ${t.skips.length}`);
+  assert.equal(t.skips[0].reason, 'signed-out');
+});
+
+test('T91-5. normal build: no follows events are written', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, follows: [{login: 'tfa', name: 'Tfa'}]});
+  await r.signIn();
+  await r.showOpen();
+  await r.settle();
+  assert.equal(r.shim.file.has('@data/qa-global.json'), false, 'no trace file in a normal build');
+});
+

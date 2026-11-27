@@ -485,8 +485,9 @@ function beginSuggestionCycle(form,force=false){
  if(now-historyStatus.at>=STATUS_INTERVAL_MS)historyStatus=emptyHistoryStatus();
  if(!passiveRestore){
   refreshSuggestionsStatus();
-  if(canReadFollows(credentials))refreshFollows();
- }
+  if(canReadFollows(credentials)){followsSkip=null;refreshFollows();}
+  else traceFollowsSkip(credentials?'no-follows-permission':'signed-out');
+ }else traceFollowsSkip('restoring-sign-in');
  if(form.posted){
   publishSuggestionUpdate();
   return;
@@ -499,6 +500,14 @@ function beginSuggestionCycle(form,force=false){
    if(form===showingReadyForm()&&!form.posted)settleSuggestions(form);
   },FIRST_SUGGESTION_WAIT_MS);
  }
+}
+
+// #91: why follows weren't requested, traced once per change of reason (diagnostic builds only).
+let followsSkip=null;
+function traceFollowsSkip(reason){
+ if(followsSkip===reason)return;
+ followsSkip=reason;
+ qaTrace('follows-skip',{reason});
 }
 
 function settleSuggestions(form){
@@ -823,6 +832,8 @@ async function refreshFollows(){
  cache.at=now;
  cache.pending=true;
  const result=await followedSuggestions(account,suggestionDeps);
+ // #91: counts only, never a login.
+ qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status).filter(v=>v===true).length:0});
  if(follows!==cache)return;
  onMainThread(()=>{
   if(follows!==cache)return;

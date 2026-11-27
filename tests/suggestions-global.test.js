@@ -2438,3 +2438,72 @@ test('T91-5. normal build: no follows events are written', async () => {
   assert.equal(r.shim.file.has('@data/qa-global.json'), false, 'no trace file in a normal build');
 });
 
+
+// #91 round 2 (lead, 2026-11-27, answering Codex's review of 3c75945): diagnostics are best effort and never
+// change what the viewer sees; a discarded answer is marked stale; a missing user id is named as such.
+const failTraceWrites = r => {
+  const api = r.shim.iina.file;
+  const write = api.write;
+  api.write = (path, content) => {
+    if (path === '@data/qa-global.json') throw new Error('disk full');
+    return write.call(api, path, content);
+  };
+};
+
+test('T91-6. a failing trace write never stops the list: signed in, follows loading', async () => {
+  const r = loadGlobal({people: many(3), signedIn: true, scopes: FOLLOWS_SCOPES, follows: [{login: 'tfa', name: 'Tfa'}], qa: true});
+  failTraceWrites(r);
+  await r.signIn();
+  await r.showOpen();
+  r.shim.timers.advance(FIRST_POST_WAIT_MS);
+  await r.settle();
+  assert.ok(r.messages('suggestions').length >= 1, 'the list is posted although every trace write throws');
+});
+
+test('T91-7. a failing trace write never stops the list: signed out', async () => {
+  const r = loadGlobal({people: many(3), qa: true});
+  failTraceWrites(r);
+  await r.showOpen();
+  r.shim.timers.advance(FIRST_POST_WAIT_MS);
+  await r.settle();
+  assert.ok(r.messages('suggestions').length >= 1, 'the list is posted although every trace write throws');
+});
+
+test('T91-8. a follows answer discarded by a sign-out is marked stale', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, follows: [{login: 'tfa', name: 'Tfa'}],
+    holdFollows: true, qa: true});
+  await r.signIn();
+  await r.showOpen();
+  await signOut(r);
+  r.releaseFollows();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 1, `one follows event, got ${t.follows.length}`);
+  assert.equal(t.follows[0].stale, true, 'the discarded answer says so');
+});
+
+test('T91-9. an accepted follows answer is not stale, and a later skip is traced after it', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, follows: [{login: 'tfa', name: 'Tfa'}], qa: true});
+  await r.signIn();
+  await r.showOpen();
+  await r.settle();
+  await signOut(r);
+  await r.reopen();
+  await r.reopen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 1);
+  assert.equal(t.follows[0].stale, false);
+  assert.equal(t.skips.filter(e => e.reason === 'signed-out').length, 1, 'signed-out once after the answer, however often reopened');
+});
+
+test('T91-10. signed in with the follows permission but no usable user id: the reason is no-user-id', async () => {
+  const r = loadGlobal({people: many(2), signedIn: true, scopes: FOLLOWS_SCOPES, qa: true});
+  r.control.userID = 'not-a-number';
+  await r.signIn();
+  await r.showOpen();
+  await r.settle();
+  const t = followsTrace(r);
+  assert.equal(t.follows.length, 0, 'nothing was requested');
+  assert.deepEqual(t.skips.map(e => e.reason), ['no-user-id']);
+});

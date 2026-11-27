@@ -28,7 +28,8 @@ function qaTrace(phase,data){
  if(!config.qa)return;
  qaEvents.push(Object.assign({phase,time:new Date().toISOString()},data||{}));
  if(qaEvents.length>60)qaEvents.shift();
- file.write('@data/qa-global.json',JSON.stringify(qaEvents));
+ // Diagnostics are best effort: a failed write must never break the caller (#91 review).
+ try{file.write('@data/qa-global.json',JSON.stringify(qaEvents));}catch(_){}
 }
 
 // A sender label is "<player id>-<plugin identifier>"; accept only players this entry created.
@@ -486,7 +487,7 @@ function beginSuggestionCycle(form,force=false){
  if(!passiveRestore){
   refreshSuggestionsStatus();
   if(canReadFollows(credentials)){followsSkip=null;refreshFollows();}
-  else traceFollowsSkip(credentials?'no-follows-permission':'signed-out');
+  else traceFollowsSkip(followsSkipReason(credentials));
  }else traceFollowsSkip('restoring-sign-in');
  if(form.posted){
   publishSuggestionUpdate();
@@ -504,6 +505,11 @@ function beginSuggestionCycle(form,force=false){
 
 // #91: why follows weren't requested, traced once per change of reason (diagnostic builds only).
 let followsSkip=null;
+function followsSkipReason(c){
+ if(!c)return 'signed-out';
+ if(!Array.isArray(c.scopes)||!c.scopes.includes('user:read:follows'))return 'no-follows-permission';
+ return 'no-user-id';
+}
 function traceFollowsSkip(reason){
  if(followsSkip===reason)return;
  followsSkip=reason;
@@ -832,8 +838,14 @@ async function refreshFollows(){
  cache.at=now;
  cache.pending=true;
  const result=await followedSuggestions(account,suggestionDeps);
- // #91: counts only, never a login.
- qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status).filter(v=>v===true).length:0});
+ // #91: counts only, never a login. A stale answer (the account or cache changed meanwhile) is discarded below.
+ if(config.qa){
+  const stale=follows!==cache;
+  try{
+   qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status||{}).filter(v=>v===true).length:0,stale});
+  }catch(_){}
+  if(!stale)followsSkip=null;
+ }
  if(follows!==cache)return;
  onMainThread(()=>{
   if(follows!==cache)return;

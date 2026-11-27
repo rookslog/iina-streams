@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Atom Repro</title></head>
+<body><p id="n">0</p>
+<script>
+// Page arm: post small objects to the plugin as fast as timers allow, and count the replies.
+let sent = 0, got = 0;
+function words(i) { const o = {}; for (let k = 0; k < 24; k++) o['k' + ((i + k) % 97)] = 'v' + ((i * 31 + k) % 1009); return o; }
+iina.onMessage('r', () => { got += 1; });
+setInterval(() => {
+  for (let j = 0; j < 4; j++) { sent += 1; iina.postMessage('m', words(sent)); }
+  if (sent % 400 === 0) document.getElementById('n').textContent = sent + ' / ' + got;
+}, 2);
+</script></body></html>

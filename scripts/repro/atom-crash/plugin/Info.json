@@ -1,0 +1,11 @@
+{
+  "name": "Atom Repro",
+  "identifier": "local.iina.atomrepro",
+  "version": "0.1.0",
+  "description": "Diagnostic harness for IINA Streams issue #90 (JavaScriptCore atom-string crash). Installed only for the length of a run.",
+  "author": {"name": "IINA Streams"},
+  "entry": "main.js",
+  "globalEntry": "global.js",
+  "permissions": ["network-request", "file-system"],
+  "allowedDomains": ["localhost"]
+}

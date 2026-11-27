@@ -132,7 +132,7 @@ Checked 2026-11-23 against IINA 1.5.1's source and the operator's own IINA setti
 ## Product Principles
 1. **State through signifiers, not reworded text.** A live dot, a spinner, an icon or a disabled state carries state. Text is for names, values, actions and real errors. Detail is on demand, in a tooltip or a VoiceOver label (operator feedback, memory `minimize-ui-text`).
 2. **Signing in supplements, never degrades.** Signed in shows at least what signed out shows, and in the same order for people both already know (spec §3).
-3. **The viewer's attention isn't for sale.** Viewer counts are shown, never used as a sort key, and there is no sponsored placement.
+3. **The viewer's attention isn't for sale.** There is no sponsored placement. Viewer counts are shown. They order only one list: search results for people outside the viewer's own channels, which go live first by viewers, then offline by follower total. The viewer's own channels keep Streams' ranking. *(Amended 2026-11-27, to match the operator's ask on 2026-11-25: "it should honestly be OniPixel 24/7 and then OniPixel"; WAITING W-21, `docs/design/finding-2026-11-22/open-stream/TESTS-74.md` rev 3.)*
 4. **Native first.** Prefer IINA's own behaviour and macOS conventions. Never force an app-wide IINA setting to get a layout.
 5. **Proof is native.** A feature works when it is observed working in IINA. Mocks and browser tests are exploration, not proof (AGENTS.md evidence hierarchy).
 

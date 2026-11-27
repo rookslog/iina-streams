@@ -410,6 +410,7 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 
 - **Recommendation (lead):** A. Load-bearing assumption: the deletion of old builds is what makes the crash cases dangerous; without it the remaining states are recoverable by the next run. What would flip it: if you'd rather not wait another round, B, since every loss is a rebuild away.
 - **Also before any merge:** a native check that IINA loads Streams Dev through the new links (plugin link to `current`, itself a link); the lead does it with IINA closed, asking before quitting yours.
+- **Update 2026-11-27 ~18:45 (lead): withdrawn; this was never the operator's to settle.** It concerns only the lead's developer tooling, and its worst case is a rebuild. The operator's words on returning: "I don't understand these sort of options that you're giving me… Why are we… not deleting old builds automatically?" **Decision (lead): C.** The current tool stays: it builds after IINA quits, so after quitting wait about a minute, or wait for the lead's "installed". Branch `fix/dev-prebuild` is parked at 48be825, and its worktree has been removed (the branch keeps the commits). Revisit only if stale builds keep reaching the operator. Recorded in the step-back, `docs/reviews/2026-11-27-step-back.md` §5 item 4.
 
 ## Answered
 

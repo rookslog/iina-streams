@@ -161,3 +161,14 @@ Update this append-only log when actual decisions are made, with evidence and ro
 - **Decision:** no flip yet. The People screen's build stays in 0.6.0.
 - **Re-check:** when #73 merges, using its measured time. If #73 took more than 3 h, the flip fires: the People screen's build moves after launch, and its design stays in the overhaul.
 - **Rests on:** one calibration point. INFERRED.
+
+2026-11-27 D-036 DECIDED (operator, 18:41, answering WAITING W-27): **pause new features; fix the basics first.** The operator's words: "go ahead, pause features and fix the basics first". The order is from the step-back record, `docs/reviews/2026-11-27-step-back.md` §6:
+1. Crashes (#90).
+2. A native walk through every journey, signed in and out, by the lead plus an independent reviewer.
+3. A new roadmap order, brought to the operator as one decision.
+
+- **What pauses:** nothing new merges into `next` except fixes. The rest of 0.5.6 waits: #30, #32, #34, #35, #73, #74 (beyond its bug #91), #75 and #87.
+- **What counts as a fix:** a crash, a defect the operator or the walk-through observed (#91, #86 and the like), and diagnostics that serve those.
+- **Supersedes:** the release order of D-035 for as long as the pause lasts. D-035 stays as the record of the earlier plan.
+- **Ends when:** the operator answers the re-plan (step 3).
+

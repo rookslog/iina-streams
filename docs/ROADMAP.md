@@ -2,11 +2,13 @@
 
 One line per release. Each item lives in a GitHub issue, and each release is a [milestone](https://github.com/rookslog/iina-streams/milestones). Open an issue for detail. Why the plan is shaped this way: [design/USER-JOURNEYS-2026-11-22.md](design/USER-JOURNEYS-2026-11-22.md) (journeys and the launch plan, D-026) and [design/ROADMAP-RATIONALE-2026-11-22.md](design/ROADMAP-RATIONALE-2026-11-22.md) (through 0.5.5).
 
+**Now (D-036, 2026-11-27): new features are paused; the basics come first.** The order is crashes (#90), then a native walk through every journey, then a re-plan brought to the operator. Only fixes merge until then. Record: [reviews/2026-11-27-step-back.md](reviews/2026-11-27-step-back.md).
+
 | Release | Theme | Issues |
 | --- | --- | --- |
 | [0.5.4](https://github.com/rookslog/iina-streams/milestone/1) | A loop you can trust; first GitHub Release | VOD chat #11 · dev workflow #5 · shortcut #4 · sign-in #7 · UI text #9 · live timestamps #10 · cleanup #12 · test shim #13 · release #14 · install-local footgun #21 · oldest-Python CI #22 · built-in Client ID #8 |
 | [0.5.5](https://github.com/rookslog/iina-streams/milestone/2) | Chat on your timeline | delay modes #2 · click-to-calibrate #28 · latency spike #16 · reduce video lag #31 · VOD test fixtures #17 · readability #23 · swallowed errors #24 |
-| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | Find what to watch | Following list #30 · offline VOD picker #32 · open from the browser #35 · official emotes and badges #34 · watch history and controls #73 · typing suggestions #74 · signed-in VOD list through Twitch's documented API #75 · plugin panel reopens with options open #86 · emotes in past-broadcast chat #87 |
+| [0.5.6](https://github.com/rookslog/iina-streams/milestone/3) | Find what to watch (**paused**, D-036) | Following list #30 · offline VOD picker #32 · open from the browser #35 · official emotes and badges #34 · watch history and controls #73 · typing suggestions #74 · signed-in VOD list through Twitch's documented API #75 · plugin panel reopens with options open #86 · emotes in past-broadcast chat #87 |
 | [0.6.0](https://github.com/rookslog/iina-streams/milestone/4) | **Public launch** (Reddit) | UI overhaul: panel #20, overlay #1, pointer tests #18, drag to dock #85, chat controls #88, right-click #89 · works out of the box #36 (spike #37) · launch kit #38 · People screen #76 · listening mode #77 |
 | [0.7.0](https://github.com/rookslog/iina-streams/milestone/5) | Talk back | send chat #3 · third-party emotes #29 · VOD resume #78 · stream end #79 |
 | [0.8.0](https://github.com/rookslog/iina-streams/milestone/6) | More platforms and accounts | accounts #6 · multi-provider #19 · YouTube live chat spike #39 · Kick spike #40 · creator records #80 · merged chat #81 |

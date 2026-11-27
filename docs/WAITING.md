@@ -412,21 +412,9 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Also before any merge:** a native check that IINA loads Streams Dev through the new links (plugin link to `current`, itself a link); the lead does it with IINA closed, asking before quitting yours.
 - **Update 2026-11-27 ~18:45 (lead): withdrawn; this was never the operator's to settle.** It concerns only the lead's developer tooling, and its worst case is a rebuild. The operator's words on returning: "I don't understand these sort of options that you're giving me… Why are we… not deleting old builds automatically?" **Decision (lead): C.** The current tool stays: it builds after IINA quits, so after quitting wait about a minute, or wait for the lead's "installed". Branch `fix/dev-prebuild` is parked at 48be825, and its worktree has been removed (the branch keeps the commits). Revisit only if stale builds keep reaching the operator. Recorded in the step-back, `docs/reviews/2026-11-27-step-back.md` §5 item 4.
 
-### W-27. After your 27 Nov verdict: pause features and fix the basics first?
-- **What it is:** on returning, you called the app "atrocious": it crashes every two hours or so, and the journeys from each start point don't hold together. You asked for a serious review, and for every issue to be marked. The lead proposes to pause new features and work in this order: crashes; then a native walk through every journey, signed in and out; then a new roadmap order brought to you as one decision. This is yours because it decides what your product's next weeks go to.
-- **Options:**
-
-  | Option | What it buys | What it costs |
-  |---|---|---|
-  | **A. Pause features, basics first** (crashes, walk-through, re-plan) | a stable app and a whole you can judge; the roadmap reordered around what you hit | the rest of 0.5.6 (search polish, the remaining history work) waits |
-  | **B. Fix the crash only, keep building 0.5.6** | features keep arriving | the sign-in, panel and polish problems stay until 0.6.0 to 0.8.0 |
-  | **C. Basics first, but finish 0.5.6's search in parallel** | search lands sooner | split attention; the follows bug (#91) is in search anyway |
-
-- **Recommendation (lead):** A. Load-bearing assumption: the basics (crashes, staying signed in, the panel) cost you more each day than missing features do. What would flip it: if you'd rather have search finished first, C.
-- **Also from you, whenever it happens:** a screenshot of "the collapsing menu" problem. It's unclear which menu it is; it may be the panel reopening with its options open (#86).
-- Full record: `docs/reviews/2026-11-27-step-back.md` (§1 your words, §5 the lead's account, §6 the order).
-
 ## Answered
+
+- **W-27, after the 27 Nov verdict** (2026-11-27 18:41, operator): **A, pause features and fix the basics first.** "go ahead, pause features and fix the basics first". Recorded as D-036. The order: crashes (#90), then a native journey walk-through, then a re-plan brought to you as one decision. Still wanted whenever it happens: a screenshot of "the collapsing menu" problem.
 
 - **W-16, where chat lives** (2026-11-23, operator): **two places only**: the side column that pushes the video over ("beside"), and the movable glass box over the video. Chat leaves the plugin sidebar: the panel that slides in over the **left** side of the video from the plugin button. It's IINA's own plugin panel, separate from the Video, Audio and Subtitles panel on the right (IINA 1.5.1 `Preference.swift`: `sidebarPluginsDisplayAtLeading: true` by default; the operator's IINA keeps the default). *Correction 2026-11-23: the lead's change to "right" was wrong; it read the Video/Audio/Subtitles panel's setting.* That sidebar becomes the place for things you check briefly and then close: switching channel, an offline person's VODs, quality. The operator's words: "No one's going to want to watch the video with the chat bar in the left sidebar that's drawn over… The things that go in that plugin side menu bar… are things I want to quickly check and focus on." **Sequencing:** the plugin sidebar is today's default chat place, so it can stop offering chat only once "beside" has shipped and passed in IINA.
   - **Update 2026-11-24 ~19:50 (operator, awake, in chat; their words):** "what about the side window and the feature for transferring the chat window to the collapsible sidebar on the right, not the sidebar that draws over? Moving easily from the right sidebar back to the window without having to go into options. I honestly feel like we should remove that as a setting. I feel like we should just have the ability to move back and forth between a window and the side thing as a macOS native kind of gesture."

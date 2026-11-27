@@ -412,6 +412,26 @@ Each item is written once, in full, here. Chat links to an item's line instead o
 - **Also before any merge:** a native check that IINA loads Streams Dev through the new links (plugin link to `current`, itself a link); the lead does it with IINA closed, asking before quitting yours.
 - **Update 2026-11-27 ~18:45 (lead): withdrawn; this was never the operator's to settle.** It concerns only the lead's developer tooling, and its worst case is a rebuild. The operator's words on returning: "I don't understand these sort of options that you're giving me… Why are we… not deleting old builds automatically?" **Decision (lead): C.** The current tool stays: it builds after IINA quits, so after quitting wait about a minute, or wait for the lead's "installed". Branch `fix/dev-prebuild` is parked at 48be825, and its worktree has been removed (the branch keeps the commits). Revisit only if stale builds keep reaching the operator. Recorded in the step-back, `docs/reviews/2026-11-27-step-back.md` §5 item 4.
 
+### W-28. A stretch of time with IINA to yourself, for the crash tests and the walk-through (D-036 steps 1–2)
+- **What it is:** both approved steps need IINA without you watching. The crash harness (`scripts/repro/atom-crash/`) runs 8 tests of 15 minutes each, about 2 hours. The journey walk-through takes about 2 more hours of the lead driving IINA on screen. It's yours because it's your IINA and your evening. The separate test account (W-5) doesn't exist yet: `id iinatest` finds no such user.
+- **What the window covers, all of it:**
+  - the lead quits nothing of yours (you quit IINA yourself);
+  - the lead's own launches and quits of IINA;
+  - your plugin switches recorded, the Streams copies switched off during the crash tests, then restored exactly;
+  - a harness plugin installed and removed;
+  - the walk-through on Streams Dev, using your existing Twitch sign-in. The lead never signs you out or signs in.
+  - Dev's pending update installs on the first quit.
+- **Options:**
+
+  | Option | What it buys | What it costs |
+  |---|---|---|
+  | **A. Tonight, when you're done watching:** quit IINA and say so | everything runs while you sleep; results in the morning | none of your time beyond the quit |
+  | **B. Set up the test account now (W-5)** | tests never need your IINA again | about 15 min of yours (admin password, one login); whether its IINA renders in a background session is unchecked |
+  | **C. Later** | — | crashes stay unexplained meanwhile |
+
+- **Recommendation (lead):** A tonight, and B before launch. Load-bearing assumption: you stop watching for some hours overnight. What would flip it: if you watch late, B now, so the harness can run beside you.
+- **Signed-out journeys:** these need a copy of Streams without a sign-in. The lead will use Streams Beta only if its own saved sign-in is absent (checked by name only), and otherwise record the gap.
+
 ## Answered
 
 - **W-27, after the 27 Nov verdict** (2026-11-27 18:41, operator): **A, pause features and fix the basics first.** "go ahead, pause features and fix the basics first". Recorded as D-036. The order: crashes (#90), then a native journey walk-through, then a re-plan brought to you as one decision. Still wanted whenever it happens: a screenshot of "the collapsing menu" problem.

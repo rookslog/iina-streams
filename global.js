@@ -843,6 +843,7 @@ async function refreshFollows(){
   const stale=follows!==cache;
   try{
    qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status||{}).filter(v=>v===true).length:0,stale});
+  // Counting is diagnostics only; an unexpected answer shape must not stop the follows from loading.
   }catch(_){}
   if(!stale)followsSkip=null;
  }

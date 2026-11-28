@@ -62,6 +62,11 @@ web
   - approved in D-026: J1–J10 (`docs/design/USER-JOURNEYS-2026-11-22.md`), mainly J1 a stranger, J2 the daily viewer, J4 the catch-up viewer, and J10 keyboard and VoiceOver;
   - approved in D-035: J11 the background listener, J12 the long-VOD viewer, J14 the viewer at stream end, and J19 the privacy-minded viewer.
 
+## Long-term vision (the operator's, 2026-11-27; a direction, not a milestone)
+- **A public gift:** good software that other people can use on the Mac.
+- **Later, Windows and Linux, perhaps with VLC.** In the operator's words: "If it's possible to do what we did here but with VLC, obviously the aesthetics are going to be different, and the UI and the UX might be slightly different. But that's something down the line that I want to do too." Whether VLC's extension model can host this is unchecked.
+- **Any agent can continue the work.** A new session, Opus or another model, can "come in, situate itself, and continue developing, testing, and shipping good software." Source: `docs/reviews/2026-11-27-step-back.md` §9.
+
 ## Product Purpose
 IINA Streams is an IINA plugin. It opens Twitch live channels, Twitch VODs and YouTube videos or livestreams in native IINA windows, and shows their chat:
 - Twitch live chat, after a read-only Twitch sign-in (`chat:read`);

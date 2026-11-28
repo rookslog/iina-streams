@@ -1,0 +1,48 @@
+{
+ "arm": "page",
+ "minutes": 15.0,
+ "start": "20261127T192237",
+ "switchesFound": {
+  "PluginEnabled.io.iina.opensub": true,
+  "PluginEnabled.io.iina.user-script": true,
+  "PluginEnabled.io.iina.ytdl": true,
+  "PluginEnabled.local.iina.streamlink-bridge": false,
+  "PluginEnabled.local.iina.streams": false,
+  "PluginEnabled.local.iina.streams.beta": false,
+  "PluginEnabled.local.iina.streams.candidate.focus": false,
+  "PluginEnabled.local.iina.streams.candidate.unified": false,
+  "PluginEnabled.local.iina.streams.design-preview": false,
+  "PluginEnabled.local.iina.streams.dev": true
+ },
+ "pid": 65942,
+ "early": {
+  "global": {
+   "side": "global",
+   "arm": "page",
+   "started": "2026-11-28T00:22:37.798Z",
+   "httpOk": 0,
+   "httpFail": 0,
+   "httpFirst": null,
+   "pageIn": 3260,
+   "pongs": 0,
+   "hooked": 0,
+   "execOk": 0,
+   "execFail": 0,
+   "churn": 0,
+   "errors": 0,
+   "lastError": "",
+   "time": "2026-11-28T00:23:03.170Z"
+  },
+  "player": {
+   "side": "player",
+   "arm": "page",
+   "pings": 0,
+   "hooks": 0,
+   "loads": 0,
+   "errors": 0,
+   "time": "2026-11-28T00:23:03.171Z"
+  }
+ },
+ "iinaStillRunning": false,
+ "restored": true
+}

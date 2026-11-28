@@ -1,0 +1,90 @@
+{
+ "arm": "all",
+ "minutes": 15.0,
+ "start": "20261127T192201",
+ "switchesFound": {
+  "PluginEnabled.io.iina.opensub": true,
+  "PluginEnabled.io.iina.user-script": true,
+  "PluginEnabled.io.iina.ytdl": true,
+  "PluginEnabled.local.iina.streamlink-bridge": false,
+  "PluginEnabled.local.iina.streams": false,
+  "PluginEnabled.local.iina.streams.beta": false,
+  "PluginEnabled.local.iina.streams.candidate.focus": false,
+  "PluginEnabled.local.iina.streams.candidate.unified": false,
+  "PluginEnabled.local.iina.streams.design-preview": false,
+  "PluginEnabled.local.iina.streams.dev": true
+ },
+ "pid": 60865,
+ "early": {
+  "global": {
+   "side": "global",
+   "arm": "all",
+   "started": "2026-11-28T00:22:02.414Z",
+   "httpOk": 8922,
+   "httpFail": 0,
+   "httpFirst": "ok",
+   "pageIn": 7236,
+   "pongs": 0,
+   "hooked": 0,
+   "execOk": 192,
+   "execFail": 0,
+   "churn": 2649834,
+   "errors": 0,
+   "lastError": "",
+   "time": "2026-11-28T00:22:18.519Z"
+  },
+  "player": {
+   "side": "player",
+   "arm": "all",
+   "pings": 0,
+   "hooks": 0,
+   "loads": 0,
+   "errors": 0,
+   "time": "2026-11-28T00:22:18.520Z"
+  }
+ },
+ "elapsedMinutes": 0.5,
+ "final": {
+  "global": {
+   "side": "global",
+   "arm": "all",
+   "started": "2026-11-28T00:22:02.414Z",
+   "httpOk": 8922,
+   "httpFail": 0,
+   "httpFirst": "ok",
+   "pageIn": 7236,
+   "pongs": 0,
+   "hooked": 0,
+   "execOk": 192,
+   "execFail": 0,
+   "churn": 2649834,
+   "errors": 0,
+   "lastError": "",
+   "time": "2026-11-28T00:22:18.519Z"
+  },
+  "player": {
+   "side": "player",
+   "arm": "all",
+   "pings": 0,
+   "hooks": 0,
+   "loads": 0,
+   "errors": 0,
+   "time": "2026-11-28T00:22:18.520Z"
+  }
+ },
+ "crashes": [
+  {
+   "report": "IINA-2026-11-27-192226.ips",
+   "verdict": "REPRODUCED (Heap.cpp:2407)",
+   "x0": 2407,
+   "top": "JSC::Heap::requestCollection(JSC::GCRequest) < JSC::LocalAllocator::allocateSlowCase(JSC::Heap&, unsigned l < WTF::ASCIILiteral JSC::JSObject::putDirectInternal<(JSC::JSO < JSC::JSObject::put(JSC::JSCell*, JSC::JSGlobalObject*, JSC::",
+   "jsc": [
+    "22625.2.8.11.9"
+   ],
+   "pid": 60865
+  }
+ ],
+ "status": "reproduced",
+ "iinaStillRunning": false,
+ "restored": true
+}

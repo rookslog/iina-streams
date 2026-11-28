@@ -4,8 +4,10 @@
 
 **Checkpoint:** repo `/Users/rookslog/Development/iina-streams`, branch `next`, clean, at the commit that adds this file.
 
-**Hard limits:**
-- Modify nothing.
+**Added by the operator, 2026-11-27 ~20:00 (verbatim):** "Fable should also be auditing our development workflows. Are we struggling in certain ways? Why? Maybe make sure to cite, because again, this is a frontier where the norms of the praxis are constantly evolving and changing because the relevant technical objects are constantly changing, or our understanding of the technical objects is changing. … ensuring that we're shipping things fast in a good way. We're trying to ship things fast while still upholding, I guess, our obligations to the different stakeholders, others who we are answerable to." They also asked that this run as **a new session, not a subagent**.
+
+**Hard limits for this first review:**
+- Modify nothing except your report, written to `docs/reviews/2026-11-27-fable-first-review.md`.
 - Never launch IINA, the crash harness (`scripts/repro/`) or a Dev deploy.
 - No GitHub writes.
 - Never print secrets, Keychain values or IP addresses.
@@ -34,8 +36,10 @@
   - **Don't write the page.**
 - **D. What can't be judged** without seeing the app run in IINA, and what you'd need in order to judge it.
 - **E. The lead's accounts:** where they're wrong or incomplete.
+- **F. The development workflows.** Where are we struggling, and why? Cover delegation across models, review rounds (D-032), tests first, the native evidence hierarchy, waiting items and the dev loop. Cite the project record, and cite current outside sources on agentic software practice. The norms are changing, so date each source and say how settled it is.
+- **G. Shipping fast, in a good way.** What would let this project ship quickly while keeping its obligations to the people it answers to? What slows it without serving them?
 
-**Return:**
+**Return:** write the report to the path above, then summarize it in chat.
 - at most 2500 words;
 - a source for every claim (file:line or commit);
 - observed kept apart from inferred;

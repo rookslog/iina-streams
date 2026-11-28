@@ -12,13 +12,14 @@ if (arm === 'players' || arm === 'http-cross' || arm === 'all') {
     churn(stats.pings);
     g.postMessage('pong', words(stats.pings));
   });
-  g.postMessage('hello', {arm});
 }
 if (arm === 'hook' || arm === 'all') {
   mpv.addHook('on_load', 20, next => {
     stats.hooks += 1;
     churn(stats.hooks);
     JSON.stringify(words(stats.hooks));
+    // No message to global from inside the hook: on 27 Nov that deadlocked IINA at launch (mpv's controller thread
+    // held the player engine and waited for global's; the main thread held global's and waited for the player's).
     next();
   });
   event.on('iina.file-loaded', () => {

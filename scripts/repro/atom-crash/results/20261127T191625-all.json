@@ -1,0 +1,47 @@
+{
+ "arm": "all",
+ "minutes": 1.5,
+ "start": "20261127T191625",
+ "switchesFound": {
+  "PluginEnabled.io.iina.opensub": true,
+  "PluginEnabled.io.iina.user-script": true,
+  "PluginEnabled.io.iina.ytdl": true,
+  "PluginEnabled.local.iina.streamlink-bridge": false,
+  "PluginEnabled.local.iina.streams": false,
+  "PluginEnabled.local.iina.streams.beta": false,
+  "PluginEnabled.local.iina.streams.candidate.focus": false,
+  "PluginEnabled.local.iina.streams.candidate.unified": false,
+  "PluginEnabled.local.iina.streams.design-preview": false,
+  "PluginEnabled.local.iina.streams.dev": true
+ },
+ "pid": 41545,
+ "early": {
+  "global": {},
+  "player": {
+   "side": "player",
+   "arm": "all",
+   "pings": 0,
+   "hooks": 0,
+   "loads": 0,
+   "errors": 0,
+   "time": "2026-11-28T00:16:25.688Z"
+  }
+ },
+ "status": "invalid",
+ "note": "counters still zero at 30 s: global.httpOk, global.pageIn, global.pongs, player.hooks, global.execOk",
+ "elapsedMinutes": 0.5,
+ "final": {
+  "global": null,
+  "player": {
+   "side": "player",
+   "arm": "all",
+   "pings": 0,
+   "hooks": 0,
+   "loads": 0,
+   "errors": 0,
+   "time": "2026-11-28T00:16:25.688Z"
+  }
+ },
+ "iinaStillRunning": true,
+ "restored": true
+}

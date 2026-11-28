@@ -22,6 +22,18 @@ INSTALLED = os.path.join(PLUGINS, PLUGIN_ID + '.iinaplugin')
 DATA = os.path.join(PLUGINS, '.data', PLUGIN_ID)
 REPORTS = os.path.expanduser('~/Library/Logs/DiagnosticReports')
 ARMS = ['control', 'page', 'players', 'http', 'http-cross', 'hook', 'exec', 'all']
+CHAIN = ['all', 'page', 'players', 'http-cross', 'http', 'hook', 'exec', 'control']
+# The counters that must be nonzero 30 s in, per arm: ('global'|'player', key). A zero means the arm never ran: INVALID.
+COUNTERS = {
+    'control': [('global', 'churn')],
+    'page': [('global', 'pageIn')],
+    'players': [('global', 'pongs')],
+    'http': [('global', 'httpOk')],
+    'http-cross': [('global', 'httpOk'), ('global', 'pageIn'), ('global', 'pongs')],
+    'hook': [('player', 'hooks')],
+    'exec': [('global', 'execOk')],
+    'all': [('global', 'httpOk'), ('global', 'pageIn'), ('global', 'pongs'), ('player', 'hooks'), ('global', 'execOk')],
+}
 
 
 def iina_pids():
@@ -69,7 +81,7 @@ def classify(path):
         verdict = 'REPRODUCED (Heap.cpp:2407)'
     else:
         verdict = 'OTHER CRASH (a separate finding)'
-    return {'report': os.path.basename(path), 'verdict': verdict, 'x0': x0, 'top': top, 'jsc': jsc}
+    return {'report': os.path.basename(path), 'verdict': verdict, 'x0': x0, 'top': top, 'jsc': jsc, 'pid': body.get('pid')}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -102,26 +114,21 @@ def read_json(path):
         return None
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--arm', required=True, choices=ARMS)
-    ap.add_argument('--minutes', type=float, default=15)
-    args = ap.parse_args()
-
+def run_arm(arm, minutes):
+    """One arm. Returns the result dict; result['status'] is reproduced, other-crash, no-crash, invalid or blocked."""
     running = iina_pids()
     if running:
-        stuck = [p for p, s in running if 'E' in s]
-        sys.exit('IINA is running%s; quit it first. Nothing was changed.' % (' with a stuck exit' if stuck else ''))
-
+        return {'arm': arm, 'status': 'blocked', 'note': 'IINA is running%s; nothing was changed.' % (
+            ' with a stuck exit' if any('E' in s for _, s in running) else '')}
     found = plugin_switches()
     stamp = datetime.now().strftime('%Y%m%dT%H%M%S')
-    result = {'arm': args.arm, 'minutes': args.minutes, 'start': stamp, 'switchesFound': found}
+    result = {'arm': arm, 'minutes': minutes, 'start': stamp, 'switchesFound': found}
     os.makedirs(os.path.join(HERE, 'results'), exist_ok=True)
-    out_path = os.path.join(HERE, 'results', '%s-%s.json' % (stamp, args.arm))
-
+    out_path = os.path.join(HERE, 'results', '%s-%s.json' % (stamp, arm))
     server = http.server.ThreadingHTTPServer(('localhost', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     before = crash_reports()
+    launched = None
     try:
         if os.path.exists(INSTALLED):
             shutil.rmtree(INSTALLED)
@@ -133,62 +140,100 @@ def main():
         media = os.path.join(DATA, 'silence.wav')
         write_silence(media)
         with open(os.path.join(DATA, 'arm.json'), 'w') as fh:
-            json.dump({'arm': args.arm, 'port': server.server_address[1], 'media': media}, fh)
+            json.dump({'arm': arm, 'port': server.server_address[1], 'media': media}, fh)
         for key, on in found.items():
             if key.startswith('PluginEnabled.local.iina.streams') and on:
                 set_switch(key, False)
         set_switch('PluginEnabled.' + PLUGIN_ID, True)
 
-        subprocess.run(['/usr/bin/open', '-a', IINA], check=True)
-        t0 = time.time()
-        early = None
-        crashed = None
-        while time.time() - t0 < args.minutes * 60:
-            time.sleep(10)
-            if early is None and time.time() - t0 > 30:
-                early = {'global': read_json(os.path.join(DATA, 'status-global.json')),
-                         'player': read_json(os.path.join(DATA, 'status-player.json'))}
-            new = crash_reports() - before
-            if new:
-                time.sleep(5)
-                crashed = sorted(new)
+        # -g: launch in the background, so the operator keeps focus (asked 2026-11-27).
+        subprocess.run(['/usr/bin/open', '-g', '-a', IINA], check=True)
+        for _ in range(30):
+            pids = iina_pids()
+            if pids:
+                launched = pids[0][0]
                 break
+            time.sleep(1)
+        result['pid'] = launched
+        t0 = time.time()
+        exited = False
+        while time.time() - t0 < minutes * 60:
+            time.sleep(10)
+            if 'early' not in result and time.time() - t0 > 30:
+                snap = {'global': read_json(os.path.join(DATA, 'status-global.json')) or {},
+                        'player': read_json(os.path.join(DATA, 'status-player.json')) or {}}
+                result['early'] = snap
+                zero = [side + '.' + key for side, key in COUNTERS[arm] if not snap[side].get(key)]
+                if zero and iina_pids():
+                    result['status'] = 'invalid'
+                    result['note'] = 'counters still zero at 30 s: ' + ', '.join(zero)
+                    break
             if not iina_pids():
-                time.sleep(20)
-                crashed = sorted(crash_reports() - before) or ['IINA exited with no crash report']
+                exited = True
                 break
         result['elapsedMinutes'] = round((time.time() - t0) / 60, 1)
-        result['early'] = early
         result['final'] = {'global': read_json(os.path.join(DATA, 'status-global.json')),
                            'player': read_json(os.path.join(DATA, 'status-player.json'))}
-        if crashed:
-            result['crashes'] = [classify(p) if p.endswith('.ips') else {'verdict': p} for p in crashed]
-        else:
-            result['crashes'] = []
-            result['verdict'] = 'no crash in the run (clears nothing)'
+        if exited:
+            # Crash reports can take ~30 s to write; wait up to 90 s for one from this IINA.
+            mine = []
+            for _ in range(18):
+                mine = [classify(p) for p in sorted(crash_reports() - before)]
+                if any(c.get('pid') == launched for c in mine):
+                    break
+                time.sleep(5)
+            result['crashes'] = mine
+            ours = [c for c in mine if c.get('pid') == launched]
+            if not ours:
+                result['status'] = 'other-crash'
+                result['note'] = 'IINA exited with no crash report from pid %s' % launched
+            elif any(c['verdict'].startswith('REPRODUCED') for c in ours):
+                result['status'] = 'reproduced'
+            else:
+                result['status'] = 'other-crash'
+        elif 'status' not in result:
+            result['status'] = 'no-crash'
+            result['note'] = 'no crash in the run (clears nothing)'
     finally:
         if iina_pids():
             subprocess.run(['/usr/bin/osascript', '-e', 'tell application "IINA" to quit'], capture_output=True)
-            for _ in range(30):
+            for _ in range(45):
                 if not iina_pids():
                     break
                 time.sleep(1)
         result['iinaStillRunning'] = bool(iina_pids())
         server.shutdown()
-        if not result['iinaStillRunning']:
-            for key, on in found.items():
-                set_switch(key, on)
-            subprocess.run(['/usr/bin/defaults', 'delete', DOMAIN, 'PluginEnabled.' + PLUGIN_ID], capture_output=True)
-            if os.path.exists(INSTALLED):
-                shutil.rmtree(INSTALLED)
-            result['restored'] = plugin_switches() == found
-        else:
-            result['restored'] = False
-            result['note'] = 'IINA did not quit within 30 s; switches and the harness plugin were left as set.'
+        # Restore the switches on every exit, even if IINA is still running (it only writes them when toggled).
+        for key, on in found.items():
+            set_switch(key, on)
+        subprocess.run(['/usr/bin/defaults', 'delete', DOMAIN, 'PluginEnabled.' + PLUGIN_ID], capture_output=True)
+        if not result['iinaStillRunning'] and os.path.exists(INSTALLED):
+            shutil.rmtree(INSTALLED)
+        result['restored'] = plugin_switches() == found
         with open(out_path, 'w') as fh:
             json.dump(result, fh, indent=1)
-    print(json.dumps({k: result.get(k) for k in ('arm', 'elapsedMinutes', 'crashes', 'verdict', 'restored', 'iinaStillRunning')}, indent=1))
-    print('result:', out_path)
+    result['path'] = out_path
+    return result
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--arm', choices=ARMS)
+    ap.add_argument('--chain', action='store_true', help='run every arm in order: ' + ' '.join(CHAIN))
+    ap.add_argument('--minutes', type=float, default=15)
+    args = ap.parse_args()
+    if not args.arm and not args.chain:
+        ap.error('give --arm or --chain')
+    arms = CHAIN if args.chain else [args.arm]
+    for arm in arms:
+        r = run_arm(arm, args.minutes)
+        print(json.dumps({k: r.get(k) for k in ('arm', 'status', 'elapsedMinutes', 'note', 'restored', 'iinaStillRunning', 'path')}), flush=True)
+        for c in r.get('crashes') or []:
+            print('   crash:', c.get('report'), c.get('verdict'), 'pid', c.get('pid'), flush=True)
+        if r['status'] in ('invalid', 'blocked') or r.get('iinaStillRunning') or not r.get('restored'):
+            print('chain stopped at', arm, flush=True)
+            sys.exit(3)
+        time.sleep(5)
 
 
 if __name__ == '__main__':

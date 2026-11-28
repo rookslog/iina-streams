@@ -510,6 +510,15 @@ function followsSkipReason(c){
  if(!Array.isArray(c.scopes)||!c.scopes.includes('user:read:follows'))return 'no-follows-permission';
  return 'no-user-id';
 }
+// #91: counts only, never a login; traced where the answer is accepted or dropped (stale: the account or cache changed).
+function traceFollows(result,stale){
+ if(!config.qa)return;
+ try{
+  qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status||{}).filter(v=>v===true).length:0,stale});
+ // Counting is diagnostics only; an unexpected answer shape must not stop the follows from loading.
+ }catch(_){}
+ if(!stale)followsSkip=null;
+}
 function traceFollowsSkip(reason){
  if(followsSkip===reason)return;
  followsSkip=reason;
@@ -838,18 +847,10 @@ async function refreshFollows(){
  cache.at=now;
  cache.pending=true;
  const result=await followedSuggestions(account,suggestionDeps);
- // #91: counts only, never a login. A stale answer (the account or cache changed meanwhile) is discarded below.
- if(config.qa){
-  const stale=follows!==cache;
-  try{
-   qaTrace('follows',{ok:!!result,rows:result?result.rows.length:0,live:result?Object.values(result.status||{}).filter(v=>v===true).length:0,stale});
-  // Counting is diagnostics only; an unexpected answer shape must not stop the follows from loading.
-  }catch(_){}
-  if(!stale)followsSkip=null;
- }
- if(follows!==cache)return;
+ if(follows!==cache){traceFollows(result,true);return;}
  onMainThread(()=>{
-  if(follows!==cache)return;
+  if(follows!==cache){traceFollows(result,true);return;}
+  traceFollows(result,false);
   if(result)Object.assign(cache,result);
   else cache.pending=false;
   publishSuggestionUpdate();
